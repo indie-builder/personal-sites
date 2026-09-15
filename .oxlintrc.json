@@ -20,15 +20,6 @@
     ],
     "shadcn/no-raw-colors": "error"
   },
-  "overrides": [
-    {
-      "files": ["components/ui/**"],
-      "rules": {
-        "shadcn/no-unknown-classes": "off",
-        "shadcn/no-raw-colors": "off"
-      }
-    }
-  ],
   "settings": {
     "shadcn": {
       "mergeFunctions": ["cn"],

@@ -4,6 +4,25 @@
 
 :root { --ink:#1c1c1e; --muted:#656568; --quiet:#767676; --line:#eee; --surface:#fff; --font-sans:"SF Pro Text","SF Pro Display",-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC","Microsoft YaHei",Arial,sans-serif; }
 @theme inline {
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--surface);
+  --color-secondary: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  --color-secondary-foreground: var(--ink);
+  --color-muted: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  --color-muted-foreground: var(--muted);
+  --color-accent: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  --color-accent-foreground: var(--ink);
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--quiet);
   --color-line: var(--line);
 }
 * { box-sizing:border-box; }
