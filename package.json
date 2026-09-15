@@ -76,6 +76,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
+    "@shadcn/lint": "^0.1.0",
     "@steipete/bird": "^0.8.0",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/dom": "10.4.2",

@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["@shadcn/lint"],
   "plugins": ["react", "jsx-a11y", "nextjs"],
   "env": {
     "browser": true,
@@ -10,7 +11,30 @@
     "correctness": "error"
   },
   "rules": {
-    "jsx-a11y/prefer-tag-over-role": "off"
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "shadcn/no-unknown-classes": [
+      "error",
+      {
+        "allow": ["about-printer", "about-printer__*", "curation-*", "ai-news-*"]
+      }
+    ],
+    "shadcn/no-raw-colors": "error"
+  },
+  "overrides": [
+    {
+      "files": ["components/ui/**"],
+      "rules": {
+        "shadcn/no-unknown-classes": "off",
+        "shadcn/no-raw-colors": "off"
+      }
+    }
+  ],
+  "settings": {
+    "shadcn": {
+      "mergeFunctions": ["cn"],
+      "variantFunctions": ["cva"],
+      "note": "设计约束见 DESIGN.md 与 AGENTS.md；颜色一律走主题语义 token。"
+    }
   },
   "ignorePatterns": [
     ".next/**",

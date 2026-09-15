@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 :root { --ink:#1c1c1e; --muted:#656568; --quiet:#767676; --line:#eee; --surface:#fff; --font-sans:"SF Pro Text","SF Pro Display",-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC","Microsoft YaHei",Arial,sans-serif; }
+@theme inline {
+  --color-line: var(--line);
+}
 * { box-sizing:border-box; }
 html { background:var(--surface); scroll-behavior:smooth; }
 body { min-width:20rem; min-height:100vh; margin:0; background:var(--surface); color:var(--ink); font-family:var(--font-sans); text-rendering:geometricPrecision; }
