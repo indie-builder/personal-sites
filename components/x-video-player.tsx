@@ -31,6 +31,7 @@ export function XVideoPlayer({ compact = false, isAnimatedGif, itemTitle, poster
 
   return (
     <figure className={`curation-detail__media-player${compact ? " design-curation__media-player" : ""}`}>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- 外部 X 视频源不提供字幕轨，无法挂载 track */}
       <video
         aria-label={`${isAnimatedGif ? "动画 GIF" : "视频"}：${itemTitle}`}
         autoPlay={shouldAutoPlay}

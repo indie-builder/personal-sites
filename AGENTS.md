@@ -18,14 +18,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Use `pnpm` with Node.js `>=22.19.0`; the package manager is pinned in `package.json`.
 - Default dev startup is domain-based via portless: `pnpm dev:domain` serves `https://personal-site.localhost` (fixed app port 3000). Plain `pnpm dev` stays available for raw-port use.
 - Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` for changes spanning app code or configuration.
-- `pnpm typecheck` deliberately invokes TypeScript 7; keep `typescript@6` for the Next.js and ESLint API compatibility layer. See `scripts/tsc7.mjs`.
+- `pnpm typecheck` deliberately invokes TypeScript 7; keep `typescript@6` for the Next.js API compatibility layer. See `scripts/tsc7.mjs`.
 - For a second dev server, use `pnpm exec next dev --turbopack --hostname 127.0.0.1 --port 7100`; do not use `pnpm dev -- --port 7100`.
 
 ## File-Scoped Commands
 
 | Task | Command |
 | --- | --- |
-| Lint one file | `pnpm exec eslint path/to/file.tsx` |
+| Lint one file | `pnpm exec oxlint path/to/file.tsx` |
 | Run one Vitest file | `pnpm exec vitest run path/to/file.test.ts` |
 | Typecheck | `pnpm typecheck` |
 | Git boundary audit | `pnpm git:safety` |

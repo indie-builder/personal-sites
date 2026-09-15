@@ -49,6 +49,7 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 点击 addon 聚焦输入框仅为鼠标便利交互，键盘用户直接 Tab 到输入框（上游 shadcn/ui 行为）
     <div
       role="group"
       data-slot="input-group-addon"

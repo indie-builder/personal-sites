@@ -37,5 +37,8 @@ export function XAppLink({ href, onClick, target = "_blank", ...props }: XAppLin
     }, 1_100);
   }
 
-  return <a {...props} href={href} onClick={openXApp} rel="noreferrer noopener" target={target} />;
+  return (
+    // eslint-disable-next-line jsx-a11y/anchor-has-content -- 链接内容由调用方经 props.children 传入
+    <a {...props} href={href} onClick={openXApp} rel="noreferrer noopener" target={target} />
+  );
 }

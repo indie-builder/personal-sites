@@ -144,7 +144,7 @@ export function parseCurationResponse(responseText) {
 }
 
 function comparableCharacters(value) {
-  return new Set(clean(value).replace(/\s+/gu, "").replace(/[，。！？、：；“”‘’"'（）()【】\[\]]/gu, ""));
+  return new Set(clean(value).replace(/\s+/gu, "").replace(/[，。！？、：；“”‘’"'（）()【】[\]]/gu, ""));
 }
 
 export function groundEvidenceExcerpt(candidate, evidence) {
