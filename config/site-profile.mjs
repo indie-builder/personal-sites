@@ -1,5 +1,5 @@
 export const siteProfile = {
-  handle: "defulat-coder",
+  handle: "indie-builder",
   name: "陈远",
   paragraphs: [
     "十余年项目开发经验，横跨 Java、Python、TypeScript 与前端；从业务平台、云服务到企业 AI，一直在做需要长期负责的工程系统。",

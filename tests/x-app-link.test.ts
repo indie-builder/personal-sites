@@ -17,7 +17,7 @@ describe("getXAppDeepLink", () => {
       "twitter://user?screen_name=defulat-coder",
     );
     expect(getXAppDeepLink("https://x.com/explore")).toBeNull();
-    expect(getXAppDeepLink("https://github.com/defulat-coder")).toBeNull();
+    expect(getXAppDeepLink("https://github.com/indie-builder")).toBeNull();
   });
 });
 

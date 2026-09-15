@@ -38,7 +38,7 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
           </div>
 
           <nav aria-label="站点链接" className="curation-home__external-links">
-            <a href="https://github.com/defulat-coder" rel="noreferrer" target="_blank">
+            <a href="https://github.com/indie-builder" rel="noreferrer" target="_blank">
               <GitBranch aria-hidden="true" />
               GitHub
             </a>
