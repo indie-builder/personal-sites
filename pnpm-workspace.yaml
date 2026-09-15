@@ -1,6 +1,7 @@
 allowBuilds:
   '@google/genai': false
   better-sqlite3: true
+  esbuild: true
   onnxruntime-node: true
   protobufjs: false
   sharp: true
@@ -16,8 +17,8 @@ minimumReleaseAgeExclude:
   - '@earendil-works/pi-telemetry@0.84.4'
   - '@earendil-works/pi-tui@0.84.4'
 overrides:
-  '@types/react': 19.2.18
-  '@types/react-dom': 19.2.4
+  '@types/react': 19.3.0
+  '@types/react-dom': 19.3.0
   adm-zip: 0.6.0
   '@hono/node-server': 1.19.15
   fast-uri: 3.1.5
