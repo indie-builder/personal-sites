@@ -31,15 +31,10 @@ export function buildDataHealth({ aiNews, commit = null, insights = null, now = 
     x: sourceStatus(publicData.curation.x, now, 72 * 60, warnings, "X 策展"),
   };
   const openSource = sourceStatus(publicData.openSource, now, 14 * 24 * 60, warnings, "开源关注");
-  const works = {
-    ...publicData.works,
-    ageMinutes: ageMinutes(publicData.works.latestAt, now),
-    healthy: publicData.works.count > 0,
-  };
   const analysisHealthy = !insights || Number(insights.analysisErrors ?? 0) === 0;
   if (Number(insights?.designReview ?? 0) > 0) warnings.push(`仍有 ${insights.designReview} 条设计分类待复核。`);
   const healthy = Boolean(aiNews.healthy && database.healthy && askIndex.healthy && curation.x.healthy && curation.douyin.healthy
-    && openSource.healthy && works.healthy && analysisHealthy);
+    && openSource.healthy && analysisHealthy);
   return {
     aiNews,
     askIndex,
@@ -51,6 +46,5 @@ export function buildDataHealth({ aiNews, commit = null, insights = null, now = 
     insights,
     openSource,
     warnings,
-    works,
   };
 }

@@ -11,7 +11,6 @@ export type PublicDataHealthEvidence = {
   };
   openSource: { count: number; latestAt: string | null };
   quickCheck: string;
-  works: { count: number; latestAt: string | null };
 };
 
 export function readPublicDataHealth(database: Database.Database): PublicDataHealthEvidence;

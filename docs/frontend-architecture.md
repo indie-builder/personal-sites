@@ -21,7 +21,7 @@ RootLayout
    ├─ /open-source              开源关注版块（ISR，revalidate = 300）
    ├─ /ask                      问一问
    │  ├─ Profile rail（与首页相同）
-   │  └─ 内容导航 + 公开资料问答（个人简介、项目档案、每日关注、开源关注）
+   │  └─ 内容导航 + 公开资料问答（个人简介、每日关注、开源关注）
    ├─ /feed.xml                 最近公开内容的 RSS 2.0 聚合
    ├─ /sitemap.xml              栏目与公开详情页索引
    ├─ /robots.txt               搜索引擎抓取规则
@@ -47,7 +47,7 @@ RootLayout
 | 详情页 | `app/curation/[id]/page.tsx`、`app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
 | 个人简介 | `components/profile-introduction.tsx` | 双语逐字输入/删除、最终中文正文与多语言标题轮换；每次进入首页都播放 | 静态履历数据源 |
-| 内容导航 | `components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注、构建、问一问）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
+| 内容导航 | `components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注、问一问）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
 | 技术信号场 | `components/interactive-dot-field.tsx` | AI 术语与技术栈词库、稀疏视觉表达 | 标签过滤或导航 |
 | 策展数据 | `lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局 |
 | 公开发现 | `lib/discovery.server.ts` | 汇总公开 SQLite 与 Supabase，生成 Sitemap/RSS 数据 | 私有原始资料或运行时写入 |
@@ -55,7 +55,7 @@ RootLayout
 
 统一健康状态会执行 SQLite `quick_check`，并按 `rowid` 双向核对 `ask_documents` 与 FTS5，而不是只比较总数；数据库损坏、缺失索引行或孤儿索引行都会让健康端点返回 503。
 
-“问一问”的本地 FTS 语料由公开个人简介、项目档案、每日关注和开源关注派生；每日动态继续直接检索 Supabase 公开投影。完整问题、拆词结果与不同来源使用排名融合后统一取前六条，并由固定公开语料评测集验证召回。项目快照发布与 Ask 文档替换在同一 SQLite 事务中完成，避免页面和问答看到不同修订。请求限流在 Supabase 中按 IP 的 HMAC 摘要原子计数，所有 Vercel 实例共享 10 分钟 50 次的窗口；浏览器不持有 service-role key。
+“问一问”的本地 FTS 语料由公开个人简介、每日关注和开源关注派生；每日动态继续直接检索 Supabase 公开投影。完整问题、拆词结果与不同来源使用排名融合后统一取前六条，并由固定公开语料评测集验证召回。请求限流在 Supabase 中按 IP 的 HMAC 摘要原子计数，所有 Vercel 实例共享 10 分钟 50 次的窗口；浏览器不持有 service-role key。
 
 ## 交付与移动浏览器
 
@@ -75,7 +75,7 @@ RootLayout
 | `.curation-home` | 两栏 Grid；左栏最小 `28rem`、最大 `38vw` | 新首页内容不得破坏此列关系 |
 | `.curation-home__profile` | `sticky`、`100dvh`、`1.875rem` padding | 首页与详情页必须视觉一致 |
 | `.curation-home__feed` | 最大 `50rem`，右侧连续流 | 使用行与行分隔，不包卡片 |
-| `ContentSectionNavigation` | 每日动态、每日关注、设计收藏、抖音收藏、开源关注、构建、问一问共享等权内容入口；导航即栏目页头 | 使用站内链接与 `aria-current`，不得伪装为同页 Tab |
+| `ContentSectionNavigation` | 每日动态、每日关注、设计收藏、抖音收藏、开源关注、问一问共享等权内容入口；导航即栏目页头 | 使用站内链接与 `aria-current`，不得伪装为同页 Tab |
 | `.curation-detail__article` | 最大 `50rem`，承接右栏阅读 | 详情结构沿用首页的留白与分隔节奏 |
 | `.curation-home__bio` | `width: 100%` | 简介正文撑满身份轨，不再限制 `max-width` |
 | `.interactive-dot-field` | `11.5rem` 高点阵画布 | AI 术语 12 词 + 技术栈 25 词按 6 条单动画轨道滚动，每条轨道以双序列无缝循环和大间距维持约 12 个同屏词；参数按泳道确定性内联，reduced-motion 收为 3×4 静态网格 |
@@ -134,4 +134,8 @@ RootLayout
 - 同级栏目链接直接提交 Next 路由，键盘导航不经过退出动效；手机身份展开/收拢保留现有桥接。之前描述的桌面淡入换页已被这一规则取代。
 - 主题即时应用，图标使用 160ms 可中断反馈；问答输入统一 16px，主要控件统一 44px。
 - `app/not-found.tsx` 为缺失页面提供共享身份轨、主题与真实阅读出口。
-- 灯箱方向键即时换图；播报节点位于图像进出场容器外，避免过渡期间重复播报。
+
+
+## 2026-09-09 构建功能下线
+
+已删除 `/works` 与详情路由、项目样张和灯箱、项目采集发布脚本、SQLite 项目快照以及对应 Ask 索引。导航、RSS、Sitemap、健康检查与向量索引不再包含项目档案；旧路由直接返回 404。

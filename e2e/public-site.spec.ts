@@ -12,13 +12,13 @@ test("Ask exposes every public search scope", async ({ page }) => {
   expect(await scope.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
   await expect(scope).toHaveAccessibleName("检索范围：关于我");
   await scope.click();
-  await page.getByRole("menuitemradio", { name: "构建" }).click();
-  await expect(scope).toHaveAccessibleName("检索范围：构建");
+  await page.getByRole("menuitemradio", { name: "每日关注" }).click();
+  await expect(scope).toHaveAccessibleName("检索范围：每日关注");
 });
 
 test("Ask suggestions fill and focus the composer", async ({ page }) => {
   await page.goto("/ask");
-  const suggestion = "你做过哪些项目，形成了哪些工程实践？";
+  const suggestion = "你的工程经历和目前关注的方向是什么？";
   const input = page.getByRole("textbox", { name: "输入问题" });
 
   await page.getByRole("button", { name: suggestion }).click();
@@ -246,53 +246,6 @@ test("repository loading uses Motion and keeps a static reduced state", async ({
   await expect(icon).toHaveCSS("transform", "none");
   releaseTree();
   await expect(loading).toBeHidden();
-});
-
-test("works keeps purposeful lightbox Motion without autonomous list choreography", async ({ page }) => {
-  await page.goto("/works");
-  const firstEntry = page.locator('[aria-label="我的作品列表"] > li').first();
-  const strip = page.getByLabel("这个站点本身 页面样张");
-  expect(await firstEntry.evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
-  await page.waitForTimeout(500);
-  expect(await strip.evaluate((element) => element.scrollLeft)).toBe(0);
-  await strip.hover();
-  await page.mouse.wheel(0, 240);
-  await expect.poll(() => strip.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-
-  await page.getByRole("button", { name: /^放大查看：/u }).first().click();
-  const dialog = page.getByRole("dialog");
-  const figure = dialog.locator("figure");
-  const shotStatus = dialog.getByRole("status");
-  await expect(dialog).toBeVisible();
-  await expect(shotStatus).toContainText("第 1 张，共");
-  await dialog.getByRole("button", { name: "下一张" }).click();
-  await expect(shotStatus).toContainText("第 2 张，共");
-  await expect(figure).toHaveCount(1);
-  expect(await figure.evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
-  await expect.poll(() => figure.evaluate((element) => getComputedStyle(element).transform)).toBe("none");
-  await dialog.getByRole("button", { name: "关闭大图" }).click();
-  await expect(dialog).toBeHidden();
-
-  await page.setViewportSize({ height: 844, width: 390 });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.reload();
-  const reducedStrip = page.getByLabel("这个站点本身 页面样张");
-  await page.waitForTimeout(1_500);
-  expect(await reducedStrip.evaluate((element) => element.scrollLeft)).toBe(0);
-  const reducedDialog = page.getByRole("dialog");
-  await expect.poll(async () => {
-    if (await reducedDialog.count()) return true;
-    await page.getByRole("button", { name: /^放大查看：/u }).first().click();
-    return Boolean(await reducedDialog.count());
-  }).toBe(true);
-  expect(await reducedDialog.locator("figure").evaluate((element) => (
-    getComputedStyle(element).transform
-  ))).toBe("none");
-  expect(await reducedDialog.getByRole("button").evaluateAll((buttons) => buttons.every((button) => {
-    const box = button.getBoundingClientRect();
-    return box.width >= 44 && box.height >= 44;
-  }))).toBe(true);
-  await reducedDialog.getByRole("button", { name: "关闭大图" }).click();
 });
 
 test("Ask retrieval status uses Motion with a static reduced state", async ({ page }) => {

@@ -83,15 +83,3 @@ test("open-source document tabs and GitHub CTA keep sticky, dark mobile controls
   await expectDesktopDensity(tabs);
   await expectDesktopDensity(github);
 });
-
-test("works project index links are mobile touch targets without widening the page", async ({ page }) => {
-  await page.setViewportSize(MOBILE_VIEWPORT);
-  await page.goto("/works/personal-site");
-
-  const links = page.getByRole("navigation", { name: "项目档案索引" }).getByRole("link");
-  await expectTouchTargets(links);
-  await expectNoHorizontalOverflow(page);
-
-  await page.setViewportSize(DESKTOP_VIEWPORT);
-  await expectDesktopDensity(links);
-});

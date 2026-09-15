@@ -15,7 +15,7 @@ async function expectNativeDocumentScroll(page: Page, key: "ArrowDown" | "PageDo
 
 test("desktop list pages keep native BODY keyboard scrolling", async ({ page }) => {
   await page.setViewportSize({ height: 640, width: 1_440 });
-  await page.goto("/works");
+  await page.goto("/design");
 
   await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollHeight)).toBeGreaterThan(640);
   for (const key of ["PageDown", "Space", "ArrowDown"] as const) {

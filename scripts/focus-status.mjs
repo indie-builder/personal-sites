@@ -64,7 +64,7 @@ if (process.argv.includes("--json")) console.log(JSON.stringify(status, null, 2)
 else {
   console.log(`每日动态：${status.aiNews.healthy ? "正常" : "异常"}（${status.aiNews.ageMinutes ?? "?"} 分钟前）`);
   console.log(`每日关注：X ${status.curation.x.count}，抖音 ${status.curation.douyin.count}，设计待复核 ${status.insights?.designReview ?? "?"}`);
-  console.log(`开源关注：${status.openSource.count}；构建：${status.works.count}`);
+  console.log(`开源关注：${status.openSource.count}`);
   console.log(`Ask 索引：${status.askIndex.documents} 文档 / ${status.askIndex.fts} FTS`);
   console.log(`SQLite：${status.database.healthy ? "正常" : status.database.quickCheck}`);
   for (const warning of status.warnings) console.log(`提醒：${warning}`);

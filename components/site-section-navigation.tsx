@@ -4,7 +4,7 @@ import { SectionNavigationLink } from "@/components/section-navigation-link";
 
 import styles from "./site-section-navigation.module.css";
 
-export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source" | "works" | "ask";
+export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source" | "ask";
 
 type SiteSectionNavigationProps = {
   current: SiteSection;
@@ -18,7 +18,6 @@ const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; la
   { href: "/design" as Route, id: "design", label: "设计收藏" },
   { href: "/douyin", id: "douyin", label: "抖音收藏" },
   { href: "/open-source", id: "open-source", label: "开源关注" },
-  { href: "/works", id: "works", label: "构建" },
   { href: "/ask", id: "ask", label: "问一问" },
 ];
 

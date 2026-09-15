@@ -14,13 +14,12 @@
 | 每日动态 | `/ai-news` | AI/Agent 领域动态，每 5 分钟自动同步 |
 | 每日关注 | `/curation` | X（Twitter）点赞/书签的中文策展与判读 |
 | 开源关注 | `/open-source` | GitHub Star 仓库的中文阅读版与个人判读 |
-| 构建 | `/works` | 个人项目产出（首发为本站自身的数据管线） |
-| 问一问 | `/ask` | 基于个人简介、项目档案、每日关注与开源关注的匿名问答入口 |
+| 问一问 | `/ask` | 基于个人简介、每日关注与开源关注的匿名问答入口 |
 
 ## 技术栈
 
 - **站点**：Next.js 16（App Router）+ React 19 + Tailwind CSS 4 + shadcn/ui
-- **数据**：每日动态使用 Supabase 公开投影；每日关注、开源关注、项目档案与问答索引使用随 Git 发布的只读 SQLite
+- **数据**：每日动态使用 Supabase 公开投影；每日关注、开源关注与问答索引使用随 Git 发布的只读 SQLite
 - **部署**：Vercel；每日动态由 Supabase Cron 增量同步、GitHub Actions 每日回填，其余内容在本机审核发布
 - **内容管道**：本地抓取 → AI 解析（Codex CLI 默认，可显式选择 Pi/Kimi）→ Git 管理的公开 SQLite → Vercel 部署只读查询
 
@@ -44,7 +43,7 @@ pnpm lint
 pnpm test             # Vitest + node:test
 pnpm test:e2e         # Playwright + Axe 浏览器回归
 pnpm build
-pnpm focus:status     # 汇总每日动态、策展、Ask 索引与项目档案健康度
+pnpm focus:status     # 汇总每日动态、策展、Ask 索引健康度
 pnpm health:production # 连续三次探测线上统一健康端点
 ```
 
@@ -56,7 +55,7 @@ pnpm health:production # 连续三次探测线上统一健康端点
 - **开源关注**：`pnpm github:starred:sync`，详见 `docs/github-starred-sync.md`。
 - **每日关注**：`pnpm curation:*` 系列命令生成 `data/curation.sqlite`，详见 `docs/supabase-x-sync.md`。
 
-公开发现入口包括 `/sitemap.xml`、`/robots.txt`、`/feed.xml` 与全站 Open Graph 图片；RSS 聚合每日动态、每日关注、开源关注和项目档案的最近更新。
+公开发现入口包括 `/sitemap.xml`、`/robots.txt`、`/feed.xml` 与全站 Open Graph 图片；RSS 聚合每日动态、每日关注、开源关注的最近更新。
 
 `/api/health/data` 汇总全部公开数据面的新鲜度、Ask 索引一致性与部署 Commit；GitHub Actions 每 15 分钟探测，连续三次异常才使任务失败。
 

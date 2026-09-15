@@ -15,7 +15,7 @@ export async function GET() {
   <channel>
     <title>${escapeXml(SITE_NAME)}</title>
     <link>${SITE_URL}</link>
-    <description>陈远持续更新的 Agent 工程动态、判断与构建档案。</description>
+    <description>陈远持续更新的 Agent 工程动态、策展与开源关注。</description>
     <language>zh-CN</language>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml" />
 ${items.map((item) => `    <item>

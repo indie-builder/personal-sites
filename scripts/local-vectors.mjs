@@ -163,11 +163,6 @@ function readPublicProjectionChunks() {
       FROM ask_documents
       ORDER BY id
     `).all();
-    const workRows = database.prepare(`
-      SELECT slug, snapshot_json
-      FROM project_snapshots
-      ORDER BY display_order, published_at DESC
-    `).all();
     const askChunks = askRows.flatMap((row) =>
       splitText(`${row.title}\n\n${row.content}`).filter(isUsefulVectorChunk).map((content, chunkIndex) => ({
         chunkIndex,
@@ -175,22 +170,7 @@ function readPublicProjectionChunks() {
         source: publicAskVectorSource(row),
       })),
     );
-    const workChunks = workRows.flatMap((row) => {
-      const snapshot = JSON.parse(row.snapshot_json);
-      const content = [
-        snapshot.title,
-        snapshot.summary,
-        snapshot.currentFocus,
-        snapshot.bodyMarkdown,
-        ...(snapshot.records ?? []).flatMap((record) => [record.title, record.summary, record.bodyMarkdown]),
-      ].filter(Boolean).join("\n\n");
-      return splitText(content).filter(isUsefulVectorChunk).map((chunk, chunkIndex) => ({
-        chunkIndex,
-        content: chunk,
-        source: `works/${row.slug}`,
-      }));
-    });
-    return { chunks: [...askChunks, ...workChunks], itemCount: askRows.length + workRows.length };
+    return { chunks: askChunks, itemCount: askRows.length };
   } finally {
     database.close();
   }

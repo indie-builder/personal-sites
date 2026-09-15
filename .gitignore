@@ -37,3 +37,6 @@ test-results/
 /.pi/skills/video-shotcraft
 # Generated design review screenshots; other .impeccable review artifacts stay tracked.
 /.impeccable/review/design-*.png
+
+# Local image-generation scratch output (avatar drafts); never commit.
+/output/

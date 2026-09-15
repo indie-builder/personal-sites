@@ -16,7 +16,6 @@ export type DataHealth = {
   insights: { analysisErrors: number | null; designReview: number | null } | null;
   openSource: DataSourceStatus;
   warnings: string[];
-  works: DataSourceStatus;
 };
 
 export function buildDataHealth(options: {
@@ -32,6 +31,5 @@ export function buildDataHealth(options: {
     curation: { douyin: { count: number; latestAt: string | null }; x: { count: number; latestAt: string | null } };
     openSource: { count: number; latestAt: string | null };
     quickCheck: string;
-    works: { count: number; latestAt: string | null };
   };
 }): DataHealth;

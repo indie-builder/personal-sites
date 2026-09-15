@@ -33,7 +33,7 @@ describe("beginProfileTransition", () => {
   it("stops discarded ghost animations on replacement and cleanup", () => {
     beginProfileTransition("home", "ask");
     const first = vi.mocked(animate).mock.results.slice(-3).map(result => result.value);
-    beginProfileTransition("home", "works");
+    beginProfileTransition("home", "daily");
     first.forEach(controls => expect(controls.stop).toHaveBeenCalledOnce());
     const second = vi.mocked(animate).mock.results.slice(-3).map(result => result.value);
     clearProfileTransition();

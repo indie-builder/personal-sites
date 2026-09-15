@@ -21,7 +21,6 @@ const base = {
     },
     openSource: { count: 3, latestAt: "2026-08-28T12:00:00.000Z" },
     quickCheck: "ok",
-    works: { count: 2, latestAt: "2026-08-20T12:00:00.000Z" },
   },
 };
 
@@ -36,13 +35,11 @@ test("SQLite health evidence reads integrity, freshness, and bidirectional FTS a
   database.exec(`
     CREATE TABLE curation_items (content_json TEXT, collected_at TEXT, published_at TEXT);
     CREATE TABLE open_source_items (published_at TEXT);
-    CREATE TABLE project_snapshots (published_at TEXT);
     CREATE TABLE ask_documents (id TEXT, content TEXT);
     CREATE VIRTUAL TABLE ask_documents_fts USING fts5(content, content='ask_documents', content_rowid='rowid');
     INSERT INTO curation_items VALUES ('{"source":{"platform":"x"}}', '2026-08-29T10:00:00.000Z', null);
     INSERT INTO curation_items VALUES ('{"source":{"platform":"douyin"}}', '2026-08-29T09:00:00.000Z', null);
     INSERT INTO open_source_items VALUES ('2026-08-28T12:00:00.000Z');
-    INSERT INTO project_snapshots VALUES ('2026-08-27T12:00:00.000Z');
     INSERT INTO ask_documents VALUES ('one', 'Agent runtime');
     INSERT INTO ask_documents_fts(rowid, content) VALUES (1, 'Agent runtime');
   `);

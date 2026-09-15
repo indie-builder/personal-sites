@@ -11,8 +11,8 @@ vi.mock("@/components/site-section-navigation", () => ({ ContentSectionNavigatio
 vi.mock("next/dynamic", () => ({ default: () => ({ source }: { source: string }) => <div>{source}</div> }));
 
 const source = {
-  content: "公开项目资料", id: "source-1", publishedAt: null, scope: "works",
-  section: null, sourceId: "project", sourceUrl: "/works/project", title: "项目来源",
+  content: "公开关注资料", id: "source-1", publishedAt: null, scope: "daily",
+  section: null, sourceId: "project", sourceUrl: "/curation/source", title: "项目来源",
 };
 
 describe("AskChat interrupted reading and session continuity", () => {
@@ -65,7 +65,7 @@ describe("AskChat interrupted reading and session continuity", () => {
 
     expect(await screen.findByText("已停止生成。")).toBeTruthy();
     expect(screen.getByText("已经收到的部分回答。")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /项目来源/ }).getAttribute("href")).toBe("/works/project");
+    expect(screen.getByRole("link", { name: /项目来源/ }).getAttribute("href")).toBe("/curation/source");
     expect(screen.queryByText("继续问")).toBeNull();
     expect(readAskChatSnapshot()?.messages.at(-1)?.content).toBe("已经收到的部分回答。");
   });
@@ -91,11 +91,11 @@ describe("AskChat interrupted reading and session continuity", () => {
         { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
         { citations: [source], content: "已经完成的回答", id: "assistant-1", isComplete: true, role: "assistant" },
       ],
-      question: "正在核对资料的草稿", scope: "works",
+      question: "正在核对资料的草稿", scope: "daily",
     }));
     const view = render(<AskChat />);
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("正在核对资料的草稿");
-    expect(screen.getByRole("button", { name: "检索范围：构建" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "检索范围：每日关注" })).toBeTruthy();
     expect(screen.getByText("已经完成的回答")).toBeTruthy();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "更新后的草稿" } });
     view.unmount();

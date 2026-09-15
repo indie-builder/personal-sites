@@ -15,7 +15,7 @@
 | `data/sensitive/x-curation/` | X 书签/点赞原文、媒体、策展队列和生成备份 | 仅本机保存，禁止 Git |
 | `data/sensitive/x-curation/generated/insight-snapshots/` | 按内容摘要去重的全库趋势与健康历史快照 | 仅本机保存，禁止 Git 与网站读取 |
 | `data/sensitive/douyin-curation/` | 抖音视频分析、转写、OCR、待审草稿和实体候选 | 仅本机保存，禁止 Git |
-| `data/curation.sqlite` | 已审核公开的每日关注、开源关注、作品快照与 Ask 文本投影 | 随代码提交；仅部署端只读查询 |
+| `data/curation.sqlite` | 已审核公开的每日关注、开源关注与 Ask 文本投影 | 随代码提交；仅部署端只读查询 |
 | `data/sensitive/local-vectors.sqlite` | 本地文档与公开投影的 sqlite-vec 混合检索索引 | 仅本机保存，禁止 Git |
 | `knowledge/sensitive/` | 私有知识库及其个人来源分区 | 仅本机保存，禁止 Git |
 | `tools/smaug/.state/` | 抓取游标、待处理书签和运行状态 | 仅本机保存，禁止 Git |
@@ -24,7 +24,7 @@
 | 私有 Supabase Storage `ask-sessions` | 匿名问答 JSONL 会话与模型生成记录 | 仅服务端 service role 可读写，禁止浏览器、Git 与公开链接 |
 | Supabase `ask_rate_limits` | IP 经 `ASK_SESSION_SECRET` 生成的 HMAC-SHA256 摘要、窗口与计数 | 启用 RLS；仅 service role 可执行原子限流函数，不保存原始 IP |
 
-X、抖音、开源关注与项目档案都不使用 Supabase 作为公开内容源。模型解析完成后，敏感原始队列继续只保留本机；只有经过批准且与当前站点展示字段完全一致的公开投影会写入 `data/curation.sqlite`，并在本机重建 `local-vectors.sqlite`。原始抓取文件、视频、转写、OCR、待审草稿及本地凭据永远不会进入 Git 或浏览器。每日动态仍单独使用 Supabase 的 `ai_news_items` 与 `ai_news_public_items`。
+X、抖音、开源关注都不使用 Supabase 作为公开内容源。模型解析完成后，敏感原始队列继续只保留本机；只有经过批准且与当前站点展示字段完全一致的公开投影会写入 `data/curation.sqlite`，并在本机重建 `local-vectors.sqlite`。原始抓取文件、视频、转写、OCR、待审草稿及本地凭据永远不会进入 Git 或浏览器。每日动态仍单独使用 Supabase 的 `ai_news_items` 与 `ai_news_public_items`。
 
 ## 防护约束
 

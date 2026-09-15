@@ -135,59 +135,6 @@ export function toProfileSearchDocument() {
   };
 }
 
-export function toProjectSearchDocuments(rows) {
-  return rows.flatMap((row) => {
-    const project = row?.snapshot;
-    if (!project?.projectId || !project.slug || !project.title) return [];
-    const sourceUrl = `/works/${encodeURIComponent(project.slug)}`;
-    const overviewContent = joinSearchText([
-      project.summary,
-      project.currentFocus,
-      project.bodyMarkdown,
-      project.role,
-      project.status,
-    ]);
-    const overview = {
-      content: overviewContent,
-      id: `works:${project.projectId}:overview`,
-      published_at: row.published_at ?? null,
-      search_text: joinSearchText([
-        project.title,
-        project.stack?.join(" "),
-        project.period,
-        overviewContent,
-      ]),
-      section: "项目概览",
-      source_id: project.projectId,
-      source_scope: "works",
-      source_url: sourceUrl,
-      title: project.title,
-    };
-    const records = (project.records ?? []).map((record) => {
-      const content = joinSearchText([record.summary, record.bodyMarkdown]);
-      return {
-        content,
-        id: `works:${project.projectId}:${record.id}`,
-        published_at: record.updatedAt ?? row.published_at ?? null,
-        search_text: joinSearchText([
-          project.title,
-          record.title,
-          record.kind,
-          record.status,
-          record.topics?.join(" "),
-          content,
-        ]),
-        section: record.kind,
-        source_id: project.projectId,
-        source_scope: "works",
-        source_url: sourceUrl,
-        title: record.title,
-      };
-    });
-    return [overview, ...records].filter((document) => document.content && document.search_text);
-  });
-}
-
 export function toOpenSourceSearchDocuments(rows) {
   return rows.flatMap((row) => {
     const item = row?.content;

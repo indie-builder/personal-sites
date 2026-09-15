@@ -6,7 +6,7 @@ const sourceSchema: z.ZodType<AskSource> = z.object({
   content: z.string(),
   id: z.string(),
   publishedAt: z.string().nullable(),
-  scope: z.enum(["profile", "works", "ai-news", "daily", "open-source"]),
+  scope: z.enum(["profile", "ai-news", "daily", "open-source"]),
   section: z.string().nullable(),
   sourceId: z.string(),
   sourceUrl: z.string(),

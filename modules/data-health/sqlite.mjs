@@ -9,7 +9,6 @@ export function readPublicDataHealth(database) {
     (SELECT count(*) FROM ask_documents_fts f LEFT JOIN ask_documents d ON d.rowid = f.rowid WHERE d.rowid IS NULL) AS orphan_fts`).get();
   const latest = (table) => database.prepare(`SELECT count(*) AS count, max(published_at) AS latest FROM ${table}`).get();
   const openSource = latest("open_source_items");
-  const works = latest("project_snapshots");
   return {
     askDocuments: Number(ask.documents),
     askFts: Number(ask.fts),
@@ -21,6 +20,5 @@ export function readPublicDataHealth(database) {
     },
     openSource: { count: Number(openSource.count), latestAt: openSource.latest ?? null },
     quickCheck: String(database.pragma("quick_check", { simple: true })),
-    works: { count: Number(works.count), latestAt: works.latest ?? null },
   };
 }

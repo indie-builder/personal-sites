@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 
-import { toProfileSearchDocument, toProjectSearchDocuments } from "../ask/search-index.mjs";
+import { toProfileSearchDocument } from "../ask/search-index.mjs";
 
 export const PUBLIC_DATABASE_PATH = "data/curation.sqlite";
 
@@ -42,20 +42,9 @@ export function initializePublicDatabase(database) {
     CREATE INDEX IF NOT EXISTS open_source_items_order_idx
       ON open_source_items (display_rank ASC, published_at DESC);
 
-    CREATE TABLE IF NOT EXISTS project_snapshots (
-      project_id TEXT PRIMARY KEY,
-      slug TEXT NOT NULL UNIQUE,
-      display_order INTEGER NOT NULL,
-      published_at TEXT NOT NULL,
-      revision TEXT NOT NULL,
-      snapshot_json TEXT NOT NULL
-    ) STRICT;
-    CREATE INDEX IF NOT EXISTS project_snapshots_order_idx
-      ON project_snapshots (display_order ASC, published_at DESC);
-
     CREATE TABLE IF NOT EXISTS ask_documents (
       id TEXT PRIMARY KEY,
-      source_scope TEXT NOT NULL CHECK (source_scope IN ('daily', 'open-source', 'profile', 'works')),
+      source_scope TEXT NOT NULL CHECK (source_scope IN ('daily', 'open-source', 'profile')),
       source_id TEXT NOT NULL,
       title TEXT NOT NULL,
       section TEXT,
@@ -143,7 +132,6 @@ export function preserveSupplementalProjection(sourcePath, targetDatabase) {
       transaction(source.prepare(`SELECT ${columns.join(", ")} FROM ${table}`).all());
     };
     copy("open_source_items", ["repo_node_id", "slug", "display_rank", "published_at", "content_json"]);
-    copy("project_snapshots", ["project_id", "slug", "display_order", "published_at", "revision", "snapshot_json"]);
     if (tables.has("ask_documents")) {
       const columns = ["id", "source_scope", "source_id", "title", "section", "source_url", "published_at", "content", "search_text"];
       const rows = source.prepare(`SELECT ${columns.join(", ")} FROM ask_documents WHERE source_scope = 'open-source'`).all();
@@ -152,11 +140,6 @@ export function preserveSupplementalProjection(sourcePath, targetDatabase) {
         for (const row of rows) insert.run(...columns.map((column) => row[column]));
       })();
     }
-    const projectRows = targetDatabase.prepare("SELECT published_at, snapshot_json FROM project_snapshots").all();
-    insertAskDocuments(targetDatabase, toProjectSearchDocuments(projectRows.map((row) => ({
-      published_at: row.published_at,
-      snapshot: JSON.parse(row.snapshot_json),
-    }))));
   } finally {
     source.close();
   }

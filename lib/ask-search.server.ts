@@ -39,7 +39,7 @@ export function fuseAskSearchDocuments(batches: RankedBatch[], limit = 6): Searc
 
 async function searchDocuments(query: string, scope: AskScope): Promise<SearchDocument[]> {
   const localScopes = scope === "all"
-    ? ["profile", "works", "daily", "open-source"] as const
+    ? ["profile", "daily", "open-source"] as const
     : scope === "ai-news" ? [] : [scope];
   const batches: RankedBatch[] = localScopes.map((localScope) => ({
     documents: searchLocalAskDocuments(query, localScope),
