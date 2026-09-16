@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { askScopes, type AskSource } from "@/lib/ask-types";
+import type { AskSource } from "@/lib/ask-types";
 
 const sourceSchema: z.ZodType<AskSource> = z.object({
   content: z.string(),
@@ -19,7 +19,6 @@ const messageSchema = z.object({
   id: z.string(),
   isComplete: z.boolean(),
   role: z.enum(["assistant", "user"]),
-  scope: z.enum(askScopes).optional(),
   interruption: z.object({
     kind: z.enum(["stopped", "error"]),
     message: z.string(),
@@ -31,7 +30,6 @@ export type ChatMessage = z.infer<typeof messageSchema>;
 const snapshotSchema = z.object({
   messages: z.array(messageSchema),
   question: z.string(),
-  scope: z.enum(askScopes),
 });
 
 export type AskChatSnapshot = z.infer<typeof snapshotSchema>;
@@ -48,7 +46,7 @@ export function readAskChatSnapshot(): AskChatSnapshot | null {
 
 export function writeAskChatSnapshot(snapshot: AskChatSnapshot) {
   try {
-    if (!snapshot.messages.length && !snapshot.question && snapshot.scope === "all") {
+    if (!snapshot.messages.length && !snapshot.question) {
       window.sessionStorage.removeItem(ASK_CHAT_STORAGE_KEY);
       return;
     }

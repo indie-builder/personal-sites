@@ -55,7 +55,7 @@ export default function RootLayout({
       <body>
         <a className="skip-link" href="#site-main">跳到主要内容</a>
         <OpeningLoader />
-        {children}
+        <div id="site-canvas">{children}</div>
       </body>
     </html>
   );

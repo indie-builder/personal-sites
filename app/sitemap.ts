@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 import { getSitemapRecords } from "@/lib/discovery.server";
 import { SITE_URL } from "@/lib/site";
 
-const staticPaths = ["", "/ai-news", "/curation", "/design", "/douyin", "/open-source", "/ask"];
+const staticPaths = ["", "/ai-news", "/curation", "/design", "/douyin", "/open-source"];
 
 export const revalidate = 300;
 

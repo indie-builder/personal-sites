@@ -20,7 +20,7 @@ export function MobileProfileCollapse({ section }: { section: string }) {
       frame = 0;
       const scrollTop = window.scrollY;
       // 首页是完整个人资料；其余阅读列表在滚动后只保留导航。
-      if (!mobile.matches || section === "home" || section === "ask") collapsed = false;
+      if (!mobile.matches || section === "home") collapsed = false;
       else if (scrollTop > 80) collapsed = true;
       else if (scrollTop < 16) collapsed = false;
       profile.toggleAttribute("data-mobile-collapsed", collapsed);

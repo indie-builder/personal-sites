@@ -7,7 +7,6 @@ import { ASK_CHAT_STORAGE_KEY, readAskChatSnapshot } from "@/components/ask-chat
 vi.mock("@fingerprintjs/fingerprintjs", () => ({
   default: { load: async () => ({ get: async () => ({ visitorId: "test-visitor-123456789" }) }) },
 }));
-vi.mock("@/components/site-section-navigation", () => ({ ContentSectionNavigation: () => null }));
 vi.mock("next/dynamic", () => ({ default: () => ({ source }: { source: string }) => <div>{source}</div> }));
 
 const source = {
@@ -85,25 +84,23 @@ describe("AskChat interrupted reading and session continuity", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("restores completed answers, draft and scope after remount and clears stored conversation", async () => {
+  it("restores completed answers and draft after reopening the drawer", async () => {
     window.sessionStorage.setItem(ASK_CHAT_STORAGE_KEY, JSON.stringify({
       messages: [
         { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
         { citations: [source], content: "已经完成的回答", id: "assistant-1", isComplete: true, role: "assistant" },
       ],
-      question: "正在核对资料的草稿", scope: "daily",
+      question: "正在核对资料的草稿",
     }));
     const view = render(<AskChat />);
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("正在核对资料的草稿");
-    expect(screen.getByRole("button", { name: "检索范围：每日关注" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /检索范围/ })).toBeNull();
     expect(screen.getByText("已经完成的回答")).toBeTruthy();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "更新后的草稿" } });
     view.unmount();
     render(<AskChat />);
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("更新后的草稿");
-    fireEvent.click(screen.getByRole("button", { name: "清空对话" }));
-    await waitFor(() => expect(window.sessionStorage.getItem(ASK_CHAT_STORAGE_KEY)).toBeNull());
-    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("");
+    expect(screen.queryByRole("button", { name: "清空对话" })).toBeNull();
   });
 
   it("does not submit Enter while composing Chinese or Shift+Enter", () => {

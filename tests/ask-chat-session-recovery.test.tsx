@@ -11,10 +11,6 @@ vi.mock("@fingerprintjs/fingerprintjs", () => ({
   default: { load: fingerprint.load },
 }));
 
-vi.mock("@/components/site-section-navigation", () => ({
-  ContentSectionNavigation: () => null,
-}));
-
 class MockResizeObserver {
   disconnect = vi.fn();
   observe = vi.fn();

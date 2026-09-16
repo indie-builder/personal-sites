@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openAssistant } from "./helpers/assistant";
 
 const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
 
@@ -8,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test("Ask gives the scroll-to-latest control a mobile touch target without enlarging desktop", async ({ page }) => {
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.goto("/ask");
+  await openAssistant(page);
 
   const button = page.getByRole("button", { name: "回到最新消息" });
   await expect(button).toBeAttached();

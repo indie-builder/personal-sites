@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { animate, useInView } from "motion/react";
+import { ProfileTextLines } from "@/components/profile-text-lines";
 
 type ProfileIntroductionProps = {
+  assistant?: ReactNode;
   animateOnFirstHomeVisit?: boolean;
   englishParagraphs: readonly string[];
   paragraphs: readonly string[];
@@ -166,13 +168,49 @@ function createTypewriterDriver() {
   return { wait, typeText, eraseText, dispose };
 }
 
+function GrowingParagraph({ children, reduceMotion }: { children: ReactNode; reduceMotion: boolean }) {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    if (!outer || !inner || reduceMotion) return;
+    let animation: Animation | undefined;
+    let previousHeight = inner.offsetHeight;
+    outer.style.height = `${previousHeight}px`;
+    const observer = new ResizeObserver(() => {
+      const nextHeight = inner.offsetHeight;
+      if (nextHeight === previousHeight) return;
+      const fromHeight = outer.getBoundingClientRect().height;
+      animation?.cancel();
+      outer.style.height = `${nextHeight}px`;
+      previousHeight = nextHeight;
+      // Animate only actual line-height changes, not every typed character.
+      if (!reduceMotion) {
+        animation = outer.animate([{ height: `${fromHeight}px` }, { height: `${nextHeight}px` }], {
+          duration: 220,
+          easing: "cubic-bezier(.23,1,.32,1)",
+        });
+      }
+    });
+    observer.observe(inner);
+    return () => {
+      observer.disconnect();
+      animation?.cancel();
+      outer.style.removeProperty("height");
+    };
+  }, [reduceMotion]);
+
+  return <div className="profile-paragraph-growth" ref={outerRef}><div className="profile-paragraph-content" ref={innerRef}>{children}</div></div>;
+}
+
 export function ProfileIntroduction({
+  assistant,
   animateOnFirstHomeVisit = false,
   englishParagraphs,
   paragraphs,
 }: ProfileIntroductionProps) {
-  const englishMeasureRef = useRef<HTMLDivElement>(null);
-  const chineseMeasureRef = useRef<HTMLDivElement>(null);
   const introductionRef = useRef<HTMLElement>(null);
   const isVisible = useInView(introductionRef);
   const reduceMotion = useSyncExternalStore(
@@ -190,7 +228,6 @@ export function ProfileIntroduction({
   const [titleVisibleCount, setTitleVisibleCount] = useState(CHINESE_TITLE.length);
   const [titleIsTyping, setTitleIsTyping] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(0);
-  const [reservedHeight, setReservedHeight] = useState<number | null>(null);
   const [hasCompletedInitialSequence, setHasCompletedInitialSequence] = useState(
     () => !animateOnFirstHomeVisit,
   );
@@ -374,31 +411,6 @@ export function ProfileIntroduction({
     };
   }, [englishParagraphs, hasCompletedInitialSequence, paragraphs, reduceMotion, shouldAnimateInitialVisit]);
 
-  useLayoutEffect(() => {
-    const measurements = [englishMeasureRef.current, chineseMeasureRef.current];
-
-    const updateReservedHeight = () => {
-      const nextHeight = Math.ceil(Math.max(...measurements.map((element) => (
-        element?.getBoundingClientRect().height ?? 0
-      ))));
-
-      if (nextHeight > 0) {
-        setReservedHeight((currentHeight) => (
-          currentHeight === nextHeight ? currentHeight : nextHeight
-        ));
-      }
-    };
-
-    updateReservedHeight();
-
-    const observer = new ResizeObserver(updateReservedHeight);
-    measurements.forEach((element) => {
-      if (element) observer.observe(element);
-    });
-
-    return () => observer.disconnect();
-  }, [englishParagraphs, paragraphs]);
-
   const displayedParagraphs = phase === "english" || phase === "erasing"
     ? englishParagraphs
     : paragraphs;
@@ -407,40 +419,28 @@ export function ProfileIntroduction({
     : phase === "complete"
       ? GREETINGS[greetingIndex]
       : CHINESE_TITLE;
-  const shouldReserveHeight = !reduceMotion && shouldAnimateInitialVisit && !hasCompletedInitialSequence;
-
-  // 测量副本不随打字机逐字重渲，仅在文案变化时重建。
-  const englishMeasureTree = useMemo(() => (
-    <div aria-hidden="true" className="curation-home__bio-measure" ref={englishMeasureRef}>
-      <h2>{ENGLISH_TITLE}</h2>
-      {englishParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-    </div>
-  ), [englishParagraphs]);
-  const chineseMeasureTree = useMemo(() => (
-    <div aria-hidden="true" className="curation-home__bio-measure" ref={chineseMeasureRef}>
-      <h2>{CHINESE_TITLE}</h2>
-      {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-    </div>
-  ), [paragraphs]);
 
   return (
     <section
       aria-labelledby="profile-introduction"
       className="curation-home__bio"
+      data-introduction-phase={hasCompletedInitialSequence ? "complete" : phase === "complete" ? "waiting" : phase}
       ref={introductionRef}
-      style={shouldReserveHeight && reservedHeight ? { minHeight: `${reservedHeight}px` } : undefined}
     >
+      <div className="profile-greeting-row">
       <h2 className={titleIsTyping ? "is-typing" : undefined} id="profile-introduction">
         {introductionTitle.slice(0, titleVisibleCount)}
       </h2>
+      </div>
       {displayedParagraphs.map((paragraph, index) => (
-        <p className={activeIndex === index ? "is-typing" : undefined} key={paragraph}>
+        <GrowingParagraph key={index} reduceMotion={reduceMotion}>
+        {index === 0 && hasCompletedInitialSequence ? <div className="profile-body-assistant">{assistant}</div> : null}
+        <p className={activeIndex === index ? "is-typing" : undefined} data-empty={!visibleCounts[index] && activeIndex !== index}>
           <span className="sr-only">{paragraph}</span>
-          <span aria-hidden="true">{paragraph.slice(0, visibleCounts[index])}</span>
+          {phase === "complete" ? <ProfileTextLines text={paragraph} /> : <span aria-hidden="true">{paragraph.slice(0, visibleCounts[index])}</span>}
         </p>
+        </GrowingParagraph>
       ))}
-      {englishMeasureTree}
-      {chineseMeasureTree}
     </section>
   );
 }

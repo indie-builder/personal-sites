@@ -340,9 +340,9 @@ html[data-curation-theme="dark"] .curation-theme-toggle { border:1px solid #3a3a
 @media (min-width:901px) {
   .curation-home { height:100dvh; overflow:hidden; }
 
-  /* 除 Ask 外都交还给文档滚动：BODY 初始焦点时 PageDown / Space / Arrow
+  /* 阅读页交还给文档滚动：BODY 初始焦点时 PageDown / Space / Arrow
      继续使用浏览器原生行为；身份轨与宽屏证据仍可相对视口 sticky。 */
-  .curation-home:not(.ask-page) { height:auto; overflow:visible; }
+  .curation-home { height:auto; overflow:visible; }
 
   .curation-home__profile { overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:rgb(28 28 30 / 24%) transparent; }
   html[data-curation-theme="dark"] .curation-home__profile { scrollbar-color:rgb(244 244 244 / 28%) transparent; }
@@ -360,7 +360,7 @@ html[data-curation-theme="dark"] .curation-theme-toggle { border:1px solid #3a3a
 
   .curation-home__feed { padding-top:0; }
 
-  .curation-home:not(.ask-page):not(.curation-detail) .curation-home__feed,
+  .curation-home:not(.curation-detail) .curation-home__feed,
   .curation-detail__article,
   .ai-news-detail__article {
     height:auto;
@@ -443,19 +443,19 @@ html[data-curation-theme="dark"] .curation-theme-toggle { border:1px solid #3a3a
     background:#404040;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__profile {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile {
     align-items:stretch;
     height: auto;
     min-height: 0;
     padding: 1rem 2rem 0;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__profile-header {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile-header {
     align-items: center;
     gap: 0.9rem;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__avatar {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__avatar {
     width: 3.25rem;
     height: 3.25rem;
     border-radius: 0.5rem;
@@ -463,37 +463,30 @@ html[data-curation-theme="dark"] .curation-theme-toggle { border:1px solid #3a3a
 
   /* 收缩头部把姓名与 handle 折成一行：文本列从三行减为两行，
      头像高度重新成为视觉锚点，与桌面身份轨的“头像主导”比例一致。 */
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__identity {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__identity {
     display: flex;
     align-items: baseline;
     gap: 0.45rem;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__identity p {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__identity p {
     margin-top: 0;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__external-links {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__external-links {
     margin-top: 0.42rem;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .interactive-dot-field,
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__bio {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .interactive-dot-field,
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__bio {
     display: none;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-theme-toggle {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-theme-toggle {
     top: 1rem;
     right: 2rem;
   }
 
-  .ask-page {
-    height: auto;
-    min-height: 0;
-    max-height: 100dvh;
-    grid-template-rows: auto minmax(0, 1fr);
-    overflow: hidden;
-  }
 
   .curation-home--mobile-home .curation-home__feed {
     display: none;
@@ -505,65 +498,25 @@ html[data-curation-theme="dark"] .curation-theme-toggle { border:1px solid #3a3a
     top: 0;
   }
 
-  .ask-page .curation-home__profile {
-    align-items:stretch;
-    height: auto;
-    min-height: 0;
-    padding: 1rem 2rem 0;
-  }
 
-  .ask-page .curation-home__profile-header {
-    align-items: center;
-    gap: 0.9rem;
-  }
 
-  .ask-page .curation-home__avatar {
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: 0.5rem;
-  }
 
-  .ask-page .curation-home__identity {
-    display: flex;
-    align-items: baseline;
-    gap: 0.45rem;
-  }
 
-  .ask-page .curation-home__identity p {
-    margin-top: 0;
-  }
 
-  .ask-page .curation-home__external-links {
-    margin-top: 0.42rem;
-  }
 
-  .ask-page .interactive-dot-field,
-  .ask-page .curation-home__bio {
-    display: none;
-  }
 
-  .ask-page .curation-theme-toggle {
-    top: 1rem;
-    right: 2rem;
-  }
 }
 
 @media (max-width:560px) {
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__profile {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile {
     padding: 1rem 1rem 0;
   }
 
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-theme-toggle {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-theme-toggle {
     right: 1rem;
   }
 
-  .ask-page .curation-home__profile {
-    padding: 1rem 1rem 0;
-  }
 
-  .ask-page .curation-theme-toggle {
-    right: 1rem;
-  }
 }
 
 @media (max-width:560px) { .curation-home__stream > li > a { grid-template-columns:minmax(0,1fr); }.curation-home__stream-meta { grid-column:1/-1; flex-direction:row; } }
@@ -671,10 +624,10 @@ html[data-curation-theme="dark"] .opening-loader { background:#181818; }
 
 
 @media (max-width:900px) {
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__profile {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile {
     transition:top 240ms cubic-bezier(.16,1,.3,1);
   }
-  .curation-home:not(.curation-detail):not(.ask-page):not(.curation-home--mobile-home) .curation-home__profile[data-mobile-collapsed] {
+  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile[data-mobile-collapsed] {
     top:calc(-1 * var(--mobile-profile-offset, 0px));
   }
 }
@@ -683,6 +636,22 @@ html[data-curation-theme="dark"] .opening-loader { background:#181818; }
 }
 
 /* 资料正文按阅读顺序组织；桌面仍保留先词条、后介绍的身份轨。 */
+.profile-greeting-row { display:flex; align-items:center; gap:1.5rem; min-height:2rem; }
+.profile-greeting-row h2 { flex:0 0 8rem; white-space:nowrap; }
+.profile-paragraph-growth { overflow:clip; }
+.profile-paragraph-content { display:flow-root; position:relative; }
+.profile-body-assistant { position:absolute; top:calc(1.15rem - 26px); left:0; right:0; z-index:2; }
+.profile-text-lines { position:relative; display:block; }
+.profile-text-measure { position:absolute; inset:0 0 auto; visibility:hidden; pointer-events:none; }
+.profile-text-line { display:block; }
+.curation-home__bio:has([data-profile-line]) .profile-paragraph-growth { overflow:visible; }
+@media (max-width:900px), (prefers-reduced-motion:reduce) {
+  .profile-paragraph-growth { height:auto !important; }
+}
+@media (max-width:900px) {
+  .curation-home--mobile-home .profile-body-assistant { top:calc(1rem - 26px); }
+}
+.curation-home__bio p[data-empty="true"] { min-height:0; margin-top:0; }
 .curation-home__profile-story { display:contents; }
 .curation-home__profile-story .interactive-dot-field { order:1; }
 .curation-home__profile-story .curation-home__bio { order:2; }

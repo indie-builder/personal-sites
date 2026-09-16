@@ -3,6 +3,7 @@ import Image from "next/image";
 
 import { MobileProfileCollapse } from "@/components/mobile-profile-collapse";
 import { AboutPrint } from "@/components/about-print";
+import { AskAssistant } from "@/components/ask-assistant";
 import { InteractiveDotField } from "@/components/interactive-dot-field";
 import { ProfileIntroduction } from "@/components/profile-introduction";
 import { ProfileTransitionBridge } from "@/components/profile-transition-bridge";
@@ -59,6 +60,7 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
 
       <div className="curation-home__profile-story">
         <ProfileIntroduction
+          assistant={<AskAssistant />}
           animateOnFirstHomeVisit={animateOnFirstHomeVisit}
           englishParagraphs={siteProfile.paragraphsEnglish}
           paragraphs={siteProfile.paragraphs}

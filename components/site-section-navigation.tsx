@@ -4,21 +4,20 @@ import { SectionNavigationLink } from "@/components/section-navigation-link";
 
 import styles from "./site-section-navigation.module.css";
 
-export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source" | "ask";
+export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source";
 
 type SiteSectionNavigationProps = {
   current: SiteSection;
   includeHome?: boolean;
 };
 
-// 问一问与阅读版块同为右侧内容入口，共享刊头与版块序列；作为对话式入口排在序列末位。
+// 刊头只包含阅读版块；问答由个人简介中的角色打开。
 const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; label: string }> = [
   { href: "/ai-news", id: "ai-news", label: "每日动态" },
   { href: "/curation", id: "daily", label: "每日关注" },
   { href: "/design" as Route, id: "design", label: "设计收藏" },
   { href: "/douyin", id: "douyin", label: "抖音收藏" },
   { href: "/open-source", id: "open-source", label: "开源关注" },
-  { href: "/ask", id: "ask", label: "问一问" },
 ];
 
 const homeSection = { href: "/" as Route, id: "home" as const, label: "首页" };

@@ -1,0 +1,64 @@
+/* Ovid reference: 17px sprite, random 4px steps, 420px side workspace. */
+.launcher { flex: 1; min-width: 0; color: var(--ink); }
+.track { position: relative; width: 100%; height: 32px; display: flex; align-items: center; }
+.walker { position: relative; width: fit-content; z-index: 2; }
+.sprite { display: block; flex-shrink: 0; transform: scaleX(var(--facing, 1)); }
+.feetB { display: none; }
+.walker[data-walking="true"] .feetA { animation: feet-a 160ms steps(1) infinite; }
+.walker[data-walking="true"] .feetB { display: inline; animation: feet-b 160ms steps(1) infinite; }
+.trigger { position: relative; display: block; border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; }
+.trigger::before { content: ""; position: absolute; inset: -12px -13px; }
+.ground { display: block; overflow: hidden; }
+.emergence { display:block; transform:translateY(calc(100% + 1px)); }
+.launcher[data-entered="false"] .tooltip { visibility:hidden; }
+.trigger:disabled { cursor:default; }
+.rise { display: block; transform: translateY(0); transition: transform 300ms cubic-bezier(.34,1.56,.64,1); }
+.launcher:not([data-phase="closed"]) .rise { transform: translateY(calc(100% + 1px)); transition-timing-function: ease-in; }
+.launcher[data-entered="false"] .rise { transform:translateY(0); transition:none; }
+.tooltip { position: absolute; bottom: calc(100% + 10px); left: -2px; border-radius: 8px 8px 8px 3px; padding: 4px 8px; background: #171717; color: #fff; white-space: nowrap; font: 400 11px/13px ui-rounded, "SF Pro Rounded", system-ui, sans-serif; }
+.tooltip { left:auto; right:-2px; opacity: 0; pointer-events: none; transition: opacity 120ms ease; }
+.trigger:focus-visible .tooltip { opacity: 1; }
+@media (hover:hover) and (pointer:fine) {
+  .trigger:hover .tooltip { opacity: 1; }
+}
+.launcher:not([data-phase="closed"]) .tooltip { opacity: 0; }
+.trigger:focus-visible, .close:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
+.panel { position: fixed; top: 0; right: 0; z-index: 80; display: flex; flex-direction: column; width: 420px; max-width: 100vw; height: 100dvh; padding-top: 60px; background: #f9f9f9; color: #111; font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif; transform: translateX(0); transition: transform 450ms cubic-bezier(.22,1,.36,1); }
+@starting-style { .panel { transform: translateX(100%); } }
+.panel[data-phase="closing"] { transform: translateX(100%); }
+.close { position: absolute; top: 8px; left: 10px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #8d8d8d; cursor: pointer; }
+.close:hover { background: #f0f0f0; }
+.mobileClose { display: none; }
+.loading { margin: auto; color: #8c8c8c; font-size: 14px; }
+:global(html[data-curation-theme="dark"]) .launcher { color: #f4f4f4; }
+:global(html[data-curation-theme="dark"]) .panel { background: #202020; color: #f4f4f4; }
+:global(body[data-assistant-open="true"]) { background: #f9f9f9; overflow: hidden; }
+:global(.curation-home__profile) { transition:opacity 180ms ease; }
+:global(.curation-home__profile:has([data-phase="sinking"])) { opacity:0; }
+:global(#site-canvas) { width:100%; clip-path:inset(0); transition:none; }
+:global(body[data-assistant-open="true"] #site-canvas) { position:fixed; inset:0 auto 0 0; overflow:auto; overflow-anchor:none; scrollbar-width:none; background:#fff; }
+:global(body[data-assistant-expanded="true"] #site-canvas) { width:calc(100% - 420px); clip-path:inset(8px 0 round 0 32px 32px 0); }
+:global(html[data-curation-theme="dark"] body[data-assistant-open="true"]),
+:global(html[data-curation-theme="dark"] body[data-assistant-open="true"] #site-canvas) { background: #202020; }
+:global(body[data-assistant-expanded="true"] .curation-home) { grid-template-columns: minmax(0, 1fr); }
+:global(body[data-assistant-expanded="true"] .curation-home__profile) { display:none; }
+:global(body[data-assistant-expanded="true"] .curation-home__feed),
+:global(body[data-assistant-expanded="true"] .curation-detail__article) { margin-inline:auto; padding-left:1.875rem; }
+.panel[data-instant="true"], .launcher[data-instant="true"] .rise { transition:none; }
+@keyframes feet-a { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes feet-b { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@media (max-width: 900px) {
+  .panel { width: 100vw; border-radius: 20px 20px 0 0; transform: translateY(0); }
+  @starting-style { .panel { transform: translateY(100%); } }
+  .panel[data-phase="closing"] { transform: translateY(100%); }
+  .close { left: auto; right: 14px; }
+  .desktopClose { display: none; }
+  .mobileClose { display: block; }
+  :global(body[data-assistant-expanded="true"] #site-canvas) { width:100%; clip-path:inset(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feetA, .feetB { animation: none !important; }
+  .feetB { display: none !important; }
+  .rise, .panel, :global(#site-canvas) { transition: none; }
+  :global(.curation-home__profile) { transition:none; }
+}

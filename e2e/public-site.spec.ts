@@ -1,30 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-
-test("Ask exposes every public search scope", async ({ page }) => {
-  await page.setViewportSize({ height: 844, width: 390 });
-  await page.goto("/ask");
-  const scope = page.getByRole("button", { name: /检索范围/u });
-  await scope.click();
-  const aboutScope = page.getByRole("menuitemradio", { name: "关于我" });
-  await expect.poll(() => aboutScope.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
-  await aboutScope.click();
-  expect(await scope.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
-  await expect(scope).toHaveAccessibleName("检索范围：关于我");
-  await scope.click();
-  await page.getByRole("menuitemradio", { name: "每日关注" }).click();
-  await expect(scope).toHaveAccessibleName("检索范围：每日关注");
-});
-
-test("Ask suggestions fill and focus the composer", async ({ page }) => {
-  await page.goto("/ask");
-  const suggestion = "你的工程经历和目前关注的方向是什么？";
-  const input = page.getByRole("textbox", { name: "输入问题" });
-
-  await page.getByRole("button", { name: suggestion }).click();
-  await expect(input).toHaveValue(suggestion);
-  await expect(input).toBeFocused();
-});
+import { openAssistant } from "./helpers/assistant";
 
 test("frequent section navigation is immediate and leaves content visible", async ({ page }) => {
   await page.goto("/curation");
@@ -64,11 +40,11 @@ test("frequent section navigation is immediate and leaves content visible", asyn
 
 test("mobile section navigation stays readable and reveals the current section", async ({ page }) => {
   await page.setViewportSize({ height: 844, width: 390 });
-  await page.goto("/ask");
+  await page.goto("/open-source");
 
   const navigation = page.locator('nav[aria-label="内容导航"]:visible');
   const links = navigation.getByRole("link");
-  const current = navigation.getByRole("link", { name: "问一问" });
+  const current = navigation.getByRole("link", { name: "开源关注" });
 
   await expect(current).toHaveAttribute("aria-current", "page");
   await expect(current).toBeInViewport();
@@ -139,8 +115,8 @@ test("mobile profile bridge uses Motion and clears transition state", async ({ p
   await page.setViewportSize({ height: 844, width: 390 });
   await page.goto("/");
   await instrumentProfileMotion();
-  await page.getByRole("link", { name: "问一问" }).click();
-  await expect(page).toHaveURL(/\/ask$/u);
+  await page.getByRole("link", { name: "开源关注" }).click();
+  await expect(page).toHaveURL(/\/open-source$/u);
   await expect.poll(async () => (await readProfileState()).ghosts).toBe(0);
   const collapsed = await readProfileState();
   expect(collapsed.revealDurations.filter((duration) => duration === 120).length).toBeGreaterThan(0);
@@ -160,9 +136,9 @@ test("mobile profile bridge uses Motion and clears transition state", async ({ p
   await page.reload();
   await instrumentProfileMotion();
   await expect.poll(async () => {
-    if (/\/ask$/u.test(page.url())) return true;
-    await page.getByRole("link", { name: "问一问" }).click();
-    return /\/ask$/u.test(page.url());
+    if (/\/open-source$/u.test(page.url())) return true;
+    await page.getByRole("link", { name: "开源关注" }).click();
+    return /\/open-source$/u.test(page.url());
   }).toBe(true);
   const reduced = await readProfileState();
   expect(reduced.revealDurations).toEqual([]);
@@ -262,7 +238,7 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ pa
     });
   });
 
-  await page.goto("/ask");
+  await openAssistant(page);
   const input = page.getByRole("textbox", { name: "输入问题" });
   await input.focus();
   await page.waitForLoadState("networkidle");
@@ -275,7 +251,7 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ pa
   await expect(statusIcon).toBeHidden();
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.reload();
+  await openAssistant(page);
   responseGate = new Promise<void>((resolve) => {
     releaseResponse = resolve;
   });
@@ -291,7 +267,7 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ pa
   releaseResponse();
 });
 
-test("Ask starts the request without waiting for send motion", async ({ page }) => {
+test("assistant drawer sends without delaying the request", async ({ page }) => {
   await page.route("**/api/ask", async (route) => {
     await route.fulfill({
       body: "event: done\ndata: {}\n\n",
@@ -300,7 +276,7 @@ test("Ask starts the request without waiting for send motion", async ({ page }) 
     });
   });
 
-  await page.goto("/ask");
+  await openAssistant(page);
   const input = page.getByRole("textbox", { name: "输入问题" });
   await input.focus();
   await page.waitForLoadState("networkidle");
@@ -349,32 +325,6 @@ test("technical signal motion pauses while offscreen", async ({ page }) => {
   await expect.poll(() => track.evaluate((element) => element.getAnimations()[0]?.playState)).toBe("running");
 });
 
-test("Ask caps clear motion for long conversations", async ({ page }) => {
-  await page.route("**/api/ask", async (route) => {
-    await route.fulfill({
-      body: "event: done\ndata: {}\n\n",
-      contentType: "text/event-stream",
-      status: 200,
-    });
-  });
-  await page.goto("/ask");
-  const input = page.getByRole("textbox", { name: "输入问题" });
-  await input.focus();
-  await page.waitForLoadState("networkidle");
-
-  for (let index = 1; index <= 8; index += 1) {
-    await input.fill(`测试问题 ${index}`);
-    await page.getByRole("button", { name: "发送问题" }).click();
-    const send = page.getByRole("button", { name: "发送问题" });
-    await expect(send).toBeVisible();
-    await send.locator("svg").evaluate((icon) => icon.getAnimations().forEach((animation) => animation.finish()));
-    await expect(send).toBeEnabled();
-  }
-
-  await page.getByRole("button", { name: "清空对话" }).click();
-  await expect(page.getByText("从公开资料开始")).toBeVisible({ timeout: 1_000 });
-});
-
 test("public discovery endpoints remain machine readable", async ({ request }) => {
   for (const [path, type] of [
     ["/robots.txt", "text/plain"],
@@ -398,8 +348,7 @@ test("public discovery endpoints remain machine readable", async ({ request }) =
 });
 
 test("Ask has no automatically detectable accessibility violations", async ({ page }) => {
-  await page.goto("/ask");
-  await expect(page.getByRole("main")).toBeVisible();
-  const results = await new AxeBuilder({ page }).analyze();
+  await openAssistant(page);
+  const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
   expect(results.violations).toEqual([]);
 });

@@ -15,6 +15,6 @@ export default defineConfig({
     command: "pnpm build && pnpm exec next start --hostname 127.0.0.1 --port 7100",
     reuseExistingServer: false,
     timeout: 120_000,
-    url: "http://127.0.0.1:7100/ask",
+    url: "http://127.0.0.1:7100/curation",
   },
 });

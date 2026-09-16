@@ -6,8 +6,17 @@
   flex-direction: column;
 }
 
-/* 框架元素（组合器、建议与引用的分隔线）撑满整栏；
-   仅回答正文收敛到与文章一致的 40rem 行宽。 */
+.root {
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+}
+
+.welcomeHeader { display:flex; flex-direction:column; align-items:center; gap:10px; max-width:100%; }
+.welcomeHeader p { margin:0; color:#707070; font:400 14px/20px ui-rounded, "SF Pro Rounded", system-ui, sans-serif; text-align:center; }
+.welcomeWalker { max-width:100%; height:32px; overflow:hidden; color:#0a0a0a; }
+.welcomeRise { width:100%; animation:assistant-rise 300ms 300ms cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes assistant-rise { from { transform: translateY(33px); } to { transform: translateY(0); } }
 
 .scroller {
   flex: 1;
@@ -65,26 +74,6 @@
   text-align: left;
 }
 
-.empty :global([data-slot="empty-header"]) {
-  max-width: none;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.empty :global([data-slot="empty-title"]) {
-  color: var(--ink);
-  font-size: 0.95rem;
-  font-weight: 620;
-  letter-spacing: -0.035em;
-}
-
-.empty :global([data-slot="empty-description"]) {
-  max-width: 24rem;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-
 .suggestions {
   width: 100%;
   max-width: none !important;
@@ -114,18 +103,6 @@
 
 .followups {
   width: 100%;
-}
-
-.followupsLabel {
-  margin: 0 0 0.25rem;
-  color: #767676;
-  font-size: 0.74rem;
-  font-weight: 620;
-  letter-spacing: -0.02em;
-}
-
-:global(html[data-curation-theme="dark"]) .followupsLabel {
-  color: #999;
 }
 
 .message :global([data-slot="message-content"]) {
@@ -225,52 +202,6 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.composer {
-  min-height: 0;
-  border: 1px solid #dedee1 !important;
-  border-radius: 0.75rem !important;
-  background: #fff !important;
-  box-shadow: none !important;
-  padding: 0 0.75rem;
-  opacity: 1 !important;
-  transition: border-color 180ms ease;
-}
-
-.composer:focus-within {
-  border-color: var(--quiet) !important;
-}
-
-.composerError,
-.composerError:focus-within {
-  border-color: #994545 !important;
-}
-
-.composer textarea {
-  min-height: 3rem;
-  max-height: 7rem;
-  color: var(--ink);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  padding: 0.25rem 0 0.5rem;
-}
-
-/* 焦点由 .composer:focus-within 的完整圆角外框表达，不再叠加 textarea 的矩形焦点环。 */
-.composer textarea:focus-visible {
-  outline: none;
-}
-
-.composer textarea::placeholder {
-  color: #6f6f72;
-}
-
-.composerFooter {
-  min-height: 2rem;
-  justify-content: flex-start !important;
-  border-top: 0;
-  color: #6f6f72 !important;
-  padding: 0.25rem 0 0.75rem !important;
-}
-
 .sessionRecovery {
   display: flex;
   align-items: center;
@@ -304,108 +235,6 @@
   transform: none !important;
 }
 
-.scopeTrigger {
-  height: 1.75rem !important;
-  margin-left: -0.25rem;
-  border-radius: 0.375rem !important;
-  color: #6f6f72;
-  font-size: 0.7rem !important;
-  padding: 0 0.5rem !important;
-}
-
-.scopeTrigger:hover,
-.scopeTrigger:focus-visible,
-.scopeTrigger[data-state="open"] {
-  background: #f0f0f1 !important;
-  color: var(--ink);
-  transform: none !important;
-}
-
-.send {
-  width: 1.75rem !important;
-  height: 1.75rem !important;
-  margin-left: auto;
-  border-radius: 0.375rem !important;
-  background: var(--ink) !important;
-  color: #fff !important;
-}
-
-.send svg {
-  transform-origin: center;
-}
-
-/* 清空对话：弱化的幽灵图标按钮，悬停才转深 */
-.clear {
-  width: 1.75rem !important;
-  height: 1.75rem !important;
-  margin-left: auto;
-  border-radius: 0.375rem !important;
-  color: #6f6f72 !important;
-}
-
-.clear:hover,
-.clear:focus-visible {
-  background: #f0f0f1 !important;
-  color: var(--ink) !important;
-  transform: none !important;
-}
-
-/* 清空按钮与发送按钮同槽右侧：发送按钮保持最右 */
-.clear ~ .send {
-  margin-left: 0.25rem;
-}
-
-.send:hover,
-.send:focus-visible {
-  background: #3a3a3d !important;
-  color: #fff !important;
-  transform: none !important;
-}
-
-.send:disabled {
-  background: var(--quiet) !important;
-  color: #fff !important;
-  opacity: 1 !important;
-}
-
-.scopeMenu {
-  width: 11rem !important;
-  min-width: 11rem !important;
-  border: 1px solid var(--line);
-  border-radius: 0.5rem !important;
-  background: #fff !important;
-  color: var(--ink);
-  box-shadow: 0 0.2rem 0.42rem rgb(28 28 30 / 8%) !important;
-  padding: 0.25rem !important;
-}
-
-.scopeMenu :global([data-slot="dropdown-menu-label"]) {
-  color: var(--muted);
-  font-size: 0.67rem;
-  padding: 0.25rem 0.5rem;
-}
-
-.scopeMenu :global([data-slot="dropdown-menu-radio-item"]) {
-  border-radius: 0.375rem;
-  color: #6f6f72;
-  font-size: 0.74rem;
-  padding: 0.5rem 1.625rem 0.5rem 0.5rem;
-}
-
-.scopeMenu :global([data-slot="dropdown-menu-radio-item"]):focus {
-  background: #f0f0f1;
-  color: var(--ink);
-}
-
-.scopeMenu :global([data-slot="dropdown-menu-radio-item"])[data-state="checked"] {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.scopeMenu :global([data-slot="dropdown-menu-radio-item-indicator"]) {
-  color: var(--ink);
-}
-
 :global(html[data-curation-theme="dark"]) .root {
   color: #f4f4f4;
 }
@@ -428,50 +257,14 @@
 }
 
 :global(html[data-curation-theme="dark"]) .empty,
-:global(html[data-curation-theme="dark"]) .empty :global([data-slot="empty-description"]),
 :global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]),
 :global(html[data-curation-theme="dark"]) .sources::before,
 :global(html[data-curation-theme="dark"]) .citation,
 :global(html[data-curation-theme="dark"]) .status,
-:global(html[data-curation-theme="dark"]) .interruption,
-:global(html[data-curation-theme="dark"]) .composerFooter,
-:global(html[data-curation-theme="dark"]) .scopeTrigger {
+:global(html[data-curation-theme="dark"]) .interruption {
   color: #999;
 }
 
-:global(html[data-curation-theme="dark"]) .scopeTrigger:hover,
-:global(html[data-curation-theme="dark"]) .scopeTrigger:focus-visible,
-:global(html[data-curation-theme="dark"]) .scopeTrigger[data-state="open"] {
-  background: #353535 !important;
-  color: #f4f4f4;
-}
-
-:global(html[data-curation-theme="dark"]) .scopeMenu {
-  border-color: #484848;
-  background: #242424 !important;
-  color: #f4f4f4;
-  box-shadow: 0 0.2rem 0.42rem rgb(0 0 0 / 24%) !important;
-}
-
-:global(html[data-curation-theme="dark"]) .scopeMenu :global([data-slot="dropdown-menu-label"]) {
-  color: #999;
-}
-
-:global(html[data-curation-theme="dark"]) .scopeMenu :global([data-slot="dropdown-menu-radio-item"]) {
-  color: #bbb;
-}
-
-:global(html[data-curation-theme="dark"]) .scopeMenu :global([data-slot="dropdown-menu-radio-item"]):focus {
-  background: #353535;
-  color: #f4f4f4;
-}
-
-:global(html[data-curation-theme="dark"]) .scopeMenu :global([data-slot="dropdown-menu-radio-item"])[data-state="checked"],
-:global(html[data-curation-theme="dark"]) .scopeMenu :global([data-slot="dropdown-menu-radio-item-indicator"]) {
-  color: #f4f4f4;
-}
-
-:global(html[data-curation-theme="dark"]) .empty :global([data-slot="empty-title"]),
 :global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]):hover,
 :global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]):focus-visible,
 :global(html[data-curation-theme="dark"]) .citation:hover,
@@ -482,24 +275,6 @@
 :global(html[data-curation-theme="dark"]) .userBubble {
   background: #f4f4f4;
   color: #181818;
-}
-
-:global(html[data-curation-theme="dark"]) .form {
-  background: #181818;
-}
-
-:global(html[data-curation-theme="dark"]) .composer {
-  border-color: #454545 !important;
-  background: #242424 !important;
-}
-
-:global(html[data-curation-theme="dark"]) .composer:focus-within {
-  border-color: #777 !important;
-}
-
-:global(html[data-curation-theme="dark"]) .composerError,
-:global(html[data-curation-theme="dark"]) .composerError:focus-within {
-  border-color: #6d3535 !important;
 }
 
 :global(html[data-curation-theme="dark"]) .sessionRecovery,
@@ -513,40 +288,6 @@
   color: #f0aaaa !important;
 }
 
-:global(html[data-curation-theme="dark"]) .composer textarea {
-  color: #f4f4f4;
-}
-
-:global(html[data-curation-theme="dark"]) .composer textarea::placeholder {
-  color: #999;
-}
-
-:global(html[data-curation-theme="dark"]) .send {
-  background: #f4f4f4 !important;
-  color: #181818 !important;
-}
-
-:global(html[data-curation-theme="dark"]) .clear {
-  color: #999 !important;
-}
-
-:global(html[data-curation-theme="dark"]) .clear:hover,
-:global(html[data-curation-theme="dark"]) .clear:focus-visible {
-  background: #353535 !important;
-  color: #f4f4f4 !important;
-}
-
-:global(html[data-curation-theme="dark"]) .send:hover,
-:global(html[data-curation-theme="dark"]) .send:focus-visible {
-  background: #d8d8d8 !important;
-  color: #181818 !important;
-}
-
-:global(html[data-curation-theme="dark"]) .send:disabled {
-  background: #5a5a5a !important;
-  color: #a9a9a9 !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .root :global([data-slot="message-scroller-viewport"]) {
     scroll-behavior: auto !important;
@@ -558,19 +299,6 @@
 }
 
 @media (min-width: 901px) {
-  /* Ask 是自身管理消息滚动的工作面：覆盖通用 feed 的 50rem 栏、右内边距
-     与 5rem 页尾留白，让刊头、viewport 与 composer 共享 42rem 轴；栏高随
-     内容收缩、封顶一屏，内容超出一屏时消息区内部滚动、组合器停靠底部。 */
-  .root:global(.curation-home__feed) {
-    width: 100%;
-    max-width: 42rem;
-    height: auto;
-    max-height: 100dvh;
-    align-self: start;
-    margin-inline: auto;
-    overflow: hidden;
-    padding: 0;
-  }
 
   .viewport,
   .form {
@@ -579,13 +307,6 @@
 }
 
 @media (max-width: 900px) {
-  .root {
-    min-height: 0;
-    max-height: 100%;
-    max-width: none;
-    overflow: hidden;
-    padding: 1.5rem 1rem 0.75rem;
-  }
 
   .scroller {
     min-height: 0;
@@ -599,28 +320,8 @@
   .viewport {
     padding: 1rem 0 0.5rem;
   }
-
-  /* 移动端滚动区无右侧滚动条留白，组合器同步去掉，保持与消息列同宽。 */
   .form {
     padding-right: 0;
-  }
-
-  /* 组合器跟随对话流：内容不足一屏时紧跟内容，超出一屏时停靠底部；iOS 输入字号 ≥16px 防止聚焦缩放。 */
-  .scopeTrigger {
-    height: 2.75rem !important;
-  }
-
-  .scopeMenu :global([data-slot="dropdown-menu-radio-item"]) {
-    min-height: 2.75rem;
-  }
-
-  .composer textarea {
-    font-size: 1rem;
-  }
-
-  .send {
-    width: 2.75rem !important;
-    height: 2.75rem !important;
   }
 
   .sessionRecovery {
@@ -670,10 +371,35 @@
 .interruption :global([data-slot="button"]) {
   color: inherit;
 }
-
-/* One control scale for pointer, touch and keyboard. */
-.composer textarea { font-size: 1rem; }
-.send, .clear { width: 2.75rem !important; height: 2.75rem !important; }
-.scopeTrigger, .sessionRetry { min-height: 2.75rem; }
+.sessionRetry { min-height: 2.75rem; }
 .suggestions :global([data-slot="button"]) { min-height: 2.75rem; white-space: normal; line-height: 1.6; }
-.scopeMenu { transform-origin: var(--radix-dropdown-menu-content-transform-origin); box-shadow: none !important; }
+.viewport { padding: 18px; scrollbar-gutter: auto; }
+.viewport:has(.empty) { padding:0; }
+.empty { justify-content: center; align-items: center; gap: 24px; padding: 24px; text-align: center; }
+.suggestions { align-items: center !important; gap: 8px !important; }
+.suggestions > span { display:flex; justify-content:center; max-width:100%; }
+.followups .suggestions { align-items:flex-start !important; }
+.suggestions :global([data-slot="button"]) { width: fit-content; min-height: 32px; max-width:100%; border: 0; border-radius: 8px; padding: 6px 12px; gap:6px; background: #fff; color: #767676; font: 400 14px/20px ui-rounded, "SF Pro Rounded", system-ui, sans-serif; box-shadow: 0 2px 8px -2px #00000014; }
+.suggestions svg { width:14px; height:14px; flex-shrink:0; }
+.suggestions :global([data-slot="button"]):hover { color: #111; }
+.form { flex-shrink: 0; margin: 0 18px max(18px, env(safe-area-inset-bottom)); padding: 0; background: transparent; }
+.drawerComposer { display:flex; flex-direction:column; flex-shrink:0; gap:10px; border:0; border-radius:16px; background:#fff; padding:12px 12px 10px 16px; box-shadow:0 2px 8px -2px #00000014; }
+.drawerComposer:has([aria-invalid="true"]) { outline:1px solid #994545; }
+.drawerInput { display:block; width:100%; min-height:22px; max-height:112px; resize:none; border:0; border-radius:0; outline:none; background:transparent; padding:1px 2px; color:#111; font:400 14px/20px ui-rounded, "SF Pro Rounded", system-ui, sans-serif; }
+.drawerInput::placeholder { color:#8d8d8d; }
+.drawerInput:focus-visible { outline:none; }
+.drawerActions { display:flex; justify-content:flex-end; height:30px; }
+.drawerSend { position:relative; display:grid; place-items:center; width:30px; height:30px; min-height:0; border:0; border-radius:50%; padding:0; background:#111; color:#fff; cursor:pointer; }
+.drawerSend::before { content:""; position:absolute; inset:-7px; }
+.drawerSend:disabled { opacity:.5; cursor:default; }
+.drawerSend:focus-visible { outline:2px solid #767676; outline-offset:3px; }
+.userBubble { max-width: 270px; border-radius: 14px 14px 4px; background: #171717; color: #fff; padding: 9px 12px; font-size: 14px; line-height: 20px; }
+.assistantBubble { font-size: 14px; line-height: 21px; }
+:global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]) { background: #2b2b2b; color: #b8b8bb; }
+:global(html[data-curation-theme="dark"]) .drawerComposer { background:#2b2b2b; }
+:global(html[data-curation-theme="dark"]) .drawerInput { color:#f4f4f4; }
+:global(html[data-curation-theme="dark"]) .drawerSend { background:#f4f4f4; color:#181818; }
+:global(html[data-curation-theme="dark"]) .welcomeWalker { color:#f4f4f4; }
+:global(html[data-curation-theme="dark"]) .welcomeHeader p { color:#b8b8bb; }
+@media (max-width: 900px) { .suggestions :global([data-slot="button"]) { min-height: 44px; } .drawerInput { font-size:16px; line-height:22px; } }
+@media (prefers-reduced-motion: reduce) { .welcomeRise { animation: none; } }

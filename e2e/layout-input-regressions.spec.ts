@@ -27,16 +27,7 @@ test("desktop list pages keep native BODY keyboard scrolling", async ({ page }) 
   await expectNativeDocumentScroll(page, "PageDown");
 });
 
-test("Ask keeps its dedicated desktop scroll surface", async ({ page }) => {
-  await page.setViewportSize({ height: 800, width: 1_440 });
-  await page.goto("/ask");
-
-  await expect(page.locator(".ask-page")).toHaveCSS("overflow", "hidden");
-  await expect(page.locator('section[aria-label="问一问"]')).toHaveCSS("overflow", "hidden");
-  expect(await page.evaluate(() => document.scrollingElement!.scrollHeight)).toBe(800);
-});
-
-for (const path of ["/", "/ask"] as const) {
+for (const path of ["/", "/curation"] as const) {
   test(`${path} mobile identity controls expose 44px touch targets`, async ({ page }) => {
     await page.setViewportSize({ height: 844, width: 390 });
     await page.goto(path);

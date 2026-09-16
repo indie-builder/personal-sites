@@ -1,24 +1,8 @@
 "use client";
 
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { Empty, EmptyContent } from "@/components/ui/empty";
 import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
 import {
   Message,
@@ -34,13 +18,13 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { ContentSectionNavigation } from "@/components/site-section-navigation";
+import { SpriteWalker } from "@/components/assistant-sprite";
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
-import { isAskScope, type AskScope, type AskSource } from "@/lib/ask-types";
-import { ArrowUpRight, ChevronDown, Search, SendHorizontal, Square, Trash2 } from "lucide-react";
-import { AnimatePresence, animate, motion } from "motion/react";
+import type { AskSource } from "@/lib/ask-types";
+import { ArrowUp, ArrowUpRight, Code2, CornerDownRight, Lightbulb, Search, Square, UserRound } from "lucide-react";
+import { motion } from "motion/react";
 import dynamic from "next/dynamic";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 
 import styles from "./ask-chat.module.css";
 
@@ -50,20 +34,38 @@ const MotionSearch = motion.create(Search);
 // react-markdown 生态只在收到第一条回答时才需要，按需加载。
 const AskAnswerMarkdown = dynamic(() => import("@/components/ask-answer-markdown").then((module) => module.AskAnswerMarkdown));
 
-const scopeLabels: Record<AskScope, string> = {
-  all: "全部",
-  profile: "关于我",
-  "ai-news": "每日动态",
-  daily: "每日关注",
-  "open-source": "开源关注",
-};
-
 const suggestedQuestions = [
   "你的工程经历和目前关注的方向是什么？",
   "最近有哪些关于 Agent 长期运行的实践？",
   "哪些开源项目值得持续关注？",
   "最近的每日关注里提到了什么检索思路？",
 ];
+
+const suggestionIcons = [UserRound, Lightbulb, Code2];
+
+function AssistantWelcome() {
+  const greeting = useRef<HTMLParagraphElement>(null);
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const element = greeting.current;
+    if (!element) return;
+    const measure = () => {
+      setWidth(element.getBoundingClientRect().width);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div className={styles.welcomeHeader}>
+      <div className={styles.welcomeWalker} style={{ width }}>
+        {width > 0 && <div className={styles.welcomeRise}><SpriteWalker /></div>}
+      </div>
+      <p ref={greeting}>我是陈远的 AI 助手，想了解什么？</p>
+    </div>
+  );
+}
 
 function parseEvents(buffer: string) {
   const chunks = buffer.split("\n\n");
@@ -164,19 +166,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
 const MESSAGE_ENTER_DURATION = 0.24;
 const EMPTY_ENTER_DURATION = 0.32;
 const MESSAGE_ENTER_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-const CLEAR_ITEM_DURATION = 0.42;
-const CLEAR_STAGGER = 0.07;
-const CLEAR_MAX_STAGGER = 0.28;
-const CLEAR_EXIT_EASE: [number, number, number, number] = [0.5, 0, 0.75, 0.4];
-const PLANE_LAUNCH_DURATION = 0.52;
-const PLANE_LAUNCH_EASE: [number, number, number, number] = [0.45, 0, 0.75, 0.4];
-const PLANE_LAUNCH_TIMES = [0, 0.16, 0.34, 0.62, 1];
-
-// 进出场由 Motion 驱动：enter 复刻旧 message-enter（240ms 上浮淡入），
-// exit 复刻旧 message-clear-wipe（420ms 自下而上收没 + 模糊），
-// exitOrder 按"最新先走"注入阶梯延迟；减少动态时进出场都立即落定。
-function AskMessageItem({ exitOrder, isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
-  exitOrder: number;
+function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
   isStreamingPlaceholder: boolean;
   message: ChatMessage;
   onRetry?: () => void;
@@ -184,20 +174,11 @@ function AskMessageItem({ exitOrder, isStreamingPlaceholder, message, onRetry, p
 }) {
   return (
     <MotionMessageScrollerItem
-      animate={{ clipPath: "inset(0% 0% 0% 0%)", filter: "blur(0px)", opacity: 1, y: "0rem" }}
+      animate={{ opacity: 1, y: "0rem" }}
       className={styles.messageItem}
-      exit={{
-        clipPath: "inset(100% 0% 0% 0%)",
-        filter: "blur(3px)",
-        opacity: 0,
-        transition: prefersReducedMotion
-          ? { duration: 0 }
-          : { delay: Math.min(exitOrder * CLEAR_STAGGER, CLEAR_MAX_STAGGER), duration: CLEAR_ITEM_DURATION, ease: CLEAR_EXIT_EASE },
-        y: "-0.4rem",
-      }}
       initial={prefersReducedMotion
         ? false
-        : { clipPath: "inset(0% 0% 0% 0%)", filter: "blur(0px)", opacity: 0, y: "0.4rem" }}
+        : { opacity: 0, y: "0.4rem" }}
       messageId={message.id}
       scrollAnchor={message.role === "user"}
       transition={{ duration: MESSAGE_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
@@ -211,39 +192,38 @@ export function AskChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [usedSuggestions, setUsedSuggestions] = useState<string[]>([]);
-  const [scope, setScope] = useState<AskScope>("all");
   const [restored, setRestored] = useState(false);
   const [visitorId, setVisitorId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isLaunching, setIsLaunching] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
   const [isRetryingSession, setIsRetryingSession] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const requestController = useRef<AbortController | null>(null);
-  const planeRef = useRef<SVGSVGElement | null>(null);
-  const planeControls = useRef<ReturnType<typeof animate> | null>(null);
   const shouldFollowLatest = useRef(true);
   const isProgrammaticScroll = useRef(false);
   const shouldFocusAfterSessionRetry = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const visitorSessionPromise = useRef<Promise<{ conversationId: string; visitorId: string }> | null>(null);
+  const snapshotRead = useRef(false);
 
   useLayoutEffect(() => {
+    // Lazy Markdown can suspend and reconnect layout effects. Restore only once
+    // per chat instance, never over a live response with its saved partial snapshot.
+    if (snapshotRead.current) return;
+    snapshotRead.current = true;
     const snapshot = readAskChatSnapshot();
     if (snapshot) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后、绘制前恢复浏览器会话，避免 SSR 不一致和草稿闪烁。
       setMessages(snapshot.messages);
       setQuestion(snapshot.question);
-      setScope(snapshot.scope);
       setUsedSuggestions(snapshot.messages.filter((message) => message.role === "user").map((message) => message.content));
     }
     setRestored(true);
   }, []);
 
   useEffect(() => {
-    if (restored) writeAskChatSnapshot({ messages, question, scope });
-  }, [messages, question, restored, scope]);
+    if (restored) writeAskChatSnapshot({ messages, question });
+  }, [messages, question, restored]);
 
   // 指纹只用于限流，等用户表现出提问意图（聚焦输入框或提交）后再加载计算。
   const ensureVisitorSession = useCallback(() => {
@@ -273,7 +253,7 @@ export function AskChat() {
     if (session.visitorId === "unavailable") shouldFocusAfterSessionRetry.current = false;
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!visitorId || visitorId === "unavailable" || !shouldFocusAfterSessionRetry.current) return;
     shouldFocusAfterSessionRetry.current = false;
     textareaRef.current?.focus();
@@ -288,43 +268,37 @@ export function AskChat() {
   }, []);
 
   useEffect(() => () => {
-    planeControls.current?.stop();
     // 卸载（离开路由）时中止进行中的流式请求，避免对已卸载组件空跑完整回答。
     requestController.current?.abort();
-  }, []);
-
-  // 清空对话：移除消息触发 AnimatePresence 逐条收没（最新一条先走，阶梯延迟由
-  // exitOrder 注入），全部收没后由 onExitComplete 重置剩余状态；减少动态时立即清空。
-  const clearChat = () => {
-    if (isClearing || messages.length === 0) return;
-    requestController.current?.abort();
-    setMessages([]);
-    setQuestion("");
-    setScope("all");
-    if (prefersReducedMotion) {
-      setUsedSuggestions([]);
-      return;
-    }
-    setIsClearing(true);
-  };
-
-  // 全部气泡收没后才真正重置对话状态，替代原先与 CSS 时长手工对齐的 setTimeout。
-  const handleMessagesExitComplete = useCallback(() => {
-    setUsedSuggestions([]);
-    setIsClearing(false);
   }, []);
 
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
-    const minHeight = 48;
-    const maxHeight = 112;
-    textarea.style.height = "0px";
-    const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
-    textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    const resize = () => {
+      const minHeight = 22;
+      const maxHeight = 112;
+      textarea.style.height = "0px";
+      const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+      textarea.style.height = `${nextHeight}px`;
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    };
+    resize();
+    let width = textarea.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (textarea.clientWidth === width) return;
+      width = textarea.clientWidth;
+      resize();
+    });
+    observer.observe(textarea);
+    return () => observer.disconnect();
   }, [question]);
+
+  useEffect(() => {
+    const delay = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450;
+    const timer = setTimeout(() => textareaRef.current?.focus({ preventScroll: true }), delay);
+    return () => clearTimeout(timer);
+  }, []);
 
   const scrollToLatest = useCallback(() => {
     const viewport = viewportRef.current;
@@ -347,37 +321,9 @@ export function AskChat() {
     setMessages((current) => current.map((message) => message.id === id ? update(message) : message));
   };
 
-  // 发送反馈：轨迹逐段复刻旧 CSS plane-launch 关键帧——先后蓄势、抬头，
-  // 再沿弧线加速飞出、缩小淡出；控件挂在 ref 上，组件卸载时统一停止。
-  const launchPlane = async () => {
-    const plane = planeRef.current;
-    if (!plane) return;
-    const controls = animate(plane, {
-      opacity: [1, 1, 1, 1, 0],
-      rotate: [0, 10, -10, -18, -26],
-      scale: [1, 0.9, 1.04, 0.94, 0.55],
-      x: ["0rem", "-0.14rem", "0.1rem", "0.9rem", "2.6rem"],
-      y: ["0rem", "0.1rem", "-0.12rem", "-0.85rem", "-2.4rem"],
-    }, {
-      duration: PLANE_LAUNCH_DURATION,
-      ease: PLANE_LAUNCH_EASE,
-      times: PLANE_LAUNCH_TIMES,
-    });
-    planeControls.current = controls;
-    // 卸载时 stop() 会中断等待，静默即可。
-    await controls.then(() => undefined, () => undefined);
-  };
-
-  const submit = async () => {
-    const trimmedQuestion = question.trim();
-    if (!trimmedQuestion || isStreaming || isLaunching || visitorId === "unavailable") return;
-
-    // 发送反馈与会话准备并行：动效只确认操作，不能把请求固定推迟 520ms。
-    // isLaunching 保留纸飞机节点直到轨迹结束；流式开始后同一按钮立即具备停止语义。
-    if (!prefersReducedMotion) {
-      setIsLaunching(true);
-      void launchPlane().then(() => setIsLaunching(false));
-    }
+  const submit = async (suggestion?: string) => {
+    const trimmedQuestion = (suggestion ?? question).trim();
+    if (!trimmedQuestion || isStreaming || visitorId === "unavailable") return;
 
     const session = await (visitorSessionPromise.current ?? ensureVisitorSession());
     if (session.visitorId === "unavailable") return;
@@ -394,12 +340,12 @@ export function AskChat() {
     requestController.current = controller;
     setMessages((current) => [...current,
       { citations: [], content: trimmedQuestion, id: userId, isComplete: true, role: "user" },
-      { citations: [], content: "", id: assistantId, isComplete: false, role: "assistant", scope },
+      { citations: [], content: "", id: assistantId, isComplete: false, role: "assistant" },
     ]);
 
     try {
       const response = await fetch("/api/ask", {
-        body: JSON.stringify({ conversationId: session.conversationId, question: trimmedQuestion, scope, visitorId: session.visitorId }),
+        body: JSON.stringify({ conversationId: session.conversationId, question: trimmedQuestion, scope: "all", visitorId: session.visitorId }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
         signal: controller.signal,
@@ -457,14 +403,13 @@ export function AskChat() {
     }
   };
 
-  const canSubmit = Boolean(question.trim() && visitorId !== "unavailable" && !isStreaming && !isLaunching && !isClearing);
+  const canSubmit = Boolean(question.trim() && visitorId !== "unavailable" && !isStreaming);
 
   // 追问引导：回答完成后给出还没用过的建议问题，沿用空态的细线行语言；
   // 点击只填入组合器并聚焦，是否发送仍由访客决定。
   const lastMessage = messages[messages.length - 1];
   const followUpQuestions = suggestedQuestions.filter((item) => !usedSuggestions.includes(item));
   const showFollowUps = !isStreaming
-    && !isClearing
     && lastMessage?.role === "assistant"
     && lastMessage.isComplete
     && !lastMessage.interruption
@@ -475,9 +420,27 @@ export function AskChat() {
     textareaRef.current?.focus();
   };
 
+  const inputProps: ComponentProps<"textarea"> = {
+    "aria-describedby": visitorId === "unavailable" ? "ask-session-status" : undefined,
+    "aria-invalid": visitorId === "unavailable",
+    "aria-label": "输入问题",
+    disabled: visitorId === "unavailable",
+    onChange: (event) => setQuestion(event.target.value),
+    onFocus: () => void ensureVisitorSession(),
+    onKeyDown: (event) => {
+      if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
+        event.preventDefault();
+        void submit();
+      }
+    },
+    placeholder: "想问些什么…",
+    ref: textareaRef,
+    rows: 1,
+    value: question,
+  };
+
   return (
-    <section aria-label="问一问" className={`curation-home__feed ${styles.root} site-section-motion`}>
-      <ContentSectionNavigation current="ask" />
+    <section aria-label="问一问" className={styles.root}>
 
       <MessageScrollerProvider autoScroll={false} defaultScrollPosition="end">
         <MessageScroller className={styles.scroller}>
@@ -505,9 +468,8 @@ export function AskChat() {
             <MessageScrollerContent
               aria-busy={isStreaming}
               className={styles.messages}
-              style={isClearing ? { pointerEvents: "none" } : undefined}
             >
-              {messages.length === 0 && !isClearing ? (
+              {messages.length === 0 ? (
                 <MotionMessageScrollerItem
                   animate={{ y: "0rem" }}
                   className={styles.emptyItem}
@@ -516,12 +478,9 @@ export function AskChat() {
                   transition={{ duration: EMPTY_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
                 >
                   <Empty className={styles.empty}>
-                    <EmptyHeader>
-                      <EmptyTitle>从公开资料开始</EmptyTitle>
-                      <EmptyDescription>我不会补充未公开的资料，也不会把猜测写成结论。</EmptyDescription>
-                    </EmptyHeader>
+                    <AssistantWelcome />
                     <EmptyContent className={styles.suggestions}>
-                      {suggestedQuestions.map((suggestion, suggestionIndex) => (
+                      {suggestedQuestions.slice(0, 3).map((suggestion, suggestionIndex) => (
                         <motion.span
                           animate={{ y: 0 }}
                           initial={prefersReducedMotion ? false : { y: "0.3rem" }}
@@ -532,9 +491,9 @@ export function AskChat() {
                             ease: MESSAGE_ENTER_EASE,
                           }}
                         >
-                          <Button onClick={() => fillSuggestion(suggestion)} size="sm" type="button" variant="ghost">
+                          <Button onClick={() => void submit(suggestion)} size="sm" type="button" variant="ghost">
+                            {(() => { const Icon = suggestionIcons[suggestionIndex]; return <Icon aria-hidden="true" data-icon="inline-start" />; })()}
                             {suggestion}
-                            <ArrowUpRight data-icon="inline-end" />
                           </Button>
                         </motion.span>
                       ))}
@@ -542,23 +501,21 @@ export function AskChat() {
                   </Empty>
                 </MotionMessageScrollerItem>
               ) : null}
-              <AnimatePresence onExitComplete={handleMessagesExitComplete}>
+
                 {messages.map((message, index) => (
                   <AskMessageItem
-                    exitOrder={messages.length - 1 - index}
                     isStreamingPlaceholder={isStreaming && index === messages.length - 1}
                     key={message.id}
                     message={message}
                     onRetry={message.interruption?.kind === "error" && !isStreaming ? () => {
                       const previousQuestion = messages[index - 1];
                       if (previousQuestion?.role !== "user") return;
-                      setScope(message.scope ?? "all");
                       fillSuggestion(previousQuestion.content);
                     } : undefined}
                     prefersReducedMotion={prefersReducedMotion}
                   />
                 ))}
-              </AnimatePresence>
+
               {showFollowUps ? (
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
@@ -566,18 +523,17 @@ export function AskChat() {
                   initial={prefersReducedMotion ? false : { opacity: 0, y: "0.3rem" }}
                   transition={{ duration: 0.24, ease: MESSAGE_ENTER_EASE }}
                 >
-                  <p className={styles.followupsLabel}>继续问</p>
                   <div className={styles.suggestions}>
-                    {followUpQuestions.slice(0, 2).map((suggestion) => (
+                    {followUpQuestions.slice(0, 1).map((suggestion) => (
                       <Button
                         key={suggestion}
-                        onClick={() => fillSuggestion(suggestion)}
+                        onClick={() => void submit(suggestion)}
                         size="sm"
                         type="button"
                         variant="ghost"
                       >
+                        <CornerDownRight aria-hidden="true" data-icon="inline-start" />
                         {suggestion}
-                        <ArrowUpRight data-icon="inline-end" />
                       </Button>
                     ))}
                   </div>
@@ -604,79 +560,17 @@ export function AskChat() {
           void submit();
         }}
       >
-        <InputGroup className={`${styles.composer} ${visitorId === "unavailable" ? styles.composerError : ""}`}>
-          <InputGroupTextarea
-            aria-describedby={visitorId === "unavailable" ? "ask-session-status" : undefined}
-            aria-invalid={visitorId === "unavailable"}
-            aria-label="输入问题"
-            disabled={visitorId === "unavailable" || isStreaming}
-            onChange={(event) => setQuestion(event.target.value)}
-            onFocus={() => void ensureVisitorSession()}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
-                event.preventDefault();
-                void submit();
-              }
-            }}
-            placeholder="问问这些公开资料…"
-            ref={textareaRef}
-            rows={1}
-            value={question}
-          />
-          <InputGroupAddon align="block-end" className={styles.composerFooter}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <InputGroupButton aria-label={`检索范围：${scopeLabels[scope]}`} className={styles.scopeTrigger} size="sm" type="button" variant="ghost">
-                  <Search data-icon="inline-start" />
-                  {scopeLabels[scope]}
-                  <ChevronDown data-icon="inline-end" />
-                </InputGroupButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className={styles.scopeMenu} side="top" sideOffset={8}>
-                <DropdownMenuLabel>检索范围</DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  <DropdownMenuRadioGroup
-                    onValueChange={(value) => {
-                      if (isAskScope(value)) setScope(value);
-                    }}
-                    value={scope}
-                  >
-                    {(Object.keys(scopeLabels) as AskScope[]).map((item) => (
-                      <DropdownMenuRadioItem key={item} value={item}>{scopeLabels[item]}</DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {messages.length > 0 && !isStreaming ? (
-              <InputGroupButton
-                aria-label="清空对话"
-                className={styles.clear}
-                disabled={isClearing}
-                onClick={clearChat}
-                size="icon-sm"
-                title="清空对话"
-                type="button"
-                variant="ghost"
-              >
-                <Trash2 aria-hidden="true" />
-              </InputGroupButton>
-            ) : null}
-            <InputGroupButton
-              aria-label={isStreaming ? "停止生成" : "发送问题"}
-              className={styles.send}
-              disabled={!isStreaming && !canSubmit && !isLaunching}
+        <div className={styles.drawerComposer} data-ask-composer>
+          <textarea {...inputProps} className={styles.drawerInput} />
+          <div className={styles.drawerActions}>
+            <button aria-label={isStreaming ? "停止生成" : "发送问题"} className={styles.drawerSend}
+              disabled={!isStreaming && !canSubmit}
               onClick={isStreaming ? () => requestController.current?.abort() : undefined}
-              size="icon-sm"
-              type={isStreaming ? "button" : "submit"}
-              variant="ghost"
-            >
-              {isLaunching || !isStreaming
-                ? <SendHorizontal aria-hidden="true" ref={planeRef} />
-                : <Square aria-hidden="true" />}
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
+              type={isStreaming ? "button" : "submit"}>
+              {isStreaming ? <Square aria-hidden="true" size={13} fill="currentColor" /> : <ArrowUp aria-hidden="true" size={15} strokeWidth={3} />}
+            </button>
+          </div>
+        </div>
         {visitorId === "unavailable" ? (
           <div className={styles.sessionRecovery}>
             <p id="ask-session-status" role={isRetryingSession ? "status" : "alert"}>
