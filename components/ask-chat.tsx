@@ -1,38 +1,24 @@
 "use client";
 
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent } from "@/components/ui/empty";
-import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
-import {
-  Message,
-  MessageContent,
-  MessageFooter,
-  MessageHeader,
-} from "@/components/ui/message";
 import {
   MessageScroller,
   MessageScrollerButton,
   MessageScrollerContent,
-  MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
 import { SpriteWalker } from "@/components/assistant-sprite";
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
-import type { AskSource } from "@/lib/ask-types";
-import { ArrowUp, ArrowUpRight, Code2, CornerDownRight, Lightbulb, Search, Square, UserRound } from "lucide-react";
+import { AskMessageItem, EMPTY_ENTER_DURATION, MESSAGE_ENTER_EASE, MotionMessageScrollerItem } from "@/components/ask-message";
+import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
+import { useVisitorSession } from "@/components/use-visitor-session";
+import { ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
 import { motion } from "motion/react";
-import dynamic from "next/dynamic";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 
 import styles from "./ask-chat.module.css";
-
-const MotionMessageScrollerItem = motion.create(MessageScrollerItem);
-const MotionSearch = motion.create(Search);
-
-// react-markdown 生态只在收到第一条回答时才需要，按需加载。
-const AskAnswerMarkdown = dynamic(() => import("@/components/ask-answer-markdown").then((module) => module.AskAnswerMarkdown));
 
 const suggestedQuestions = [
   "你的工程经历和目前关注的方向是什么？",
@@ -67,174 +53,20 @@ function AssistantWelcome() {
   );
 }
 
-function parseEvents(buffer: string) {
-  const chunks = buffer.split("\n\n");
-  const remainder = chunks.pop() ?? "";
-  const events = chunks.flatMap((chunk) => {
-    const event = /^event:\s*(.+)$/m.exec(chunk)?.[1];
-    const data = /^data:\s*(.+)$/m.exec(chunk)?.[1];
-    if (!event || !data) return [];
-    try {
-      return [{ data: JSON.parse(data) as Record<string, unknown>, event }];
-    } catch {
-      return [];
-    }
-  });
-  return { events, remainder };
-}
-
-// SSE 事件按类型收敛到单处：返回应用事件后的消息；无法识别或不合法的事件原样返回。
-function applyStreamEvent(
-  message: ChatMessage,
-  event: { data: Record<string, unknown>; event: string },
-): ChatMessage {
-  switch (event.event) {
-    case "done":
-      return { ...message, isComplete: true };
-    case "error":
-      return {
-        ...message,
-        interruption: {
-          kind: "error",
-          message: typeof event.data.message === "string" ? event.data.message : "回答暂时不可用，请稍后重试。",
-        },
-        isComplete: true,
-      };
-    case "sources":
-      return Array.isArray(event.data.sources)
-        ? { ...message, citations: event.data.sources as AskSource[] }
-        : message;
-    case "text":
-      return typeof event.data.delta === "string"
-        ? { ...message, content: `${message.content}${event.data.delta}` }
-        : message;
-    default:
-      return message;
-  }
-}
-
-// 单条消息气泡独立 memo：流式 delta 只更新目标 message 对象引用，
-// 历史消息引用保持不变即可整体跳过重渲染（含其中的 Markdown 解析）。
-const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
-  isStreamingPlaceholder: boolean;
-  message: ChatMessage;
-  onRetry?: () => void;
-  prefersReducedMotion: boolean;
-}) {
-  return (
-    <Message align={message.role === "user" ? "end" : "start"} className={styles.message}>
-      <MessageContent>
-        {/* 对齐方向已表达说话人；铭牌只保留给读屏，不占垂直节奏。 */}
-        <MessageHeader className="sr-only">
-          {message.role === "user" ? "你" : "归档助手"}
-        </MessageHeader>
-        {message.content ? (
-          <Bubble align={message.role === "user" ? "end" : "start"} variant={message.role === "user" ? "default" : "ghost"}>
-            <BubbleContent aria-live={message.role === "assistant" ? "polite" : undefined} className={`${styles.bubble} ${message.role === "user" ? styles.userBubble : styles.assistantBubble}`}>
-              {/* 流式期间渲染纯文本：Markdown 组件对每个 delta 全量重解析是 O(n²)，
-                  落定（isComplete）后才挂 ReactMarkdown；bubble 的 pre-wrap 保证换行不丢。 */}
-              {message.role === "assistant" && message.isComplete
-                ? <AskAnswerMarkdown source={message.content} />
-                : message.content}
-            </BubbleContent>
-          </Bubble>
-        ) : isStreamingPlaceholder ? (
-          <Marker className={styles.status} role="status">
-            <MarkerIcon>
-              <MotionSearch
-                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: [1, 0.3, 1] }}
-                initial={false}
-                transition={prefersReducedMotion
-                  ? { duration: 0 }
-                  : { duration: 1.15, ease: "easeInOut", repeat: Infinity }}
-              />
-            </MarkerIcon>
-            <MarkerContent>
-              {message.citations.length > 0
-                ? "已检索公开资料，正在生成回答…"
-                : "正在检索公开资料…"}
-            </MarkerContent>
-          </Marker>
-        ) : null}
-        {message.interruption ? (
-          <div className={styles.interruption}>
-            <p role={message.interruption.kind === "error" ? "alert" : "status"}>{message.interruption.message}</p>
-            {message.interruption.kind === "error" && onRetry ? (
-              <Button onClick={onRetry} size="sm" type="button" variant="ghost">重新提问</Button>
-            ) : null}
-          </div>
-        ) : null}
-        {message.role === "assistant" && message.isComplete && message.citations.length > 0 ? (
-          <MessageFooter className={styles.sources}>
-            {/* 回答落定后来源逐条阶梯入场；减少动态时直接静态呈现。 */}
-            <ol aria-label="回答来源" className={styles.citations}>
-              {message.citations.map((source, sourceIndex) => (
-                <motion.li
-                  animate={{ opacity: 1, y: 0 }}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: "0.3rem" }}
-                  key={source.id}
-                  transition={{
-                    delay: prefersReducedMotion ? 0 : sourceIndex * 0.045,
-                    duration: 0.22,
-                    ease: MESSAGE_ENTER_EASE,
-                  }}
-                >
-                  <a className={styles.citation} href={source.sourceUrl}>
-                    <span>【{sourceIndex + 1}】{source.title}{source.section ? ` · ${source.section}` : ""}</span>
-                    <ArrowUpRight aria-hidden="true" />
-                  </a>
-                </motion.li>
-              ))}
-            </ol>
-          </MessageFooter>
-        ) : null}
-      </MessageContent>
-    </Message>
-  );
-});
-
-const MESSAGE_ENTER_DURATION = 0.24;
-const EMPTY_ENTER_DURATION = 0.32;
-const MESSAGE_ENTER_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
-  isStreamingPlaceholder: boolean;
-  message: ChatMessage;
-  onRetry?: () => void;
-  prefersReducedMotion: boolean;
-}) {
-  return (
-    <MotionMessageScrollerItem
-      animate={{ opacity: 1, y: "0rem" }}
-      className={styles.messageItem}
-      initial={prefersReducedMotion
-        ? false
-        : { opacity: 0, y: "0.4rem" }}
-      messageId={message.id}
-      scrollAnchor={message.role === "user"}
-      transition={{ duration: MESSAGE_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
-    >
-      <AskMessageBubble isStreamingPlaceholder={isStreamingPlaceholder} message={message} onRetry={onRetry} prefersReducedMotion={prefersReducedMotion} />
-    </MotionMessageScrollerItem>
-  );
-}
-
 export function AskChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [usedSuggestions, setUsedSuggestions] = useState<string[]>([]);
   const [restored, setRestored] = useState(false);
-  const [visitorId, setVisitorId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isRetryingSession, setIsRetryingSession] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const requestController = useRef<AbortController | null>(null);
   const shouldFollowLatest = useRef(true);
   const isProgrammaticScroll = useRef(false);
-  const shouldFocusAfterSessionRetry = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const visitorSessionPromise = useRef<Promise<{ conversationId: string; visitorId: string }> | null>(null);
   const snapshotRead = useRef(false);
+  const { ensureVisitorSession, isRetryingSession, retryVisitorSession, visitorId } = useVisitorSession(textareaRef);
 
   useLayoutEffect(() => {
     // Lazy Markdown can suspend and reconnect layout effects. Restore only once
@@ -254,40 +86,6 @@ export function AskChat() {
   useEffect(() => {
     if (restored) writeAskChatSnapshot({ messages, question });
   }, [messages, question, restored]);
-
-  // 指纹只用于限流，等用户表现出提问意图（聚焦输入框或提交）后再加载计算。
-  const ensureVisitorSession = useCallback(() => {
-    visitorSessionPromise.current ??= (async () => {
-      try {
-        const { default: FingerprintJS } = await import("@fingerprintjs/fingerprintjs");
-        const agent = await FingerprintJS.load();
-        const result = await agent.get();
-        const session = { conversationId: crypto.randomUUID(), visitorId: result.visitorId };
-        setVisitorId(session.visitorId);
-        return session;
-      } catch {
-        setVisitorId("unavailable");
-        return { conversationId: "", visitorId: "unavailable" };
-      }
-    })();
-    return visitorSessionPromise.current;
-  }, []);
-
-  const retryVisitorSession = async () => {
-    if (isRetryingSession) return;
-    setIsRetryingSession(true);
-    shouldFocusAfterSessionRetry.current = true;
-    visitorSessionPromise.current = null;
-    const session = await ensureVisitorSession();
-    setIsRetryingSession(false);
-    if (session.visitorId === "unavailable") shouldFocusAfterSessionRetry.current = false;
-  };
-
-  useLayoutEffect(() => {
-    if (!visitorId || visitorId === "unavailable" || !shouldFocusAfterSessionRetry.current) return;
-    shouldFocusAfterSessionRetry.current = false;
-    textareaRef.current?.focus();
-  }, [visitorId]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -355,7 +153,7 @@ export function AskChat() {
     const trimmedQuestion = (suggestion ?? question).trim();
     if (!trimmedQuestion || isStreaming || visitorId === "unavailable") return;
 
-    const session = await (visitorSessionPromise.current ?? ensureVisitorSession());
+    const session = await ensureVisitorSession();
     if (session.visitorId === "unavailable") return;
 
     const userId = crypto.randomUUID();
