@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { subscribeToNothing } from "@/components/use-mounted";
 
 import styles from "@/components/open-source.module.css";
 import { OpenSourceRepositoryBrowser } from "@/components/open-source-repository-browser";
@@ -12,8 +13,6 @@ type OpenSourceDocumentViewProps = {
   repositoryUrl: string;
   slug: string;
 };
-
-const subscribeToNothing = () => () => {};
 
 // 文档版本切换是纯客户端状态，详情页因此可以保持 ISR；
 // 深链 ?view=repository 在水合后生效，切换时同步回 URL 便于分享。

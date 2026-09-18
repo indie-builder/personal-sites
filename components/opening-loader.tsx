@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { subscribeToNothing, useHasMounted } from "@/components/use-mounted";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
@@ -12,7 +13,6 @@ import {
 
 type LoaderPhase = "preparing" | "playing" | "leaving" | "complete";
 
-const subscribeToNothing = () => () => {};
 
 // 电池五格逐一充电的节拍（秒），与电池颜色由红转绿的主时间线（4.7s）并行。
 const CELL_CHARGE_DELAYS = [0.45, 1.4, 2.35, 3.3, 4.25];
@@ -27,7 +27,7 @@ export function OpeningLoader() {
   const sessionPlayed = useSyncExternalStore(subscribeToNothing, hasPlayedThisSession, () => false);
 
   // 角色序列图约 440KB(gzip)，水合后再渲染 <img>，避免拖慢 SSR 首帧。
-  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const mounted = useHasMounted();
 
   const start = useCallback(() => {
     setPhase((current) => (current === "preparing" ? "playing" : current));

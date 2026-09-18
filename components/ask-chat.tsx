@@ -83,6 +83,36 @@ function parseEvents(buffer: string) {
   return { events, remainder };
 }
 
+// SSE 事件按类型收敛到单处：返回应用事件后的消息；无法识别或不合法的事件原样返回。
+function applyStreamEvent(
+  message: ChatMessage,
+  event: { data: Record<string, unknown>; event: string },
+): ChatMessage {
+  switch (event.event) {
+    case "done":
+      return { ...message, isComplete: true };
+    case "error":
+      return {
+        ...message,
+        interruption: {
+          kind: "error",
+          message: typeof event.data.message === "string" ? event.data.message : "回答暂时不可用，请稍后重试。",
+        },
+        isComplete: true,
+      };
+    case "sources":
+      return Array.isArray(event.data.sources)
+        ? { ...message, citations: event.data.sources as AskSource[] }
+        : message;
+    case "text":
+      return typeof event.data.delta === "string"
+        ? { ...message, content: `${message.content}${event.data.delta}` }
+        : message;
+    default:
+      return message;
+  }
+}
+
 // 单条消息气泡独立 memo：流式 delta 只更新目标 message 对象引用，
 // 历史消息引用保持不变即可整体跳过重渲染（含其中的 Markdown 解析）。
 const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
@@ -364,25 +394,7 @@ export function AskChat() {
         const parsed = parseEvents(buffer);
         buffer = parsed.remainder;
         for (const item of parsed.events) {
-          if (item.event === "sources" && Array.isArray(item.data.sources)) {
-            updateAssistant(assistantId, (message) => ({ ...message, citations: item.data.sources as AskSource[] }));
-          }
-          if (item.event === "text" && typeof item.data.delta === "string") {
-            updateAssistant(assistantId, (message) => ({ ...message, content: `${message.content}${item.data.delta}` }));
-          }
-          if (item.event === "done") {
-            updateAssistant(assistantId, (message) => ({ ...message, isComplete: true }));
-          }
-          if (item.event === "error") {
-            updateAssistant(assistantId, (message) => ({
-              ...message,
-              interruption: {
-                kind: "error",
-                message: typeof item.data.message === "string" ? item.data.message : "回答暂时不可用，请稍后重试。",
-              },
-              isComplete: true,
-            }));
-          }
+          updateAssistant(assistantId, (message) => applyStreamEvent(message, item));
         }
         if (done) break;
       }
