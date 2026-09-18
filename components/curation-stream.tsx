@@ -10,164 +10,54 @@
  * FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
  */
 
-import { useStreamDate } from "@/components/use-stream-date";
 import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
 import type { CurationListItem } from "@/lib/curation-types";
 import { XVideoPlayer } from "@/components/x-video-player";
+import { useStreamDate } from "@/components/use-stream-date";
 
-import { observeCurationScrollEnd, getCurationScrollTarget } from "./curation-scroll";
-import {
-  readCurationStreamSnapshot,
-  toCurationStreamSnapshot,
-  writeCurationStreamSnapshot,
-} from "./curation-stream-snapshot";
+import { STREAM_EASE } from "./motion-tokens";
+import { curationStreamSnapshot } from "./stream-snapshot";
+import { useStreamFeed } from "./use-stream-feed";
 
-type CurationPageResponse = {
-  error?: string;
-  hasMore: boolean;
-  items: CurationListItem[];
-};
-
-type CurationStreamProps = {
-  /** 加载更多的分页接口；每日关注用 /api/curation，抖音收藏用 /api/douyin。 */
+export function CurationStream({
+  apiPath = "/api/curation",
+  emptyLabel = "暂无已发布的策展条目。",
+  initialHasMore,
+  initialItems,
+  snapshotKey,
+  /** 设计收藏在列表内直接呈现可播放视频，详情入口缩为标题链接以避免嵌套交互。 */
+  variant = "default",
+}: {
   apiPath?: string;
-  /** 空列表时的提示文案。 */
   emptyLabel?: string;
   initialHasMore: boolean;
   initialItems: CurationListItem[];
   /** 会话快照的 sessionStorage key；两个板块各自独立，互不覆盖。 */
   snapshotKey?: string;
-  /** 设计收藏在列表内直接呈现可播放视频，详情入口缩为标题链接以避免嵌套交互。 */
   variant?: "default" | "design";
-};
-
-const PAGE_SIZE = 20;
-
-export function CurationStream({ apiPath = "/api/curation", emptyLabel = "暂无已发布的策展条目。", initialHasMore, initialItems, snapshotKey, variant = "default" }: CurationStreamProps) {
-  const streamRef = useRef<HTMLOListElement>(null);
+}) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
-  const [items, setItems] = useState(initialItems);
+  const { appendStart, hasMore, isLoading, items, loadError, loadMore, streamRef } = useStreamFeed<
+    CurationListItem,
+    Record<never, never>,
+    HTMLOListElement
+  >({
+    apiPath,
+    pageSize: 20,
+    loadErrorMessage: "暂时无法加载更多策展内容。",
+    initialHasMore,
+    initialItems,
+    snapshot: curationStreamSnapshot,
+    storageKey: snapshotKey,
+  });
   const visibleDay = useStreamDate(wrapperRef, items);
   const currentDate = visibleDay ?? (items[0] ? formatCurationDate(items[0]) : null);
-  const [appendStart, setAppendStart] = useState(initialItems.length);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  // 会话快照恢复：从详情页返回时把分页与滚动位置还原，避免列表从头开始。
-  // restored 是一次性开关——恢复后的重渲染提交完成、DOM 行数齐全后再落滚动位置。
-  const [restored, setRestored] = useState(false);
-  const scrollTopRef = useRef(0);
-  const restoreScrollTopRef = useRef(0);
-  // 快照写入门闩：挂载提交期间（含 StrictMode 重放、dev 下的重挂载）禁止写快照——
-  // 否则恢复读取之前，初始 SSR 状态会先把有效快照覆盖掉。挂载落定后由宏任务开门。
-  const writesEnabledRef = useRef(false);
-  const latestRef = useRef({ hasMore, items });
-
-  // 仅挂载时执行：首渲染仍用 SSR 数据（无水合不一致），layout effect 里的
-  // setState 会在绘制前同步重渲染，访客看不到从 20 条跳回完整列表的过程。
-  useLayoutEffect(() => {
-    const enableWrites = window.setTimeout(() => {
-      writesEnabledRef.current = true;
-    }, 0);
-    if (!restored) {
-      const snapshot = readCurationStreamSnapshot(initialItems[0]?.id, snapshotKey);
-      if (snapshot) {
-        restoreScrollTopRef.current = snapshot.scrollTop;
-        scrollTopRef.current = snapshot.scrollTop;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- 恢复 sessionStorage 快照只能在挂载后做，layout effect 保证绘制前完成
-        setItems(snapshot.items);
-        setHasMore(snapshot.hasMore);
-        // 恢复的行全部视为非追加行，不重播入场阶梯。
-        setAppendStart(snapshot.items.length);
-        setRestored(true);
-      }
-    }
-    return () => window.clearTimeout(enableWrites);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时尝试恢复一次
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!restored) return;
-    const stream = streamRef.current;
-    if (!stream) return;
-    getCurationScrollTarget(stream).scrollTo({ behavior: "auto", top: restoreScrollTopRef.current });
-  }, [restored]);
-
-  // 跟踪滚动位置（rAF 节流的被动监听）；桌面端滚动容器是 .curation-home__feed，
-  // 移动端是 window，统一经 getCurationScrollTarget 取值。
-  useEffect(() => {
-    const stream = streamRef.current;
-    if (!stream) return;
-    const target = getCurationScrollTarget(stream);
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        scrollTopRef.current = target instanceof Window ? target.scrollY : target.scrollTop;
-      });
-    };
-    target.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      target.removeEventListener("scroll", onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  // 分页变化时持久化快照；滚动位置在写入时从 ref 取最新值。
-  useEffect(() => {
-    latestRef.current = { hasMore, items };
-    if (!writesEnabledRef.current || items.length === 0) return;
-    writeCurationStreamSnapshot(toCurationStreamSnapshot({
-      hasMore,
-      items,
-      scrollTop: scrollTopRef.current,
-    }), snapshotKey);
-  }, [hasMore, items, snapshotKey]);
-
-  // 路由离开（点进详情）时组件卸载，兜底写一次最终状态。
-  useEffect(() => () => {
-    if (!writesEnabledRef.current) return;
-    const latest = latestRef.current;
-    if (latest.items.length === 0) return;
-    writeCurationStreamSnapshot(toCurationStreamSnapshot({ ...latest, scrollTop: scrollTopRef.current }), snapshotKey);
-  }, [snapshotKey]);
-
-  const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return;
-
-    setIsLoading(true);
-    setLoadError(null);
-    setAppendStart(items.length);
-    try {
-      const response = await fetch(`${apiPath}?offset=${items.length}&limit=${PAGE_SIZE}`);
-      const payload = (await response.json()) as CurationPageResponse;
-      if (!response.ok) throw new Error(payload.error ?? "暂时无法加载更多策展内容。");
-
-      setItems((currentItems) => {
-        const knownIds = new Set(currentItems.map((item) => item.id));
-        return [...currentItems, ...payload.items.filter((item) => !knownIds.has(item.id))];
-      });
-      setHasMore(payload.hasMore);
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "暂时无法加载更多策展内容。");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [apiPath, hasMore, isLoading, items.length]);
-
-  useEffect(() => {
-    const stream = streamRef.current;
-    if (!hasMore || !stream) return;
-
-    return observeCurationScrollEnd(stream, () => void loadMore());
-  }, [hasMore, loadMore]);
 
   return (
     <div ref={wrapperRef}>
@@ -188,7 +78,7 @@ export function CurationStream({ apiPath = "/api/curation", emptyLabel = "暂无
           transition={{
             delay: isAppended ? Math.min(index - appendStart, 9) * 0.032 : 0,
             duration: 0.3,
-            ease: [0.16, 1, 0.3, 1],
+            ease: STREAM_EASE,
           }}
         >
           {variant === "design" ? (

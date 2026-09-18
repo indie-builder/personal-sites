@@ -1,137 +1,47 @@
 "use client";
 
-import { useStreamDate } from "@/components/use-stream-date";
 import { ChevronDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  formatAiNewsClock,
-  getAiNewsCategoryLabel,
-  groupAiNewsByDay,
-  listAiNewsCategories,
-} from "@/lib/ai-news-types";
+import { formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNewsCategories } from "@/lib/ai-news-types";
 import type { AiNewsListItem } from "@/lib/ai-news-types";
 
-import {
-  readAiNewsStreamSnapshot,
-  toAiNewsStreamSnapshot,
-  writeAiNewsStreamSnapshot,
-} from "./ai-news-stream-snapshot";
-import { observeCurationScrollEnd, getCurationScrollTarget } from "./curation-scroll";
+import { aiNewsStreamSnapshot } from "./stream-snapshot";
+import { STREAM_EASE } from "./motion-tokens";
+import { useStreamDate } from "@/components/use-stream-date";
+import { useStreamFeed } from "./use-stream-feed";
+import { getCurationScrollTarget } from "./curation-scroll";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-type AiNewsPageResponse = {
-  error?: string;
-  hasMore: boolean;
-  items: AiNewsListItem[];
-};
-
-type AiNewsStreamProps = {
-  initialHasMore: boolean;
-  initialItems: AiNewsListItem[];
-};
-
-const PAGE_SIZE = 50;
-const STREAM_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 // 筛选切换时从头揭示的行数：与滚动追加共用 0.45rem 上浮 + 32ms 阶梯的语言，
 // 只揭示首屏可见的前几行，其余行直接呈现，避免长列表整体延迟。
 const FILTER_REVEAL_COUNT = 8;
 
-export function AiNewsStream({ initialHasMore, initialItems }: AiNewsStreamProps) {
-  const streamRef = useRef<HTMLDivElement>(null);
+export function AiNewsStream({ initialHasMore, initialItems }: {
+  initialHasMore: boolean;
+  initialItems: AiNewsListItem[];
+}) {
   const reduceMotion = useReducedMotion();
-  const [items, setItems] = useState(initialItems);
-  const [appendStart, setAppendStart] = useState(initialItems.length);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   // 筛选版本号：> 0 表示列表是筛选后的客户端重挂载，首行阶梯揭示只在这种挂载上播。
   const [filterVersion, setFilterVersion] = useState(0);
-  // 会话快照恢复：从详情页返回时把分页与滚动位置还原，避免列表从头开始。
-  // restored 是一次性开关——恢复后的重渲染提交完成、DOM 行数齐全后再落滚动位置。
-  const [restored, setRestored] = useState(false);
-  const scrollTopRef = useRef(0);
-  const restoreScrollTopRef = useRef(0);
-  // 快照写入门闩：挂载提交期间（含 StrictMode 重放、dev 下的重挂载）禁止写快照——
-  // 否则恢复读取之前，初始 SSR 状态会先把有效快照覆盖掉。挂载落定后由宏任务开门。
-  const writesEnabledRef = useRef(false);
-  const latestRef = useRef({ activeCategory, hasMore, items });
-
-  // 仅挂载时执行：首渲染仍用 SSR 数据（无水合不一致），layout effect 里的
-  // setState 会在绘制前同步重渲染，访客看不到从 50 条跳回完整列表的过程。
-  useLayoutEffect(() => {
-    const enableWrites = window.setTimeout(() => {
-      writesEnabledRef.current = true;
-    }, 0);
-    if (!restored) {
-      const snapshot = readAiNewsStreamSnapshot(initialItems[0]?.id);
-      if (snapshot) {
-        restoreScrollTopRef.current = snapshot.scrollTop;
-        scrollTopRef.current = snapshot.scrollTop;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- 恢复 sessionStorage 快照只能在挂载后做，layout effect 保证绘制前完成
-        setItems(snapshot.items);
-        setHasMore(snapshot.hasMore);
-        setActiveCategory(snapshot.activeCategory);
-        // 恢复的行全部视为非追加行，不重播入场阶梯。
-        setAppendStart(snapshot.items.length);
-        setRestored(true);
-      }
-    }
-    return () => window.clearTimeout(enableWrites);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时尝试恢复一次
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!restored) return;
-    const stream = streamRef.current;
-    if (!stream) return;
-    getCurationScrollTarget(stream).scrollTo({ behavior: "auto", top: restoreScrollTopRef.current });
-  }, [restored]);
-
-  // 跟踪滚动位置（rAF 节流的被动监听）；桌面端滚动容器是 .curation-home__feed，
-  // 移动端是 window，统一经 getCurationScrollTarget 取值。
-  useEffect(() => {
-    const stream = streamRef.current;
-    if (!stream) return;
-    const target = getCurationScrollTarget(stream);
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        scrollTopRef.current = target instanceof Window ? target.scrollY : target.scrollTop;
-      });
-    };
-    target.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      target.removeEventListener("scroll", onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  // 分页或筛选变化时持久化快照；滚动位置在写入时从 ref 取最新值。
-  useEffect(() => {
-    latestRef.current = { activeCategory, hasMore, items };
-    if (!writesEnabledRef.current || items.length === 0) return;
-    writeAiNewsStreamSnapshot(toAiNewsStreamSnapshot({
-      activeCategory,
-      hasMore,
-      items,
-      scrollTop: scrollTopRef.current,
-    }));
-  }, [activeCategory, hasMore, items]);
-
-  // 路由离开（点进详情）时组件卸载，兜底写一次最终状态。
-  useEffect(() => () => {
-    if (!writesEnabledRef.current) return;
-    const latest = latestRef.current;
-    if (latest.items.length === 0) return;
-    writeAiNewsStreamSnapshot(toAiNewsStreamSnapshot({ ...latest, scrollTop: scrollTopRef.current }));
-  }, []);
+  const { appendStart, hasMore, isLoading, items, loadError, loadMore, streamRef } = useStreamFeed<
+    AiNewsListItem,
+    { activeCategory: string | null },
+    HTMLDivElement
+  >({
+    apiPath: "/api/ai-news",
+    pageSize: 50,
+    loadErrorMessage: "暂时无法加载更多每日动态。",
+    initialHasMore,
+    initialItems,
+    snapshot: aiNewsStreamSnapshot,
+    snapshotExtra: () => ({ activeCategory }),
+    onSnapshotRestore: (snapshot) => setActiveCategory(snapshot.activeCategory),
+  });
 
   const selectCategory = (next: string | null) => {
     // 幂等：重复点击当前激活的筛选（含「全部」）不触发任何副作用（滚顶/揭示动画）。
@@ -149,37 +59,7 @@ export function AiNewsStream({ initialHasMore, initialItems }: AiNewsStreamProps
       behavior: reduceMotion ? "auto" : "smooth",
       top: 0,
     });
-  }, [filterVersion, reduceMotion]);
-
-  const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return;
-
-    setIsLoading(true);
-    setLoadError(null);
-    setAppendStart(items.length);
-    try {
-      const response = await fetch(`/api/ai-news?offset=${items.length}&limit=${PAGE_SIZE}`);
-      const payload = (await response.json()) as AiNewsPageResponse;
-      if (!response.ok) throw new Error(payload.error ?? "暂时无法加载更多每日动态。");
-
-      setItems((currentItems) => {
-        const knownIds = new Set(currentItems.map((item) => item.id));
-        return [...currentItems, ...payload.items.filter((item) => !knownIds.has(item.id))];
-      });
-      setHasMore(payload.hasMore);
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "暂时无法加载更多每日动态。");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [hasMore, isLoading, items.length]);
-
-  useEffect(() => {
-    const stream = streamRef.current;
-    if (!hasMore || !stream) return;
-
-    return observeCurationScrollEnd(stream, () => void loadMore());
-  }, [hasMore, loadMore]);
+  }, [filterVersion, reduceMotion, streamRef]);
 
   const categories = useMemo(() => listAiNewsCategories(items), [items]);
   const hasSelected = useMemo(() => items.some((item) => item.selected), [items]);
