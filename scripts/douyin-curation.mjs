@@ -6,7 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createCodexCliReader, createKimiReader } from "../modules/github-starred/analysis.mjs";
+import { createCodexCliReader, createKimiReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import {
   buildCurationPrompt,
@@ -53,7 +53,7 @@ export function parseArgs(args) {
   delete options.positionals;
   if (extra.length > 0) throw new Error("sync 不接受额外参数。");
   if (options.stage !== "sync") {
-    throw new Error("用法：pnpm douyin:curation -- sync --manifest <download_manifest.jsonl> [--refresh-only] [--limit n] [--engine codex-cli|pi]");
+    throw new Error("用法：pnpm douyin:curation -- sync --manifest <download_manifest.jsonl> [--refresh-only] [--limit n] [--engine zcode|codex-cli|pi]");
   }
   if (!options.manifest) throw new Error("sync 需要 --manifest <download_manifest.jsonl>。");
   options.engine = resolveAnalysisEngine(options.engine);
@@ -141,14 +141,17 @@ async function sync(options) {
     throw error;
   });
   const failuresById = new Map(previousFailures.items.map((item) => [item.id, item]));
-  const concurrency = options.concurrency ?? (options.engine === "pi" ? 2 : 20);
+  const concurrency = options.concurrency ?? (options.engine === "pi" ? 2 : options.engine === "zcode" ? 8 : 20);
   const analyzerConcurrency = options.analyzerConcurrency ?? 6;
-  const reader = options.refreshOnly ? null : options.engine === "pi"
-    ? await createKimiReader({ config: {}, repoRoot })
-    : await createCodexCliReader({
-      config: { analysis: { codex_cli: { model: "gpt-5.6-terra", reasoning_effort: "high" } } },
-      repoRoot,
-    });
+  const reader = options.refreshOnly ? null
+    : options.engine === "pi"
+      ? await createKimiReader({ config: {}, repoRoot })
+      : options.engine === "zcode"
+        ? createZcodeCliReader({ config: {}, repoRoot })
+        : await createCodexCliReader({
+          config: { analysis: { codex_cli: { model: "gpt-5.6-terra", reasoning_effort: "high" } } },
+          repoRoot,
+        });
 
   const targets = options.refreshOnly ? [] : videos.filter((video) => options.force || !byId.has(`douyin:${video.awemeId}`));
   let completed = 0;

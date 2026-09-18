@@ -72,7 +72,7 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
   assert.deepEqual(parseArgs(["sync", "--manifest", "downloads/download_manifest.jsonl", "--limit", "5"]), {
     analyzerConcurrency: null,
     concurrency: null,
-    engine: "codex-cli",
+    engine: "zcode",
     force: false,
     limit: 5,
     manifest: "downloads/download_manifest.jsonl",
@@ -86,7 +86,7 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
     analyzerConcurrency: 6,
     concurrency: 20,
     download: false,
-    engine: "codex-cli",
+    engine: "zcode",
   });
   assert.throws(() => parseArgs(["approve", "douyin:123"]), /不接受/u);
 });

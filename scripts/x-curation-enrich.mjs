@@ -30,7 +30,7 @@ import { fileURLToPath } from "node:url";
 
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-import { createCodexCliReader } from "../modules/github-starred/analysis.mjs";
+import { createCodexCliReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
 import {
   applyCurationAnalysis,
   applyDesignAnalysis,
@@ -315,16 +315,22 @@ if (!DRY_RUN && ENGINE === "pi" && !process.env.KIMI_API_KEY) {
   console.error("缺少 KIMI_API_KEY 环境变量，Pi 无法使用 Kimi Coding 模型。");
   process.exit(1);
 }
-const runtime = DRY_RUN || ENGINE === "codex-cli" ? null : await ModelRuntime.create({ allowModelNetwork: false });
+const runtime = DRY_RUN || ENGINE !== "pi" ? null : await ModelRuntime.create({ allowModelNetwork: false });
+const zcodeReader = !DRY_RUN && ENGINE === "zcode" ? createZcodeCliReader({ config, repoRoot }) : null;
 const codexReader = !DRY_RUN && ENGINE === "codex-cli"
   ? await createCodexCliReader({
     config: { analysis: { codex_cli: { model: CODEX_MODEL, reasoning_effort: CODEX_REASONING_EFFORT } } },
     repoRoot,
   })
   : null;
-const MODEL_LABEL = ENGINE === "codex-cli" ? `codex-cli/${CODEX_MODEL}` : `pi/${piModel.provider}/${piModel.model}`;
+const MODEL_LABEL = ENGINE === "codex-cli"
+  ? `codex-cli/${CODEX_MODEL}`
+  : ENGINE === "zcode" ? "zcode/GLM-5.3-Flash" : `pi/${piModel.provider}/${piModel.model}`;
 
 async function callModel(prompt, images, parser = parseJsonResponse) {
+  if (zcodeReader) {
+    return parser(await zcodeReader.prompt(prompt, { imagePaths: images.map((image) => image.path) }));
+  }
   if (codexReader) {
     return parser(await codexReader.prompt(prompt, { imagePaths: images.map((image) => image.path) }));
   }

@@ -31,9 +31,7 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
       command: process.execPath,
       args: [
         "/repo/scripts/x-curation-enrich.mjs",
-        "--engine", "codex-cli",
-        "--model", "gpt-5.6-luna",
-        "--reasoning-effort", "max",
+        "--engine", "zcode",
         "--limit", "3",
       ],
       options: { cwd: "/repo" },
@@ -43,10 +41,8 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
       args: [
         "/repo/scripts/x-curation-enrich.mjs",
         "--design-only",
-        "--engine", "codex-cli",
-        "--model", "gpt-5.6-luna",
-        "--reasoning-effort", "high",
-        "--concurrency", "40",
+        "--engine", "zcode",
+        "--concurrency", "8",
         "--limit", "3",
       ],
       options: { cwd: "/repo" },
@@ -108,14 +104,14 @@ test("sync arguments accept pnpm's -- separator", () => {
     media: true,
     fetchOnly: true,
     history: false,
-    engine: "codex-cli",
+    engine: "zcode",
     codexModel: "gpt-5.6-luna",
-    designConcurrency: 40,
+    designConcurrency: 8,
     reasoningEffort: "max",
   });
 });
 
-test("Codex is the default and backfills design classification at concurrency 40", async () => {
+test("ZCode is the default and backfills design classification at concurrency 8", async () => {
   const calls = [];
   await runSyncPipeline({
     repoRoot: "/repo",
@@ -125,17 +121,13 @@ test("Codex is the default and backfills design classification at concurrency 40
 
   assert.deepEqual(calls[2].args, [
     "/repo/scripts/x-curation-enrich.mjs",
-    "--engine", "codex-cli",
-    "--model", "gpt-5.6-luna",
-    "--reasoning-effort", "max",
+    "--engine", "zcode",
   ]);
   assert.deepEqual(calls[3].args, [
     "/repo/scripts/x-curation-enrich.mjs",
     "--design-only",
-    "--engine", "codex-cli",
-    "--model", "gpt-5.6-luna",
-    "--reasoning-effort", "high",
-    "--concurrency", "40",
+    "--engine", "zcode",
+    "--concurrency", "8",
   ]);
 });
 

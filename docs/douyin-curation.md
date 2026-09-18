@@ -32,7 +32,7 @@ pnpm douyin:curation -- sync \
   --limit 5
 ```
 
-默认使用本机 Codex CLI 的 `gpt-5.6-terra`（`high`）生成自动批准条目。也可显式切换到项目现有 Pi/Kimi：
+默认使用 ZCode CLI（复用宿主 ZCode 应用的 Z.ai 登录态，GLM-5.3-Flash）生成自动批准条目；也可显式切换到 Codex CLI 或 Pi/Kimi：
 
 ```bash
 pnpm douyin:curation -- sync \
@@ -62,7 +62,7 @@ pnpm douyin:curation -- sync \
 pnpm douyin:sync
 ```
 
-它每次都会重新发现收藏页，只下载 manifest 中不存在的视频，再只解析自动批准队列中尚未完成的条目。默认使用 `gpt-5.6-terra`（`high`）通过 Codex CLI 20 并发整理内容、本地 Whisper/OCR 6 并发提取证据；每个本地转写进程限制约 2 个 CPU 线程。可用 `--analyze-limit 20` 控制单次批量，或用 `--discover-only` 只刷新收藏索引。
+它每次都会重新发现收藏页，只下载 manifest 中不存在的视频，再只解析自动批准队列中尚未完成的条目。默认由 ZCode CLI（GLM-5.3-Flash，8 并发）整理内容、本地 Whisper/OCR 6 并发提取证据；每个本地转写进程限制约 2 个 CPU 线程。`--engine codex-cli` 可回到 Codex（`--model gpt-5.6-terra`），`--analyze-limit 20` 控制单次批量，`--discover-only` 只刷新收藏索引。
 
 ## 数据位置
 

@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 import { openSourceEntries } from "../config/open-source-curation.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
-import { analyzeStarredRecords, createCodexCliReader, createKimiReader, ONE_LINE_SUMMARY_VERSION, readLocalAnalyses } from "../modules/github-starred/analysis.mjs";
+import { analyzeStarredRecords, createCodexCliReader, createKimiReader, createZcodeCliReader, ONE_LINE_SUMMARY_VERSION, readLocalAnalyses } from "../modules/github-starred/analysis.mjs";
 import { publishStarredRecords } from "../modules/github-starred/publish-to-sqlite.mjs";
 import { readLocalSourceRecords, syncStarredRepositories } from "../modules/github-starred/source.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
@@ -111,13 +111,15 @@ async function analyze(records) {
       .filter((analysis) => analysis.oneLineSummary && analysis.summaryVersion === ONE_LINE_SUMMARY_VERSION && !analysis.summaryFallback)
       .map((analysis) => analysis.repoNodeId),
   );
-  const engineLabel = options.engine === "codex-cli" ? "Codex CLI" : "Pi Coding Agent / Kimi";
+  const engineLabel = options.engine === "codex-cli" ? "Codex CLI" : options.engine === "zcode" ? "ZCode CLI" : "Pi Coding Agent / Kimi";
   console.log(`开始生成中文阅读版与一句话简介：${targets.length} 个仓库，并发 ${concurrency}；官方中文 README 直接使用，所有仓库的一句话简介由 ${engineLabel} 生成。`);
   const needsModel = targets.some((record) => !record.readingMarkdown || !summariesByNodeId.has(record.repository.nodeId));
   const reader = needsModel
     ? options.engine === "codex-cli"
       ? await createCodexCliReader({ config, repoRoot })
-      : await createKimiReader({ config, repoRoot })
+      : options.engine === "zcode"
+        ? createZcodeCliReader({ config, repoRoot })
+        : await createKimiReader({ config, repoRoot })
     : null;
   const results = await analyzeStarredRecords(targets, {
     chunkCharacters,
