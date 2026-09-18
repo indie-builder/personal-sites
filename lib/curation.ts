@@ -7,6 +7,7 @@ import { z } from "zod";
 import { curationItemSchema } from "@/lib/curation-types";
 import type { CurationItem, CurationListItem } from "@/lib/curation-types";
 import { getPublicDatabase, PUBLIC_DATABASE_PATH } from "@/lib/public-database";
+import { byScoreThenRecency, occurrences } from "@/lib/search-score";
 
 const curationContentRowSchema = z.object({ content_json: z.string().min(1) });
 const curationNeighborRowSchema = z.object({
@@ -160,17 +161,6 @@ export type LocalAskDocument = {
   title: string;
 };
 
-function occurrences(text: string, query: string) {
-  let count = 0;
-  let start = 0;
-  while (true) {
-    const index = text.indexOf(query, start);
-    if (index < 0) return count;
-    count += 1;
-    start = index + query.length;
-  }
-}
-
 /** The daily corpus is small and ships with the deployment, so an in-process scorer avoids a second remote X index. */
 
 type DailySearchCorpusEntry = {
@@ -282,6 +272,6 @@ export function searchLocalAskDocuments(
       title: entry.title,
     }))
     .filter((row) => row.score > 0)
-    .sort((left, right) => right.score - left.score || (right.publishedAt ?? "").localeCompare(left.publishedAt ?? ""))
+    .sort(byScoreThenRecency)
     .slice(0, limit);
 }

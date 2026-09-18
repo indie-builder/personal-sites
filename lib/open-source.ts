@@ -3,30 +3,9 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 
-import {
-  getOpenSourceCategoryLabel,
-  getOpenSourceDimensionLabel,
-  openSourceCategories,
-  openSourceDimensions,
-  toOpenSourceListEntry,
-} from "@/lib/open-source-types";
+import { toOpenSourceListEntry } from "@/lib/open-source-types";
 import type { OpenSourceEntry, OpenSourceListEntry } from "@/lib/open-source-types";
 import { getPublicDatabase } from "@/lib/public-database";
-
-export {
-  getOpenSourceCategoryLabel,
-  getOpenSourceDimensionLabel,
-  openSourceCategories,
-  openSourceDimensions,
-};
-export type {
-  OpenSourceCategory,
-  OpenSourceDimension,
-  OpenSourceEntry,
-  OpenSourceEvidence,
-  OpenSourceListEntry,
-  OpenSourceStatus,
-} from "@/lib/open-source-types";
 
 const openSourceEntrySchema = z.object({
   category: z.enum(["skills", "agents", "context", "tools"]),

@@ -101,9 +101,6 @@ export async function getGitHubRepositoryFile(slug: string, requestedPath: strin
   const response = await githubFetch(`/repos/${repository}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`, {
     headers: { Accept: "application/vnd.github.raw" },
   });
-  const length = Number(response.headers.get("content-length") ?? 0);
-  if (length > MAX_FILE_BYTES) throw new GitHubRepositoryBrowserError("文件超过 512 KB，已改为仅提供 GitHub 原文件链接。", 413);
-
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > MAX_FILE_BYTES) throw new GitHubRepositoryBrowserError("文件超过 512 KB，已改为仅提供 GitHub 原文件链接。", 413);
   const binary = bytes.includes(0);
