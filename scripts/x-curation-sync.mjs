@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
-import { resolvePiModelConfig } from "./lib/x-curation-ai.mjs";
+import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
 

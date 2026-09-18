@@ -52,7 +52,7 @@ import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs"
 import { writeJsonAtomically, writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
 import { getFinalAssistantFailure, getFinalAssistantText } from "../lib/pi-runtime.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
-import { resolvePiModelConfig } from "./lib/x-curation-ai.mjs";
+import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 
 const execFileAsync = promisify(execFile);

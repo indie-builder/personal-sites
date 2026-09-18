@@ -112,11 +112,6 @@ export function insertAskDocuments(database, documents) {
   }
 }
 
-export function replaceAskDocuments(database, scope, sourceId, documents) {
-  database.prepare("DELETE FROM ask_documents WHERE source_scope = ? AND source_id = ?").run(scope, sourceId);
-  insertAskDocuments(database, documents);
-}
-
 export function preserveSupplementalProjection(sourcePath, targetDatabase) {
   if (!existsSync(sourcePath)) return;
   const source = new Database(sourcePath, { fileMustExist: true, readonly: true });

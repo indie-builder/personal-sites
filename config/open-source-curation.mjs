@@ -1,25 +1,3 @@
-export const openSourceCategories = [
-  { id: "all", label: "全部" },
-  { id: "skills", label: "Skills 与工作流" },
-  { id: "agents", label: "智能体系统" },
-  { id: "context", label: "智能体上下文" },
-  { id: "tools", label: "AI 开发工具" },
-];
-
-export const openSourceDimensions = [
-  { id: "agent-skills", label: "Agent Skills" },
-  { id: "coding-agent", label: "Coding Agent" },
-  { id: "agent-runtime", label: "Agent 运行时" },
-  { id: "long-running", label: "长程 Agent" },
-  { id: "multi-agent", label: "多智能体协作" },
-  { id: "agent-control", label: "Agent 控制面" },
-  { id: "agent-infra", label: "Agent 基础设施" },
-  { id: "agent-context", label: "Agent 上下文" },
-  { id: "local-retrieval", label: "本地检索" },
-  { id: "model-gateway", label: "模型网关" },
-  { id: "ai-ingestion", label: "AI 数据入口" },
-];
-
 /**
  * 这是经过人工挑选、可以公开的个人判读，不是完整 GitHub Star 列表。
  * 事实层优先来自 README；仅在 README 缺失时才切换到仓库结构与入口文件解析。
@@ -328,14 +306,3 @@ export const openSourceEntries = [
   },
 ];
 
-export function getOpenSourceEntry(slug) {
-  return openSourceEntries.find((entry) => entry.slug === slug) ?? null;
-}
-
-export function getOpenSourceCategoryLabel(category) {
-  return openSourceCategories.find((item) => item.id === category)?.label ?? category;
-}
-
-export function getOpenSourceDimensionLabel(dimension) {
-  return openSourceDimensions.find((item) => item.id === dimension)?.label ?? dimension;
-}
