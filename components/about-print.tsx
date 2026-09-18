@@ -101,6 +101,7 @@ export function AboutPrint() {
                 <motion.div
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   aria-label="关于我：个人经历打印稿"
+                  aria-modal="true"
                   className="about-modal__dialog"
                   exit={{
                     opacity: 0,
