@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowUpRight } from "lucide-react";
 
 import { OpenSourceDocumentTabs } from "@/components/open-source-document-tabs";
-import { SiteProfile } from "@/components/site-profile";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import { getOpenSourceEntry } from "@/lib/open-source";
 
 type OpenSourceEntryPageProps = {
@@ -35,17 +33,9 @@ export default async function OpenSourceEntryPage({ params }: OpenSourceEntryPag
   if (!entry) notFound();
 
   return (
-    <main className="curation-home curation-detail curation-open-source-detail" id="site-main" tabIndex={-1}>
-      <SiteProfile />
-
+    <DetailPage mainClassName="curation-home curation-detail curation-open-source-detail">
       <article className="curation-detail__article curation-open-source__article">
-        <nav aria-label="返回" className="curation-detail__back">
-          <Link href="/open-source">
-            <ArrowLeft aria-hidden="true" />
-            返回开源关注
-          </Link>
-          <ThemeToggle />
-        </nav>
+        <DetailTopbar backHref="/open-source" backLabel="返回开源关注" />
 
         <header className="curation-detail__header">
           <h1>{entry.repository}</h1>
@@ -76,6 +66,6 @@ export default async function OpenSourceEntryPage({ params }: OpenSourceEntryPag
           <span className="curation-detail__cta-host">{new URL(entry.repositoryUrl).host}</span>
         </footer>
       </article>
-    </main>
+    </DetailPage>
   );
 }

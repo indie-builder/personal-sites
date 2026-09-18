@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 
+import { LoadingDocument } from "@/components/page-shell";
 import styles from "@/components/open-source.module.css";
 import { SiteProfile } from "@/components/site-profile";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -24,11 +25,7 @@ export function AiNewsDetailSkeleton() {
       </header>
 
       <section aria-label="正在读取内容" className="ai-news-detail__section">
-        <div className={styles.loadingDocument}>
-          <span aria-hidden="true" className={styles.loadingLine} />
-          <span aria-hidden="true" className={`${styles.loadingLine} ${styles.loadingLineMedium}`} />
-          <span aria-hidden="true" className={`${styles.loadingLine} ${styles.loadingLineShort}`} />
-        </div>
+        <LoadingDocument />
       </section>
     </article>
   );

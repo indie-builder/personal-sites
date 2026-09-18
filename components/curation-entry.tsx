@@ -1,11 +1,10 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Play } from "lucide-react";
+import { ArrowUpRight, Play } from "lucide-react";
 
 import { ArticleMarkdown } from "@/components/article-markdown";
-import { SiteProfile } from "@/components/site-profile";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import { XAppLink } from "@/components/x-app-link";
 import { XVideoPlayer } from "@/components/x-video-player";
 import { findCurationItem, getCurationNeighbors } from "@/lib/curation";
@@ -17,6 +16,18 @@ import {
 import type { CurationItem } from "@/lib/curation-types";
 
 export type CurationEntryContext = "curation" | "design";
+
+/** 板块归属：详情返回链接、页面标题共用同一份解析。 */
+const SECTION_BY_CONTEXT: Record<CurationEntryContext, (item: CurationItem) => {
+  backHref: string;
+  backLabel: string;
+  label: string;
+}> = {
+  curation: (item) => item.source.platform === "douyin"
+    ? { backHref: "/douyin", backLabel: "返回抖音收藏", label: "抖音收藏" }
+    : { backHref: "/curation", backLabel: "返回每日关注", label: "每日关注" },
+  design: () => ({ backHref: "/design", backLabel: "返回设计收藏", label: "设计收藏" }),
+};
 
 /** 把原文里的 t.co 短链替换为可点击的展开后链接。 */
 function linkifyText(text: string, links: CurationItem["links"]) {
@@ -42,10 +53,23 @@ export async function getCurationEntryMetadata(
 ): Promise<Metadata> {
   const item = await findCurationItem(id);
   if (!item || (context === "design" && item.design?.status !== "include")) return {};
-  const section = context === "design"
-    ? "设计收藏"
-    : item.source.platform === "douyin" ? "抖音收藏" : "每日关注";
-  return { description: item.summary, title: `${item.title}｜${section}` };
+  const section = SECTION_BY_CONTEXT[context](item);
+  return { description: item.summary, title: `${item.title}｜${section.label}` };
+  
+}
+
+/**
+ * /curation/[id] 与 /design/[id] 是同一条目在不同板块的路由声明；
+ * 路由文件各自 re-export 这里的页面与元数据，板块差异全部由 context 承载。
+ */
+export function createCurationEntryRoute(context: CurationEntryContext) {
+  async function EntryPage({ params }: { params: Promise<{ id: string }> }) {
+    return <CurationEntry context={context} id={(await params).id} />;
+  }
+  async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    return getCurationEntryMetadata((await params).id, context);
+  }
+  return { EntryPage, generateMetadata };
 }
 
 export async function CurationEntry({
@@ -59,24 +83,15 @@ export async function CurationEntry({
   if (!item || (context === "design" && item.design?.status !== "include")) notFound();
   const designContext = context === "design";
   const neighbors = await getCurationNeighbors(id, designContext);
-  const backHref = designContext
-    ? "/design"
-    : item.source.platform === "douyin" ? "/douyin" : "/curation";
-  const backLabel = designContext
-    ? "返回设计收藏"
-    : item.source.platform === "douyin" ? "返回抖音收藏" : "返回每日关注";
+  const section = SECTION_BY_CONTEXT[context](item);
   const neighborHref = (neighborId: string) => (
     designContext ? `/design/${neighborId}` : `/curation/${neighborId}`
   ) as Route;
 
   return (
-    <main className="curation-home curation-detail curation-detail--spread" id="site-main" tabIndex={-1}>
-      <SiteProfile />
+    <DetailPage mainClassName="curation-home curation-detail curation-detail--spread">
       <article className="curation-detail__article" data-content-id={item.id}>
-        <nav aria-label="返回" className="curation-detail__back">
-          <Link href={backHref as Route}><ArrowLeft aria-hidden="true" />{backLabel}</Link>
-          <ThemeToggle />
-        </nav>
+        <DetailTopbar backHref={section.backHref} backLabel={section.backLabel} />
 
         <header className="curation-detail__header">
           <div className="curation-detail__meta">
@@ -189,6 +204,6 @@ export async function CurationEntry({
           </nav>
         ) : null}
       </article>
-    </main>
+    </DetailPage>
   );
 }
