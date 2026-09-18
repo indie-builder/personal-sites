@@ -2,6 +2,8 @@
 /** Generate the public, Git-tracked SQLite projection from approved private focus queues. */
 
 import { readFile } from "node:fs/promises";
+
+import { readJsonOr } from "./lib/json-file.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,15 +17,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));
 const queue = JSON.parse(await readFile(path.join(repoRoot, config.queueFile), "utf8"));
 const douyinConfig = JSON.parse(await readFile(path.join(repoRoot, "config/douyin-curation.json"), "utf8"));
-
-async function readJsonOr(filePath, fallback) {
-  try {
-    return JSON.parse(await readFile(filePath, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return fallback;
-    throw error;
-  }
-}
 
 const douyinQueue = await readJsonOr(path.join(repoRoot, douyinConfig.queueFile), { items: [] });
 const xItems = queue.items.filter(isReadyForPublication).map(toPublicCurationItem);

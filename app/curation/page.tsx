@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 
 import { CurationStream } from "@/components/curation-stream";
-import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
-import { ContentSectionNavigation } from "@/components/site-section-navigation";
-import { SiteProfile } from "@/components/site-profile";
+import { FeedPage } from "@/components/page-shell";
 import { getCurationPage } from "@/lib/curation";
 
 // 策展投影随部署打包进 data/curation.sqlite（next.config 的 outputFileTracingIncludes），
@@ -18,13 +16,8 @@ export const metadata: Metadata = {
 export default async function CurationPage() {
   const curationPage = await getCurationPage();
   return (
-    <main className="curation-home" id="site-main" tabIndex={-1}>
-      <SiteProfile mobileSection="daily" />
-      <SectionMotionLifecycle section="daily" />
-      <section aria-label="每日关注" className="curation-home__feed site-section-motion">
-        <ContentSectionNavigation current="daily" />
-        <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />
-      </section>
-    </main>
+    <FeedPage label="每日关注" section="daily">
+      <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />
+    </FeedPage>
   );
 }

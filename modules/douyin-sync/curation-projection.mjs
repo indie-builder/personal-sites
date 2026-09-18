@@ -1,11 +1,4 @@
-function toIsoDate(value) {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-}
-
-function toOrder(value) {
-  return Number.isInteger(value) && value >= 0 ? value : null;
-}
+import { toIsoDate, toOrder } from "../x-sync/curation-projection.mjs";
 
 export function toPublicDouyinItem(item) {
   if (!item.review?.approved) throw new Error(`${item.id} 未完成自动批准，不能进入公开每日关注。`);

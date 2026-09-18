@@ -3,15 +3,9 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  createAgentSession,
-  DefaultResourceLoader,
-  getAgentDir,
-  ModelRuntime,
-  SessionManager,
-} from "@earendil-works/pi-coding-agent";
-
-import { getFinalAssistantFailure, getFinalAssistantText, resolvePiModelConfig } from "../../lib/pi-runtime.mjs";
+import { awaitModelResponse as awaitModelResponseWithTimeout, runPiPrompt } from "../analysis/model-runner.mjs";
+import { runWorkerPool } from "../analysis/runtime.mjs";
+import { resolvePiModelConfig, stripJsonFence } from "../../lib/pi-runtime.mjs";
 import { repositoryDirectoryName } from "./source.mjs";
 
 const PARSER_VERSION = "github-starred-zh-reader/v1";
@@ -119,10 +113,7 @@ ${source}
 }
 
 export function normaliseOneLineSummary(value) {
-  const summary = value
-    .trim()
-    .replace(/^```(?:text|markdown)?\s*/iu, "")
-    .replace(/\s*```$/u, "")
+  const summary = stripJsonFence(value)
     .replace(/[\r\n]+/gu, " ")
     .replace(/\s{2,}/gu, " ")
     .replace(/^[“”"']|[“”"']$/gu, "")
@@ -155,32 +146,6 @@ async function createOneLineSummary(record, { prompt }) {
   }
 }
 
-function collectModelText(session) {
-  let answer = "";
-  const unsubscribe = session.subscribe((event) => {
-    if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-      answer += event.assistantMessageEvent.delta;
-    }
-  });
-  return { getText: () => answer, unsubscribe };
-}
-
-export async function awaitModelResponse(request, timeoutMilliseconds, { label } = {}) {
-  if (!Number.isInteger(timeoutMilliseconds) || timeoutMilliseconds < 1000) {
-    throw new Error("模型请求超时必须是不小于 1000 的整数毫秒数。");
-  }
-  const requestLabel = label ? `${label} 请求` : "模型请求";
-  let timeoutId;
-  const timeout = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(`${requestLabel}超时（${Math.round(timeoutMilliseconds / 1000)} 秒）。`)), timeoutMilliseconds);
-  });
-  try {
-    return await Promise.race([request, timeout]);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 export async function createKimiReader({ config = {}, env = process.env, repoRoot }) {
   const modelConfig = resolvePiModelConfig({ config, env });
   if (!env.KIMI_API_KEY) throw new Error("缺少 KIMI_API_KEY，无法生成 GitHub Star 中文阅读版。");
@@ -192,37 +157,14 @@ export async function createKimiReader({ config = {}, env = process.env, repoRoo
   return {
     modelConfig,
     async prompt(prompt) {
-      const resourceLoader = new DefaultResourceLoader({
+      return runPiPrompt({
         cwd: repoRoot,
-        agentDir: getAgentDir(),
-        noExtensions: true,
-        noPromptTemplates: true,
-        noSkills: true,
-        noThemes: true,
-      });
-      await resourceLoader.reload();
-      const { session } = await createAgentSession({
-        cwd: repoRoot,
+        label: "Kimi",
         model,
-        modelRuntime: runtime,
-        noTools: "all",
-        resourceLoader,
-        sessionManager: SessionManager.inMemory(repoRoot),
-        thinkingLevel: "off",
+        prompt,
+        runtime,
+        timeoutMilliseconds: requestTimeoutMilliseconds,
       });
-      const collected = collectModelText(session);
-      try {
-        await awaitModelResponse(session.prompt(prompt), requestTimeoutMilliseconds, { label: "Kimi" });
-        const failure = getFinalAssistantFailure(session);
-        if (failure) throw new Error(`Kimi 请求失败：${failure}`);
-        // Some providers only expose the complete message when the turn ends,
-        // without emitting text_delta events. Prefer that authoritative result
-        // and retain the streaming collector for providers that do stream.
-        return getFinalAssistantText(session) || collected.getText().trim();
-      } finally {
-        collected.unsubscribe();
-        session.dispose();
-      }
     },
   };
 }
@@ -291,7 +233,7 @@ export async function createCodexCliReader({ config = {}, repoRoot, run = runCod
       args.push("-");
       const input = `${prompt}\n\n你正在作为受限的文本转换器运行。只输出请求中要求的最终 Markdown 或一句话简介；不要调用工具、不要解释过程、不要修改任何文件。`;
       try {
-        await awaitModelResponse(
+        await awaitModelResponseWithTimeout(
           run(executable, args, {
             cwd: repoRoot,
             input,
@@ -427,27 +369,21 @@ export async function analyzeStarredRecords(records, {
 
   const analyses = [];
   const failures = [];
-  let cursor = 0;
   let completed = 0;
-  const worker = async () => {
-    while (cursor < records.length) {
-      const index = cursor;
-      cursor += 1;
-      const record = records[index];
-      try {
-        const analysis = await analyzeStarredRecord(record, { chunkCharacters, derivedRoot, model, prompt });
-        const persisted = { ...analysis, repoNodeId: record.repository.nodeId };
-        analyses.push(persisted);
-        completed += 1;
-        await onRecord?.(persisted, record, completed, records.length);
-      } catch (error) {
-        const failure = { repository: record.repository.fullName, message: error instanceof Error ? error.message : String(error) };
-        failures.push(failure);
-        await onError?.(failure, record, failures.length);
-      }
+  await runWorkerPool(records.length, concurrency, async (index) => {
+    const record = records[index];
+    try {
+      const analysis = await analyzeStarredRecord(record, { chunkCharacters, derivedRoot, model, prompt });
+      const persisted = { ...analysis, repoNodeId: record.repository.nodeId };
+      analyses.push(persisted);
+      completed += 1;
+      await onRecord?.(persisted, record, completed, records.length);
+    } catch (error) {
+      const failure = { repository: record.repository.fullName, message: error instanceof Error ? error.message : String(error) };
+      failures.push(failure);
+      await onError?.(failure, record, failures.length);
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(concurrency, records.length) }, worker));
+  });
   const completedAnalyses = analyses.sort((left, right) => left.repository.localeCompare(right.repository));
   Object.defineProperty(completedAnalyses, "failures", { enumerable: false, value: failures });
   return completedAnalyses;
@@ -463,3 +399,4 @@ export async function readLocalAnalyses(records, derivedRoot) {
 }
 
 export { ONE_LINE_SUMMARY_VERSION, PARSER_VERSION };
+export { awaitModelResponse } from "../analysis/model-runner.mjs";

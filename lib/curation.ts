@@ -1,115 +1,13 @@
 import "server-only";
 
-import Database from "better-sqlite3";
-import { existsSync, statSync } from "node:fs";
-import path from "node:path";
+import { statSync } from "node:fs";
 import { cache } from "react";
 import { z } from "zod";
 
+import { curationItemSchema } from "@/lib/curation-types";
 import type { CurationItem, CurationListItem } from "@/lib/curation-types";
-
-const curationItemSchema = z.object({
-  analysis: z.string().min(1),
-  author: z.object({
-    handle: z.string(),
-    name: z.string(),
-  }),
-  collectedAt: z.string().datetime().nullable().default(null),
-  collectedOrder: z.number().int().nonnegative().nullable().default(null),
-  design: z
-    .object({
-      categories: z.array(z.string().min(1)).max(3),
-      classifiedAt: z.string().datetime(),
-      confidence: z.number().min(0).max(1),
-      evidence: z.array(z.string().min(1)).max(4),
-      reason: z.string().min(1),
-      relevant: z.boolean(),
-      status: z.enum(["include", "review", "exclude"]),
-    })
-    .nullable()
-    .default(null),
-  facts: z
-    .object({
-      version: z.number().int().positive(),
-      contentType: z.enum(["original", "quote", "reply"]),
-      domains: z.array(z.string()),
-      hashtags: z.array(z.string()),
-      linkTypes: z.array(z.string()),
-      mediaTypes: z.array(z.string()),
-      mentions: z.array(z.string()),
-      sourceKinds: z.array(z.string()),
-      tools: z.array(z.string()),
-    })
-    .default({
-      version: 1,
-      contentType: "original",
-      domains: [],
-      hashtags: [],
-      linkTypes: [],
-      mediaTypes: [],
-      mentions: [],
-      sourceKinds: [],
-      tools: [],
-    }),
-  id: z.string().min(1),
-  links: z.array(
-    z.object({
-      shortUrl: z.string().url().nullable(),
-      type: z.string().min(1),
-      url: z.string().url(),
-    }),
-  ),
-  media: z.array(
-    z.object({
-      durationMs: z.number().int().nonnegative().nullable().default(null),
-      height: z.number().int().positive().nullable(),
-      previewUrl: z.string().url().nullable(),
-      type: z.enum(["photo", "video", "animated_gif"]),
-      url: z.string().url(),
-      videoUrl: z.string().url().nullable().default(null),
-      width: z.number().int().positive().nullable(),
-    }),
-  ),
-  publishedAt: z.string().datetime().nullable(),
-  quoteContext: z
-    .object({
-      author: z.string(),
-      authorName: z.string(),
-      text: z.string(),
-    })
-    .nullable(),
-  source: z.object({
-    label: z.string().min(1),
-    platform: z.enum(["douyin", "x"]),
-    url: z.string().url(),
-  }),
-  searchSignals: z
-    .object({
-      concepts: z.array(z.string()),
-      entities: z.array(z.string()),
-      problems: z.array(z.string()),
-      sentiment: z.enum(["positive", "negative", "neutral", "humorous", "controversial"]),
-      tools: z.array(z.string()),
-      useCases: z.array(z.string()),
-    })
-    .nullable()
-    .default(null),
-  summary: z.string().min(1),
-  tags: z.array(z.string().min(1)).min(1),
-  text: z.string().min(1),
-  title: z.string().min(1),
-  visualFacts: z
-    .object({
-      interactionSignals: z.array(z.string()),
-      objects: z.array(z.string()),
-      ocr: z.array(z.string()),
-      scenes: z.array(z.string()),
-      styles: z.array(z.string()),
-      tools: z.array(z.string()),
-    })
-    .nullable()
-    .default(null),
-});
+import { getPublicDatabase, PUBLIC_DATABASE_PATH } from "@/lib/public-database";
+import { byScoreThenRecency, occurrences } from "@/lib/search-score";
 
 const curationContentRowSchema = z.object({ content_json: z.string().min(1) });
 const curationNeighborRowSchema = z.object({
@@ -137,17 +35,7 @@ const ATTACHMENT_LABELS = {
 const CURATION_ORDER = "collected_at DESC NULLS LAST, collected_order ASC NULLS LAST, published_at DESC NULLS LAST, id DESC";
 const DOUYIN_CURATION_ORDER = "collected_order ASC NULLS LAST, collected_at DESC NULLS LAST, published_at DESC NULLS LAST, id DESC";
 const CURATION_PLATFORM = "json_extract(content_json, '$.source.platform')";
-const DATABASE_PATH = path.join(process.cwd(), "data/curation.sqlite");
-
-let database: Database.Database | undefined;
-
-function getCurationDatabase() {
-  if (!existsSync(DATABASE_PATH)) {
-    throw new Error("缺少 data/curation.sqlite；请先运行 pnpm curation:publish 生成公开策展投影。");
-  }
-  database ??= new Database(DATABASE_PATH, { fileMustExist: true, readonly: true });
-  return database;
-}
+const CURATION_DESIGN_INCLUDE = "json_extract(content_json, '$.design.status') = 'include'";
 
 function parseCurationItem(contentJson: string) {
   return curationItemSchema.parse(JSON.parse(contentJson));
@@ -181,13 +69,30 @@ export type CurationPage = {
 
 type CurationPlatform = "douyin" | "x";
 
-async function getCurationPageByPlatform(platform: CurationPlatform, offset: number, limit: number): Promise<CurationPage> {
+function selectCurationRows(where: string, parameters: unknown[], offset: number, limit: number) {
+  return getPublicDatabase()
+    .prepare(`SELECT content_json FROM curation_items WHERE ${where} LIMIT ? OFFSET ?`)
+    .all(...parameters, limit + 1, offset)
+    .map((row) => curationContentRowSchema.parse(row))
+    .map((row) => toCurationListItem(parseCurationItem(row.content_json)));
+}
+
+async function getCurationPageByPlatform(
+  platform: CurationPlatform,
+  offset: number,
+  limit: number,
+  designOnly = false,
+): Promise<CurationPage> {
+  const where = designOnly
+    ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_DESIGN_INCLUDE}`
+    : `${CURATION_PLATFORM} = ?`;
   const order = platform === "douyin" ? DOUYIN_CURATION_ORDER : CURATION_ORDER;
-  const rows = getCurationDatabase()
-    .prepare(`SELECT content_json FROM curation_items WHERE ${CURATION_PLATFORM} = ? ORDER BY ${order} LIMIT ? OFFSET ?`)
-    .all(platform, limit + 1, offset)
-    .map((row) => curationContentRowSchema.parse(row));
-  const items = rows.map((row) => toCurationListItem(parseCurationItem(row.content_json)));
+  const items = selectCurationRows(
+    `${where} ORDER BY ${order}`,
+    designOnly ? [] : [platform],
+    offset,
+    limit,
+  );
   return { hasMore: items.length > limit, items: items.slice(0, limit) };
 }
 
@@ -203,22 +108,12 @@ export async function getDouyinCurationPage(offset = 0, limit = 20): Promise<Cur
 
 /** 设计收藏：只呈现模型高置信收录的 X 条目；中置信结果留在本地队列等待复核。 */
 export async function getDesignCurationPage(offset = 0, limit = 20): Promise<CurationPage> {
-  const rows = getCurationDatabase()
-    .prepare(`SELECT content_json FROM curation_items
-      WHERE ${CURATION_PLATFORM} = 'x'
-        AND json_extract(content_json, '$.design.status') = 'include'
-      ORDER BY ${CURATION_ORDER} LIMIT ? OFFSET ?`)
-    .all(limit + 1, offset)
-    .map((row) => curationContentRowSchema.parse(row));
-  const items = rows.map((row) => toCurationListItem(parseCurationItem(row.content_json)));
-  return { hasMore: items.length > limit, items: items.slice(0, limit) };
+  return getCurationPageByPlatform("x", offset, limit, true);
 }
 
-export type CurationNeighbor = { id: string; title: string } | null;
-
 export type CurationNeighbors = {
-  newer: CurationNeighbor;
-  older: CurationNeighbor;
+  newer: { id: string; title: string } | null;
+  older: { id: string; title: string } | null;
 };
 
 const curationPlatformRowSchema = z.object({ platform: z.enum(["douyin", "x"]) });
@@ -226,16 +121,16 @@ const curationPlatformRowSchema = z.object({ platform: z.enum(["douyin", "x"]) }
 // 剪报簿总量有限（逐条人工策展的点赞），一次取全量 id+title 即可按列表同一排序定位相邻条目。
 // 来源拆分后相邻导航不跨来源：抖音条目只在抖音条目间翻页，X 条目只在 X 条目间翻页。
 export async function getCurationNeighbors(id: string, designOnly = false): Promise<CurationNeighbors> {
-  const platformRow = getCurationDatabase()
+  const platformRow = getPublicDatabase()
     .prepare(`SELECT ${CURATION_PLATFORM} AS platform FROM curation_items WHERE id = ?`)
     .get(id);
   if (!platformRow) return { newer: null, older: null };
   const { platform } = curationPlatformRowSchema.parse(platformRow);
   const order = platform === "douyin" ? DOUYIN_CURATION_ORDER : CURATION_ORDER;
-  const rows = getCurationDatabase()
+  const rows = getPublicDatabase()
     .prepare(`SELECT id, title FROM curation_items
       WHERE ${CURATION_PLATFORM} = ?
-        ${designOnly ? "AND json_extract(content_json, '$.design.status') = 'include'" : ""}
+        ${designOnly ? `AND ${CURATION_DESIGN_INCLUDE}` : ""}
       ORDER BY ${order}`)
     .all(platform)
     .map((row) => curationNeighborRowSchema.parse(row));
@@ -247,33 +142,24 @@ export async function getCurationNeighbors(id: string, designOnly = false): Prom
 }
 
 export const findCurationItem = cache(async (id: string): Promise<CurationItem | null> => {
-  const row = getCurationDatabase()
+  const row = getPublicDatabase()
     .prepare("SELECT content_json FROM curation_items WHERE id = ?")
     .get(id);
   if (!row) return null;
   return parseCurationItem(curationContentRowSchema.parse(row).content_json);
 });
 
-export type CurationDailySearchDocument = {
+export type LocalAskDocument = {
   content: string;
   id: string;
   publishedAt: string | null;
   score: number;
+  scope: "daily" | "open-source" | "profile";
+  section: string | null;
   sourceId: string;
   sourceUrl: string;
   title: string;
 };
-
-function occurrences(text: string, query: string) {
-  let count = 0;
-  let start = 0;
-  while (true) {
-    const index = text.indexOf(query, start);
-    if (index < 0) return count;
-    count += 1;
-    start = index + query.length;
-  }
-}
 
 /** The daily corpus is small and ships with the deployment, so an in-process scorer avoids a second remote X index. */
 
@@ -284,9 +170,9 @@ type DailySearchCorpusEntry = {
   lowercaseSearchText: string;
   lowercaseTitle: string;
   publishedAt: string | null;
+  scope: "daily" | "open-source" | "profile";
   section: string | null;
   sourceId: string;
-  sourceScope: "daily" | "open-source" | "profile";
   sourceUrl: string;
   title: string;
 };
@@ -297,11 +183,10 @@ type DailySearchCorpusEntry = {
 let dailySearchCorpusCache: { entries: DailySearchCorpusEntry[]; mtimeMs: number } | undefined;
 
 function getDailySearchCorpus(): DailySearchCorpusEntry[] {
-  const db = getCurationDatabase();
-  const mtimeMs = statSync(DATABASE_PATH).mtimeMs;
+  const mtimeMs = statSync(PUBLIC_DATABASE_PATH).mtimeMs;
   if (dailySearchCorpusCache?.mtimeMs === mtimeMs) return dailySearchCorpusCache.entries;
 
-  const entries = db
+  const entries = getPublicDatabase()
     .prepare("SELECT id, source_scope, published_at, title, section, content, search_text, source_id, source_url FROM ask_documents")
     .all()
     .map((row) => localSearchRowSchema.parse(row))
@@ -312,9 +197,9 @@ function getDailySearchCorpus(): DailySearchCorpusEntry[] {
       lowercaseSearchText: row.search_text.toLocaleLowerCase("en-US"),
       lowercaseTitle: row.title.toLocaleLowerCase("en-US"),
       publishedAt: row.published_at,
+      scope: row.source_scope,
       section: row.section,
       sourceId: row.source_id,
-      sourceScope: row.source_scope,
       sourceUrl: row.source_url,
       title: row.title,
     }));
@@ -322,27 +207,10 @@ function getDailySearchCorpus(): DailySearchCorpusEntry[] {
   return entries;
 }
 
-export function searchCurationDailyDocuments(query: string, limit = 6): CurationDailySearchDocument[] {
-  return searchLocalAskDocuments(query, "daily", limit).map((document) => ({
-    content: document.content,
-    id: document.id,
-    publishedAt: document.publishedAt,
-    score: document.score,
-    sourceId: document.sourceId,
-    sourceUrl: document.sourceUrl,
-    title: document.title,
-  }));
-}
-
-export type LocalAskDocument = CurationDailySearchDocument & {
-  scope: "daily" | "open-source" | "profile";
-  section: string | null;
-};
-
-function searchLocalAskFts(query: string, scope: "daily" | "open-source" | "profile", limit: number) {
+function searchLocalAskFts(query: string, scope: LocalAskDocument["scope"], limit: number) {
   if (Array.from(query).length < 3) return [];
   try {
-    return getCurationDatabase()
+    return getPublicDatabase()
       .prepare(`SELECT documents.id, bm25(ask_documents_fts, 6.0, 1.0) AS rank
         FROM ask_documents_fts
         JOIN ask_documents AS documents ON documents.rowid = ask_documents_fts.rowid
@@ -358,13 +226,13 @@ function searchLocalAskFts(query: string, scope: "daily" | "open-source" | "prof
 
 export function searchLocalAskDocuments(
   query: string,
-  scope: "daily" | "open-source" | "profile",
+  scope: LocalAskDocument["scope"],
   limit = 6,
 ): LocalAskDocument[] {
   const needle = query.trim().toLocaleLowerCase("en-US");
   if (!needle) return [];
 
-  const corpus = getDailySearchCorpus().filter((entry) => entry.sourceScope === scope);
+  const corpus = getDailySearchCorpus().filter((entry) => entry.scope === scope);
   const byId = new Map(corpus.map((entry) => [entry.id, entry]));
   const ftsRows = searchLocalAskFts(needle, scope, limit * 4);
   if (ftsRows.length > 0) {
@@ -379,7 +247,7 @@ export function searchLocalAskDocuments(
           score: 4 / (index + 1)
             + occurrences(entry.lowercaseTitle, needle) * 8
             + occurrences(entry.lowercaseSearchText, needle) * 2,
-          scope: entry.sourceScope,
+          scope: entry.scope,
           section: entry.section,
           sourceId: entry.sourceId,
           sourceUrl: entry.sourceUrl,
@@ -397,13 +265,13 @@ export function searchLocalAskDocuments(
       score: occurrences(entry.lowercaseTitle, needle) * 8
         + occurrences(entry.lowercaseSearchText, needle) * 2
         + occurrences(entry.lowercaseContent, needle),
-      scope: entry.sourceScope,
+      scope: entry.scope,
       section: entry.section,
       sourceId: entry.sourceId,
       sourceUrl: entry.sourceUrl,
       title: entry.title,
     }))
     .filter((row) => row.score > 0)
-    .sort((left, right) => right.score - left.score || (right.publishedAt ?? "").localeCompare(left.publishedAt ?? ""))
+    .sort(byScoreThenRecency)
     .slice(0, limit);
 }

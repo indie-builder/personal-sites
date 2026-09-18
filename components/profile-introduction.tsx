@@ -233,6 +233,12 @@ export function ProfileIntroduction({
   );
   const [shouldAnimateInitialVisit] = useState(() => animateOnFirstHomeVisit);
 
+  const resetTitleToChinese = () => {
+    setGreetingIndex(0);
+    setTitleVisibleCount(CHINESE_TITLE.length);
+    setTitleIsTyping(false);
+  };
+
   useEffect(() => {
     let cancelled = false;
     const showChinese = () => {
@@ -290,9 +296,7 @@ export function ProfileIntroduction({
       setVisibleCounts(paragraphs.map((paragraph) => paragraph.length));
       setActiveIndex(null);
       setPhase("complete");
-      setGreetingIndex(0);
-      setTitleVisibleCount(CHINESE_TITLE.length);
-      setTitleIsTyping(false);
+      resetTitleToChinese();
       setHasCompletedInitialSequence(true);
     };
 

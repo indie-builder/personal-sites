@@ -1,11 +1,12 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { z } from "zod";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
 import type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
+import { byScoreThenRecency, occurrences } from "@/lib/search-score";
+import { getPublicSupabaseClient } from "@/lib/supabase.server";
 
 export type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
 
@@ -23,18 +24,8 @@ export type AiNewsSearchDocument = {
 // 完整数据都在 Supabase 公开投影里。
 export const AI_NEWS_LIST_LIMIT = 50;
 
-function requiredEnvironment(key: "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY") {
-  const value = process.env[key];
-  if (!value) throw new Error(`缺少 ${key}；网站每日动态只能从 Supabase 公开投影读取。`);
-  return value;
-}
-
 function getPublicAiNewsClient() {
-  return createClient(
-    requiredEnvironment("SUPABASE_URL"),
-    requiredEnvironment("SUPABASE_PUBLISHABLE_KEY"),
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
+  return getPublicSupabaseClient("网站每日动态只能从 Supabase 公开投影读取。");
 }
 
 const aiNewsRowSchema = z.object({
@@ -111,17 +102,6 @@ async function getAiNewsAskCorpus() {
   return items;
 }
 
-function occurrences(text: string, query: string) {
-  let count = 0;
-  let start = 0;
-  while (true) {
-    const index = text.indexOf(query, start);
-    if (index < 0) return count;
-    count += 1;
-    start = index + query.length;
-  }
-}
-
 /** 每日动态仍以 Supabase 为源，Ask 直接读取现有公开表，不再维护第二份远端索引。 */
 export async function searchAiNewsDocuments(query: string, limit = 6): Promise<AiNewsSearchDocument[]> {
   const needle = query.trim().toLocaleLowerCase("en-US");
@@ -142,6 +122,6 @@ export async function searchAiNewsDocuments(query: string, limit = 6): Promise<A
       };
     })
     .filter((item) => item.score > 0)
-    .sort((left, right) => right.score - left.score || (right.publishedAt ?? "").localeCompare(left.publishedAt ?? ""))
+    .sort(byScoreThenRecency)
     .slice(0, limit);
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { ChevronDown, ChevronRight, ExternalLink, FileCode2, Folder, FolderOpen, LoaderCircle } from "lucide-react";
+import { useHasMounted } from "@/components/use-mounted";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import styles from "@/components/open-source.module.css";
 import {
@@ -34,10 +35,9 @@ type OpenSourceRepositoryBrowserProps = {
 };
 
 const MotionLoaderCircle = motion.create(LoaderCircle);
-const subscribeToNothing = () => () => {};
 
 function RepositoryLoadingIcon() {
-  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const mounted = useHasMounted();
   const reduceMotion = useReducedMotion();
   const spinning = mounted && !reduceMotion;
   return (

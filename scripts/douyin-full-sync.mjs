@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
+import { parseCliOptions } from "./lib/cli.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataRoot = path.join(repoRoot, "data/sensitive/douyin-curation");
@@ -33,25 +34,33 @@ async function pendingVideoCount() {
 }
 
 export function parseFullSyncArgs(args) {
-  const options = { analyze: true, analyzeLimit: null, analyzerConcurrency: 6, concurrency: 20, download: true, engine: DEFAULT_ANALYSIS_ENGINE };
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
-    if (argument === "--") continue;
-    if (argument === "--discover-only") options.download = options.analyze = false;
-    else if (argument === "--skip-download") options.download = false;
-    else if (argument === "--skip-analyze") options.analyze = false;
-    else if (argument === "--analyze-limit") options.analyzeLimit = Number.parseInt(args[++index], 10);
-    else if (argument === "--concurrency") options.concurrency = Number.parseInt(args[++index], 10);
-    else if (argument === "--analyzer-concurrency") options.analyzerConcurrency = Number.parseInt(args[++index], 10);
-    else if (argument === "--engine") options.engine = args[++index] ?? "";
-    else throw new Error(`未知参数：${argument}`);
+  const parsed = parseCliOptions(args, {
+    "--analyzer-concurrency": "int",
+    "--analyze-limit": "int",
+    "--concurrency": "int",
+    "--discover-only": "flag",
+    "--engine": "string",
+    "--skip-analyze": "flag",
+    "--skip-download": "flag",
+  });
+  const { discoverOnly, positionals: stages, skipAnalyze, skipDownload, ...values } = parsed;
+  if (stages.length > 0) throw new Error("不接受额外参数。");
+  const options = {
+    analyze: true,
+    analyzeLimit: null,
+    analyzerConcurrency: 6,
+    concurrency: 20,
+    download: true,
+    engine: DEFAULT_ANALYSIS_ENGINE,
+    ...values,
+  };
+  if (discoverOnly) {
+    options.download = false;
+    options.analyze = false;
   }
-  if (options.analyzeLimit !== null && (!Number.isInteger(options.analyzeLimit) || options.analyzeLimit < 1)) {
-    throw new Error("--analyze-limit 必须是正整数。");
-  }
+  if (skipDownload) options.download = false;
+  if (skipAnalyze) options.analyze = false;
   options.engine = resolveAnalysisEngine(options.engine);
-  if (!Number.isInteger(options.concurrency) || options.concurrency < 1) throw new Error("--concurrency 必须是正整数。");
-  if (!Number.isInteger(options.analyzerConcurrency) || options.analyzerConcurrency < 1) throw new Error("--analyzer-concurrency 必须是正整数。");
   return options;
 }
 

@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
+import { openSourceEntries } from "../config/open-source-curation.mjs";
 import { openSourceCategories, openSourceDimensions, toOpenSourceListEntry } from "../lib/open-source-types";
 import { resolveGitHubReadmeAssetUrl, resolveGitHubReadmeUrl } from "../lib/github-readme-url";
 import { buildGitHubRepositoryTree, githubRepositoryFileUrl, normalizeGitHubPath } from "../lib/github-repository-browser";
-import { openSourceSeedEntries } from "../lib/open-source-seed";
 
 describe("open-source curation", () => {
   it("only exposes a curated public subset with stable, unique routes", () => {
-    expect(openSourceSeedEntries).toHaveLength(10);
-    expect(new Set(openSourceSeedEntries.map((entry) => entry.slug)).size).toBe(openSourceSeedEntries.length);
-    expect(openSourceSeedEntries.every((entry) => entry.repositoryUrl.startsWith("https://github.com/"))).toBe(true);
-    expect(openSourceSeedEntries.every((entry) => entry.evidence.kind === "readme")).toBe(true);
-    expect(openSourceSeedEntries.every((entry) => entry.evidence.url.includes("/README"))).toBe(true);
+    expect(openSourceEntries).toHaveLength(10);
+    expect(new Set(openSourceEntries.map((entry) => entry.slug)).size).toBe(openSourceEntries.length);
+    expect(openSourceEntries.every((entry) => entry.repositoryUrl.startsWith("https://github.com/"))).toBe(true);
+    expect(openSourceEntries.every((entry) => entry.evidence.kind === "readme")).toBe(true);
+    expect(openSourceEntries.every((entry) => entry.evidence.url.includes("/README"))).toBe(true);
   });
 
   it("keeps skills and agent systems as distinct primary categories", () => {
@@ -22,22 +22,22 @@ describe("open-source curation", () => {
       "context",
       "tools",
     ]);
-    expect(openSourceSeedEntries.some((entry) => entry.category === "skills")).toBe(true);
-    expect(openSourceSeedEntries.some((entry) => entry.category === "agents")).toBe(true);
+    expect(openSourceEntries.some((entry) => entry.category === "skills")).toBe(true);
+    expect(openSourceEntries.some((entry) => entry.category === "agents")).toBe(true);
     expect(openSourceDimensions.some((dimension) => dimension.id === "agent-control")).toBe(true);
-    expect(openSourceSeedEntries.some((entry) => entry.dimensions.includes("multi-agent"))).toBe(true);
+    expect(openSourceEntries.some((entry) => entry.dimensions.includes("multi-agent"))).toBe(true);
   });
 
   it("keeps the publish allowlist bounded even when the Star synchronizer has all repositories", () => {
-    expect(openSourceSeedEntries.find((entry) => entry.slug === "herdr")).toMatchObject({
+    expect(openSourceEntries.find((entry) => entry.slug === "herdr")).toMatchObject({
       repository: "herdrdev/herdr",
       category: "agents",
     });
-    expect(openSourceSeedEntries.find((entry) => entry.slug === "not-starred")).toBeUndefined();
+    expect(openSourceEntries.find((entry) => entry.slug === "not-starred")).toBeUndefined();
   });
 
   it("keeps long repository documents out of the client-side list projection", () => {
-    const entry = openSourceSeedEntries[0];
+    const entry = openSourceEntries[0];
     const listEntry = toOpenSourceListEntry({
       ...entry,
       parsedMarkdown: "# 很长的中文阅读版",

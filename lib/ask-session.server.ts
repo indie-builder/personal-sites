@@ -1,11 +1,12 @@
 import "server-only";
 
+import { getAdminSupabaseClient } from "@/lib/supabase.server";
+
 import { createHmac } from "node:crypto";
 import { chmod, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { createClient } from "@supabase/supabase-js";
 
 import { readPersistableSessionFile } from "@/lib/ask-session-file";
 import type { AskSource } from "@/lib/ask-types";
@@ -56,37 +57,23 @@ function getRestoredSessionFileName(sessionId: string) {
   return `ask_${sessionId}.jsonl`;
 }
 
-function requiredStorageEnvironment(key: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY") {
-  const value = process.env[key];
-  if (!value) throw new Error(`缺少 ${key}；无法持久保存公开问答会话。`);
-  return value;
-}
-
 function getSessionStorageClient() {
-  return createClient(
-    requiredStorageEnvironment("SUPABASE_URL"),
-    requiredStorageEnvironment("SUPABASE_SERVICE_ROLE_KEY"),
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
+  return getAdminSupabaseClient("无法持久保存公开问答会话。");
 }
 
 function isMissingRemoteSession(error: { message?: string; status?: number; statusCode?: string } | null) {
   return error?.statusCode === "404" && /object not found/i.test(error.message ?? "");
 }
 
-async function ensureSessionDirectory() {
-  const sessionDirectory = getSessionDirectory();
-  await mkdir(/* turbopackIgnore: true */ sessionDirectory, { mode: 0o700, recursive: true });
-  await chmod(/* turbopackIgnore: true */ sessionDirectory, 0o700);
-  return sessionDirectory;
+async function ensurePrivateDirectory(getDirectory: () => string) {
+  const directory = getDirectory();
+  await mkdir(/* turbopackIgnore: true */ directory, { mode: 0o700, recursive: true });
+  await chmod(/* turbopackIgnore: true */ directory, 0o700);
+  return directory;
 }
 
-async function ensureRuntimeDirectory() {
-  const runtimeDirectory = getRuntimeDirectory();
-  await mkdir(/* turbopackIgnore: true */ runtimeDirectory, { mode: 0o700, recursive: true });
-  await chmod(/* turbopackIgnore: true */ runtimeDirectory, 0o700);
-  return runtimeDirectory;
-}
+const ensureSessionDirectory = () => ensurePrivateDirectory(getSessionDirectory);
+const ensureRuntimeDirectory = () => ensurePrivateDirectory(getRuntimeDirectory);
 
 async function restoreRemoteSession(sessionId: string, sessionDirectory: string) {
   if (!usesRemoteSessionStorage()) return;

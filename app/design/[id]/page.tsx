@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import { createCurationEntryRoute } from "@/components/curation-entry";
 
-import { CurationEntry, getCurationEntryMetadata } from "@/components/curation-entry";
+const { EntryPage, generateMetadata } = createCurationEntryRoute("design");
 
-type DesignEntryPageProps = { params: Promise<{ id: string }> };
+export { generateMetadata };
 
 export const revalidate = 300;
 
@@ -10,10 +10,4 @@ export function generateStaticParams() {
   return [];
 }
 
-export async function generateMetadata({ params }: DesignEntryPageProps): Promise<Metadata> {
-  return getCurationEntryMetadata((await params).id, "design");
-}
-
-export default async function DesignEntryPage({ params }: DesignEntryPageProps) {
-  return <CurationEntry context="design" id={(await params).id} />;
-}
+export default EntryPage;

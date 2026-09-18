@@ -9,10 +9,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { openSourceEntries } from "../config/open-source-curation.mjs";
-import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
+import { resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import { analyzeStarredRecords, createCodexCliReader, createKimiReader, ONE_LINE_SUMMARY_VERSION, readLocalAnalyses } from "../modules/github-starred/analysis.mjs";
 import { publishStarredRecords } from "../modules/github-starred/publish-to-sqlite.mjs";
 import { readLocalSourceRecords, syncStarredRepositories } from "../modules/github-starred/source.mjs";
+import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -20,31 +21,22 @@ const config = JSON.parse(await readFile(path.join(repoRoot, "config/github-sync
 loadLocalEnv(repoRoot);
 
 export function parseGithubStarredArgs(args) {
-  const options = { concurrency: null, engine: DEFAULT_ANALYSIS_ENGINE, limit: Infinity, only: null, stage: "run" };
-  const positionals = [];
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
-    if (argument === "--") continue;
-    if (argument === "--limit") options.limit = Number.parseInt(args[++index], 10);
-    else if (argument === "--concurrency") options.concurrency = Number.parseInt(args[++index], 10);
-    else if (argument === "--engine") options.engine = args[++index] ?? "";
-    else if (argument === "--only") options.only = new Set((args[++index] ?? "").split(",").filter(Boolean));
-    else if (argument.startsWith("--")) throw new Error(`未知参数：${argument}`);
-    else positionals.push(argument);
-  }
-  if (positionals.length > 1 || (positionals[0] && !["init", "daily", "sync", "analyze", "publish", "run"].includes(positionals[0]))) {
+  const parsed = parseCliOptions(args, {
+    "--concurrency": "int",
+    "--engine": "string",
+    "--limit": "int",
+    "--only": "csv",
+  });
+  if (parsed.positionals.length > 1 || (parsed.positionals[0] && !["init", "daily", "sync", "analyze", "publish", "run"].includes(parsed.positionals[0]))) {
     throw new Error("用法：node scripts/github-starred.mjs [init|daily|sync|analyze|publish|run] [--limit n] [--concurrency n]");
   }
-  if (options.limit !== Infinity && (!Number.isInteger(options.limit) || options.limit < 1)) {
-    throw new Error("--limit 必须是大于 0 的整数。");
-  }
-  if (options.concurrency !== null && (!Number.isInteger(options.concurrency) || options.concurrency < 1)) {
-    throw new Error("--concurrency 必须是大于 0 的整数。");
-  }
-  if (options.only?.size === 0) throw new Error("--only 至少需要一个 owner/repository。");
-  options.engine = resolveAnalysisEngine(options.engine);
-  options.stage = positionals[0] ?? "run";
-  return options;
+  return {
+    concurrency: parsed.concurrency ?? null,
+    engine: resolveAnalysisEngine(parsed.engine),
+    limit: parsed.limit ?? Infinity,
+    only: parsed.only ?? null,
+    stage: parsed.positionals[0] ?? "run",
+  };
 }
 
 const options = parseGithubStarredArgs(process.argv.slice(2));

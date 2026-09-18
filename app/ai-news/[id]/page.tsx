@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
-import { SiteProfile } from "@/components/site-profile";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import { getAiNewsItem } from "@/lib/ai-news";
 import {
   formatAiNewsRelativeTime,
@@ -33,12 +31,11 @@ export default function AiNewsDetailPage({ params }: AiNewsDetailPageProps) {
   // 壳（个人信息栏）立即渲染，详情数据经 Suspense 流式补进：
   // 动态渲染下首字节不再等 Supabase 查询。
   return (
-    <main className="curation-home curation-detail" id="site-main" tabIndex={-1}>
-      <SiteProfile />
+    <DetailPage>
       <Suspense fallback={<AiNewsDetailSkeleton />}>
         <AiNewsDetailContent params={params} />
       </Suspense>
-    </main>
+    </DetailPage>
   );
 }
 
@@ -50,13 +47,7 @@ async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
 
   return (
     <article className="ai-news-detail__article" data-content-id={item.id}>
-      <nav aria-label="返回" className="ai-news-detail__topbar">
-        <Link className="ai-news-detail__back" href="/ai-news">
-          <ArrowLeft aria-hidden="true" />
-          返回每日动态
-        </Link>
-        <ThemeToggle />
-      </nav>
+      <DetailTopbar backClassName="ai-news-detail__back" backHref="/ai-news" backLabel="返回每日动态" className="ai-news-detail__topbar" />
 
       <header className="ai-news-detail__header">
         <p className="ai-news-detail__kicker">

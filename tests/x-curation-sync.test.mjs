@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { parseSyncArgs, runHistoryPipeline, runSyncPipeline } from "../scripts/x-curation-sync.mjs";
-import { resolvePiModelConfig } from "../scripts/lib/x-curation-ai.mjs";
+import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 
 test("sync pipeline fetches X data, prepares the sensitive queue, then enriches it", async () => {
   const calls = [];

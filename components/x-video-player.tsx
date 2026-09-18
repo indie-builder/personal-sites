@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 
+import { useHasMounted } from "@/components/use-mounted";
 import { XAppLink } from "@/components/x-app-link";
 
 type XVideoPlayerProps = {
@@ -14,13 +15,11 @@ type XVideoPlayerProps = {
   videoUrl: string;
 };
 
-const subscribeToNothing = () => () => {};
-
 /** 原生控制条播放；加载失败时保留 X 原视频回退入口。 */
 export function XVideoPlayer({ compact = false, isAnimatedGif, itemTitle, poster, tweetUrl, videoUrl }: XVideoPlayerProps) {
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
-  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const mounted = useHasMounted();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {

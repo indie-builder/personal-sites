@@ -17,6 +17,8 @@
  */
 
 import { createHash } from "node:crypto";
+
+import { readJsonOr } from "./lib/json-file.mjs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,15 +83,6 @@ function normalizeEntry(bookmark) {
       enrichedAt: null,
     },
   });
-}
-
-async function readJsonOr(filePath, fallback) {
-  try {
-    return JSON.parse(await readFile(filePath, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return fallback;
-    throw error;
-  }
 }
 
 async function readSourceOrder() {
