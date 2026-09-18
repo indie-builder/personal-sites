@@ -28,13 +28,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import {
-  createAgentSession,
-  DefaultResourceLoader,
-  getAgentDir,
-  ModelRuntime,
-  SessionManager,
-} from "@earendil-works/pi-coding-agent";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
 import { createCodexCliReader } from "../modules/github-starred/analysis.mjs";
 import {
@@ -50,10 +44,11 @@ import {
 import { DESIGN_CATEGORIES, designClassificationStatus, normalizeDesignClassification } from "../modules/x-sync/design-classification.mjs";
 import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs";
 import { writeJsonAtomically, writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
-import { getFinalAssistantFailure, getFinalAssistantText } from "../lib/pi-runtime.mjs";
+import { resolvePiModelConfig, stripJsonFence } from "../lib/pi-runtime.mjs";
+import { runPiPrompt } from "../modules/analysis/model-runner.mjs";
+import { resolveAnalysisConcurrency, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
+import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
-import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
-import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -65,25 +60,26 @@ const queuePath = path.join(repoRoot, config.queueFile);
 loadLocalEnv(repoRoot);
 const piModel = resolvePiModelConfig({ config, env: process.env });
 
-const args = process.argv.slice(2);
-const DRY_RUN = args.includes("--dry-run");
-const DESIGN_ONLY = args.includes("--design-only");
-const REFRESH = args.includes("--refresh");
-const engineIdx = args.indexOf("--engine");
-const ENGINE = resolveAnalysisEngine(engineIdx >= 0 ? args[engineIdx + 1] : DEFAULT_ANALYSIS_ENGINE);
-const codexModelIdx = args.indexOf("--model");
-const CODEX_MODEL = codexModelIdx >= 0 ? args[codexModelIdx + 1] : "gpt-5.6-luna";
-const reasoningEffortIdx = args.indexOf("--reasoning-effort");
-const CODEX_REASONING_EFFORT = reasoningEffortIdx >= 0 ? args[reasoningEffortIdx + 1] : "max";
-const limitIdx = args.indexOf("--limit");
-const LIMIT = limitIdx >= 0 ? Number.parseInt(args[limitIdx + 1], 10) : Infinity;
-const concurrencyIdx = args.indexOf("--concurrency");
-const CONCURRENCY = resolveAnalysisConcurrency({
-  engine: ENGINE,
-  override: concurrencyIdx >= 0 ? Number.parseInt(args[concurrencyIdx + 1], 10) : null,
+const cli = parseCliOptions(process.argv.slice(2), {
+  "--concurrency": "int",
+  "--design-only": "flag",
+  "--dry-run": "flag",
+  "--engine": "string",
+  "--limit": "int",
+  "--model": "string",
+  "--only": "csv",
+  "--refresh": "flag",
+  "--reasoning-effort": "string",
 });
-const onlyIdx = args.indexOf("--only");
-const ONLY = onlyIdx >= 0 ? new Set(args[onlyIdx + 1].split(",")) : null;
+const DRY_RUN = cli.dryRun ?? false;
+const DESIGN_ONLY = cli.designOnly ?? false;
+const REFRESH = cli.refresh ?? false;
+const ENGINE = resolveAnalysisEngine(cli.engine);
+const CODEX_MODEL = cli.model ?? "gpt-5.6-luna";
+const CODEX_REASONING_EFFORT = cli.reasoningEffort ?? "max";
+const LIMIT = cli.limit ?? Infinity;
+const CONCURRENCY = resolveAnalysisConcurrency({ engine: ENGINE, override: cli.concurrency ?? null });
+const ONLY = cli.only ?? null;
 
 const README_CAP = 12_000;
 const ARTICLE_CAP = 8_000;
@@ -257,8 +253,7 @@ ${visualEvidenceCount > 0 ? `\n【视觉证据】随请求附有 ${visualEvidenc
 }
 
 function parseJsonResponse(responseText) {
-  const body = responseText.trim().replace(/^```(?:json)?\s*/u, "").replace(/\s*```$/u, "");
-  const parsed = JSON.parse(body);
+  const parsed = JSON.parse(stripJsonFence(responseText));
   if (
     !parsed.title
       || !parsed.summary
@@ -279,53 +274,14 @@ function parseJsonResponse(responseText) {
 }
 
 function parseDesignResponse(responseText) {
-  const body = responseText.trim().replace(/^```(?:json)?\s*/u, "").replace(/\s*```$/u, "");
-  const parsed = JSON.parse(body);
+  const parsed = JSON.parse(stripJsonFence(responseText));
   return { design: normalizeDesignClassification(parsed.design, null) };
 }
 
-async function callPiModel(prompt, runtime, images, parser = parseJsonResponse) {
+async function callPiModel(prompt, images, parser = parseJsonResponse) {
   const model = runtime.getModel(piModel.provider, piModel.model);
   if (!model) throw new Error(`Pi 未找到模型：${piModel.provider}/${piModel.model}`);
-
-  const resourceLoader = new DefaultResourceLoader({
-    cwd: repoRoot,
-    agentDir: getAgentDir(),
-    noExtensions: true,
-    noPromptTemplates: true,
-    noSkills: true,
-    noThemes: true,
-  });
-  await resourceLoader.reload();
-  const { session } = await createAgentSession({
-    cwd: repoRoot,
-    model,
-    modelRuntime: runtime,
-    noTools: "all",
-    resourceLoader,
-    sessionManager: SessionManager.inMemory(repoRoot),
-    thinkingLevel: "off",
-  });
-  let answer = "";
-  const unsubscribe = session.subscribe((event) => {
-    if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-      answer += event.assistantMessageEvent.delta;
-    }
-  });
-  try {
-    await session.prompt(prompt, {
-      images: images.map((image) => ({
-        source: { data: image.data, mediaType: image.mediaType, type: "base64" },
-        type: "image",
-      })),
-    });
-    const failure = getFinalAssistantFailure(session);
-    if (failure) throw new Error(`Kimi 请求失败：${failure}`);
-    return parser(getFinalAssistantText(session) || answer);
-  } finally {
-    unsubscribe();
-    session.dispose();
-  }
+  return parser(await runPiPrompt({ cwd: repoRoot, images, label: "Kimi", model, prompt, runtime }));
 }
 
 // ---------- 主流程 ----------
@@ -372,12 +328,11 @@ async function callModel(prompt, images, parser = parseJsonResponse) {
   if (codexReader) {
     return parser(await codexReader.prompt(prompt, { imagePaths: images.map((image) => image.path) }));
   }
-  return callPiModel(prompt, runtime, images, parser);
+  return callPiModel(prompt, images, parser);
 }
 
 let done = 0;
 let failed = 0;
-let nextTargetIndex = 0;
 let saveQueue = Promise.resolve();
 
 function persistQueue() {
@@ -466,16 +421,7 @@ async function processItem(item) {
   }
 }
 
-async function worker() {
-  while (true) {
-    const index = nextTargetIndex;
-    nextTargetIndex += 1;
-    if (index >= targets.length) return;
-    await processItem(targets[index]);
-  }
-}
-
-await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
+await runWorkerPool(targets.length, CONCURRENCY, (index) => processItem(targets[index]));
 await saveQueue;
 
 console.log(`\n完成: ${done} 条解析，${failed} 条失败（可重跑续传）`);

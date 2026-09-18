@@ -11,6 +11,7 @@ import { promisify } from "node:util";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
@@ -21,13 +22,21 @@ export { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const execFileAsync = promisify(execFile);
 
-function requireValue(args, index, option) {
-  const value = args[index + 1];
-  if (!value || value.startsWith("--")) throw new Error(`${option} 需要一个值。`);
-  return value;
-}
-
 export function parseSyncArgs(args) {
+  const parsed = parseCliOptions(args, {
+    "--design-concurrency": "int",
+    "--engine": "string",
+    "--fetch-only": "flag",
+    "--help": "flag",
+    "-h": "flag",
+    "--history": "flag",
+    "--limit": "int",
+    "--media": "flag",
+    "--model": "string",
+    "--no-media": "flag",
+    "--reasoning-effort": "string",
+    "--source": "string",
+  });
   const options = {
     source: "both",
     limit: null,
@@ -38,56 +47,12 @@ export function parseSyncArgs(args) {
     codexModel: "gpt-5.6-luna",
     designConcurrency: null,
     reasoningEffort: "max",
+    ...parsed,
   };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === "--") {
-      continue;
-    } else if (arg === "--source") {
-      options.source = requireValue(args, index, "--source");
-      index += 1;
-    } else if (arg.startsWith("--source=")) {
-      options.source = arg.slice("--source=".length);
-    } else if (arg === "--limit") {
-      options.limit = Number.parseInt(requireValue(args, index, "--limit"), 10);
-      index += 1;
-    } else if (arg.startsWith("--limit=")) {
-      options.limit = Number.parseInt(arg.slice("--limit=".length), 10);
-    } else if (arg === "--engine") {
-      options.engine = requireValue(args, index, "--engine");
-      index += 1;
-    } else if (arg === "--model") {
-      options.codexModel = requireValue(args, index, "--model");
-      index += 1;
-    } else if (arg === "--reasoning-effort") {
-      options.reasoningEffort = requireValue(args, index, "--reasoning-effort");
-      index += 1;
-    } else if (arg === "--design-concurrency") {
-      options.designConcurrency = Number.parseInt(requireValue(args, index, "--design-concurrency"), 10);
-      index += 1;
-    } else if (arg.startsWith("--design-concurrency=")) {
-      options.designConcurrency = Number.parseInt(arg.slice("--design-concurrency=".length), 10);
-    } else if (arg === "--media") {
-      options.media = true;
-    } else if (arg === "--no-media") {
-      options.media = false;
-    } else if (arg === "--fetch-only") {
-      options.fetchOnly = true;
-    } else if (arg === "--history") {
-      options.history = true;
-    } else if (arg === "--help" || arg === "-h") {
-      options.help = true;
-    } else {
-      throw new Error(`不支持的参数：${arg}`);
-    }
-  }
-
-  if (!['bookmarks', 'likes', 'both'].includes(options.source)) {
+  delete options.positionals;
+  if (parsed.noMedia) options.media = false;
+  if (!["bookmarks", "likes", "both"].includes(options.source)) {
     throw new Error("--source 只能是 bookmarks、likes 或 both。");
-  }
-  if (options.limit !== null && (!Number.isInteger(options.limit) || options.limit <= 0)) {
-    throw new Error("--limit 必须是正整数。");
   }
   options.engine = resolveAnalysisEngine(options.engine);
   if (!new Set(["none", "low", "medium", "high", "xhigh", "max"]).has(options.reasoningEffort)) {

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { stripJsonFence } from "../../lib/pi-runtime.mjs";
 
 const VIDEO_EXTENSIONS = new Set([".m4v", ".mov", ".mp4", ".webm"]);
 
@@ -107,7 +108,7 @@ ${ocr || "（无）"}
 }
 
 export function parseCurationResponse(responseText) {
-  const body = String(responseText).trim().replace(/^```(?:json)?\s*/u, "").replace(/\s*```$/u, "");
+  const body = stripJsonFence(String(responseText));
   const parsed = JSON.parse(body);
   for (const key of ["title", "summary", "analysis", "excerpt"]) {
     if (!clean(parsed[key])) throw new Error(`模型返回缺少 ${key}。`);

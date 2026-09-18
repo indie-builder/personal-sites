@@ -13,6 +13,8 @@
  */
 
 import { mkdir, readFile, readdir, stat } from "node:fs/promises";
+
+import { readJsonOr } from "./lib/json-file.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -86,15 +88,6 @@ function normalizeTweet(tweet, fetchSource) {
       enrichedAt: null,
     },
   });
-}
-
-async function readJsonOr(filePath, fallback) {
-  try {
-    return JSON.parse(await readFile(filePath, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return fallback;
-    throw error;
-  }
 }
 
 function earlierFirstSeen(current, candidate) {

@@ -4,6 +4,8 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { runWorkerPool } from "../analysis/runtime.mjs";
+
 const execFileAsync = promisify(execFile);
 const README_FILE = "README.md";
 const REPOSITORY_FILE = "repository-structure.md";
@@ -319,26 +321,20 @@ export async function syncStarredRepositories({ concurrency = 15, exec, existing
   const existingByNodeId = new Map(existingRecords.map((record) => [record.repository.nodeId, record]));
   const records = [];
   const changedRecords = [];
-  let cursor = 0;
   let completed = 0;
-  const worker = async () => {
-    while (cursor < repositories.length) {
-      const index = cursor;
-      cursor += 1;
-      const repository = repositories[index];
-      const existing = existingByNodeId.get(repository.nodeId);
-      const changed = !incremental || repositoryNeedsSourceRefresh(repository, existing);
-      const record = changed
-        ? await syncRepositorySource(repository, { exec, maxBytes, rawRoot })
-        : withCurrentRepositoryMetadata(existing, repository);
-      if (!changed) await writeSnapshot(rawRoot, record);
-      records.push(record);
-      if (changed) changedRecords.push(record);
-      completed += 1;
-      await onRecord?.(record, completed, repositories.length, { changed });
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(concurrency, repositories.length) }, worker));
+  await runWorkerPool(repositories.length, concurrency, async (index) => {
+    const repository = repositories[index];
+    const existing = existingByNodeId.get(repository.nodeId);
+    const changed = !incremental || repositoryNeedsSourceRefresh(repository, existing);
+    const record = changed
+      ? await syncRepositorySource(repository, { exec, maxBytes, rawRoot })
+      : withCurrentRepositoryMetadata(existing, repository);
+    if (!changed) await writeSnapshot(rawRoot, record);
+    records.push(record);
+    if (changed) changedRecords.push(record);
+    completed += 1;
+    await onRecord?.(record, completed, repositories.length, { changed });
+  });
   const sortedRecords = records.sort((left, right) => left.repository.fullName.localeCompare(right.repository.fullName));
   Object.defineProperty(sortedRecords, "changedRecords", {
     enumerable: false,

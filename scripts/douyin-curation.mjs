@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { createCodexCliReader, createKimiReader } from "../modules/github-starred/analysis.mjs";
-import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
+import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import {
   buildCurationPrompt,
   groundEvidenceExcerpt,
@@ -17,6 +17,7 @@ import {
   toDouyinVideo,
   toReviewItem,
 } from "../modules/douyin-sync/import.mjs";
+import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -28,31 +29,34 @@ const failuresPath = path.join(path.dirname(queuePath), "analysis-failures.json"
 const favoriteIndexPath = path.join(path.dirname(queuePath), "favorite-index.json");
 
 export function parseArgs(args) {
-  const options = { analyzerConcurrency: null, concurrency: null, engine: DEFAULT_ANALYSIS_ENGINE, force: false, limit: Infinity, manifest: null, refreshOnly: false, stage: null };
-  const positionals = [];
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
-    if (argument === "--") continue;
-    if (argument === "--manifest") options.manifest = args[++index] ?? null;
-    else if (argument === "--limit") options.limit = Number.parseInt(args[++index], 10);
-    else if (argument === "--concurrency") options.concurrency = Number.parseInt(args[++index], 10);
-    else if (argument === "--analyzer-concurrency") options.analyzerConcurrency = Number.parseInt(args[++index], 10);
-    else if (argument === "--engine") options.engine = args[++index] ?? "";
-    else if (argument === "--force") options.force = true;
-    else if (argument === "--refresh-only") options.refreshOnly = true;
-    else if (argument.startsWith("--")) throw new Error(`未知参数：${argument}`);
-    else positionals.push(argument);
-  }
-  options.stage = positionals.shift() ?? null;
-  if (positionals.length > 0) throw new Error("sync 不接受额外参数。");
+  const parsed = parseCliOptions(args, {
+    "--analyzer-concurrency": "int",
+    "--concurrency": "int",
+    "--engine": "string",
+    "--force": "flag",
+    "--limit": "int",
+    "--manifest": "string",
+    "--refresh-only": "flag",
+  });
+  const [stage = null, ...extra] = parsed.positionals;
+  const options = {
+    analyzerConcurrency: null,
+    concurrency: null,
+    engine: DEFAULT_ANALYSIS_ENGINE,
+    force: false,
+    limit: Infinity,
+    manifest: null,
+    refreshOnly: false,
+    ...parsed,
+    stage,
+  };
+  delete options.positionals;
+  if (extra.length > 0) throw new Error("sync 不接受额外参数。");
   if (options.stage !== "sync") {
     throw new Error("用法：pnpm douyin:curation -- sync --manifest <download_manifest.jsonl> [--refresh-only] [--limit n] [--engine codex-cli|pi]");
   }
-  if (options.stage === "sync" && !options.manifest) throw new Error("sync 需要 --manifest <download_manifest.jsonl>。");
+  if (!options.manifest) throw new Error("sync 需要 --manifest <download_manifest.jsonl>。");
   options.engine = resolveAnalysisEngine(options.engine);
-  if (options.limit !== Infinity && (!Number.isInteger(options.limit) || options.limit < 1)) throw new Error("--limit 必须是正整数。");
-  if (options.concurrency !== null && (!Number.isInteger(options.concurrency) || options.concurrency < 1)) throw new Error("--concurrency 必须是正整数。");
-  if (options.analyzerConcurrency !== null && (!Number.isInteger(options.analyzerConcurrency) || options.analyzerConcurrency < 1)) throw new Error("--analyzer-concurrency 必须是正整数。");
   return options;
 }
 
@@ -79,21 +83,14 @@ async function readFavoriteOrders() {
 }
 
 export async function settleConcurrently(targets, concurrency, processTarget) {
-  let nextTargetIndex = 0;
   const failures = [];
-  async function worker() {
-    while (true) {
-      const index = nextTargetIndex;
-      nextTargetIndex += 1;
-      if (index >= targets.length) return;
-      try {
-        await processTarget(targets[index]);
-      } catch (error) {
-        failures.push({ error, target: targets[index] });
-      }
+  await runWorkerPool(targets.length, concurrency, async (index) => {
+    try {
+      await processTarget(targets[index]);
+    } catch (error) {
+      failures.push({ error, target: targets[index] });
     }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+  });
   return failures;
 }
 

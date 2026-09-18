@@ -11,12 +11,12 @@ export function isReadyForPublication(item) {
   );
 }
 
-function toIsoDate(createdAt) {
+export function toIsoDate(createdAt) {
   const parsed = new Date(createdAt);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-function toOrder(value) {
+export function toOrder(value) {
   return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
