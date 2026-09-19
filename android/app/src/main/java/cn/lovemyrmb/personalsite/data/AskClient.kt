@@ -3,6 +3,7 @@ package cn.lovemyrmb.personalsite.data
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -44,7 +45,8 @@ data class AskSource(
 
 /**
  * 问一问流式客户端：POST /api/ask（SSE），逐行解析 event/data 帧。
- * 限流（429）与网络失败都以 AskEvent.Error 返回，由 UI 呈现中文提示。
+ * 非 2xx 优先采用服务端 error 字段文案（route 契约），网络失败回退固定中文提示，
+ * 全部以 AskEvent.Error 返回由 UI 呈现。
  */
 class AskClient(
     private val client: OkHttpClient,
@@ -87,11 +89,7 @@ class AskClient(
             override fun onResponse(call: Call, response: Response) {
                 response.use { resp ->
                     if (!resp.isSuccessful) {
-                        onEvent(
-                            AskEvent.Error(
-                                if (resp.code == 429) "提问太频繁了，请十分钟后再试。" else "暂时无法回答，请稍后再试。",
-                            ),
-                        )
+                        onEvent(AskEvent.Error(errorMessage(resp)))
                         return
                     }
                     val source = resp.body?.source() ?: run {
@@ -152,4 +150,17 @@ class AskClient(
     // 保留来源顺序；不能静默丢弃异常项，否则回答中的编号会指向错误资料。
     private fun decodeSources(array: JsonArray): List<AskSource> =
         array.map { element -> json.decodeFromJsonElement(AskSource.serializer(), element) }
+
+    /** 非 2xx：服务端统一返回 {"error": "..."}；缺失、为空、非字符串或非 JSON 时回退固定文案。 */
+    private fun errorMessage(resp: Response): String {
+        val fallback = if (resp.code == 429) "提问过于频繁，请稍后再试。" else "暂时无法回答，请稍后再试。"
+        val body = runCatching { resp.body?.string() }.getOrNull() ?: return fallback
+        val message = body.takeIf { it.isNotBlank() }?.let { text ->
+            runCatching {
+                (json.decodeFromString(JsonObject.serializer(), text)["error"] as? JsonPrimitive)
+                    ?.takeIf { it.isString }?.content
+            }.getOrNull()
+        }
+        return message?.takeIf { it.isNotBlank() } ?: fallback
+    }
 }
