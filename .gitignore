@@ -40,3 +40,6 @@ test-results/
 
 # Local image-generation scratch output (avatar drafts); never commit.
 /output/
+
+# ZCode CLI per-session state; never commit.
+/.zcode/

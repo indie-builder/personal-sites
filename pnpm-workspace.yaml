@@ -24,3 +24,11 @@ overrides:
   fast-uri: 3.1.5
   hono: 4.12.34
   'sharp@<0.35.0': 0.35.4
+peerDependencyRules:
+  allowedVersions:
+    # @shadcn/lint 的 typescript-eslint 是永不触发的 fallback parser（运行时走 oxc-parser），
+    # 上游 peer 上限 <6.1.0 尚未放开 TS7，允许全项目统一 typescript@7。
+    '@typescript-eslint/parser>typescript': '7'
+    '@typescript-eslint/typescript-estree>typescript': '7'
+    '@typescript-eslint/project-service>typescript': '7'
+    '@typescript-eslint/tsconfig-utils>typescript': '7'

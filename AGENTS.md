@@ -18,7 +18,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Use `pnpm` with Node.js `>=22.19.0`; the package manager is pinned in `package.json`.
 - Default dev startup is domain-based via portless: `pnpm dev:domain` serves `https://personal-site.localhost` (fixed app port 3000). Plain `pnpm dev` stays available for raw-port use.
 - Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` for changes spanning app code or configuration.
-- `pnpm typecheck` deliberately invokes TypeScript 7; keep `typescript@6` for the Next.js API compatibility layer. See `scripts/tsc7.mjs`.
+- `pnpm typecheck` invokes TypeScript 7 via the `@typescript/native` alias; the `typescript` dev dependency is the same TS 7 build. See `scripts/tsc7.mjs`. The typescript-eslint parser pulled in by `@shadcn/lint` is an inert fallback — lint runs on oxlint with `oxc-parser` — so its TS `<6.1.0` peer cap is waived in `pnpm-workspace.yaml`.
 - For a second dev server, use `pnpm exec next dev --turbopack --hostname 127.0.0.1 --port 7100`; do not use `pnpm dev -- --port 7100`.
 
 ## File-Scoped Commands
