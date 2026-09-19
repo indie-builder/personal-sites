@@ -6,7 +6,15 @@ import { OpenSourceStream } from "@/components/open-source-stream";
 import type { SiteSection } from "@/components/site-section-navigation";
 import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
 import { getCurationPage } from "@/lib/curation";
+import { withCanonical } from "@/lib/metadata";
 import { getOpenSourceListEntries } from "@/lib/open-source";
+import type { Metadata } from "next";
+
+// ?view= 遗留内容视图只改变首页壳的初始形态；canonical 固定指向裸路径，
+// 避免视图参数派生出多个可索引的首页变体。
+export const metadata: Metadata = {
+  alternates: withCanonical("/"),
+};
 
 // 动态渲染、每请求直读 Supabase 公开投影：每日动态 5 分钟一变，不用 ISR
 // 时间缓存——否则缓存过期后的首次访问仍先拿到旧页面。

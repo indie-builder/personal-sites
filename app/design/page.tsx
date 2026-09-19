@@ -4,10 +4,12 @@ import { Suspense } from "react";
 import { CurationStream } from "@/components/curation-stream";
 import { FeedPage, FeedSkeleton } from "@/components/page-shell";
 import { getDesignCurationPage } from "@/lib/curation";
+import { withCanonical } from "@/lib/metadata";
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
+  alternates: withCanonical("/design"),
   description: "陈远在 X 点赞与收藏的设计相关内容，视频可直接在站内播放。",
   title: "设计收藏｜陈远",
 };

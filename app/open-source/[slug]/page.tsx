@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import { OpenSourceDocumentTabs } from "@/components/open-source-document-tabs";
 import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import { getOpenSourceEntry } from "@/lib/open-source";
+import { entryShareMetadata, withCanonical } from "@/lib/metadata";
 
 type OpenSourceEntryPageProps = {
   params: Promise<{ slug: string }>;
@@ -18,13 +19,18 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: OpenSourceEntryPageProps): Promise<Metadata> {
-  const entry = await getOpenSourceEntry((await params).slug);
-  return entry
-    ? {
-      description: entry.personalNote,
-      title: `${entry.repository}｜开源关注`,
-    }
-    : {};
+  const { slug } = await params;
+  const entry = await getOpenSourceEntry(slug);
+  if (!entry) return {};
+  const title = `${entry.repository}｜开源关注`;
+  const description = entry.personalNote || entry.repository;
+  const canonicalPath = `/open-source/${encodeURIComponent(slug)}`;
+  return {
+    alternates: withCanonical(canonicalPath),
+    description,
+    ...entryShareMetadata({ canonicalPath, description, title }),
+    title,
+  };
 }
 
 export default async function OpenSourceEntryPage({ params }: OpenSourceEntryPageProps) {

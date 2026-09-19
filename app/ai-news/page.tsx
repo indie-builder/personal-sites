@@ -4,11 +4,13 @@ import { Suspense } from "react";
 import { AiNewsStream } from "@/components/ai-news-stream";
 import { FeedPage, FeedSkeleton } from "@/components/page-shell";
 import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
+import { withCanonical } from "@/lib/metadata";
 
 // 动态渲染、每请求直读 Supabase 公开投影，打开即最新。
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: withCanonical("/ai-news"),
   description: "陈远每日跟踪的 AI 与 Agent 工程动态，按日分组的连续阅读流。",
   title: "每日动态｜陈远",
 };
