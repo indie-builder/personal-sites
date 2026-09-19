@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Project Instructions
 
 - This is a personal project. Unless explicitly requested, backward compatibility is not a requirement, including for published APIs, older clients, and installed app versions. Replace old APIs and data structures directly; do not add compatibility layers, dual-version support, migration bridges, or fallback branches for older consumers.
-- Prefer the simplest implementation that meets the current need. Do not add abstractions or infrastructure for hypothetical future requirements. The product is Web-only, with responsive desktop and mobile browser layouts.
+- Prefer the simplest implementation that meets the current need. Do not add abstractions or infrastructure for hypothetical future requirements. The primary product is the Web app, with responsive desktop and mobile browser layouts; `android/` holds the Kotlin + Compose Android client (「陈远小站」), which only consumes the site's public GET APIs.
 
 ## Runtime and Checks
 

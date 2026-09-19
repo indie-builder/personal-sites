@@ -54,6 +54,16 @@ export async function getOpenSourceListEntries(): Promise<OpenSourceListEntry[]>
     .map((row) => toOpenSourceListEntry(parseEntry(row.content_json)));
 }
 
+// /api/open-source 的分页读取：策展集合小（当前 10 条），直接整表切片，
+// 响应契约与其余信息流接口一致（{ hasMore, items }）。
+export async function getOpenSourcePage(offset = 0, limit = 20) {
+  const entries = await getOpenSourceListEntries();
+  return {
+    hasMore: offset + limit < entries.length,
+    items: entries.slice(offset, offset + limit),
+  };
+}
+
 export const getOpenSourceEntry = cache(async (slug: string): Promise<OpenSourceEntry | null> => {
   if (!/^[\w-]+$/u.test(slug)) return null;
   const row = getPublicDatabase().prepare("SELECT content_json FROM open_source_items WHERE slug = ?").get(slug);
