@@ -61,6 +61,9 @@ export function AskChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const requestController = useRef<AbortController | null>(null);
+  // isStreaming 要等会话预热（异步）之后才置位：用同步标记挡住这个窗口里的
+  // 重入（双击重试、重试与回车并发），避免重复请求与停止按钮失灵。
+  const submitInFlight = useRef(false);
   const shouldFollowLatest = useRef(true);
   const isProgrammaticScroll = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -149,12 +152,16 @@ export function AskChat() {
     setMessages((current) => current.map((message) => message.id === id ? update(message) : message));
   };
 
-  const submit = async (suggestion?: string) => {
+  const submit = async (suggestion?: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
     const trimmedQuestion = (suggestion ?? question).trim();
-    if (!trimmedQuestion || isStreaming || visitorId === "unavailable") return;
+    if (!trimmedQuestion || isStreaming || visitorId === "unavailable" || submitInFlight.current) return;
+    submitInFlight.current = true;
 
     const session = await ensureVisitorSession();
-    if (session.visitorId === "unavailable") return;
+    if (session.visitorId === "unavailable") {
+      submitInFlight.current = false;
+      return;
+    }
 
     const userId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
@@ -162,7 +169,8 @@ export function AskChat() {
       setUsedSuggestions((current) => [...current, trimmedQuestion]);
     }
     shouldFollowLatest.current = true;
-    setQuestion("");
+    // 失败重试的问题来自历史消息而非输入框：保留输入框里正在编辑的草稿。
+    if (!preserveDraft) setQuestion("");
     setIsStreaming(true);
     const controller = new AbortController();
     requestController.current = controller;
@@ -208,6 +216,7 @@ export function AskChat() {
         isComplete: true,
       }));
     } finally {
+      submitInFlight.current = false;
       requestController.current = null;
       setIsStreaming(false);
     }
@@ -225,11 +234,6 @@ export function AskChat() {
     && !lastMessage.interruption
     && Boolean(lastMessage.content)
     && followUpQuestions.length > 0;
-  const fillSuggestion = (suggestion: string) => {
-    setQuestion(suggestion);
-    textareaRef.current?.focus();
-  };
-
   const inputProps: ComponentProps<"textarea"> = {
     "aria-describedby": visitorId === "unavailable" ? "ask-session-status" : undefined,
     "aria-invalid": visitorId === "unavailable",
@@ -320,7 +324,8 @@ export function AskChat() {
                     onRetry={message.interruption?.kind === "error" && !isStreaming ? () => {
                       const previousQuestion = messages[index - 1];
                       if (previousQuestion?.role !== "user") return;
-                      fillSuggestion(previousQuestion.content);
+                      // 与主流对话产品一致：重试直接重发原问题，输入框草稿保持不动。
+                      void submit(previousQuestion.content, { preserveDraft: true });
                     } : undefined}
                     prefersReducedMotion={prefersReducedMotion}
                   />

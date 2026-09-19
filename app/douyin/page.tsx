@@ -25,6 +25,7 @@ async function DouyinFeed() {
       initialHasMore={douyinPage.hasMore}
       initialItems={douyinPage.items}
       loadErrorMessage="暂时无法加载更多抖音收藏。"
+      loadedAllLabel="已加载全部抖音收藏"
       snapshotKey="douyin-stream-v1"
     />
   );

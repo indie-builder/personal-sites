@@ -66,6 +66,27 @@ test("design stream names its own section in the network-failure fallback", asyn
   await expect(page.locator(".curation-home__stream-status")).toContainText("暂时无法加载更多设计收藏。");
 });
 
+test("design stream ends with its own section completion copy", async ({ page }) => {
+  // 第二页直接返回收尾分页：hasMore=false 且无可追加条目，应显示板块收尾文案。
+  await page.route("**/api/design?*", async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get("offset") ?? "0");
+    if (offset === 0) {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({ body: JSON.stringify({ hasMore: false, items: [] }), contentType: "application/json" });
+  });
+
+  await page.goto("/design");
+  await expect(page.locator(".design-curation__entry").first()).toBeVisible();
+
+  // 先确认第二页请求真的发出（首屏数据不足 20 条时收尾文案会直接渲染，用例会空转）。
+  const secondPage = page.waitForRequest(/api\/design\?offset=[1-9]/u);
+  await scrollToFeedEnd(page);
+  await secondPage;
+  await expect(page.locator(".curation-home__stream-status")).toContainText("已加载全部设计收藏");
+});
+
 async function scrollToFeedEnd(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
     const stream = document.querySelector(".curation-home__stream");
