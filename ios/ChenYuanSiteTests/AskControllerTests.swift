@@ -5,13 +5,25 @@ import Testing
 
 /// 问一问会话控制器的状态机规格（「新对话」确认弹窗背后的逻辑）：
 /// 输入校验、连接失败兜底、新对话重置、重试最近一问。
-/// 代次隔离的时序场景依赖可控的流，这里用即拒连接快速进入终态验证状态迁移。
+/// 用 URLProtocol 桩让请求在任何环境（含 CI runner）都确定性失败，
+/// 不依赖真实网络行为。
 @MainActor
 struct AskControllerTests {
-    /// 指向立即拒绝的地址：send 后毫秒级进入错误态，测试无需真实网络。
+    /// 拦截一切请求并立即报连接失败：send 后毫秒级进入错误态。
+    /// URLProtocol 由加载系统在任意线程调用，须保持 nonisolated。
+    nonisolated private final class FailingURLProtocol: URLProtocol {
+        override class func canInit(with request: URLRequest) -> Bool { true }
+        override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+        override func startLoading() {
+            client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
+        }
+        override func stopLoading() {}
+    }
+
     private func makeController() -> AskController {
-        var client = AskClient()
-        client.baseURL = URL(string: "http://127.0.0.1:1/")!
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [FailingURLProtocol.self]
+        let client = AskClient(session: URLSession(configuration: configuration))
         return AskController(client: client, visitorId: "test-visitor-000000000000")
     }
 
