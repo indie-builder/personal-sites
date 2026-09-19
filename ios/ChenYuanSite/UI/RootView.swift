@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var path: [Route] = []
     @State private var selectedSection = 0
     @State private var showAsk = false
+    @State private var askResetDemo = false
     @State private var barVisible = true
     @State private var travel: CGFloat = 0
 
@@ -52,7 +53,7 @@ struct RootView: View {
             .animation(.snappy(duration: 0.22, extraBounce: 0), value: barVisible)
             .frame(width: proxy.size.width, height: proxy.size.height)
             .fullScreenCover(isPresented: $showAsk) {
-                AskView()
+                AskView(demoResetPrompt: askResetDemo)
             }
             .onAppear { applyLaunchArguments() }
             .onChange(of: selectedSection) { _, _ in showBar() }
@@ -135,16 +136,23 @@ struct RootView: View {
     }
 
     /// 演示/联调用启动参数：-route-ask 直达问一问，-route-about 直达关于我，
-    /// -route-detail 拉取每日动态第一条并进入详情，-ask-demo 自动发送预设问题。
+    /// -route-detail 拉取每日动态第一条并进入详情，-ask-demo 自动发送预设问题，
+    /// -ask-reset 在 -ask-demo 基础上再弹出「新对话」确认。
     private func applyLaunchArguments() {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-route-ask") { showAsk = true }
         if arguments.contains("-route-about") { path = [.about] }
-        if arguments.contains("-ask-demo") {
+        if arguments.contains("-ask-demo") || arguments.contains("-ask-reset") {
             showAsk = true
             Task {
                 try? await Task.sleep(for: .seconds(0.5))
                 env.askController.send("介绍一下陈远", scope: .profile)
+            }
+        }
+        if arguments.contains("-ask-reset") {
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                askResetDemo = true
             }
         }
         if arguments.contains("-route-detail") {

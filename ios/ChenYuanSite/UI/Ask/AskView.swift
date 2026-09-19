@@ -8,7 +8,10 @@ private let recommendedQuestions: [(question: String, scope: AskScope)] = [
 ]
 
 /// 全屏原生问答：SSE 流式回答、引用编号应用内阅读、停止/重试/新对话。
+/// demoResetPrompt 是 -ask-reset 演示参数的触发信号（见 RootView）。
 struct AskView: View {
+    var demoResetPrompt = false
+
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -41,6 +44,24 @@ struct AskView: View {
             }
         }
         .background(SiteTheme.background)
+        .alert(
+            "开始新对话？",
+            isPresented: $confirmReset,
+        ) {
+            Button("取消", role: .cancel) {}
+            Button("新对话", role: .destructive) {
+                controller.newConversation()
+                input = ""
+                followLatest = true
+            }
+        } message: {
+            Text("当前对话和输入草稿将清空。")
+        }
+        // 演示信号挂在 body 顶层：引用阅读页打开时也能触发确认弹窗。
+        .onChange(of: demoResetPrompt) { _, prompted in
+            guard prompted else { return }
+            confirmReset = true
+        }
         .onDisappear { controller.cancel() }
     }
 
