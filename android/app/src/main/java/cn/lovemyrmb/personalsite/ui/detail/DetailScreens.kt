@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,7 @@ import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.aiNewsCategoryLabel
 import cn.lovemyrmb.personalsite.data.dimensionLabels
+import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.VideoCard
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.components.openExternally
@@ -107,8 +109,9 @@ private fun AiNewsDetailScreen(
 ) {
     var item by remember { mutableStateOf<AiNewsItem?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var attempt by remember { mutableStateOf(0) }
 
-    LaunchedEffect(id) {
+    LaunchedEffect(id, attempt) {
         runCatching { api.aiNewsDetail(id) }
             .onSuccess { item = it.item }
             .onFailure { error = "暂时无法读取这条每日动态。" }
@@ -124,7 +127,12 @@ private fun AiNewsDetailScreen(
         DetailTopBar(label = "每日动态", onBack = onBack)
         when {
             item != null -> AiNewsDetailBody(item!!, onOpenLink)
-            error != null -> DetailError(error ?: "", Modifier.weight(1f))
+            error != null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                ErrorRetry(message = error ?: "") {
+                    error = null
+                    attempt++
+                }
+            }
             else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
             }
@@ -314,7 +322,7 @@ private fun SourceCta(label: String, host: String, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(SiteTheme.colors.ink)
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = SiteSpace.page, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -384,13 +392,6 @@ private fun CurationMediaSection(media: List<CurationMedia>, source: CurationSou
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DetailError(message: String, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Text(text = message, style = SiteText.summary, color = SiteTheme.colors.muted)
     }
 }
 

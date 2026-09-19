@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -52,6 +55,7 @@ import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
 import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.dimensionLabels
+import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
@@ -176,7 +180,8 @@ private fun SectionTabs(selectedPage: Int, onSelect: (Int) -> Unit) {
             val selected = index == selectedPage
             Box(
                 modifier = Modifier
-                    .clickable { onSelect(index) }
+                    .heightIn(min = SiteSpace.touch)
+                    .selectable(selected = selected, role = Role.Tab) { onSelect(index) }
                     .padding(horizontal = 14.dp, vertical = 13.dp),
             ) {
                 Text(
@@ -212,7 +217,7 @@ private fun <T> FeedPageUi(
                 CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
             }
 
-            state.error != null && state.items.isEmpty() -> FeedError(
+            state.error != null && state.items.isEmpty() -> ErrorRetry(
                 message = state.error ?: "",
                 modifier = Modifier.fillMaxSize(),
             ) { viewModel.retry(section) }
@@ -264,7 +269,7 @@ private fun FeedFooter(state: FeedState<*>, onRetry: () -> Unit) {
             )
         }
 
-        state.error != null -> FeedError(message = state.error ?: "", modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
+        state.error != null -> ErrorRetry(message = state.error ?: "", modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
 
         !state.hasMore && state.items.isNotEmpty() -> Text(
             text = "已经到底了",
@@ -274,26 +279,6 @@ private fun FeedFooter(state: FeedState<*>, onRetry: () -> Unit) {
                 .fillMaxWidth()
                 .padding(vertical = 18.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun FeedError(message: String, modifier: Modifier = Modifier, onRetry: () -> Unit) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(text = message, style = SiteText.summary, color = SiteTheme.colors.muted)
-        Text(
-            text = "重试",
-            style = SiteText.eyebrow,
-            color = SiteTheme.colors.ink,
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .clickable { onRetry() }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 }

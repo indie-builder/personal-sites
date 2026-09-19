@@ -4,10 +4,16 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import okhttp3.Response
+import okhttp3.ResponseBody
 import okhttp3.Protocol
+import okio.ForwardingSource
+import okio.BufferedSource
+import okio.Buffer
+import okio.buffer
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.MediaType.Companion.toMediaType
 
@@ -40,6 +46,74 @@ class AskClientTest {
         val events = collect("event: text\ndata: {\"delta\":\"未完成\"}\n\n")
         assertTrue(events.last() is AskEvent.Error)
         assertFalse(events.contains(AskEvent.Done))
+    }
+
+    @Test fun serverErrorBodyMessageIsPreferredOverFixedCopy() {
+        assertEquals(
+            listOf(AskEvent.Error("提问过于频繁，请稍后再试。")),
+            collectError(code = 429, body = """{"error":"提问过于频繁，请稍后再试。"}"""),
+        )
+        assertEquals(
+            listOf(AskEvent.Error("问答服务暂时不可用，请稍后再试。")),
+            collectError(code = 503, body = """{"error":"问答服务暂时不可用，请稍后再试。"}"""),
+        )
+    }
+
+    @Test fun nonJsonOrEmptyErrorBodyFallsBackToFixedCopy() {
+        assertEquals(
+            listOf(AskEvent.Error("暂时无法回答，请稍后再试。")),
+            collectError(code = 502, body = "<html>bad gateway</html>"),
+        )
+        assertEquals(
+            listOf(AskEvent.Error("提问过于频繁，请稍后再试。")),
+            collectError(code = 429, body = ""),
+        )
+    }
+
+    @Test fun blankErrorFieldFallsBackToFixedCopy() {
+        assertEquals(
+            listOf(AskEvent.Error("暂时无法回答，请稍后再试。")),
+            collectError(code = 400, body = """{"error":""}"""),
+        )
+        assertEquals(
+            listOf(AskEvent.Error("暂时无法回答，请稍后再试。")),
+            collectError(code = 400, body = """{"error":123}"""),
+        )
+    }
+
+    @Test fun unreadableErrorBodyFallsBackToFixedCopy() {
+        val broken = object : ResponseBody() {
+            override fun contentType() = "application/json".toMediaType()
+            override fun contentLength() = -1L
+            override fun source(): BufferedSource =
+                object : ForwardingSource(Buffer()) {
+                    override fun read(sink: Buffer, byteCount: Long): Long = throw IOException("broken body")
+                }.buffer()
+        }
+        assertEquals(
+            listOf(AskEvent.Error("暂时无法回答，请稍后再试。")),
+            collectError(code = 503, body = broken),
+        )
+    }
+
+    private fun collectError(code: Int, body: String): List<AskEvent> =
+        collectError(code, body.toResponseBody("application/json".toMediaType()))
+
+    private fun collectError(code: Int, body: ResponseBody): List<AskEvent> {
+        val latch = CountDownLatch(1)
+        val events = mutableListOf<AskEvent>()
+        val http = OkHttpClient.Builder().addInterceptor { chain ->
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("Error")
+                .body(body).build()
+        }.build()
+        try {
+            AskClient(http, json).ask("问题", "1234567890123456", "1234567890123456") {
+                events.add(it)
+                if (it is AskEvent.Done || it is AskEvent.Error) latch.countDown()
+            }
+            assertTrue(latch.await(5, TimeUnit.SECONDS))
+            return events.toList()
+        } finally { http.connectionPool.evictAll() }
     }
 
     private fun collect(body: String): List<AskEvent> {
