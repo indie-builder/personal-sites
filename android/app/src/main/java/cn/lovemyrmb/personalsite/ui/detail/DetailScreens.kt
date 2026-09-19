@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -107,8 +109,9 @@ private fun AiNewsDetailScreen(
 ) {
     var item by remember { mutableStateOf<AiNewsItem?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var attempt by remember { mutableStateOf(0) }
 
-    LaunchedEffect(id) {
+    LaunchedEffect(id, attempt) {
         runCatching { api.aiNewsDetail(id) }
             .onSuccess { item = it.item }
             .onFailure { error = "暂时无法读取这条每日动态。" }
@@ -124,7 +127,10 @@ private fun AiNewsDetailScreen(
         DetailTopBar(label = "每日动态", onBack = onBack)
         when {
             item != null -> AiNewsDetailBody(item!!, onOpenLink)
-            error != null -> DetailError(error ?: "", Modifier.weight(1f))
+            error != null -> DetailError(error ?: "", Modifier.weight(1f)) {
+                error = null
+                attempt++
+            }
             else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
             }
@@ -314,7 +320,7 @@ private fun SourceCta(label: String, host: String, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .background(SiteTheme.colors.ink)
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = SiteSpace.page, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -388,9 +394,25 @@ private fun CurationMediaSection(media: List<CurationMedia>, source: CurationSou
 }
 
 @Composable
-private fun DetailError(message: String, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+private fun DetailError(message: String, modifier: Modifier = Modifier, onRetry: () -> Unit) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+    ) {
         Text(text = message, style = SiteText.summary, color = SiteTheme.colors.muted)
+        Text(
+            text = "重试",
+            style = SiteText.eyebrow,
+            color = SiteTheme.colors.ink,
+            modifier = Modifier
+                .heightIn(min = SiteSpace.touch)
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(onClickLabel = "重新加载内容", role = Role.Button) { onRetry() }
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 
