@@ -50,6 +50,9 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 
 无触控环境（如 CI 截图）可用启动参数直达页面：
 
+推送含 `ios/` 变更会自动触发 GitHub Actions 跑同一套测试
+（`.github/workflows/ios-tests.yml`，macOS runner）。
+
 | 参数 | 行为 |
 | --- | --- |
 | `-route-ask` | 打开问一问 |
