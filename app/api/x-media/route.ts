@@ -9,6 +9,23 @@ const FORWARDED_HEADERS = [
   "etag",
   "last-modified",
 ];
+// 超时只覆盖"发起请求到响应头返回"：视频体随后长时间流式传输是正常情况，
+// 不能被固定时限掐断。
+const UPSTREAM_TIMEOUT_MS = 15_000;
+
+function jsonError(message: string, status: number) {
+  return Response.json({ error: message }, { status });
+}
+
+async function fetchUpstreamOnce(url: URL, headers: Headers, method: "GET" | "HEAD") {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    return await fetch(url, { headers, method, redirect: "manual", signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function getMediaUrl(request: Request): URL | null {
   const value = new URL(request.url).searchParams.get("url");
@@ -38,26 +55,32 @@ function getRedirectUrl(location: string | null, base: URL): URL | null {
 }
 
 async function fetchUpstream(mediaUrl: URL, headers: Headers, method: "GET" | "HEAD") {
-  const first = await fetch(mediaUrl, { headers, method, redirect: "manual" });
+  const first = await fetchUpstreamOnce(mediaUrl, headers, method);
   if (first.status < 300 || first.status >= 400) return first;
 
   const target = getRedirectUrl(first.headers.get("location"), mediaUrl);
   if (!target) return null;
-  const second = await fetch(target, { headers, method, redirect: "manual" });
+  const second = await fetchUpstreamOnce(target, headers, method);
   // 第二跳仍是重定向则不再跟随，避免被多跳链带出 CDN 域。
   return second.status >= 300 && second.status < 400 ? null : second;
 }
 
 async function proxyMedia(request: Request, method: "GET" | "HEAD") {
   const mediaUrl = getMediaUrl(request);
-  if (!mediaUrl) return new Response("不支持的视频地址。", { status: 400 });
+  if (!mediaUrl) return jsonError("不支持的视频地址。", 400);
 
   const headers = new Headers();
   const range = request.headers.get("range");
   if (range) headers.set("range", range);
 
-  const upstream = await fetchUpstream(mediaUrl, headers, method);
-  if (!upstream) return new Response("视频地址的重定向目标不受支持。", { status: 502 });
+  let upstream: Response | null;
+  try {
+    upstream = await fetchUpstream(mediaUrl, headers, method);
+  } catch {
+    // twimg DNS/连接抖动或响应头超时：与站内其他端点一致返回 JSON，不落 HTML 500。
+    return jsonError("视频源暂时无法连接。", 502);
+  }
+  if (!upstream) return jsonError("视频地址的重定向目标不受支持。", 502);
   const responseHeaders = new Headers();
   for (const name of FORWARDED_HEADERS) {
     const value = upstream.headers.get(name);
