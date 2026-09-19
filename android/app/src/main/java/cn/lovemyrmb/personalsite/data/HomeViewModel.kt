@@ -24,7 +24,6 @@ data class FeedState<T>(
 class PagedFeed<T>(
     private val scope: kotlinx.coroutines.CoroutineScope,
     private val idOf: (T) -> String,
-    private val pageSize: Int,
     private val fetch: suspend (offset: Long) -> FeedPage<T>,
 ) {
     private val _state = MutableStateFlow(FeedState<T>())
@@ -39,7 +38,10 @@ class PagedFeed<T>(
     }
 
     fun refresh() {
-        if (_state.value.refreshing) return
+        val current = _state.value
+        // 初始加载/追加进行中时忽略刷新：两个并发请求会竞态覆盖状态，
+        // 且此时数据马上就会到达，无需重复拉取。
+        if (current.refreshing || current.loadingMore || current.initial) return
         request(offset = 0, append = false, refreshing = true)
     }
 
@@ -55,6 +57,8 @@ class PagedFeed<T>(
 
     fun retry() {
         val current = _state.value
+        // 首屏重载进行中（前一次 retry 已置 initial）不得再次触发，避免并发重载竞态。
+        if (current.initial) return
         if (current.items.isEmpty()) {
             started = false
             _state.value = current.copy(error = null, initial = true)
@@ -104,19 +108,19 @@ class PagedFeed<T>(
 }
 
 class HomeViewModel(private val api: SiteApi) : ViewModel() {
-    val aiNews = PagedFeed(viewModelScope, idOf = AiNewsListItem::id, pageSize = Section.AI_NEWS.pageSize) { offset ->
+    val aiNews = PagedFeed(viewModelScope, idOf = AiNewsListItem::id) { offset ->
         api.aiNews(offset, Section.AI_NEWS.pageSize)
     }
-    val curation = PagedFeed(viewModelScope, idOf = CurationItem::id, pageSize = Section.CURATION.pageSize) { offset ->
+    val curation = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
         api.curation(offset, Section.CURATION.pageSize)
     }
-    val design = PagedFeed(viewModelScope, idOf = CurationItem::id, pageSize = Section.DESIGN.pageSize) { offset ->
+    val design = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
         api.design(offset, Section.DESIGN.pageSize)
     }
-    val douyin = PagedFeed(viewModelScope, idOf = CurationItem::id, pageSize = Section.DOUYIN.pageSize) { offset ->
+    val douyin = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
         api.douyin(offset, Section.DOUYIN.pageSize)
     }
-    val openSource = PagedFeed(viewModelScope, idOf = OpenSourceListEntry::slug, pageSize = Section.OPEN_SOURCE.pageSize) { offset ->
+    val openSource = PagedFeed(viewModelScope, idOf = OpenSourceListEntry::slug) { offset ->
         api.openSource(offset, Section.OPEN_SOURCE.pageSize)
     }
 
