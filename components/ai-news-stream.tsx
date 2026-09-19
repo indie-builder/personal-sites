@@ -207,7 +207,12 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
             </div>
           </>
         ) : null}
-        {loadError ? <button onClick={() => void loadMore()} type="button">{loadError}，重试</button> : null}
+        {loadError ? (
+          <>
+            <span>{loadError}</span>
+            <button onClick={() => void loadMore()} type="button">重试</button>
+          </>
+        ) : null}
         {!hasMore && !loadError ? (
           <span>{activeFilterLabel ? `已加载全部${activeFilterLabel}动态` : "已加载最近 7 天的全部动态"}</span>
         ) : null}

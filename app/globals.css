@@ -738,7 +738,7 @@ html[data-curation-theme="dark"] .stream-date-toolbar { background:#181818; bord
 .curation-theme-toggle { width:2.75rem; height:2.75rem; transition:background-color 160ms ease,transform 120ms var(--ease-out); }
 .curation-theme-toggle:active:not(:focus-visible) { transform:scale(.97); }
 .curation-detail__back a,.curation-detail__sources a { min-height:2.75rem; }
-.curation-home__stream-status button { min-height:2.75rem; padding:.5rem; }
+.curation-home__stream-status button,.ai-news__status button { min-height:2.75rem; padding:.5rem; }
 @media (hover:none), (pointer:coarse) {
   .curation-home__external-links a:hover,.curation-home__about-trigger:hover { transform:none; }
 }

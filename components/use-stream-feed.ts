@@ -23,6 +23,35 @@ export interface StreamSnapshotAdapter<Item, Extra> {
   write(snapshot: object, storageKey?: string): void;
 }
 
+/** 加载更多的请求上限；超时后走可重试的兜底提示，不让骨架无限转下去。 */
+export const STREAM_FETCH_TIMEOUT_MS = 10_000;
+
+/**
+ * 请求下一页流数据。成功返回分页负载；失败返回面向访客的错误文案：
+ * 只有服务端 JSON 里明确给出的非空 error 才原样展示，网络中断、超时或网关
+ * 返回的 HTML 错误页（json() 抛 SyntaxError）一律回落到兜底提示。
+ * 形状非法的 2xx 响应（items 非数组、hasMore 缺失）与失败同权回落，
+ * 避免 updater 里的 TypeError 逃逸出错误 UI。
+ */
+export async function requestStreamPage<Item>(
+  url: string,
+  fallbackError: string,
+): Promise<StreamPage<Item> | string> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(STREAM_FETCH_TIMEOUT_MS) });
+    const payload = (await response.json().catch(() => null)) as StreamPage<Item> | null;
+    if (!response.ok) {
+      return typeof payload?.error === "string" && payload.error ? payload.error : fallbackError;
+    }
+    if (payload === null || !Array.isArray(payload.items) || typeof payload.hasMore !== "boolean") {
+      return fallbackError;
+    }
+    return payload;
+  } catch {
+    return fallbackError;
+  }
+}
+
 type StreamFeedOptions<Item, Extra> = {
   /** 加载更多的分页接口。 */
   apiPath: string;
@@ -151,29 +180,33 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
     setLoadError(null);
     setAppendStart(items.length);
     try {
-      const response = await fetch(`${apiPath}?offset=${items.length}&limit=${pageSize}`);
-      const payload = (await response.json()) as StreamPage<Item>;
-      if (!response.ok) throw new Error(payload.error ?? loadErrorMessage);
-
+      const page = await requestStreamPage<Item>(
+        `${apiPath}?offset=${items.length}&limit=${pageSize}`,
+        loadErrorMessage,
+      );
+      if (typeof page === "string") {
+        setLoadError(page);
+        return;
+      }
       setItems((currentItems) => {
         const knownIds = new Set(currentItems.map((item) => item.id));
-        return [...currentItems, ...payload.items.filter((item) => !knownIds.has(item.id))];
+        return [...currentItems, ...page.items.filter((item) => !knownIds.has(item.id))];
       });
-      setHasMore(payload.hasMore);
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : loadErrorMessage);
+      setHasMore(page.hasMore);
     } finally {
       setIsLoading(false);
     }
   }, [apiPath, hasMore, isLoading, items.length, loadErrorMessage, pageSize]);
 
   // 无限滚动：哨兵进入视口（或初始未填满滚动容器）时加载下一页。
+  // 失败后暂停自动加载（否则对快速失败的上游形成紧密重试循环），
+  // 只保留显式的重试入口，点击重试清除 loadError 后自动恢复。
   useEffect(() => {
     const stream = streamRef.current;
-    if (!hasMore || !stream) return;
+    if (!hasMore || loadError || !stream) return;
 
     return observeCurationScrollEnd(stream, () => void loadMore());
-  }, [hasMore, loadMore]);
+  }, [hasMore, loadError, loadMore]);
 
   return { appendStart, hasMore, isLoading, items, loadError, loadMore, setItems, streamRef };
 }

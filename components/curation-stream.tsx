@@ -151,7 +151,12 @@ export function CurationStream({
             </div>
           </>
         ) : null}
-        {loadError ? <button onClick={() => void loadMore()} type="button">{loadError}，重试</button> : null}
+        {loadError ? (
+          <>
+            <span>{loadError}</span>
+            <button onClick={() => void loadMore()} type="button">重试</button>
+          </>
+        ) : null}
         {!hasMore && !loadError ? <span>{items.length === 0 ? emptyLabel : "已加载全部策展内容"}</span> : null}
       </li>
     </ol>

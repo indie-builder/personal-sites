@@ -1,0 +1,60 @@
+import { expect, test } from "@playwright/test";
+
+/**
+ * 信息流「加载更多」的失败→重试契约：分页接口被网关 502（HTML 错误页）打断时，
+ * 页面只出现中文兜底文案与独立的重试按钮，不把技术性英文
+ * （JSON 解析错误、Failed to fetch）暴露给访客；上游恢复后重试可继续追加。
+ */
+test("curation stream surfaces a Chinese fallback when load more fails and recovers on retry", async ({ page }) => {
+  let upstreamHealthy = false;
+  await page.route("**/api/curation?*", async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get("offset") ?? "0");
+    if (offset > 0 && !upstreamHealthy) {
+      await route.fulfill({
+        body: "<html>502 Bad Gateway</html>",
+        contentType: "text/html; charset=utf-8",
+        status: 502,
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/curation");
+  const feed = page.locator(".curation-home__feed");
+  const status = page.locator(".curation-home__stream-status");
+  await expect(feed.locator("li").first()).toBeVisible();
+
+  // 滚动到底触发下一页请求（被 mock 成网关 502 HTML 错误页）。
+  await scrollToFeedEnd(page);
+  const retry = page.getByRole("button", { name: "重试" });
+  await expect(retry).toBeVisible();
+  const statusText = await status.innerText();
+  expect(statusText).toContain("暂时无法加载更多策展内容。");
+  expect(statusText).not.toMatch(/Unexpected token|Failed to fetch|SyntaxError/u);
+
+  // 离开底部哨兵，避免失败期间的自动重试与手动重试竞争。
+  await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 0 }));
+  await feed.evaluate((element) => {
+    if (["auto", "scroll"].includes(getComputedStyle(element).overflowY)) element.scrollTop = 0;
+  });
+
+  // 上游恢复后重试：列表追加一页，错误态消失。
+  upstreamHealthy = true;
+  const itemsBefore = await feed.locator("li").count();
+  await retry.click();
+  await expect(feed.locator("li")).toHaveCount(itemsBefore + 20, { timeout: 15_000 });
+  await expect(retry).toHaveCount(0);
+});
+
+async function scrollToFeedEnd(page: import("@playwright/test").Page) {
+  await page.evaluate(() => {
+    const stream = document.querySelector(".curation-home__stream");
+    const feed = stream?.closest(".curation-home__feed");
+    if (feed instanceof HTMLElement && ["auto", "scroll"].includes(getComputedStyle(feed).overflowY)) {
+      feed.scrollTop = feed.scrollHeight;
+      return;
+    }
+    window.scrollTo({ behavior: "instant", top: document.body.scrollHeight });
+  });
+}
