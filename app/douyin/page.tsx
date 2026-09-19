@@ -24,6 +24,7 @@ async function DouyinFeed() {
       emptyLabel="暂无已发布的抖音收藏条目。"
       initialHasMore={douyinPage.hasMore}
       initialItems={douyinPage.items}
+      loadErrorMessage="暂时无法加载更多抖音收藏。"
       snapshotKey="douyin-stream-v1"
     />
   );
