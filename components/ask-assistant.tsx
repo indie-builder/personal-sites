@@ -17,6 +17,11 @@ export function AskAssistant() {
   const [instant, setInstant] = useState(false);
   const [entered, setEntered] = useState(false);
   const [appearance, setAppearance] = useState(0);
+  // ≤900px 时面板是全屏覆盖层：打开时按断点决定模态形态，让 Radix 圈闭
+  // 焦点并屏蔽背景；桌面保持非模态侧板（断点与面板 CSS 一致）。判定在打开
+  // 时冻结——Radix 按 modal 在两个组件类型间二选一，开着切换会整体重挂
+  // Content 子树（丢对话草稿、甩出焦点、重放入场动画），重开才采用新判定。
+  const [compact, setCompact] = useState(false);
   const restoreFocusAfterEntry = useRef(false);
   const emergence = useRef<HTMLSpanElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -45,7 +50,8 @@ export function AskAssistant() {
         { transform: "translateY(calc(100% + 1px))" },
         { transform: "translateY(0)" },
       ], { duration: 480, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" });
-      animation.finished.then(settle).catch(() => {});
+      // 动画被中断或失败时也要落到最终状态，否则触发按钮会永久禁用。
+      animation.finished.then(settle).catch(() => settle());
     }
     const onReducedMotion = () => { if (reduced.matches) settle(); };
     reduced.addEventListener("change", onReducedMotion);
@@ -146,13 +152,14 @@ export function AskAssistant() {
   }
 
   return (
-    <Dialog.Root modal={false} open={shown} onOpenChange={(open) => { if (!open) close(); }}>
+    <Dialog.Root modal={compact} open={shown} onOpenChange={(open) => { if (!open) close(); }}>
       <div className={styles.launcher} data-phase={phase} data-instant={instant} data-entered={entered}>
         <SpriteWalker key={appearance} paused={!entered || phase !== "closed"}>
           <button ref={trigger} disabled={!entered} className={styles.trigger} aria-label="和像素助手聊聊" aria-haspopup="dialog" aria-expanded={shown} type="button" onClick={(event) => {
             if (phase !== "closed") return;
             const skip = event.detail === 0 || matchMedia("(prefers-reduced-motion: reduce)").matches;
             setInstant(skip);
+            setCompact(matchMedia("(max-width: 900px)").matches);
             setPhase(skip ? "open" : "sinking");
             if (!skip) timer.current = setTimeout(() => setPhase("open"), 300);
           }}>
@@ -162,7 +169,8 @@ export function AskAssistant() {
         </SpriteWalker>
       </div>
       <Dialog.Portal>
-        <Dialog.Content className={styles.panel} data-phase={phase} data-instant={instant}
+        {/* Radix 1.1 只按 modal 提供焦点圈闭与背景屏蔽行为，不渲染 aria-modal；移动端全屏面板需要显式标注。 */}
+        <Dialog.Content aria-modal={compact} className={styles.panel} data-phase={phase} data-instant={instant}
           onInteractOutside={(event) => event.preventDefault()}
           onOpenAutoFocus={(event) => { event.preventDefault(); document.querySelector<HTMLButtonElement>('[aria-label="关闭问一问"]')?.focus(); }}
           onCloseAutoFocus={(event) => {
