@@ -43,7 +43,7 @@ export function toPublicCurationItem(item) {
     design: prepared.ai.design
       ? {
           ...prepared.ai.design,
-          status: designClassificationStatus(prepared.ai.design.relevant, prepared.ai.design.confidence),
+          status: designClassificationStatus(prepared.ai.design.relevant),
         }
       : null,
     author: {

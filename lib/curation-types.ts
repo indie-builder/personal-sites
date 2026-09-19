@@ -20,7 +20,7 @@ export const curationItemSchema = z.object({
       evidence: z.array(z.string().min(1)).max(4),
       reason: z.string().min(1),
       relevant: z.boolean(),
-      status: z.enum(["include", "review", "exclude"]),
+      status: z.enum(["include", "exclude"]),
     })
     .nullable()
     .default(null),
@@ -47,6 +47,8 @@ export const curationItemSchema = z.object({
       sourceKinds: [],
       tools: [],
     }),
+  // 抖音条目的证据摘录在原视频中出现的时间（mm:ss）；X 来源与旧数据为 null。
+  excerptTime: z.string().nullable().default(null),
   id: z.string().min(1),
   links: z.array(
     z.object({

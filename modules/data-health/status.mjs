@@ -32,7 +32,6 @@ export function buildDataHealth({ aiNews, commit = null, insights = null, now = 
   };
   const openSource = sourceStatus(publicData.openSource, now, 14 * 24 * 60, warnings, "开源关注");
   const analysisHealthy = !insights || Number(insights.analysisErrors ?? 0) === 0;
-  if (Number(insights?.designReview ?? 0) > 0) warnings.push(`仍有 ${insights.designReview} 条设计分类待复核。`);
   const healthy = Boolean(aiNews.healthy && database.healthy && askIndex.healthy && curation.x.healthy && curation.douyin.healthy
     && openSource.healthy && analysisHealthy);
   return {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,6 +40,7 @@ export function parseFullSyncArgs(args) {
     "--analyze-limit": "int",
     "--concurrency": "int",
     "--discover-only": "flag",
+    "--dry-run": "flag",
     "--engine": "string",
     "--skip-analyze": "flag",
     "--skip-download": "flag",
@@ -48,9 +50,11 @@ export function parseFullSyncArgs(args) {
   const options = {
     analyze: true,
     analyzeLimit: null,
-    analyzerConcurrency: 6,
-    concurrency: 20,
+    // 并发默认值以 douyin:curation 的引擎感知配置为唯一来源，这里只在显式传入时覆盖。
+    analyzerConcurrency: null,
+    concurrency: null,
     download: true,
+    dryRun: false,
     engine: DEFAULT_ANALYSIS_ENGINE,
     ...values,
   };
@@ -66,6 +70,16 @@ export function parseFullSyncArgs(args) {
 
 async function main() {
   const options = parseFullSyncArgs(process.argv.slice(2));
+
+  if (options.dryRun) {
+    const pending = await pendingVideoCount();
+    console.log(`[dry-run] 收藏索引待下载 ${pending} 条；分析阶段计划如下，不重新发现收藏页、不下载、不调用模型。`);
+    const args = ["douyin:curation", "--", "sync", "--dry-run"];
+    if (existsSync(manifest)) args.push("--manifest", manifest);
+    await run("pnpm", args);
+    return;
+  }
+
   await run("uv", [
     "run",
     "python",
@@ -86,16 +100,15 @@ async function main() {
     const args = [
       "douyin:curation", "--", "sync", "--manifest", manifest,
       "--engine", options.engine,
-      "--concurrency", String(options.concurrency),
-      "--analyzer-concurrency", String(options.analyzerConcurrency),
     ];
+    if (options.concurrency !== null) args.push("--concurrency", String(options.concurrency));
+    if (options.analyzerConcurrency !== null) args.push("--analyzer-concurrency", String(options.analyzerConcurrency));
     if (options.analyzeLimit !== null) args.push("--limit", String(options.analyzeLimit));
     await run("pnpm", args, {
       env: {
         WHISPER_BIN: path.join(sidecar, ".venv/bin/whisper-ctranslate2"),
         WHISPER_COMPUTE: "int8",
         WHISPER_DEVICE: "cpu",
-        WHISPER_LANGUAGE: "zh",
         WHISPER_MODEL: "small",
         OMP_NUM_THREADS: "2",
       },

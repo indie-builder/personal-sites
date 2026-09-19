@@ -8,7 +8,7 @@ import path from "node:path";
 import { normalizeDesignClassification, summarizeDesignClassifications } from "../modules/x-sync/design-classification.mjs";
 import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs";
 
-test("design classification separates relevance from confidence", () => {
+test("design classification maps relevance directly to inclusion", () => {
   const base = {
     categories: ["交互设计"],
     evidence: ["视频展示界面状态切换"],
@@ -16,14 +16,14 @@ test("design classification separates relevance from confidence", () => {
     relevant: true,
   };
   const included = normalizeDesignClassification({ ...base, confidence: 0.75 }, "2026-08-25T00:00:00.000Z");
-  const review = normalizeDesignClassification({ ...base, confidence: 0.6 }, "2026-08-25T00:00:00.000Z");
+  const lowConfidenceInclusion = normalizeDesignClassification({ ...base, confidence: 0.6 }, "2026-08-25T00:00:00.000Z");
   const excluded = normalizeDesignClassification({ ...base, confidence: 0.9, relevant: false }, "2026-08-25T00:00:00.000Z");
-  const uncertainExclusion = normalizeDesignClassification({ ...base, confidence: 0.6, relevant: false }, "2026-08-25T00:00:00.000Z");
+  const lowConfidenceExclusion = normalizeDesignClassification({ ...base, confidence: 0.6, relevant: false }, "2026-08-25T00:00:00.000Z");
 
   assert.equal(included.status, "include");
-  assert.equal(review.status, "review");
+  assert.equal(lowConfidenceInclusion.status, "include");
   assert.equal(excluded.status, "exclude");
-  assert.equal(uncertainExclusion.status, "review");
+  assert.equal(lowConfidenceExclusion.status, "exclude");
   assert.throws(
     () => normalizeDesignClassification({ ...base, categories: ["漂亮视频"], confidence: 0.9 }),
     /未知分类/u,
@@ -69,13 +69,11 @@ test("design publication summary reports decisions and directly playable videos"
     item("include", "https://video.twimg.com/a.mp4"),
     item("include"),
     item("exclude"),
-    item("review"),
     item(null),
   ]), {
     exclude: 1,
     include: 2,
     playableVideos: 1,
-    review: 1,
     unclassified: 1,
   });
 });

@@ -10,10 +10,7 @@ export const DESIGN_CATEGORIES = [
   "3D/空间设计",
 ];
 
-export const DESIGN_INCLUDE_THRESHOLD = 0.75;
-
-export function designClassificationStatus(relevant, confidence) {
-  if (confidence < DESIGN_INCLUDE_THRESHOLD) return "review";
+export function designClassificationStatus(relevant) {
   return relevant ? "include" : "exclude";
 }
 
@@ -40,7 +37,7 @@ export function normalizeDesignClassification(value, classifiedAt = new Date().t
   const reason = String(value.reason ?? "").trim();
   if (!reason) throw new Error("设计相关性判断缺少理由");
 
-  const status = designClassificationStatus(relevant, confidence);
+  const status = designClassificationStatus(relevant);
 
   return { categories, classifiedAt, confidence, evidence, reason, relevant, status };
 }
@@ -53,5 +50,5 @@ export function summarizeDesignClassifications(items) {
       summary.playableVideos += 1;
     }
     return summary;
-  }, { exclude: 0, include: 0, playableVideos: 0, review: 0, unclassified: 0 });
+  }, { exclude: 0, include: 0, playableVideos: 0, unclassified: 0 });
 }

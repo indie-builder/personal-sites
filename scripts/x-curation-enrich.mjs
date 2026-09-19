@@ -292,7 +292,7 @@ queue.items = queue.items.map((item) => prepareCurationItem(item));
 let normalizedStatuses = 0;
 for (const item of queue.items) {
   if (!item.ai?.design) continue;
-  const status = designClassificationStatus(item.ai.design.relevant, item.ai.design.confidence);
+  const status = designClassificationStatus(item.ai.design.relevant);
   if (item.ai.design.status === status) continue;
   item.ai.design.status = status;
   normalizedStatuses += 1;

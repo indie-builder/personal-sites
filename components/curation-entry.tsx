@@ -116,6 +116,7 @@ export async function CurationEntry({
                 <time dateTime={item.publishedAt ?? undefined}>
                   原内容发布于 {formatOriginalPublicationDate(item)}
                 </time>
+                {item.excerptTime ? <span>摘录出现于 {item.excerptTime}</span> : null}
               </figcaption>
               <blockquote><p>{linkifyText(item.text, item.links)}</p></blockquote>
               {item.quoteContext ? (

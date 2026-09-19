@@ -46,7 +46,7 @@ pnpm curation:enrich -- --refresh --limit 20
 
 1. 执行其中一个同步命令：抓取媒体与正文 → 为新条目生成完整策展及设计分类 → 只为已有解析但缺分类的历史条目补设计判断 → 本地敏感生成备份 → 生成 `data/curation.sqlite`。历史补分类不会重写已有标题、摘要、标签或深度解析。底层仍保留 `--engine codex-cli|pi`，用于显式切换解析引擎。
 2. 只暂存 `data/curation.sqlite` 与本次明确的代码/文档变更，运行 `pnpm git:safety` 后提交并推送；Vercel 的 Git 集成会创建新部署。
-3. `pnpm curation:publish` 只重建 SQLite，不会访问远端数据库；结束时固定报告设计收录、排除、待复核、未分类及可播放视频数量。
+3. `pnpm curation:publish` 只重建 SQLite，不会访问远端数据库；结束时固定报告设计收录、排除、未分类及可播放视频数量。
 
 全量策展、项目档案和 GitHub Star 三个公开 SQLite 写入口共享压实规则：空闲页达到 32 页时才执行 `VACUUM`，减少 Git 二进制与部署体积，同时避免每次微小更新都重写数据库。
 
@@ -60,7 +60,7 @@ pnpm curation:enrich -- --refresh --limit 20
 
 模型解析每条 X 内容时，同时读取原文、引用、展开后的外链正文，以及最多 5 张图片或视频代表帧。视频帧只写入系统临时目录，判断结束立即删除；原视频、抽帧和私有队列都不会进入公开 SQLite。
 
-分类输出包含 `relevant`、`confidence`、设计子类、证据和理由，由本地代码统一决策：置信度不低于 `0.75` 的相关内容进入 `/design`，同等置信度的不相关内容直接排除，低置信度的正反判断都留在私有队列等待复核。旧条目缺少分类时会在后续 `curation:enrich` / `curation:sync` 批次中重新解析，可用 `--limit` 分批回填。
+分类输出包含 `relevant`、`confidence`、设计子类、证据和理由，由本地代码统一决策：模型判断为相关的内容直接进入 `/design`，判断为不相关的直接排除，不存在人工复核的中间状态；`confidence` 只作为模型自报信息留档。旧条目缺少分类时会在后续 `curation:enrich` / `curation:sync` 批次中重新解析，可用 `--limit` 分批回填。
 
 ## 迁移后的远端清理
 

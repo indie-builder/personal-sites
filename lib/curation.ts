@@ -106,7 +106,7 @@ export async function getDouyinCurationPage(offset = 0, limit = 20): Promise<Cur
   return getCurationPageByPlatform("douyin", offset, limit);
 }
 
-/** 设计收藏：只呈现模型高置信收录的 X 条目；中置信结果留在本地队列等待复核。 */
+/** 设计收藏：呈现模型判断为设计相关的 X 条目。 */
 export async function getDesignCurationPage(offset = 0, limit = 20): Promise<CurationPage> {
   return getCurationPageByPlatform("x", offset, limit, true);
 }

@@ -86,7 +86,6 @@ export function buildCurationInsights(items, { generatedAt = new Date() } = {}) 
     ), 10),
     health: {
       analysisErrors: items.filter((item) => item.pipeline?.stages?.editorial?.status === "error").length,
-      designReview: items.filter((item) => item.ai?.design?.status === "review").length,
       missingFacts: items.filter((item) => !item.facts).length,
       missingSearchSignals: items.filter((item) => !item.ai?.searchSignals).length,
       missingVisualFacts: items.filter((item) => (item.media?.length ?? 0) > 0 && !item.ai?.visualFacts).length,
@@ -127,7 +126,6 @@ export function renderCurationInsightsMarkdown(insights) {
     "",
     `- 条目：${insights.totals.items}`,
     `- 已解析：${insights.totals.analyzed}`,
-    `- 待复核设计分类：${insights.health.designReview}`,
     `- 分析错误：${insights.health.analysisErrors}`,
     `- 缺失检索信号：${insights.health.missingSearchSignals}`,
     `- 缺失视觉事实：${insights.health.missingVisualFacts}`,

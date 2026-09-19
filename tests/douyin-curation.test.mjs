@@ -9,12 +9,12 @@ import {
   parseCurationResponse,
   parseDownloadManifest,
   toDouyinVideo,
-  toReviewItem,
+  toQueueItem,
 } from "../modules/douyin-sync/import.mjs";
 import { parseArgs, settleConcurrently } from "../scripts/douyin-curation.mjs";
 import { parseFullSyncArgs } from "../scripts/douyin-full-sync.mjs";
 
-test("Douyin manifest and analyzer output form an auditable review item", () => {
+test("Douyin manifest and analyzer output form an auditable queue item", () => {
   const [record] = parseDownloadManifest(`${JSON.stringify({
     author_name: "作者",
     author_sec_uid: "sec-id",
@@ -46,17 +46,16 @@ test("Douyin manifest and analyzer output form an auditable review item", () => 
     tags: ["AI 应用"],
     title: "值得留意的示例项目",
   }));
-  parsed.ai.excerpt = groundEvidenceExcerpt("Example Project", evidence);
-  const item = toReviewItem(video, parsed, "data/sensitive/douyin-curation/raw/123/analysis.json");
+  parsed.ai.excerpt = groundEvidenceExcerpt("Example Project", evidence).text;
+  const item = toQueueItem(video, parsed, "data/sensitive/douyin-curation/raw/123/analysis.json");
 
   assert.equal(video.videoPath, "/downloads/作者/collect/demo.mp4");
   assert.match(buildCurationPrompt(video, evidence, ["AI 应用"]), /屏幕文字 OCR/u);
-  assert.equal(item.review.approved, false);
-  assert.equal(item.review.reviewedAt, undefined);
   assert.equal(item.collectedOrder, 2);
   assert.equal(item.ai.excerpt, "Example Project");
+  assert.deepEqual(groundEvidenceExcerpt("Example Project", evidence), { text: "Example Project", time: "0:03" });
   assert.equal(item.mentionedProjects[0].verification, "unresolved");
-  const publicItem = toPublicDouyinItem({ ...item, review: { approved: true, reviewedAt: "2026-08-29T00:00:00.000Z" } });
+  const publicItem = toPublicDouyinItem(item);
   assert.equal(publicItem.id, "douyin-123");
   assert.deepEqual(publicItem.source, {
     label: "抖音视频",
@@ -72,6 +71,7 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
   assert.deepEqual(parseArgs(["sync", "--manifest", "downloads/download_manifest.jsonl", "--limit", "5"]), {
     analyzerConcurrency: null,
     concurrency: null,
+    dryRun: false,
     engine: "zcode",
     force: false,
     limit: 5,
@@ -80,15 +80,56 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
     stage: "sync",
   });
   assert.equal(parseArgs(["sync", "--manifest", "downloads/download_manifest.jsonl", "--refresh-only"]).refreshOnly, true);
+  assert.equal(parseArgs(["sync", "--dry-run"]).manifest, null);
   assert.deepEqual(parseFullSyncArgs(["--skip-download", "--analyze-limit", "20"]), {
     analyze: true,
     analyzeLimit: 20,
-    analyzerConcurrency: 6,
-    concurrency: 20,
+    analyzerConcurrency: null,
+    concurrency: null,
     download: false,
+    dryRun: false,
     engine: "zcode",
   });
+  assert.equal(parseFullSyncArgs(["--dry-run"]).dryRun, true);
   assert.throws(() => parseArgs(["approve", "douyin:123"]), /不接受/u);
+});
+
+test("Curated tags are normalized against the configured taxonomy whitelist", () => {
+  const response = JSON.stringify({
+    analysis: "分析",
+    excerpt: "摘录",
+    summary: "摘要",
+    tags: ["前端", "自创标签"],
+    title: "标题",
+  });
+  const parsed = parseCurationResponse(response, { allowedTags: ["AI 应用", "前端工程"] });
+  assert.deepEqual(parsed.ai.tags, ["前端工程"]);
+
+  assert.throws(
+    () => parseCurationResponse(JSON.stringify({ analysis: "分析", excerpt: "摘录", summary: "摘要", tags: ["乱编"], title: "标题" }), {
+      allowedTags: ["AI 应用"],
+    }),
+    /白名单/u,
+  );
+  assert.doesNotThrow(
+    () => parseCurationResponse(JSON.stringify({ analysis: "分析", excerpt: "摘录", summary: "摘要", tags: ["随便写的标签"], title: "标题" })),
+  );
+});
+
+test("Evidence truncation declares how much of the video the model can see", () => {
+  const transcript = Array.from({ length: 900 }, (_, index) => ({
+    speaker: "主讲",
+    text: `第${index}段内容，用于撑满证据窗口的转写句子。`,
+    time: `${Math.floor(index / 60)}:${String(index % 60).padStart(2, "0")}`,
+  }));
+  const evidence = parseAnalyzerOutput({ metadata: {}, ocrResults: [], timeline: [], transcript, warnings: [] });
+  const prompt = buildCurationPrompt(
+    { sourceUrl: "https://www.douyin.com/video/1", author: { name: "作者" }, description: "", tags: [] },
+    evidence,
+    ["AI 应用"],
+  );
+  assert.match(prompt, /仅覆盖至/u);
+  assert.doesNotMatch(prompt, /第899段/u);
 });
 
 test("Douyin worker pool records one failure without stopping later work", async () => {

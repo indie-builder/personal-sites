@@ -66,8 +66,18 @@ export function parseAnalyzerOutput(value) {
 }
 
 function evidenceText(entries, formatter, maximumCharacters = 18_000) {
-  const text = entries.map(formatter).join("\n");
-  return text.length > maximumCharacters ? `${text.slice(0, maximumCharacters)}\n[内容已截断]` : text;
+  const lines = entries.map(formatter);
+  const text = lines.join("\n");
+  if (text.length <= maximumCharacters) return text;
+  let consumed = 0;
+  let lastTime = "";
+  for (const [index, line] of lines.entries()) {
+    const lineLength = line.length + (index > 0 ? 1 : 0);
+    if (consumed + lineLength > maximumCharacters) break;
+    consumed += lineLength;
+    lastTime = entries[index].time || lastTime;
+  }
+  return `${text.slice(0, consumed)}\n[内容已截断：仅覆盖至 ${lastTime || "开头"}，之后的内容模型不可见]`;
 }
 
 export function buildCurationPrompt(video, evidence, taxonomy) {
@@ -107,13 +117,25 @@ ${ocr || "（无）"}
 }`;
 }
 
-export function parseCurationResponse(responseText) {
+export function parseCurationResponse(responseText, { allowedTags = null } = {}) {
   const body = stripJsonFence(String(responseText));
   const parsed = JSON.parse(body);
   for (const key of ["title", "summary", "analysis", "excerpt"]) {
     if (!clean(parsed[key])) throw new Error(`模型返回缺少 ${key}。`);
   }
   if (!Array.isArray(parsed.tags) || parsed.tags.length === 0) throw new Error("模型返回缺少 tags。");
+  const cleanedTags = parsed.tags.map(String).map(clean).filter(Boolean);
+  const tags = (allowedTags
+    ? cleanedTags
+      .map((tag) => allowedTags.find((allowed) => allowed === tag
+        || allowed.includes(tag)
+        || tag.includes(allowed)) ?? null)
+      .filter((tag) => tag !== null)
+    : cleanedTags)
+    .slice(0, 2);
+  if (tags.length === 0) {
+    throw new Error(`模型返回 tags ${JSON.stringify(cleanedTags)} 不在分类白名单内：${(allowedTags ?? []).join("、")}。`);
+  }
   const mentionedProjects = Array.isArray(parsed.mentionedProjects)
     ? parsed.mentionedProjects.flatMap((project) => {
       const name = clean(project?.name);
@@ -137,7 +159,7 @@ export function parseCurationResponse(responseText) {
       enrichedAt: new Date().toISOString(),
       excerpt: clean(parsed.excerpt).slice(0, 280),
       summary: clean(parsed.summary),
-      tags: parsed.tags.map(String).map(clean).filter(Boolean).slice(0, 2),
+      tags,
       title: clean(parsed.title),
     },
     mentionedProjects,
@@ -151,18 +173,19 @@ function comparableCharacters(value) {
 export function groundEvidenceExcerpt(candidate, evidence) {
   const target = comparableCharacters(candidate);
   const entries = [...evidence.transcript, ...evidence.ocrResults]
-    .map((entry) => clean(entry.text))
-    .filter((text) => text.length >= 6);
+    .map((entry) => ({ text: clean(entry.text), time: clean(entry.time) }))
+    .filter((entry) => entry.text.length >= 6);
   if (entries.length === 0) throw new Error("没有可用于公开摘录的转写或 OCR 原句。");
   const score = (text) => {
     const characters = comparableCharacters(text);
     const overlap = [...characters].filter((character) => target.has(character)).length;
     return overlap / Math.max(1, characters.size + target.size - overlap);
   };
-  return entries.sort((left, right) => score(right) - score(left) || right.length - left.length)[0].slice(0, 280);
+  const best = entries.sort((left, right) => score(right.text) - score(left.text) || right.text.length - left.text.length)[0];
+  return { text: best.text.slice(0, 280), time: best.time || null };
 }
 
-export function toReviewItem(video, parsed, rawEvidencePath) {
+export function toQueueItem(video, parsed, rawEvidencePath) {
   return {
     ai: parsed.ai,
     author: video.author,
@@ -171,9 +194,6 @@ export function toReviewItem(video, parsed, rawEvidencePath) {
     id: `douyin:${video.awemeId}`,
     mentionedProjects: parsed.mentionedProjects,
     publishedAt: video.publishedAt,
-    review: {
-      approved: false,
-    },
     sourceDescription: video.description,
     sourceUrl: video.sourceUrl,
     privateEvidencePath: rawEvidencePath,

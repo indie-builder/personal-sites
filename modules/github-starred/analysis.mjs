@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -212,29 +211,27 @@ export function runCodexCli(command, args, { cwd, input, maxBuffer = 8 * 1024 * 
  * contract so all translation validation and local persistence stay shared.
  * It is only constructed when the caller explicitly selects `codex-cli`.
  */
-const ZCODE_CLI_BUNDLED = "/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs";
-
-function resolveZcodeCliPath(env = process.env) {
+function resolveZcodeCliCommand(env = process.env) {
   if (env.ZCODE_CLI) return env.ZCODE_CLI;
-  if (existsSync(ZCODE_CLI_BUNDLED)) return ZCODE_CLI_BUNDLED;
-  return "zcode";
+  if (env.CLAUDE_CLI) return env.CLAUDE_CLI;
+  return "claude";
 }
 
 /**
- * ZCode CLI reader。复用宿主 ZCode 应用的登录态（Z.ai Coding Plan），以无头
- * 单次执行取回应答文本；首次使用前需在交互式 TUI 里完成一次 /model 选择。
+ * ZCode CLI reader。经由用户配置了 ZCode/智谱模型端点的 Claude Code CLI
+ * （`claude -p`）无头执行提示词并取回 stdout 应答文本。
  */
 export function createZcodeCliReader({ config = {}, env = process.env, repoRoot, run = runCodexCli, timeoutMilliseconds } = {}) {
   const requestTimeoutMilliseconds = timeoutMilliseconds ?? config.analysis?.request_timeout_ms ?? 240000;
-  const cliPath = resolveZcodeCliPath(env);
-  const nodeBin = env.ZCODE_NODE ?? process.execPath;
+  const command = resolveZcodeCliCommand(env);
   return {
-    modelConfig: { model: config.analysis?.zcode?.model ?? "GLM-5.3-Flash", provider: "zcode" },
+    modelConfig: { model: config.analysis?.zcode?.model ?? env.ANTHROPIC_MODEL ?? "zcode-configured", provider: "zcode" },
     async prompt(prompt, { imagePaths = [] } = {}) {
-      const args = [cliPath, "-p", prompt];
-      for (const image of imagePaths) args.push("--attach", image);
+      const text = imagePaths.length > 0
+        ? `${prompt}\n\n请先逐一读取以下本地图片再作答，结论必须用到图片内容：${imagePaths.join(" ")}`
+        : prompt;
       const { stdout } = await awaitModelResponseWithTimeout(
-        run(nodeBin, args, { cwd: repoRoot, input: "" }),
+        run(command, ["-p", text], { cwd: repoRoot, input: "" }),
         requestTimeoutMilliseconds,
         { label: "ZCode" },
       );
