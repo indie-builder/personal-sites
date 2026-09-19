@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { CurationStream } from "@/components/curation-stream";
-import { FeedPage } from "@/components/page-shell";
+import { FeedPage, FeedSkeleton } from "@/components/page-shell";
 import { getCurationPage } from "@/lib/curation";
 
 // 策展投影随部署打包进 data/curation.sqlite（next.config 的 outputFileTracingIncludes），
@@ -13,11 +14,17 @@ export const metadata: Metadata = {
   title: "每日关注｜陈远",
 };
 
-export default async function CurationPage() {
+async function CurationFeed() {
   const curationPage = await getCurationPage();
+  return <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />;
+}
+
+export default function CurationPage() {
   return (
     <FeedPage label="每日关注" section="daily">
-      <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />
+      <Suspense fallback={<FeedSkeleton />}>
+        <CurationFeed />
+      </Suspense>
     </FeedPage>
   );
 }

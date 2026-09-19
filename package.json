@@ -18,7 +18,7 @@
     "start": "next start --hostname 127.0.0.1",
     "lint": "oxlint --deny-warnings app components e2e lib modules scripts tests '*.config.{js,mjs,ts}'",
     "typecheck": "node scripts/tsc7.mjs --noEmit",
-    "test": "vitest run --passWithNoTests && node --test tests/*.test.mjs",
+    "test": "vitest run && node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
     "curation:prepare": "node scripts/x-curation-prepare.mjs",
     "curation:recover": "node scripts/recover-x-curation-queue.mjs",

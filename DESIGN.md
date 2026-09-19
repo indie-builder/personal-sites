@@ -377,7 +377,7 @@ components:
 
 人工按四项分别评为通过／失败：**事实保真、任务可完成、阅读层级、品牌一致性**。不能用“像参考图”替代任务完成；任一项失败先修正，再复核受影响场景。
 
-浏览器验证统一用 ego lite，检查实际页面、编译问题、控制台与网络错误；不要只检查截图。自动回归复用 `e2e/`，例如 `curation-detail-responsive.spec.ts`、`detail-touch-targets.spec.ts`、`ask-layout.spec.ts` 和 `layout-input-regressions.spec.ts`。涉及应用代码或配置时执行项目要求的 typecheck、lint、test、build；机械问题加入相应回归测试，文案与构成判断留给人工评审。
+浏览器验证统一用 ego lite，检查实际页面、编译问题、控制台与网络错误；不要只检查截图。自动回归复用 `e2e/`，例如 `curation-detail-responsive.spec.ts`、`detail-touch-targets.spec.ts`、`assistant-drawer.spec.ts` 和 `layout-input-regressions.spec.ts`。涉及应用代码或配置时执行项目要求的 typecheck、lint、test、build；机械问题加入相应回归测试，文案与构成判断留给人工评审。
 
 ### 如何更新这份规范
 

@@ -6,8 +6,8 @@ export default function CurationEntryLoading() {
       <article aria-busy="true" aria-live="polite" className="curation-detail__article">
         <DetailLoadingChrome backLabel="返回每日关注" loadingLabel="正在打开每日关注" />
         <div className="curation-detail__body">
-          <section aria-label="正在读取原推" className="curation-detail__evidence">
-            <h2 className="curation-detail__eyebrow">原推剪报</h2>
+          <section aria-label="正在读取来源摘录" className="curation-detail__evidence">
+            <h2 className="curation-detail__eyebrow">来源摘录</h2>
             <LoadingDocument />
           </section>
           <section aria-label="正在读取解析" className="curation-detail__reading">
