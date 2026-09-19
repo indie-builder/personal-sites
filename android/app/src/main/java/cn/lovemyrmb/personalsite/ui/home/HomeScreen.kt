@@ -295,8 +295,9 @@ private fun FeedError(message: String, modifier: Modifier = Modifier, onRetry: (
             style = SiteText.eyebrow,
             color = SiteTheme.colors.ink,
             modifier = Modifier
+                .heightIn(min = SiteSpace.touch)
                 .clip(RoundedCornerShape(6.dp))
-                .clickable { onRetry() }
+                .clickable(onClickLabel = "重新加载内容", role = Role.Button) { onRetry() }
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
