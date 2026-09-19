@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { OpenSourceStream } from "@/components/open-source-stream";
-import { FeedPage } from "@/components/page-shell";
+import { FeedPage, FeedSkeleton } from "@/components/page-shell";
 import { getOpenSourceListEntries } from "@/lib/open-source";
 
 // 公开投影随部署打包进 data/curation.sqlite，页面按五分钟 ISR 节奏更新。
@@ -12,11 +13,17 @@ export const metadata: Metadata = {
   title: "开源关注｜陈远",
 };
 
-export default async function OpenSourcePage() {
+async function OpenSourceFeed() {
   const openSourceEntries = await getOpenSourceListEntries();
+  return <OpenSourceStream entries={openSourceEntries} />;
+}
+
+export default function OpenSourcePage() {
   return (
     <FeedPage label="开源关注" section="open-source">
-      <OpenSourceStream entries={openSourceEntries} />
+      <Suspense fallback={<FeedSkeleton />}>
+        <OpenSourceFeed />
+      </Suspense>
     </FeedPage>
   );
 }
