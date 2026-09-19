@@ -14,6 +14,7 @@ import {
   formatOriginalPublicationDate,
 } from "@/lib/curation-format";
 import type { CurationItem } from "@/lib/curation-types";
+import { entryShareMetadata, withCanonical } from "@/lib/metadata";
 
 export type CurationEntryContext = "curation" | "design";
 
@@ -54,8 +55,16 @@ export async function getCurationEntryMetadata(
   const item = await findCurationItem(id);
   if (!item || (context === "design" && item.design?.status !== "include")) return {};
   const section = SECTION_BY_CONTEXT[context](item);
-  return { description: item.summary, title: `${item.title}｜${section.label}` };
-  
+  const title = `${item.title}｜${section.label}`;
+  // /design/<id> 与 /curation/<id> 是同一条目：sitemap 只收录 /curation 路径，
+  // 两个路径的 canonical 都指向它，把搜索信号归一到收录 URL。
+  const canonicalPath = `/curation/${encodeURIComponent(id)}`;
+  return {
+    alternates: withCanonical(canonicalPath),
+    description: item.summary,
+    ...entryShareMetadata({ canonicalPath, description: item.summary, title }),
+    title,
+  };
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   getAiNewsOriginalAction,
   getAiNewsUrlHost,
 } from "@/lib/ai-news-types";
+import { entryShareMetadata, withCanonical } from "@/lib/metadata";
 
 import { AiNewsDetailSkeleton } from "./loading";
 
@@ -27,10 +28,18 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: AiNewsDetailPageProps): Promise<Metadata> {
-  const item = await getAiNewsItem((await params).id);
-  return item
-    ? { description: item.summary || item.title, title: `${item.title}｜每日动态` }
-    : {};
+  const { id } = await params;
+  const item = await getAiNewsItem(id);
+  if (!item) return {};
+  const title = `${item.title}｜每日动态`;
+  const description = item.summary || item.title;
+  const canonicalPath = `/ai-news/${encodeURIComponent(id)}`;
+  return {
+    alternates: withCanonical(canonicalPath),
+    description,
+    ...entryShareMetadata({ canonicalPath, description, title }),
+    title,
+  };
 }
 
 export default function AiNewsDetailPage({ params }: AiNewsDetailPageProps) {

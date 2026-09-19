@@ -4,12 +4,14 @@ import { Suspense } from "react";
 import { CurationStream } from "@/components/curation-stream";
 import { FeedPage, FeedSkeleton } from "@/components/page-shell";
 import { getDouyinCurationPage } from "@/lib/curation";
+import { withCanonical } from "@/lib/metadata";
 
 // 与 /curation 一致：策展投影随部署打包进 data/curation.sqlite，本页读本地库；
 // revalidate 只对页面外壳有意义，内容更新以重新部署为准。
 export const revalidate = 300;
 
 export const metadata: Metadata = {
+  alternates: withCanonical("/douyin"),
   description: "陈远从抖音收藏视频中收录并写下策展解析的判断流。",
   title: "抖音收藏｜陈远",
 };
