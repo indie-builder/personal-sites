@@ -7,15 +7,15 @@
 | 数据 | 本地 | Git | 网站读取 |
 | --- | --- | --- | --- |
 | 原始 X 抓取与完整队列 | `data/sensitive/x-curation/` | 禁止 | 否 |
-| Pi/Kimi 或 Codex CLI 生成结果 | `data/sensitive/x-curation/` | 禁止 | 否 |
+| Pi/智谱 GLM 或 Codex CLI 生成结果 | `data/sensitive/x-curation/` | 禁止 | 否 |
 | 已完成解析且已公开的统一每日关注内容 | `data/curation.sqlite` | 提交 | 是 |
 
 ## 配置
 
-X 数据解析默认复用本机 Codex CLI 登录态，不需要额外模型密钥。显式传入 `--engine pi` 或使用 Kimi 快捷命令时，才需要在被 Git 忽略的 `.env.local` 中配置：
+X 数据解析默认经 Pi 运行时直连智谱，需在被 Git 忽略的 `.env.local` 中配置：
 
 ```bash
-KIMI_API_KEY=<kimi-key>
+BIGMODEL_API_KEY=<bigmodel-key>
 ```
 
 `data/curation.sqlite` 只能由本机 `scripts/build-curation-sqlite.mjs` 通过 `better-sqlite3` 从 X 策展队列与已批准的抖音待审队列生成。它是只读公开投影，不包含抓取快照、视频、转写、游标或凭据；Vercel 在部署中随 Git 文件读取，运行时不写入它。
@@ -26,14 +26,14 @@ KIMI_API_KEY=<kimi-key>
 
 ## 初始化与同步
 
-两类同步使用同一套 X 抓取、敏感备份和 SQLite 发布流程，仅解析引擎不同；Codex CLI 是默认引擎，Pi/Kimi 是显式备选：
+两类同步使用同一套 X 抓取、敏感备份和 SQLite 发布流程，仅解析引擎不同；Pi / 智谱 GLM 是默认引擎，CLI 为显式选项：
 
 ```bash
-# Codex CLI + GPT-5.6 Luna（默认；正文解析 Max 单并发，设计回填 High 40 并发）
+# 默认 Pi / 智谱 GLM（15 并发）
 pnpm curation:sync
 
-# 显式改用 Pi Coding Agent + Kimi（15 并发）
-pnpm curation:sync:kimi
+# 同一智谱路径的显式快捷命令
+pnpm curation:sync:glm
 
 # 只补“已有策展、缺少设计判断”的历史条目，不改写原解析
 pnpm curation:classify-design

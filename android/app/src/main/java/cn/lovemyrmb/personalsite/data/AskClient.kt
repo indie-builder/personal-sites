@@ -25,11 +25,21 @@ sealed interface AskEvent {
     data class Error(val message: String) : AskEvent
 }
 
+enum class AskScope(val apiValue: String, val label: String) {
+    ALL("all", "全部资料"), PROFILE("profile", "个人资料"), AI_NEWS("ai-news", "每日动态"),
+    DAILY("daily", "每日关注"), OPEN_SOURCE("open-source", "开源内容"),
+}
+
 @kotlinx.serialization.Serializable
 data class AskSource(
+    val id: String = "",
+    val sourceId: String = "",
+    val content: String = "",
+    val scope: String = "",
+    val publishedAt: String? = null,
     val title: String = "",
     val sourceUrl: String = "",
-    val section: String = "",
+    val section: String? = null,
 )
 
 /**
@@ -39,24 +49,26 @@ data class AskSource(
 class AskClient(
     private val client: OkHttpClient,
     private val json: Json,
+    private val baseUrl: String = SITE_BASE_URL,
 ) {
     fun ask(
         question: String,
         conversationId: String,
         visitorId: String,
+        scope: AskScope = AskScope.ALL,
         onEvent: (AskEvent) -> Unit,
     ): Call {
         val payload = buildJsonObject {
             put("conversationId", conversationId)
             put("visitorId", visitorId)
             put("question", question)
-            put("scope", "all")
+            put("scope", scope.apiValue)
         }
         val body = payload.toString()
             .toRequestBody("application/json; charset=utf-8".toMediaType())
 
         val request = Request.Builder()
-            .url(SITE_BASE_URL + "api/ask")
+            .url(baseUrl.trimEnd('/') + "/api/ask")
             .header("Accept", "text/event-stream")
             .post(body)
             .build()
@@ -87,19 +99,32 @@ class AskClient(
                         return
                     }
                     var currentEvent = ""
+                    val data = StringBuilder()
+                    var terminal = false
+                    fun dispatch() {
+                        if (data.isEmpty()) return
+                        val event = parseFrame(currentEvent, data.toString())
+                        if (event != null) onEvent(event)
+                        terminal = event is AskEvent.Done || event is AskEvent.Error
+                        currentEvent = ""
+                        data.setLength(0)
+                    }
                     try {
-                        while (true) {
+                        while (!terminal && !call.isCanceled()) {
                             val line = source.readUtf8Line() ?: break
                             when {
+                                line.isEmpty() -> dispatch()
                                 line.startsWith("event:") -> currentEvent = line.removePrefix("event:").trim()
                                 line.startsWith("data:") -> {
-                                    val data = line.removePrefix("data:").trim()
-                                    parseFrame(currentEvent, data)?.let(onEvent)
-                                    currentEvent = ""
+                                    if (data.isNotEmpty()) data.append('\n')
+                                    data.append(line.removePrefix("data:").trimStart())
                                 }
                             }
                         }
-                        onEvent(AskEvent.Done)
+                        if (!terminal && !call.isCanceled()) {
+                            dispatch()
+                            if (!terminal) onEvent(AskEvent.Error("连接提前结束了，请重试。"))
+                        }
                     } catch (_: IOException) {
                         if (!call.isCanceled()) onEvent(AskEvent.Error("连接中断了，请重试。"))
                     }
@@ -110,22 +135,21 @@ class AskClient(
     }
 
     /** data 帧按 JSON 形状分发：delta→文本增量、sources→来源、message→错误、空对象→结束。 */
-    private fun parseFrame(event: String, data: String): AskEvent? {
+    internal fun parseFrame(event: String, data: String): AskEvent? {
         if (data.isEmpty() || data == "{}") return if (event == "done") AskEvent.Done else null
         val obj = runCatching {
             json.decodeFromString(JsonObject.serializer(), data)
-        }.getOrNull() ?: return null
-        return when {
+        }.getOrNull() ?: return AskEvent.Error("回答数据格式异常，请重试。")
+        return runCatching { when {
             obj.containsKey("delta") -> AskEvent.Delta(obj["delta"]!!.jsonPrimitive.content)
             obj.containsKey("sources") -> AskEvent.Sources(decodeSources(obj["sources"]!!.jsonArray))
             obj.containsKey("message") -> AskEvent.Error(obj["message"]!!.jsonPrimitive.content)
+            event == "done" -> AskEvent.Done
             else -> null
-        }
+        } }.getOrElse { AskEvent.Error("引用或回答数据格式异常，请重试。") }
     }
 
-    // 单个来源缺字段不影响整体。
+    // 保留来源顺序；不能静默丢弃异常项，否则回答中的编号会指向错误资料。
     private fun decodeSources(array: JsonArray): List<AskSource> =
-        array.mapNotNull { element ->
-            runCatching { json.decodeFromJsonElement(AskSource.serializer(), element) }.getOrNull()
-        }
+        array.map { element -> json.decodeFromJsonElement(AskSource.serializer(), element) }
 }

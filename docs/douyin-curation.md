@@ -45,7 +45,7 @@ pnpm douyin:curation -- sync \
   --limit 5
 ```
 
-默认 `zcode` 引擎经由 Claude Code CLI（`claude -p`，可用 `ZCODE_CLI`/`CLAUDE_CLI` 环境变量覆盖命令）调用用户配置的智谱 GLM 端点，模型名取 `ANTHROPIC_MODEL` 或 CLI 默认配置。前置条件：`claude` CLI 已登录且端点可用；正式分析前会先做一次探活，失败时直接报错并提示切换 `--engine`，避免整批空跑。也可显式切换到 Codex CLI 或 Pi/Kimi：
+默认 `pi` 引擎使用统一的智谱 Anthropic 端点与 `BIGMODEL_API_KEY`，模型取 `BIGMODEL_MODEL`（默认 `glm-5.3-flash`），不再依赖旧供应商账号。`zcode` 和 Codex CLI 仅在显式选择时使用各自的本机 CLI 配置：
 
 ```bash
 pnpm douyin:curation -- sync \

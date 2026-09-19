@@ -5,8 +5,8 @@
   "queueFile": "data/sensitive/x-curation/curation-queue.json",
   "ai": {
     "runtime": "pi-coding-agent",
-    "provider": "kimi-coding",
-    "model": "kimi-for-coding"
+    "provider": "bigmodel-coding",
+    "model": "glm-5.3-flash"
   },
   "taxonomy": [
     "Agent 工程",

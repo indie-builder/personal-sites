@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.data.AiNewsListItem
@@ -50,10 +51,10 @@ import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
 import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
-import cn.lovemyrmb.personalsite.data.aiNewsCategoryLabel
 import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import kotlinx.coroutines.launch
 
@@ -62,11 +63,11 @@ private val sections = Section.entries.toList()
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    pagerState: PagerState,
     bottomBarPadding: Dp,
     onOpenDetail: (DetailEntry) -> Unit,
     onOpenLink: (String) -> Unit,
 ) {
-    val pagerState = rememberPagerState(pageCount = { sections.size })
     val scope = rememberCoroutineScope()
 
     Column(
@@ -144,16 +145,27 @@ fun HomeScreen(
 /** 顶部栏目导航：横向滚动、单色文字 + 短下划线，对应截图里的顶栏。 */
 @Composable
 private fun SectionTabs(selectedPage: Int, onSelect: (Int) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(
+            model = cn.lovemyrmb.personalsite.R.drawable.profile_avatar,
+            contentDescription = "陈远的头像",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .padding(start = 16.dp, end = 4.dp)
+                .size(32.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape),
+        )
     ScrollableTabRow(
+        modifier = Modifier.weight(1f),
         selectedTabIndex = selectedPage,
         containerColor = SiteTheme.colors.background,
         contentColor = SiteTheme.colors.ink,
-        edgePadding = 20.dp,
+        edgePadding = 4.dp,
         divider = {},
         indicator = { tabPositions ->
             if (selectedPage < tabPositions.size) {
                 SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedPage]),
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedPage]).padding(horizontal = SiteSpace.page),
                     height = 2.dp,
                     color = SiteTheme.colors.ink,
                 )
@@ -169,13 +181,12 @@ private fun SectionTabs(selectedPage: Int, onSelect: (Int) -> Unit) {
             ) {
                 Text(
                     text = section.label,
-                    style = SiteText.listTitle.copy(
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    ),
+                    style = if (selected) SiteText.tabSelected else SiteText.tab,
                     color = if (selected) SiteTheme.colors.ink else SiteTheme.colors.muted,
                 )
             }
         }
+    }
     }
 }
 
@@ -230,6 +241,7 @@ private fun HorizontalRule() {
     Box(
         Modifier
             .fillMaxWidth()
+            .padding(horizontal = SiteSpace.page)
             .height(Dp.Hairline)
             .background(SiteTheme.colors.line),
     )
@@ -289,31 +301,32 @@ private fun FeedError(message: String, modifier: Modifier = Modifier, onRetry: (
 /** 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。 */
 @Composable
 private fun AiNewsRow(item: AiNewsListItem, onOpen: () -> Unit) {
+    val summary = item.summary.trim().removePrefix(item.title.trim()).trimStart(' ', '，', '。', '：', ':', '—', '-', '\n')
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(SiteTheme.colors.background)
             .clickable(onClick = onOpen)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.item),
     ) {
         Text(
             text = item.title,
             style = SiteText.title,
             color = SiteTheme.colors.ink,
-            maxLines = 3,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        if (item.summary.isNotBlank()) {
-            Spacer(Modifier.height(6.dp))
+        if (summary.isNotBlank()) {
+            Spacer(Modifier.height(SiteSpace.compact))
             Text(
-                text = item.summary,
+                text = summary,
                 style = SiteText.summary,
                 color = SiteTheme.colors.muted,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(SiteSpace.related))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = listOfNotNull(
@@ -325,11 +338,6 @@ private fun AiNewsRow(item: AiNewsListItem, onOpen: () -> Unit) {
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = aiNewsCategoryLabel(item.category),
-                style = SiteText.meta,
-                color = SiteTheme.colors.quiet,
             )
         }
     }
@@ -343,8 +351,8 @@ private fun CurationRow(item: CurationItem, section: Section, onOpen: () -> Unit
             .fillMaxWidth()
             .background(SiteTheme.colors.background)
             .clickable(onClick = onOpen)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph),
+        horizontalArrangement = Arrangement.spacedBy(SiteSpace.paragraph),
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -354,7 +362,7 @@ private fun CurationRow(item: CurationItem, section: Section, onOpen: () -> Unit
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(SiteSpace.compact))
             Text(
                 text = curationMeta(item),
                 style = SiteText.meta,
@@ -385,7 +393,7 @@ private fun OpenSourceRow(entry: OpenSourceListEntry, onOpen: () -> Unit) {
             .fillMaxWidth()
             .background(SiteTheme.colors.background)
             .clickable(onClick = onOpen)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph),
     ) {
         Text(
             text = entry.repository,
@@ -394,7 +402,7 @@ private fun OpenSourceRow(entry: OpenSourceListEntry, onOpen: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(SiteSpace.compact))
         Text(
             text = entry.sourceSummary,
             style = SiteText.summary,
@@ -402,7 +410,7 @@ private fun OpenSourceRow(entry: OpenSourceListEntry, onOpen: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(SiteSpace.compact))
         Text(
             text = listOfNotNull(
                 entry.status.takeIf { it.isNotBlank() },

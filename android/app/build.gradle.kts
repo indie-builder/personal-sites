@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "cn.lovemyrmb.personalsite"
     compileSdk = 35
+    buildFeatures { buildConfig = true }
 
     defaultConfig {
         applicationId = "cn.lovemyrmb.personalsite"
@@ -15,9 +16,16 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("int", "LOCAL_ASK_PORT", "0")
     }
 
     buildTypes {
+        debug {
+            val port = providers.gradleProperty("localAskPort").orNull?.toInt() ?: 0
+            require(port == 0 || port in 1..65535) { "localAskPort must be a valid port" }
+            buildConfigField("int", "LOCAL_ASK_PORT", port.toString())
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -35,6 +43,15 @@ android {
 }
 
 dependencies {
+    implementation("org.commonmark:commonmark:0.30.0")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.30.0")
+    implementation("org.commonmark:commonmark-ext-gfm-strikethrough:0.30.0")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

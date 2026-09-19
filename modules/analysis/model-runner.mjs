@@ -5,7 +5,7 @@ import {
   getAgentDir,
 } from "@earendil-works/pi-coding-agent";
 
-import { getFinalAssistantFailure, getFinalAssistantText } from "../../lib/pi-runtime.mjs";
+import { getFinalAssistantFailure, getFinalAssistantText } from "../../lib/agent-response.mjs";
 
 /** 给模型请求加统一超时；超时或成功都会清掉定时器。 */
 export async function awaitModelResponse(request, timeoutMilliseconds, { label } = {}) {
@@ -42,6 +42,7 @@ export async function runPiPrompt({
   const resourceLoader = new DefaultResourceLoader({
     cwd,
     agentDir: getAgentDir(),
+    noContextFiles: true,
     noExtensions: true,
     noPromptTemplates: true,
     noSkills: true,
@@ -71,6 +72,7 @@ export async function runPiPrompt({
       })),
     });
     if (timeoutMilliseconds !== undefined) await awaitModelResponse(request, timeoutMilliseconds, { label });
+    else await request;
     const failure = getFinalAssistantFailure(session);
     if (failure) throw new Error(`${label} 请求失败：${failure}`);
     return getFinalAssistantText(session) || answer.trim();

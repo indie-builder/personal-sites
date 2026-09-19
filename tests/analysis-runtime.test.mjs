@@ -7,9 +7,9 @@ import {
   resolveAnalysisEngine,
 } from "../modules/analysis/runtime.mjs";
 
-test("ZCode is the shared default while codex-cli and Pi remain explicit options", () => {
-  assert.equal(DEFAULT_ANALYSIS_ENGINE, "zcode");
-  assert.equal(resolveAnalysisEngine(), "zcode");
+test("Pi BigModel is the shared default while CLI adapters remain explicit options", () => {
+  assert.equal(DEFAULT_ANALYSIS_ENGINE, "pi");
+  assert.equal(resolveAnalysisEngine(), "pi");
   assert.equal(resolveAnalysisEngine("pi"), "pi");
   assert.equal(resolveAnalysisEngine("codex-cli"), "codex-cli");
   assert.throws(() => resolveAnalysisEngine("other"), /仅支持 zcode、codex-cli 或 pi/u);

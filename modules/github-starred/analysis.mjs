@@ -6,6 +6,7 @@ import path from "node:path";
 import { awaitModelResponse as awaitModelResponseWithTimeout, runPiPrompt } from "../analysis/model-runner.mjs";
 import { runWorkerPool } from "../analysis/runtime.mjs";
 import { resolvePiModelConfig, stripJsonFence } from "../../lib/pi-runtime.mjs";
+import { configureBigModelRuntime } from "../../lib/bigmodel.mjs";
 import { repositoryDirectoryName } from "./source.mjs";
 
 const PARSER_VERSION = "github-starred-zh-reader/v1";
@@ -146,11 +147,12 @@ async function createOneLineSummary(record, { prompt }) {
   }
 }
 
-export async function createKimiReader({ config = {}, env = process.env, repoRoot }) {
+export async function createBigModelReader({ config = {}, env = process.env, repoRoot }) {
   const modelConfig = resolvePiModelConfig({ config, env });
-  if (!env.KIMI_API_KEY) throw new Error("缺少 KIMI_API_KEY，无法生成 GitHub Star 中文阅读版。");
+  if (!env.BIGMODEL_API_KEY) throw new Error("缺少 BIGMODEL_API_KEY，无法生成 GitHub Star 中文阅读版。");
   const requestTimeoutMilliseconds = config.analysis?.request_timeout_ms ?? 240000;
   const runtime = await ModelRuntime.create({ allowModelNetwork: false });
+  await configureBigModelRuntime(runtime, modelConfig.model, env);
   const model = runtime.getModel(modelConfig.provider, modelConfig.model);
   if (!model) throw new Error(`Pi 未找到模型：${modelConfig.provider}/${modelConfig.model}`);
 
@@ -159,7 +161,7 @@ export async function createKimiReader({ config = {}, env = process.env, repoRoo
     async prompt(prompt) {
       return runPiPrompt({
         cwd: repoRoot,
-        label: "Kimi",
+        label: "智谱 GLM",
         model,
         prompt,
         runtime,

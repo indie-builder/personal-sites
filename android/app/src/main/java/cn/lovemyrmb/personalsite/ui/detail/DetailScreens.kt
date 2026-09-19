@@ -55,6 +55,7 @@ import cn.lovemyrmb.personalsite.ui.components.VideoCard
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.components.openExternally
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import java.net.URLEncoder
 
@@ -137,7 +138,7 @@ private fun AiNewsDetailBody(item: AiNewsItem, onOpenLink: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = SiteSpace.page),
     ) {
         Text(
             text = listOf(aiNewsCategoryLabel(item.category), if (item.selected) "精选" else null)
@@ -146,9 +147,9 @@ private fun AiNewsDetailBody(item: AiNewsItem, onOpenLink: (String) -> Unit) {
             style = SiteText.eyebrow,
             color = SiteTheme.colors.quiet,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(SiteSpace.related))
         Text(text = item.title, style = SiteText.pageTitle, color = SiteTheme.colors.ink)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(SiteSpace.related))
         Text(
             text = listOfNotNull(
                 item.sourceName.takeIf { it.isNotBlank() },
@@ -157,19 +158,19 @@ private fun AiNewsDetailBody(item: AiNewsItem, onOpenLink: (String) -> Unit) {
             style = SiteText.meta,
             color = SiteTheme.colors.quiet,
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(SiteSpace.paragraph))
         HorizontalDivider(color = SiteTheme.colors.line, thickness = 1.dp)
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(SiteSpace.paragraph))
         if (item.summary.isNotBlank()) {
             DetailSection(eyebrow = "导读", body = item.summary)
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
         }
         if (item.reason.isNotBlank()) {
             DetailSection(eyebrow = "推荐理由", body = item.reason)
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
         }
         SourceCta(label = originalActionLabel(item.url), host = hostOf(item.url)) { onOpenLink(item.url) }
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(SiteSpace.section))
     }
 }
 
@@ -193,7 +194,7 @@ private fun CurationDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = SiteSpace.page),
         ) {
             Text(
                 text = listOfNotNull(
@@ -209,23 +210,23 @@ private fun CurationDetailScreen(
             )
             val headline = item.title?.takeIf { it.isNotBlank() }
             if (headline != null) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(SiteSpace.related))
                 Text(text = headline, style = SiteText.pageTitle, color = SiteTheme.colors.ink)
             }
             item.summary?.takeIf { it.isNotBlank() && it != headline }?.let { summary ->
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(SiteSpace.related))
                 Text(text = summary, style = SiteText.body, color = SiteTheme.colors.ink)
             }
             item.text?.takeIf { it.isNotBlank() && it != headline && it != item.summary }?.let { text ->
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(SiteSpace.paragraph))
                 Text(text = text, style = SiteText.body, color = SiteTheme.colors.ink)
             }
             if (item.media.isNotEmpty()) {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(SiteSpace.paragraph))
                 CurationMediaSection(item.media, item.source)
             }
             if (item.tags.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(SiteSpace.paragraph))
                 Text(
                     text = item.tags.joinToString(" ") { "#$it" },
                     style = SiteText.meta,
@@ -239,7 +240,7 @@ private fun CurationDetailScreen(
                     host = hostOf(item.source.url),
                 ) { onOpenLink(item.source.url) }
             }
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(SiteSpace.section))
         }
     }
 }
@@ -264,7 +265,7 @@ private fun OpenSourceDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = SiteSpace.page),
         ) {
             Text(
                 text = listOfNotNull(
@@ -274,25 +275,25 @@ private fun OpenSourceDetailScreen(
                 style = SiteText.eyebrow,
                 color = SiteTheme.colors.quiet,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(SiteSpace.related))
             Text(text = listEntry.repository, style = SiteText.pageTitle, color = SiteTheme.colors.ink)
             if (listEntry.dimensions.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(SiteSpace.related))
                 Text(
                     text = listEntry.dimensions.joinToString(" · ") { dimensionLabels[it] ?: it },
                     style = SiteText.meta,
                     color = SiteTheme.colors.quiet,
                 )
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
             HorizontalDivider(color = SiteTheme.colors.line, thickness = 1.dp)
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
             DetailSection(eyebrow = "摘要", body = listEntry.sourceSummary)
             Spacer(Modifier.height(20.dp))
             SourceCta(label = "在站点查看判读与仓库", host = "default-coder.lovemyrmb.cn") {
                 onOpenLink(MediaUrls.sitePage("/open-source/${URLEncoder.encode(listEntry.slug, "UTF-8")}"))
             }
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(SiteSpace.section))
         }
     }
 }
@@ -300,7 +301,7 @@ private fun OpenSourceDetailScreen(
 @Composable
 private fun DetailSection(eyebrow: String, body: String) {
     Text(text = eyebrow, style = SiteText.eyebrow, color = SiteTheme.colors.quiet)
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(SiteSpace.compact))
     Text(text = body, style = SiteText.body, color = SiteTheme.colors.ink)
 }
 
@@ -314,12 +315,12 @@ private fun SourceCta(label: String, host: String, onClick: () -> Unit) {
                 .clip(RoundedCornerShape(8.dp))
                 .background(SiteTheme.colors.ink)
                 .clickable(onClick = onClick)
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .padding(horizontal = SiteSpace.page, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = label,
-                style = SiteText.listTitle.copy(fontWeight = FontWeight.SemiBold),
+                style = SiteText.listTitle,
                 color = SiteTheme.colors.background,
             )
             Spacer(Modifier.width(6.dp))

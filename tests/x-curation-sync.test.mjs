@@ -31,7 +31,7 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
       command: process.execPath,
       args: [
         "/repo/scripts/x-curation-enrich.mjs",
-        "--engine", "zcode",
+        "--engine", "pi",
         "--limit", "3",
       ],
       options: { cwd: "/repo" },
@@ -41,8 +41,8 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
       args: [
         "/repo/scripts/x-curation-enrich.mjs",
         "--design-only",
-        "--engine", "zcode",
-        "--concurrency", "8",
+        "--engine", "pi",
+        "--concurrency", "15",
         "--limit", "3",
       ],
       options: { cwd: "/repo" },
@@ -104,14 +104,14 @@ test("sync arguments accept pnpm's -- separator", () => {
     media: true,
     fetchOnly: true,
     history: false,
-    engine: "zcode",
+    engine: "pi",
     codexModel: "gpt-5.6-luna",
-    designConcurrency: 8,
+    designConcurrency: 15,
     reasoningEffort: "max",
   });
 });
 
-test("ZCode is the default and backfills design classification at concurrency 8", async () => {
+test("BigModel Pi is the default and backfills design classification at concurrency 15", async () => {
   const calls = [];
   await runSyncPipeline({
     repoRoot: "/repo",
@@ -121,13 +121,13 @@ test("ZCode is the default and backfills design classification at concurrency 8"
 
   assert.deepEqual(calls[2].args, [
     "/repo/scripts/x-curation-enrich.mjs",
-    "--engine", "zcode",
+    "--engine", "pi",
   ]);
   assert.deepEqual(calls[3].args, [
     "/repo/scripts/x-curation-enrich.mjs",
     "--design-only",
-    "--engine", "zcode",
-    "--concurrency", "8",
+    "--engine", "pi",
+    "--concurrency", "15",
   ]);
 });
 
@@ -184,14 +184,14 @@ test("history pipeline uses bird pagination directly and imports both raw source
   ]);
 });
 
-test("Pi Coding Agent defaults to Kimi and permits explicit Pi model overrides", () => {
+test("Pi analysis uses BigModel and permits GLM model overrides", () => {
   const resolved = resolvePiModelConfig({
-    config: { ai: { provider: "kimi-coding" } },
-    env: { PI_MODEL: "kimi-custom", PI_MODEL_PROVIDER: "another-provider" },
+    config: { ai: { provider: "bigmodel-coding" } },
+    env: { BIGMODEL_MODEL: "glm-5.3", PI_MODEL_PROVIDER: "another-provider" },
   });
 
   assert.deepEqual(resolved, {
-    provider: "kimi-coding",
-    model: "kimi-custom",
+    provider: "bigmodel-coding",
+    model: "glm-5.3",
   });
 });

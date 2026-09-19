@@ -14,7 +14,7 @@
 
 ## 执行
 
-首次初始化会读取当前全部 GitHub Star、保留本地敏感副本，并默认使用本机 Codex CLI 解析每个仓库：
+首次初始化会读取当前全部 GitHub Star、保留本地敏感副本，并默认使用 Pi / 智谱 GLM 解析每个仓库：
 
 ```bash
 pnpm github:starred:init
@@ -28,11 +28,11 @@ pnpm github:starred:init
 pnpm github:starred:daily
 ```
 
-该任务必须在保存 GitHub 登录态和 Codex CLI 登录态的本机环境执行；不要放进前端或 Vercel。Codex 默认单并发，避免同时启动大量 Agent 会话；`--limit 20` 可用于小范围验证，`--only owner/repository` 可重试单个仓库，`--concurrency 2` 可显式提高并发。
+该任务必须在保存 GitHub 登录态和 `BIGMODEL_API_KEY` 的本机环境执行；不要放进前端或 Vercel。默认解析15并发，可用 `--concurrency 2` 降低并发；`--limit 20` 用于小范围验证，`--only owner/repository` 重试单个仓库。
 
 ## 解析引擎
 
-默认路径使用本机已登录的 Codex CLI；Pi / Kimi 保留为显式备选。两条路径使用同一受限翻译/解析提示，最终文本都沿用相同的本地私有落盘与 SQLite 发布逻辑。
+默认路径经 Pi 运行时使用统一智谱端点与 `BIGMODEL_API_KEY`；CLI 适配器仅保留为显式选项。翻译提示、本地私有落盘与 SQLite 发布逻辑不变。
 
 ```bash
 pnpm github:starred:analyze
@@ -40,11 +40,11 @@ pnpm github:starred:analyze:pi
 pnpm github:starred:analyze:pi -- --only owner/repository
 ```
 
-可在 `config/github-sync.json` 的 `analysis.codex_cli` 中设置 Codex 并发与超时。显式使用 Pi 时需要 `KIMI_API_KEY`，默认 15 并发；两种方式都会把待处理的公开 README/仓库结构发送给所选模型。
+可在 `config/github-sync.json` 的 `analysis.codex_cli` 中设置 Codex 并发与超时。显式使用 Pi 时需要 `BIGMODEL_API_KEY`，默认 15 并发；两种方式都会把待处理的公开 README/仓库结构发送给所选模型。
 
 ## 中文阅读版规则
 
-README 存在时优先解析 README。若根目录存在仓库维护的中文 README（如 `README.zh-CN.md`、`README_CN.md`），它直接成为中文阅读版，不调用模型翻译；源 README 本身为中文时也同样直接使用。没有官方中文 README 的英文 README 才交给所选解析引擎翻译，默认使用 Codex CLI，也可显式选择 Pi / Kimi。README 缺失时读取根目录和可识别的入口/manifest 文件，生成带信息缺口说明的仓库解析。
+README 存在时优先解析 README。若根目录存在仓库维护的中文 README（如 `README.zh-CN.md`、`README_CN.md`），它直接成为中文阅读版，不调用模型翻译；源 README 本身为中文时也同样直接使用。没有官方中文 README 的英文 README 才交给所选解析引擎翻译，默认使用 Pi / 智谱 GLM；其他 CLI 仅可显式选择。README 缺失时读取根目录和可识别的入口/manifest 文件，生成带信息缺口说明的仓库解析。
 
 模型翻译时只翻译自然语言说明。代码块、行内代码、命令、路径、配置键、URL、Markdown 链接、仓库/产品/模型/协议名称，以及 `Skill`、`Agent`、`README`、`MCP`、`API`、`CLI`、`SDK`、`LLM`、`RAG` 等专业术语保持原样。模型不拥有工具权限，且输入 README 只作为不可信引用。若两次翻译仍无法完整保留这些内容，当前 Markdown 片段会保留原文，避免为了翻译丢失链接、代码或格式，也不会阻塞整个仓库的解析。
 

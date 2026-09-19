@@ -6,7 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createCodexCliReader, createKimiReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
+import { createCodexCliReader, createBigModelReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import {
   buildCurationPrompt,
@@ -189,7 +189,7 @@ async function sync(options) {
   const analyzerConcurrency = options.analyzerConcurrency ?? 6;
   const reader = options.refreshOnly ? null
     : options.engine === "pi"
-      ? await createKimiReader({ config: {}, repoRoot })
+      ? await createBigModelReader({ config: {}, repoRoot })
       : options.engine === "zcode"
         ? createZcodeCliReader({ config: {}, repoRoot })
         : await createCodexCliReader({

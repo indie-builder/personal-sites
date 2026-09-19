@@ -6,8 +6,9 @@
 
 - **五个栏目**：每日动态 / 每日关注 / 设计收藏 / 抖音收藏 / 开源关注，顶部横滑 Tab + 页面滑动，下拉刷新、触底加载（分页契约与站点客户端一致：动态每页 50，其余 20，按 id 去重）。
 - **原生详情**：每日动态走 `GET /api/ai-news/[id]`；每日关注、设计收藏、抖音收藏直接渲染列表携带的全文与媒体（图片网格 + ExoPlayer 视频，X 平台视频经站内 `/api/x-media` 代理）；开源关注为轻详情，仓库浏览跳站点网页。
-- **底部磨砂玻璃栏**：GitHub / 语雀 / 作品集（Chrome Custom Tabs）+ 关于我（原生履历小票）。
-- **问一问**：`POST /api/ask` SSE 流式问答，答案附来源，429 限流有中文提示。
+- **悬浮玻璃底栏**：动态 / 问一问 / 作品集 / 关于我。栏目和详情页共用实时背景模糊、透光描边与胶囊选中态；向下浏览隐藏，向上回看显示，切换栏目或页面时恢复显示。
+- **原生个人首页**：GitHub、语雀外链在头像上方右对齐，姓名与原头像形成身份区；“2014—至今 · 个人经历”整行打开原生履历弹层。简介按主叙述与补充段落组织，以技术词条收尾。问答仅保留底栏入口。词条在离屏、后台暂停，关闭系统动画时静止展示。页面设计规范见 `DESIGN.md`。
+- **问一问**：全屏原生对话页、多行输入、资料范围选择、推荐问题、新对话确认、停止/重试/复制；引用编号和来源行打开 App 内资料正文，不跳浏览器。进入后隐藏底栏，返回时保留会话，离开时停止生成。完整契约见 [ask-experience.md](docs/ask-experience.md)。
 - 深浅色跟随系统；minSdk 31（Android 12+，磨砂 RenderEffect 全覆盖）。
 
 ## 数据源
@@ -29,6 +30,8 @@ cd android
 
 ## 工程结构
 
+全应用字体与间距规范见 [typography-and-spacing.md](docs/typography-and-spacing.md)。统一角色由 `SiteText` / `SiteTypography` / `SiteSpace` 提供，运行 `node scripts/check-typography.mjs` 防止页面新增独立字体覆盖。
+
 ```
 app/src/main/java/cn/lovemyrmb/personalsite/
 ├── MainActivity.kt / SiteApplication
@@ -39,6 +42,6 @@ app/src/main/java/cn/lovemyrmb/personalsite/
     ├── home/                  # 五栏目 Tab + Pager + 三类信息流行
     ├── detail/                # 三种详情页
     ├── about/                 # 履历小票 Sheet
-    ├── ask/                   # 问一问对话 Sheet
+    ├── ask/                   # 全屏原生问答页面
     └── components/            # 视频卡、时间工具、Custom Tabs
 ```

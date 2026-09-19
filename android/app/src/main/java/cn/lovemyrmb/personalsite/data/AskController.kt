@@ -14,8 +14,11 @@ data class AskMessage(
     val role: Role,
     val text: String = "",
     val sources: List<AskSource> = emptyList(),
+    val status: Status = Status.COMPLETE,
+    val scope: AskScope = AskScope.ALL,
 ) {
     enum class Role { QUESTION, ANSWER }
+    enum class Status { STREAMING, COMPLETE, STOPPED, ERROR }
 }
 
 data class AskUiState(
@@ -39,17 +42,19 @@ class AskController(
     private val activeCall = AtomicReference<Call?>(null)
     private var conversationId: String = newConversationId()
     private var messageId = 0L
+    private var generation = 0L
 
-    fun send(question: String) {
+    fun send(question: String, scope: AskScope = AskScope.ALL) {
         val trimmed = question.trim()
         val current = _state.value
-        if (trimmed.isEmpty() || current.streaming) return
+        if (trimmed.length !in 2..1000 || current.streaming) return
+        val requestGeneration = ++generation
 
         val answerId = nextMessageId()
         _state.value = AskUiState(
             messages = current.messages +
-                AskMessage(nextMessageId(), AskMessage.Role.QUESTION, trimmed) +
-                AskMessage(answerId, AskMessage.Role.ANSWER),
+                AskMessage(nextMessageId(), AskMessage.Role.QUESTION, trimmed, scope = scope) +
+                AskMessage(answerId, AskMessage.Role.ANSWER, status = AskMessage.Status.STREAMING),
             streaming = true,
             error = null,
         )
@@ -60,8 +65,10 @@ class AskController(
             question = trimmed,
             conversationId = conversationId,
             visitorId = visitorId,
+            scope = scope,
         ) { event ->
             mainHandler.post {
+                if (requestGeneration != generation) return@post
                 when (event) {
                     is AskEvent.Delta -> {
                         appended += event.text
@@ -72,14 +79,16 @@ class AskController(
                         patchAnswer(answerId, appended, sources)
                     }
                     is AskEvent.Error -> {
+                        generation++
                         activeCall.set(null)
-                        _state.value = _state.value.copy(streaming = false, error = event.message)
+                        finishAnswer(AskMessage.Status.ERROR, event.message)
                     }
                     AskEvent.Done -> {
+                        generation++
                         activeCall.set(null)
                         val answer = appended.ifBlank { "（这次没有可回答的内容，换个问法试试。）" }
                         patchAnswer(answerId, answer, sources)
-                        _state.value = _state.value.copy(streaming = false)
+                        finishAnswer(AskMessage.Status.COMPLETE)
                     }
                 }
             }
@@ -88,9 +97,10 @@ class AskController(
     }
 
     fun cancel() {
+        generation++
         activeCall.getAndSet(null)?.cancel()
         if (_state.value.streaming) {
-            _state.value = _state.value.copy(streaming = false)
+            finishAnswer(AskMessage.Status.STOPPED)
         }
     }
 
@@ -98,6 +108,23 @@ class AskController(
         cancel()
         conversationId = newConversationId()
         _state.value = AskUiState()
+    }
+
+    fun retryLast() {
+        if (_state.value.streaming) return
+        val messages = _state.value.messages
+        if (messages.size < 2 || messages.last().role != AskMessage.Role.ANSWER) return
+        val question = messages[messages.lastIndex - 1]
+        if (question.role != AskMessage.Role.QUESTION) return
+        _state.value = AskUiState(messages = messages.dropLast(2))
+        send(question.text, question.scope)
+    }
+
+    private fun finishAnswer(status: AskMessage.Status, error: String? = null) {
+        val current = _state.value
+        _state.value = current.copy(streaming = false, error = error, messages = current.messages.map {
+            if (it.status == AskMessage.Status.STREAMING) it.copy(status = status) else it
+        })
     }
 
     private fun patchAnswer(answerId: Long, text: String, sources: List<AskSource>) {

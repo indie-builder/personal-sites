@@ -1,8 +1,17 @@
 package cn.lovemyrmb.personalsite
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,13 +32,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Work
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,18 +47,31 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cn.lovemyrmb.personalsite.data.AskController
 import cn.lovemyrmb.personalsite.data.HomeViewModel
-import cn.lovemyrmb.personalsite.ui.about.AboutSheet
-import cn.lovemyrmb.personalsite.ui.ask.AskSheet
+import cn.lovemyrmb.personalsite.data.Section
+import kotlinx.coroutines.launch
+import cn.lovemyrmb.personalsite.ui.ask.AskScreen
+import cn.lovemyrmb.personalsite.ui.about.AboutScreen
 import cn.lovemyrmb.personalsite.ui.components.openExternally
+import cn.lovemyrmb.personalsite.ui.components.NavigationIcons
 import cn.lovemyrmb.personalsite.ui.detail.DetailRoute
 import cn.lovemyrmb.personalsite.ui.home.HomeScreen
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
@@ -58,16 +81,16 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-private const val BAR_HEIGHT = 62
+private const val BAR_HEIGHT = 72
 
 private data class GlassBarAction(val label: String, val icon: ImageVector, val url: String?)
 
-// 底部身份外链：对应站点身份栏的 GitHub / 语雀 / 作品集 / 关于我。
+// 首页入口与身份外链共用悬浮玻璃底栏。
 private val glassBarActions = listOf(
-    GlassBarAction("GitHub", Icons.Outlined.Code, "https://github.com/indie-builder"),
-    GlassBarAction("语雀", Icons.AutoMirrored.Outlined.MenuBook, "https://www.yuque.com/defulat-coder"),
-    GlassBarAction("作品集", Icons.Outlined.Work, "https://portfolio.default-coder.lovemyrmb.cn/"),
-    GlassBarAction("关于我", Icons.Outlined.Person, null),
+    GlassBarAction("动态", NavigationIcons.Activity, null),
+    GlassBarAction("问一问", NavigationIcons.Ask, null),
+    GlassBarAction("作品集", NavigationIcons.Portfolio, "https://portfolio.default-coder.lovemyrmb.cn/"),
+    GlassBarAction("关于我", NavigationIcons.About, null),
 )
 
 @Composable
@@ -77,11 +100,38 @@ fun PersonalSiteApp(container: AppContainer) {
     val context = LocalContext.current
     val viewModel: HomeViewModel = viewModel(factory = PersonalSiteViewModelFactory(container))
     val askController = remember { AskController(container.askClient, container.visitorId) }
-    var showAbout by rememberSaveable { mutableStateOf(false) }
-    var showAsk by rememberSaveable { mutableStateOf(false) }
+    val pagerState = rememberPagerState(pageCount = { Section.entries.size })
+    val scope = rememberCoroutineScope()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    fun openTab(route: String) {
+        navController.navigate(route) {
+            popUpTo("home") { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+    var barVisible by remember { mutableStateOf(true) }
+    val threshold = with(LocalDensity.current) { 16.dp.toPx() }
+    val scrollConnection = remember(threshold, backStackEntry, pagerState.currentPage) {
+        object : NestedScrollConnection {
+            var travel = 0f
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && consumed.y != 0f) {
+                    if (travel * consumed.y < 0f) travel = 0f
+                    travel += consumed.y
+                    if (kotlin.math.abs(travel) >= threshold) {
+                        barVisible = travel > 0f
+                        travel = 0f
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(backStackEntry, pagerState.currentPage) { barVisible = true }
 
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val bottomBarTotal = BAR_HEIGHT.dp + navigationBarInset
+    val bottomBarTotal = BAR_HEIGHT.dp + navigationBarInset + 12.dp
 
     Box(
         modifier = Modifier
@@ -93,12 +143,14 @@ fun PersonalSiteApp(container: AppContainer) {
             startDestination = "home",
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollConnection)
                 .hazeSource(hazeState),
         ) {
             composable("home") {
                 HomeScreen(
                     viewModel = viewModel,
-                    bottomBarPadding = bottomBarTotal + 96.dp,
+                    pagerState = pagerState,
+                    bottomBarPadding = bottomBarTotal + 24.dp,
                     onOpenDetail = { entry ->
                         container.entryHolder.set(entry)
                         navController.navigate("detail/${entry.section.name}/${Uri.encode(entry.id)}")
@@ -114,66 +166,83 @@ fun PersonalSiteApp(container: AppContainer) {
                     onBack = { navController.popBackStack() },
                 )
             }
+            composable("about") {
+                AboutScreen(
+                    bottomPadding = bottomBarTotal,
+                )
+            }
+            composable("ask") {
+                AskScreen(controller = askController, onDismiss = { navController.popBackStack() })
+            }
         }
 
-        FloatingActionButton(
-            onClick = { showAsk = true },
-            shape = CircleShape,
-            containerColor = SiteTheme.colors.ink,
-            contentColor = SiteTheme.colors.background,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = bottomBarTotal + 16.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.Chat,
-                contentDescription = "问一问",
-            )
-        }
 
-        // 磨砂玻璃底栏：实时模糊其后的内容流。
-        Box(
+        // 悬浮胶囊：实时背景模糊、透光边缘与独立选中态。
+        AnimatedVisibility(
+            visible = barVisible && backStackEntry?.destination?.route != "ask",
+            enter = slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(160)),
+            exit = slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(120)),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .hazeEffect(hazeState, style = HazeMaterials.thin(containerColor = SiteTheme.colors.background)),
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
-            HorizontalDivider(color = SiteTheme.colors.line, thickness = 1.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .height(BAR_HEIGHT.dp),
+                    .height(BAR_HEIGHT.dp)
+                    .clip(CircleShape)
+                    .hazeEffect(hazeState, style = HazeMaterials.thin(containerColor = SiteTheme.colors.background))
+                    .border(1.dp, Brush.verticalGradient(listOf(
+                        Color.White.copy(alpha = 0.65f),
+                        SiteTheme.colors.ink.copy(alpha = 0.12f),
+                        Color.White.copy(alpha = 0.3f),
+                    )), CircleShape)
+                    .padding(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 glassBarActions.forEach { action ->
+                    val isHome = action.label == "动态"
+                    val isAbout = action.label == "关于我"
+                    val selected = (isHome && backStackEntry?.destination?.route == "home") ||
+                        (isAbout && backStackEntry?.destination?.route == "about")
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxSize()
-                            .clickable {
+                            .clip(CircleShape)
+                            .background(if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent)
+                            .selectable(selected = selected, role = Role.Tab) {
                                 val url = action.url
-                                if (url != null) openExternally(context, url) else showAbout = true
+                                when {
+                                    isHome -> {
+                                        openTab("home")
+                                        scope.launch { pagerState.scrollToPage(0) }
+                                        barVisible = true
+                                    }
+                                    isAbout -> openTab("about")
+                                    action.label == "问一问" -> navController.navigate("ask") { launchSingleTop = true }
+                                    url != null -> openExternally(context, url)
+                                }
                             },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Icon(
                             imageVector = action.icon,
-                            contentDescription = action.label,
+                            contentDescription = null,
                             tint = SiteTheme.colors.ink,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(26.dp),
                         )
                         Spacer(Modifier.height(3.dp))
-                        Text(text = action.label, style = SiteText.meta, color = SiteTheme.colors.muted)
+                        Text(text = action.label, style = SiteText.meta, color = if (selected) SiteTheme.colors.ink else SiteTheme.colors.muted, maxLines = 1)
                     }
                 }
             }
         }
     }
 
-    if (showAbout) AboutSheet(onDismiss = { showAbout = false })
-    if (showAsk) AskSheet(controller = askController, onDismiss = { showAsk = false })
 }
 
 private class PersonalSiteViewModelFactory(

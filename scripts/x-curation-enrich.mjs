@@ -5,15 +5,15 @@
  * 策展队列的本地模型解析程序。对未解析条目执行完整解析：
  *   1. 展开 t.co 短链并分类（github / article / 其他）
  *   2. 抓取链接内容：GitHub 仓库元数据 + 完整 README（gh CLI）；文章正文
- *   3. 默认由 Codex CLI 生成标题 / 摘要 / 标签 / 深度解析；可显式改用 Pi/Kimi
+ *   3. 默认由 Pi / 智谱 GLM 生成标题 / 摘要 / 标签 / 深度解析；可显式改用 Pi/智谱 GLM
  *   4. 写回策展队列（每条落盘，可断点续跑）
  *
  * 凭据从环境变量读取，不写入任何文件：
- *   KIMI_API_KEY         Pi/Kimi 路径必填
- *   PI_MODEL             Pi/Kimi 路径可选，默认 kimi-for-coding
+ *   BIGMODEL_API_KEY         Pi/智谱 GLM 路径必填
+ *   BIGMODEL_MODEL       Pi/智谱 GLM 路径可选，默认 glm-5.3-flash
  *
  * 用法：
- *   node scripts/x-curation-enrich.mjs                    # 默认使用 Codex CLI，单并发解析
+ *   node scripts/x-curation-enrich.mjs                    # 默认使用 Pi / 智谱 GLM，单并发解析
  *   node scripts/x-curation-enrich.mjs --concurrency 10   # 调整并发数
  *   node scripts/x-curation-enrich.mjs --limit 20         # 只处理前 20 条
  *   node scripts/x-curation-enrich.mjs --engine codex-cli --model gpt-5.6-luna --reasoning-effort max
@@ -45,6 +45,7 @@ import { DESIGN_CATEGORIES, designClassificationStatus, normalizeDesignClassific
 import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs";
 import { writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
 import { resolvePiModelConfig, stripJsonFence } from "../lib/pi-runtime.mjs";
+import { configureBigModelRuntime } from "../lib/bigmodel.mjs";
 import { runPiPrompt } from "../modules/analysis/model-runner.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
@@ -281,7 +282,7 @@ function parseDesignResponse(responseText) {
 async function callPiModel(prompt, images, parser = parseJsonResponse) {
   const model = runtime.getModel(piModel.provider, piModel.model);
   if (!model) throw new Error(`Pi 未找到模型：${piModel.provider}/${piModel.model}`);
-  return parser(await runPiPrompt({ cwd: repoRoot, images, label: "Kimi", model, prompt, runtime }));
+  return parser(await runPiPrompt({ cwd: repoRoot, images, label: "智谱 GLM", model, prompt, runtime }));
 }
 
 // ---------- 主流程 ----------
@@ -312,11 +313,12 @@ if (ONLY) targets = targets.filter((item) => ONLY.has(item.id));
 targets = targets.slice(0, LIMIT);
 
 console.log(`待${DESIGN_ONLY ? "补设计分类" : "解析"}: ${targets.length} 条，并发 ${CONCURRENCY}${REFRESH ? "（强制刷新）" : ""}${DRY_RUN ? "（dry-run，不调用模型）" : ""}`);
-if (!DRY_RUN && ENGINE === "pi" && !process.env.KIMI_API_KEY) {
-  console.error("缺少 KIMI_API_KEY 环境变量，Pi 无法使用 Kimi Coding 模型。");
+if (!DRY_RUN && ENGINE === "pi" && !process.env.BIGMODEL_API_KEY) {
+  console.error("缺少 BIGMODEL_API_KEY 环境变量，Pi 无法使用 智谱 GLM Coding 模型。");
   process.exit(1);
 }
 const runtime = DRY_RUN || ENGINE !== "pi" ? null : await ModelRuntime.create({ allowModelNetwork: false });
+if (runtime) await configureBigModelRuntime(runtime, piModel.model);
 const zcodeReader = !DRY_RUN && ENGINE === "zcode" ? createZcodeCliReader({ config, repoRoot }) : null;
 const codexReader = !DRY_RUN && ENGINE === "codex-cli"
   ? await createCodexCliReader({

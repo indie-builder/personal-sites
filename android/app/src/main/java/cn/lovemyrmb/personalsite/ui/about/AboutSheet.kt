@@ -1,7 +1,8 @@
 package cn.lovemyrmb.personalsite.ui.about
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,10 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 
 private data class ReceiptItem(val company: String, val meta: String, val years: String)
@@ -32,7 +32,7 @@ private val receiptItems = listOf(
     ReceiptItem("PayerMax", "2026— · OPT · 端到端交付", "至今"),
 )
 
-/** 「关于我」：复刻站内履历小票（等宽字、细线、条码收尾）。 */
+/** 履历小票保留细线与条码，字体遵循全应用规范。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutSheet(onDismiss: () -> Unit) {
@@ -43,24 +43,25 @@ fun AboutSheet(onDismiss: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .padding(bottom = 32.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = SiteSpace.page)
+                .padding(bottom = SiteSpace.section),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "陈远 / CHEN YUAN",
-                style = SiteText.title.copy(fontFamily = FontFamily.Monospace),
+                style = SiteText.title,
                 color = SiteTheme.colors.ink,
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "个人经历 · CAREER RECEIPT",
-                style = SiteText.meta.copy(fontFamily = FontFamily.Monospace),
+                style = SiteText.meta,
                 color = SiteTheme.colors.quiet,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
             HorizontalDivider(color = SiteTheme.colors.ink, thickness = 1.dp)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
             receiptItems.forEach { item ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -68,18 +69,18 @@ fun AboutSheet(onDismiss: () -> Unit) {
                 ) {
                     Text(
                         text = item.company,
-                        style = SiteText.summary.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold),
+                        style = SiteText.label,
                         color = SiteTheme.colors.ink,
                     )
                     Text(
                         text = item.years,
-                        style = SiteText.summary.copy(fontFamily = FontFamily.Monospace),
+                        style = SiteText.summary,
                         color = SiteTheme.colors.ink,
                     )
                 }
                 Text(
                     text = item.meta,
-                    style = SiteText.meta.copy(fontFamily = FontFamily.Monospace),
+                    style = SiteText.meta,
                     color = SiteTheme.colors.muted,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -87,29 +88,29 @@ fun AboutSheet(onDismiss: () -> Unit) {
                 )
             }
             HorizontalDivider(color = SiteTheme.colors.ink, thickness = 1.dp)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     text = "合计 TOTAL",
-                    style = SiteText.summary.copy(fontFamily = FontFamily.Monospace),
+                    style = SiteText.summary,
                     color = SiteTheme.colors.ink,
                 )
                 Text(
                     text = "12 年",
-                    style = SiteText.title.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold),
+                    style = SiteText.title,
                     color = SiteTheme.colors.ink,
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(SiteSpace.compact))
             Text(
                 text = "十二年 · 四段路 · 仍在增长",
-                style = SiteText.meta.copy(fontFamily = FontFamily.Monospace),
+                style = SiteText.meta,
                 color = SiteTheme.colors.quiet,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(SiteSpace.paragraph))
             ReceiptBarcode(modifier = Modifier.fillMaxWidth().height(36.dp))
         }
     }

@@ -2,6 +2,9 @@ package cn.lovemyrmb.personalsite.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -55,14 +58,38 @@ object SiteTheme {
 
 // 站点排版阶梯的 App 侧映射：标题 600 字重，正文 15sp，辅助 12sp。
 object SiteText {
-    val pageTitle = TextStyle(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold)
-    val title = TextStyle(fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold)
-    val listTitle = TextStyle(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold)
-    val body = TextStyle(fontSize = 15.sp, lineHeight = 26.sp)
-    val summary = TextStyle(fontSize = 13.sp, lineHeight = 19.sp)
-    val meta = TextStyle(fontSize = 12.sp, lineHeight = 17.sp)
-    val eyebrow = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium)
+    private val base = TextStyle(fontFamily = FontFamily.SansSerif, letterSpacing = 0.sp, fontWeight = FontWeight.Normal)
+    val identity = base.copy(fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Medium)
+    val pageTitle = base.copy(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold)
+    val title = base.copy(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium)
+    val listTitle = base.copy(fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+    val body = base.copy(fontSize = 15.sp, lineHeight = 26.sp)
+    val summary = base.copy(fontSize = 13.sp, lineHeight = 21.sp)
+    val meta = base.copy(fontSize = 12.sp, lineHeight = 18.sp)
+    val eyebrow = meta.copy(fontWeight = FontWeight.Medium)
+    val label = base.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
+    val tab = label.copy(fontWeight = FontWeight.Normal)
+    val tabSelected = label.copy(fontWeight = FontWeight.SemiBold)
 }
+
+object SiteSpace {
+    val micro = 4.dp
+    val compact = 8.dp
+    val related = 12.dp
+    val paragraph = 16.dp
+    val item = 20.dp
+    val page = 24.dp
+    val section = 24.dp
+    val touch = 48.dp
+}
+
+private val SiteTypography = Typography(
+    displayLarge = SiteText.identity, displayMedium = SiteText.identity, displaySmall = SiteText.identity,
+    headlineLarge = SiteText.identity, headlineMedium = SiteText.pageTitle, headlineSmall = SiteText.pageTitle,
+    titleLarge = SiteText.title, titleMedium = SiteText.listTitle, titleSmall = SiteText.label,
+    bodyLarge = SiteText.body, bodyMedium = SiteText.summary, bodySmall = SiteText.meta,
+    labelLarge = SiteText.label, labelMedium = SiteText.eyebrow, labelSmall = SiteText.meta,
+)
 
 private val LightScheme = lightColorScheme(
     background = LightSiteColors.background,
@@ -96,6 +123,7 @@ fun PersonalSiteTheme(
     val colors = if (darkTheme) DarkSiteColors else LightSiteColors
     CompositionLocalProvider(LocalSiteColors provides colors) {
         MaterialTheme(
+            typography = SiteTypography,
             colorScheme = if (darkTheme) DarkScheme else LightScheme,
             content = content,
         )

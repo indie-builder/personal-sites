@@ -43,7 +43,10 @@ class AppContainer(context: Context) {
         .build()
         .create(SiteApi::class.java)
 
-    val askClient: AskClient = AskClient(askOkClient, json)
+    val askClient: AskClient = AskClient(
+        askOkClient, json,
+        if (BuildConfig.DEBUG && BuildConfig.LOCAL_ASK_PORT > 0) "http://127.0.0.1:${BuildConfig.LOCAL_ASK_PORT}/" else SITE_BASE_URL,
+    )
 
     /** 问一问的匿名访客 id：客户端生成一次并持久化（[A-Za-z0-9_-]{16,128}）。 */
     val visitorId: String by lazy {

@@ -76,13 +76,13 @@ function printUsage() {
   console.log(`用法：pnpm curation:sync -- [选项]
 
 快捷入口：
-  pnpm curation:sync              Codex CLI + GPT-5.6 Luna（Max，默认）
-  pnpm curation:sync:kimi -- [选项]  显式改用 Pi Coding Agent + Kimi
+  pnpm curation:sync              Pi / 智谱 GLM（默认）
+  pnpm curation:sync:glm -- [选项]  显式改用 Pi Coding Agent + 智谱 GLM
 
 选项：
   --source bookmarks|likes|both  抓取来源，默认 both
   --limit <n>                    最多交给解析器处理 n 条条目
-  --engine codex-cli|pi          解析器，默认 codex-cli；Pi 需要显式选择
+  --engine codex-cli|pi          解析器，默认 pi / 智谱 GLM
   --model <name>                 Codex CLI 模型，默认 gpt-5.6-luna
   --reasoning-effort <level>     Codex CLI 推理等级，默认 max
   --design-concurrency <n>       缺失设计分类的回填并发；Codex 默认 40，Pi 默认 15
@@ -153,8 +153,8 @@ async function main() {
   if (!options.fetchOnly) {
     if (options.engine === "pi") {
       const model = resolvePiModelConfig({ env: process.env });
-      if (!process.env.KIMI_API_KEY) {
-        throw new Error("缺少 KIMI_API_KEY（可写入本项目被忽略的 .env.local）。");
+      if (!process.env.BIGMODEL_API_KEY) {
+        throw new Error("缺少 BIGMODEL_API_KEY（可写入本项目被忽略的 .env.local）。");
       }
       console.log(`解析运行时：Pi Coding Agent / ${model.provider}/${model.model}`);
     } else {

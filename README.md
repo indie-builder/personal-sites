@@ -21,7 +21,7 @@
 - **站点**：Next.js 16（App Router）+ React 19 + Tailwind CSS 4 + shadcn/ui
 - **数据**：每日动态使用 Supabase 公开投影；每日关注、开源关注与问答索引使用随 Git 发布的只读 SQLite
 - **部署**：Vercel；每日动态由 Supabase Cron 增量同步、GitHub Actions 每日回填，其余内容在本机审核发布
-- **内容管道**：本地抓取 → AI 解析（Codex CLI 默认，可显式选择 Pi/Kimi）→ Git 管理的公开 SQLite → Vercel 部署只读查询
+- **内容管道**：本地抓取 → AI 解析（Pi / 智谱 GLM 默认）→ Git 管理的公开 SQLite → Vercel 部署只读查询
 
 ```
 本地抓取/策展（敏感原始数据不入库、不入 Git）

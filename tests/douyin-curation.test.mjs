@@ -72,7 +72,7 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
     analyzerConcurrency: null,
     concurrency: null,
     dryRun: false,
-    engine: "zcode",
+    engine: "pi",
     force: false,
     limit: 5,
     manifest: "downloads/download_manifest.jsonl",
@@ -88,7 +88,7 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
     concurrency: null,
     download: false,
     dryRun: false,
-    engine: "zcode",
+    engine: "pi",
   });
   assert.equal(parseFullSyncArgs(["--dry-run"]).dryRun, true);
   assert.throws(() => parseArgs(["approve", "douyin:123"]), /不接受/u);

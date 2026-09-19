@@ -203,7 +203,7 @@ test("仓库一句话简介只基于公开资料生成，并保持专业术语",
   assert.ok(!getPreservedLiterals("访问 http://localhost:10100**本地服务**").includes("http://localhost:10100**"));
 });
 
-test("官方中文 README 直接写入中文阅读版，仅调用 Kimi 生成一句话简介", async () => {
+test("官方中文 README 直接写入中文阅读版，仅调用 智谱 GLM 生成一句话简介", async () => {
   const derivedRoot = await mkdtemp(path.join(os.tmpdir(), "github-starred-analysis-"));
   try {
     const record = {
@@ -216,7 +216,7 @@ test("官方中文 README 直接写入中文阅读版，仅调用 Kimi 生成一
     const prompts = [];
     const analysis = await analyzeStarredRecord(record, {
       derivedRoot,
-      model: { model: "kimi-for-coding", provider: "kimi-coding" },
+      model: { model: "glm-5.3-flash", provider: "bigmodel-coding" },
       prompt: async (prompt) => {
         prompts.push(prompt);
         assert.doesNotMatch(prompt, /只把自然语言说明翻译成简体中文/u);
@@ -233,7 +233,7 @@ test("官方中文 README 直接写入中文阅读版，仅调用 Kimi 生成一
   }
 });
 
-test("Kimi 未返回简介时以 GitHub 元数据生成一句话兜底", async () => {
+test("智谱 GLM 未返回简介时以 GitHub 元数据生成一句话兜底", async () => {
   const derivedRoot = await mkdtemp(path.join(os.tmpdir(), "github-starred-summary-fallback-"));
   try {
     const analysis = await analyzeStarredRecord(
@@ -246,7 +246,7 @@ test("Kimi 未返回简介时以 GitHub 元数据生成一句话兜底", async (
       },
       {
         derivedRoot,
-        model: { model: "kimi-for-coding", provider: "kimi-coding" },
+        model: { model: "glm-5.3-flash", provider: "bigmodel-coding" },
         prompt: async () => "",
       },
     );
@@ -313,7 +313,7 @@ test("发布器把公开投影和问答分块写入本地 SQLite", async () => {
     judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/repo", repositoryUrl: "https://github.com/example/repo",
     scenarios: [], slug: "example-repo", sourceSummary: "摘要", status: "持续跟踪", type: "Skill", workflow: [],
   };
-  const analysis = { contentMarkdown: "# 中文阅读版\n", generatedAt: "2026-08-09T00:00:00.000Z", model: { provider: "kimi-coding", model: "kimi-for-coding" }, oneLineSummary: "Kimi 生成的一句话简介。", parserVersion: "test", repoNodeId: "node-1", repository: "example/repo", sourceKind: "readme", sourceSha256: "sha", summaryModel: { provider: "kimi-coding", model: "kimi-for-coding" }, summaryVersion: "test-summary" };
+  const analysis = { contentMarkdown: "# 中文阅读版\n", generatedAt: "2026-08-09T00:00:00.000Z", model: { provider: "bigmodel-coding", model: "glm-5.3-flash" }, oneLineSummary: "智谱 GLM 生成的一句话简介。", parserVersion: "test", repoNodeId: "node-1", repository: "example/repo", sourceKind: "readme", sourceSha256: "sha", summaryModel: { provider: "bigmodel-coding", model: "glm-5.3-flash" }, summaryVersion: "test-summary" };
   try {
     const result = await publishStarredRecords({ analyses: [analysis], databasePath, records: [record], seedEntries: [entry] });
     assert.deepEqual(result, { indexedCount: 1, privateAnalysisCount: 1, privateSourceCount: 1, publicCount: 1 });

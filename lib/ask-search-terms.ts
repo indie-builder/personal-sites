@@ -1,7 +1,10 @@
+import { siteProfile } from "@/config/site-profile.mjs";
+
 const MAX_FALLBACK_TERMS = 4;
 
 const IGNORED_TERMS = new Set([
   "一下",
+  "介绍",
   "什么",
   "内容",
   "关于",
@@ -35,6 +38,13 @@ function isSearchTerm(value: string) {
 export function getAskSearchFallbackTerms(query: string) {
   const segmenter = new Intl.Segmenter("zh-CN", { granularity: "word" });
   const terms = new Map<string, string>();
+  // 中文分词可能把两字人名拆成两个单字，而单字会被过滤；保留公开身份实体。
+  const normalizedQuery = query.toLocaleLowerCase("en-US");
+  for (const name of [siteProfile.name, siteProfile.handle]) {
+    if (normalizedQuery.includes(name.toLocaleLowerCase("en-US"))) {
+      terms.set(name.toLocaleLowerCase("en-US"), name);
+    }
+  }
 
   for (const segment of segmenter.segment(query)) {
     const value = segment.segment.trim();

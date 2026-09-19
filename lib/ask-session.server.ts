@@ -10,7 +10,9 @@ import path from "node:path";
 
 import { readPersistableSessionFile } from "@/lib/ask-session-file";
 import type { AskSource } from "@/lib/ask-types";
-import { getFinalAssistantFailure, getFinalAssistantText, resolvePiModelConfig } from "@/lib/pi-runtime.mjs";
+import { getFinalAssistantFailure, getFinalAssistantText } from "@/lib/agent-response.mjs";
+import { requireAskApiKey, resolveAskModelConfig } from "@/lib/ask-model.mjs";
+import { configureBigModelRuntime } from "@/lib/bigmodel.mjs";
 
 const DEFAULT_SESSION_RETENTION_HOURS = 24;
 const MAX_SOURCE_CHARACTERS = 2_400;
@@ -238,9 +240,8 @@ async function loadPiRuntime() {
     ModelRuntime,
     SessionManager,
   } = await import("@earendil-works/pi-coding-agent");
-  const modelConfig = resolvePiModelConfig({ env: process.env });
-  const kimiApiKey = process.env.KIMI_API_KEY;
-  if (!kimiApiKey) throw new Error("缺少 KIMI_API_KEY，暂时无法生成回答。");
+  const modelConfig = resolveAskModelConfig();
+  requireAskApiKey();
 
   const runtimeDirectory = await ensureRuntimeDirectory();
   const runtime = await ModelRuntime.create({
@@ -248,7 +249,7 @@ async function loadPiRuntime() {
     authPath: path.join(runtimeDirectory, "auth.json"),
     modelsPath: null,
   });
-  await runtime.setRuntimeApiKey(modelConfig.provider, kimiApiKey);
+  await configureBigModelRuntime(runtime, modelConfig.model);
   const model = runtime.getModel(modelConfig.provider, modelConfig.model);
   if (!model) throw new Error(`Pi 未找到模型：${modelConfig.provider}/${modelConfig.model}`);
 

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-19T00:00:00+08:00",
+  "title": "Design System: 陈远小站 · Android About",
+  "extensions": {
+    "motion": [
+      {
+        "name": "technical-lanes",
+        "value": "63s, 69s, 60s, 81s, 72s, 66s; linear leftward; lane phase offset 1.7s",
+        "purpose": "Six decorative lanes. Runs only while intersecting the window and lifecycle RESUMED. Coroutine cancellation stops the frame loop; disabled Android animators reset elapsed time to zero for a stable static state."
+      }
+    ],
+    "breakpoints": [],
+    "shadows": []
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "Personal introduction spread",
+    "overview": "This scoped record describes AboutScreen.kt and TechnicalTerms.kt, with tokens from ui/theme/Theme.kt. It inherits the root visual world; it does not replace the Web design system or prescribe other Android screens. Identity, experience and biography form one continuous native reading composition.",
+    "keyCharacteristics": [
+      "Monochrome text hierarchy and open space.",
+      "Original portrait alongside the name and handle.",
+      "Career entry embedded in the reading flow.",
+      "Quiet external references above the portrait; a technical field closes the page."
+    ],
+    "rules": [],
+    "dos": [
+      "Do preserve the original portrait, exact biography and monochrome native reading flow.",
+      "Do keep the career row reachable by scrolling and the external references above the portrait at narrow widths and enlarged system text.",
+      "Do retain semantic descriptions and the system-animation-disabled static state."
+    ],
+    "donts": [
+      "Don't restore the previous button toolbar or introduce cards, heavy shadows or broad accent colors into this surface.",
+      "Don't treat the decorative canvas labels as interactive chips or invent Web components for this native screen."
+    ]
+  }
+}

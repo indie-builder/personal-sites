@@ -1,5 +1,5 @@
 export const ANALYSIS_ENGINES = ["zcode", "codex-cli", "pi"];
-export const DEFAULT_ANALYSIS_ENGINE = "zcode";
+export const DEFAULT_ANALYSIS_ENGINE = "pi";
 
 export function resolveAnalysisEngine(value = DEFAULT_ANALYSIS_ENGINE) {
   if (!ANALYSIS_ENGINES.includes(value)) throw new Error("--engine 仅支持 zcode、codex-cli 或 pi。");
