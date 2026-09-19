@@ -46,6 +46,13 @@ import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import kotlinx.coroutines.launch
 
+/** 推荐问题与其检索范围成对声明，避免按文案字符串反推范围（docs/ask-experience.md：推荐问题会选对应范围）。 */
+private val recommendedQuestions = listOf(
+    "介绍一下陈远" to AskScope.PROFILE,
+    "最近关注哪些 AI 技术？" to AskScope.AI_NEWS,
+    "有哪些值得了解的开源项目？" to AskScope.OPEN_SOURCE,
+)
+
 /** Full-screen native conversation. References open the returned source content in-app. */
 @Composable
 fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
@@ -107,10 +114,10 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                     Column(Modifier.padding(top = 40.dp), verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
                         Text("有什么想了解的？", style = SiteText.pageTitle, color = SiteTheme.colors.ink)
                         Text("关于陈远、每日关注或开源内容，都可以从这里开始。", style = SiteText.body, color = SiteTheme.colors.muted)
-                        listOf("介绍一下陈远", "最近关注哪些 AI 技术？", "有哪些值得了解的开源项目？").forEach { question ->
+                        recommendedQuestions.forEach { (question, questionScope) ->
                             OutlinedButton(onClick = {
                                 input = question
-                                searchScope = when (question) { "介绍一下陈远" -> AskScope.PROFILE; "有哪些值得了解的开源项目？" -> AskScope.OPEN_SOURCE; else -> AskScope.AI_NEWS }
+                                searchScope = questionScope
                                 focus.requestFocus(); keyboard?.show()
                             }) { Text(question) }
                         }
