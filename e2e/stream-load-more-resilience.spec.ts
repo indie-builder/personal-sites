@@ -47,6 +47,25 @@ test("curation stream surfaces a Chinese fallback when load more fails and recov
   await expect(retry).toHaveCount(0);
 });
 
+test("design stream names its own section in the network-failure fallback", async ({ page }) => {
+  // 网络层失败（非 JSON 错误响应）：客户端只能用自己的兜底文案，应带板块名。
+  await page.route("**/api/design?*", async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get("offset") ?? "0");
+    if (offset > 0) {
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/design");
+  await expect(page.locator(".design-curation__entry").first()).toBeVisible();
+
+  await scrollToFeedEnd(page);
+  await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
+  await expect(page.locator(".curation-home__stream-status")).toContainText("暂时无法加载更多设计收藏。");
+});
+
 async function scrollToFeedEnd(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
     const stream = document.querySelector(".curation-home__stream");

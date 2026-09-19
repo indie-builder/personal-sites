@@ -22,6 +22,7 @@ async function DesignFeed() {
       emptyLabel="暂时没有高置信度的设计收藏。"
       initialHasMore={designPage.hasMore}
       initialItems={designPage.items}
+      loadErrorMessage="暂时无法加载更多设计收藏。"
       snapshotKey="design-stream-v1"
       variant="design"
     />
