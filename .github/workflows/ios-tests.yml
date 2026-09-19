@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   test:
+    # 依赖镜像默认 Xcode 26+（工程部署目标 iOS 26、Swift 6）。
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -28,6 +29,10 @@ jobs:
         id: simulator
         run: |
           device=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/[[:space:]]*$//')
+          if [ -z "$device" ]; then
+            echo "no iPhone simulator found on runner image" >&2
+            exit 1
+          fi
           echo "Using simulator: $device"
           echo "name=$device" >> "$GITHUB_OUTPUT"
       - name: Run tests
