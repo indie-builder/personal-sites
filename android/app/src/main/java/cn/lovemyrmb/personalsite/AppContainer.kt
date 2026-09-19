@@ -2,6 +2,7 @@ package cn.lovemyrmb.personalsite
 
 import android.content.Context
 import cn.lovemyrmb.personalsite.data.AskClient
+import cn.lovemyrmb.personalsite.data.AskController
 import cn.lovemyrmb.personalsite.data.EntryHolder
 import cn.lovemyrmb.personalsite.data.SITE_BASE_URL
 import cn.lovemyrmb.personalsite.data.SiteApi
@@ -57,6 +58,12 @@ class AppContainer(context: Context) {
     }
 
     val entryHolder = EntryHolder()
+
+    /**
+     * 问一问会话：按 docs/ask-experience.md 保存在当前 App 进程中。
+     * Activity 重建（深浅色、语言、密度变更）不丢对话；进程死亡不承诺恢复。
+     */
+    val askController: AskController by lazy { AskController(askClient, visitorId) }
 
     private fun generateVisitorId(): String {
         val bytes = ByteArray(18)

@@ -64,7 +64,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import cn.lovemyrmb.personalsite.data.AskController
 import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.Section
 import kotlinx.coroutines.launch
@@ -99,7 +98,7 @@ fun PersonalSiteApp(container: AppContainer) {
     val hazeState = remember { HazeState() }
     val context = LocalContext.current
     val viewModel: HomeViewModel = viewModel(factory = PersonalSiteViewModelFactory(container))
-    val askController = remember { AskController(container.askClient, container.visitorId) }
+    val askController = container.askController
     val pagerState = rememberPagerState(pageCount = { Section.entries.size })
     val scope = rememberCoroutineScope()
     val backStackEntry by navController.currentBackStackEntryAsState()
