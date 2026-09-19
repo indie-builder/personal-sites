@@ -1,33 +1,12 @@
-import { z } from "zod";
-
 import { getCurationPage } from "@/lib/curation";
+import { createPaginatedFeedRoute } from "@/lib/paginated-route";
 
-const PUBLIC_CURATION_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
-
-// 分页档位固定为客户端的 PAGE_SIZE=20：limit 钳位、offset 向下取整到 20 的倍数。
-// 注意与 /api/ai-news 不同：这里读的是随部署打包的本地 sqlite（不经 unstable_cache），
-// 钳位只保持两个分页接口的参数语义一致，不提供缓存键收敛；客户端按 id 去重，
+// 读随部署打包的本地 sqlite（不经 unstable_cache）；分页档位固定为客户端的
+// PAGE_SIZE=20，与 /api/ai-news 的参数语义保持一致。客户端按 id 去重，
 // 取整带来的重复条目会被丢弃。
-const PAGE_STEP = 20;
-
-const querySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(PAGE_STEP),
-  offset: z.coerce.number().int().min(0).max(10_000).default(0),
+export const GET = createPaginatedFeedRoute({
+  label: "策展内容",
+  maxLimit: 50,
+  pageStep: 20,
+  readPage: getCurationPage,
 });
-
-export async function GET(request: Request) {
-  const query = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
-  if (!query.success) {
-    return Response.json({ error: "分页参数无效。" }, { status: 400 });
-  }
-
-  const offset = Math.floor(query.data.offset / PAGE_STEP) * PAGE_STEP;
-  try {
-    return Response.json(await getCurationPage(offset, PAGE_STEP), {
-      headers: { "Cache-Control": PUBLIC_CURATION_CACHE_CONTROL },
-    });
-  } catch (error) {
-    console.error("读取策展分页失败", error);
-    return Response.json({ error: "暂时无法加载更多策展内容。" }, { status: 500 });
-  }
-}
