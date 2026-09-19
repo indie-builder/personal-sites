@@ -40,26 +40,30 @@ export async function buildPublicCurationDatabase({ outputPath, items: unsortedI
       INSERT INTO curation_items (id, collected_at, collected_order, published_at, title, content_json)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-    for (const item of items) {
-      insertItem.run(item.id, item.collectedAt, item.collectedOrder, item.publishedAt, item.title, JSON.stringify(item));
-    }
+    database.transaction((rows) => {
+      for (const item of rows) {
+        insertItem.run(item.id, item.collectedAt, item.collectedOrder, item.publishedAt, item.title, JSON.stringify(item));
+      }
+    })(items);
 
     const insertDocument = database.prepare(`
       INSERT INTO ask_documents (id, source_scope, published_at, title, content, search_text, source_id, source_url)
       VALUES (?, 'daily', ?, ?, ?, ?, ?, ?)
     `);
     const documents = toDailySearchDocuments(items.map((content) => ({ content, published_at: content.publishedAt })));
-    for (const document of documents) {
-      insertDocument.run(
-        document.id,
-        document.published_at,
-        document.title,
-        document.content,
-        document.search_text,
-        document.source_id,
-        document.source_url,
-      );
-    }
+    database.transaction((rows) => {
+      for (const document of rows) {
+        insertDocument.run(
+          document.id,
+          document.published_at,
+          document.title,
+          document.content,
+          document.search_text,
+          document.source_id,
+          document.source_url,
+        );
+      }
+    })(documents);
     compactPublicDatabase(database);
     database.close();
 

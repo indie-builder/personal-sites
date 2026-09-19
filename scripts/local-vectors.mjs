@@ -30,6 +30,9 @@ const VECTOR_DIMENSIONS = 512;
 const QUERY_PREFIX = "为这个句子生成表示以用于检索相关文章：";
 const BATCH_SIZE = 16;
 const SUPPORTED_EXTENSIONS = new Set([".md", ".mdx", ".txt"]);
+const INDEX_FINGERPRINT_KEY = "default_fingerprint";
+// 分块或索引参数变化时递增，让指纹短路失效。
+const INDEXER_VERSION = 1;
 
 function compactText(value) {
   return String(value ?? "")
@@ -185,6 +188,14 @@ async function createEmbedder() {
   });
 }
 
+// 模块级复用：加载 ONNX 模型是秒级开销，索引与每次 search 共享同一实例。
+let embedderPromise = null;
+
+function getEmbedder() {
+  embedderPromise ??= createEmbedder();
+  return embedderPromise;
+}
+
 async function embed(embedder, texts) {
   const output = await embedder(texts, {
     normalize: true,
@@ -261,7 +272,34 @@ function initializeDatabase(filePath) {
   return database;
 }
 
-async function buildIndex(inputs, { includeCuration = false } = {}) {
+/** 默认索引的输入指纹：源文件清单 + mtime/size + 公开投影文件 + 索引参数。 */
+async function computeDefaultIndexFingerprint() {
+  const files = await collectFiles(defaultInputs, { ignoreMissing: true });
+  const parts = [`indexer:${INDEXER_VERSION}`, MODEL_DTYPE, MODEL_ID, String(VECTOR_DIMENSIONS)];
+  for (const filePath of files) {
+    const fileStat = await stat(filePath);
+    parts.push(`${path.relative(repoRoot, filePath)}:${fileStat.mtimeMs}:${fileStat.size}`);
+  }
+  if (existsSync(curationDatabasePath)) {
+    const databaseStat = await stat(curationDatabasePath);
+    parts.push(`data/curation.sqlite:${databaseStat.mtimeMs}:${databaseStat.size}`);
+  }
+  return contentHash(parts.join("\n"));
+}
+
+function readStoredFingerprint() {
+  if (!existsSync(databasePath)) return null;
+  const database = new Database(databasePath, { fileMustExist: true, readonly: true });
+  try {
+    return database.prepare("SELECT value FROM metadata WHERE key = ?").get(INDEX_FINGERPRINT_KEY)?.value ?? null;
+  } catch {
+    return null;
+  } finally {
+    database.close();
+  }
+}
+
+async function buildIndex(inputs, { fingerprint = null, includeCuration = false } = {}) {
   const { chunks: fileChunks, fileCount } = await readChunks(inputs, { ignoreMissing: includeCuration });
   const publicProjection = includeCuration ? readPublicProjectionChunks() : { chunks: [], itemCount: 0 };
   const chunks = [...fileChunks, ...publicProjection.chunks];
@@ -279,6 +317,9 @@ async function buildIndex(inputs, { includeCuration = false } = {}) {
   let generatedCount = 0;
   let reusedCount = 0;
   const database = initializeDatabase(temporaryPath);
+  if (fingerprint) {
+    database.prepare("INSERT INTO metadata(key, value) VALUES (?, ?)").run(INDEX_FINGERPRINT_KEY, fingerprint);
+  }
   const insertDocument = database.prepare(
     "INSERT INTO documents(id, source, chunk_index, content) VALUES (?, ?, ?, ?)",
   );
@@ -303,7 +344,7 @@ async function buildIndex(inputs, { includeCuration = false } = {}) {
       const vectors = batch.map((chunk) => cachedVectors.get(contentHash(chunk.content)) ?? null);
       const missingIndexes = vectors.flatMap((vector, index) => vector ? [] : [index]);
       if (missingIndexes.length > 0) {
-        embedder ??= await createEmbedder();
+        embedder ??= await getEmbedder();
         const generated = await embed(embedder, missingIndexes.map((index) => batch[index].content));
         missingIndexes.forEach((batchIndex, generatedIndex) => {
           vectors[batchIndex] = new Float32Array(generated[generatedIndex]);
@@ -326,8 +367,15 @@ async function buildIndex(inputs, { includeCuration = false } = {}) {
   console.log(`本地索引已写入 ${path.relative(repoRoot, databasePath)}（复用 ${reusedCount}，新生成 ${generatedCount}）。`);
 }
 
-export function rebuildDefaultIndex() {
-  return buildIndex(defaultInputs, { includeCuration: true });
+export async function rebuildDefaultIndex() {
+  // 指纹短路：管线尾部（curation:publish、GitHub daily）都会调用这里，
+  // 输入无变化时跳过全量重扫——读源文件、全库 SHA-256 比对、重建临时库都不再发生。
+  const fingerprint = await computeDefaultIndexFingerprint();
+  if (fingerprint === readStoredFingerprint()) {
+    console.log("索引输入无变化，跳过本地向量索引重建。");
+    return;
+  }
+  return buildIndex(defaultInputs, { fingerprint, includeCuration: true });
 }
 
 function quoteFtsQuery(query) {
@@ -337,7 +385,7 @@ function quoteFtsQuery(query) {
 async function search(query) {
   if (!compactText(query)) throw new Error("搜索词不能为空。");
 
-  const embedder = await createEmbedder();
+  const embedder = await getEmbedder();
   const [queryVector] = await embed(embedder, [`${QUERY_PREFIX}${compactText(query)}`]);
   const database = new Database(databasePath, { fileMustExist: true, readonly: true });
   sqliteVec.load(database);

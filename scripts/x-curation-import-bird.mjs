@@ -145,19 +145,20 @@ for (const file of rawFiles) {
 
 const queue = await readJsonOr(queuePath, { version: 2, items: [] });
 queue.version = Math.max(Number(queue.version ?? 0), 3);
-const existing = new Set(queue.items.map((item) => item.id));
-const seen = new Set(existing);
+const itemById = new Map(queue.items.map((item) => [item.id, item]));
+const seen = new Set(itemById.keys());
 
 let added = 0;
 let backfilled = 0;
 let duplicated = 0;
 let bothSources = 0;
+const newEntries = [];
 for (const { tweet, fetchSource, firstSeenAt, firstSeenOrder } of tweets) {
   const id = String(tweet.id);
+  const item = itemById.get(id);
   if (seen.has(id)) {
     duplicated += 1;
     // 同一条同时出现在书签和点赞：补充来源标记
-    const item = queue.items.find((candidate) => candidate.id === id);
     if (item && item.fetchSource !== fetchSource && !item.fetchSource.includes(fetchSource)) {
       item.fetchSource = `${item.fetchSource}+${fetchSource}`;
       bothSources += 1;
@@ -174,10 +175,13 @@ for (const { tweet, fetchSource, firstSeenAt, firstSeenOrder } of tweets) {
   const entry = normalizeTweet(tweet, fetchSource);
   entry.firstSeenAt = firstSeenAt;
   entry.firstSeenOrder = firstSeenOrder;
-  queue.items.unshift(entry);
+  newEntries.push(entry);
+  itemById.set(id, entry);
   seen.add(id);
   added += 1;
 }
+// 等价于逐条 unshift（后处理的排在最前），但把每次 O(N) 的移位摊成一次拼接。
+queue.items = [...newEntries.reverse(), ...queue.items];
 
 for (const item of queue.items) {
   const firstSeen = firstSeenById.get(item.id);

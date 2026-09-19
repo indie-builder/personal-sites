@@ -4,9 +4,9 @@ import { Suspense } from "react";
 import { ArrowUpRight } from "lucide-react";
 
 import { DetailPage, DetailTopbar } from "@/components/page-shell";
+import { AiNewsRelativeTime } from "@/components/ai-news-relative-time";
 import { getAiNewsItem } from "@/lib/ai-news";
 import {
-  formatAiNewsRelativeTime,
   formatAiNewsTime,
   getAiNewsCategoryLabel,
   getAiNewsOriginalAction,
@@ -17,8 +17,14 @@ import { AiNewsDetailSkeleton } from "./loading";
 
 type AiNewsDetailPageProps = { params: Promise<{ id: string }> };
 
-// 动态渲染、每请求直读 Supabase 公开投影，打开即最新。
-export const dynamic = "force-dynamic";
+// 条目发布后基本不可变：ISR 缓存 5 分钟（与上游同步频率一致）。
+// 唯一依赖当前时间的是相对时间展示，已移到客户端（AiNewsRelativeTime），
+// 不再为它保留整页动态渲染。
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({ params }: AiNewsDetailPageProps): Promise<Metadata> {
   const item = await getAiNewsItem((await params).id);
@@ -28,8 +34,8 @@ export async function generateMetadata({ params }: AiNewsDetailPageProps): Promi
 }
 
 export default function AiNewsDetailPage({ params }: AiNewsDetailPageProps) {
-  // 壳（个人信息栏）立即渲染，详情数据经 Suspense 流式补进：
-  // 动态渲染下首字节不再等 Supabase 查询。
+  // 壳（个人信息栏）立即渲染，详情数据经 Suspense 补进：缓存未命中时
+  // 首字节不等 Supabase 查询，命中后整页静态返回。
   return (
     <DetailPage>
       <Suspense fallback={<AiNewsDetailSkeleton />}>
@@ -42,8 +48,6 @@ export default function AiNewsDetailPage({ params }: AiNewsDetailPageProps) {
 async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
   const item = await getAiNewsItem((await params).id);
   if (!item) notFound();
-
-  const relativeTime = formatAiNewsRelativeTime(item.publishedAt);
 
   return (
     <article className="ai-news-detail__article" data-content-id={item.id}>
@@ -58,7 +62,7 @@ async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
         <div className="ai-news-detail__meta">
           <span>{item.sourceName}</span>
           <time dateTime={item.publishedAt ?? undefined}>{formatAiNewsTime(item.publishedAt)}</time>
-          {relativeTime ? <span>{relativeTime}</span> : null}
+          <AiNewsRelativeTime publishedAt={item.publishedAt} />
         </div>
       </header>
 

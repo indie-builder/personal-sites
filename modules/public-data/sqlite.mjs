@@ -77,8 +77,10 @@ export function initializePublicDatabase(database) {
       INSERT INTO ask_documents_fts(rowid, title, search_text)
       VALUES (new.rowid, new.title, new.search_text);
     END;
-    INSERT INTO ask_documents_fts(ask_documents_fts) VALUES ('rebuild');
   `);
+  // FTS 增量由上面的触发器维护；不再在每次初始化时执行全量 rebuild——
+  // GitHub 分析期曾对每个仓库单独 publish，一次运行会触发 N 次全量重建。
+  // 若索引出现漂移，重新跑 curation:publish 从零生成公开库即可。
   insertAskDocuments(database, [toProfileSearchDocument()]);
   return database;
 }

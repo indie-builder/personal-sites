@@ -43,7 +43,7 @@ import {
 } from "../modules/x-sync/analysis.mjs";
 import { DESIGN_CATEGORIES, designClassificationStatus, normalizeDesignClassification } from "../modules/x-sync/design-classification.mjs";
 import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs";
-import { writeJsonAtomically, writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
+import { writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
 import { resolvePiModelConfig, stripJsonFence } from "../lib/pi-runtime.mjs";
 import { runPiPrompt } from "../modules/analysis/model-runner.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
@@ -300,7 +300,8 @@ for (const item of queue.items) {
 if (normalizedStatuses > 0) {
   console.log(`已校正 ${normalizedStatuses} 条历史设计分类状态。`);
 }
-await writeJsonAtomically(queuePath, queue);
+// 运行前基线落盘（紧凑 JSON），断点续跑依赖它。
+await writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`);
 let targets = queue.items.filter((item) => DESIGN_ONLY
   ? item.ai.enrichedAt && (
       !item.ai.design
@@ -342,8 +343,9 @@ let failed = 0;
 let saveQueue = Promise.resolve();
 
 function persistQueue() {
-  const snapshot = JSON.stringify(queue, null, 2) + "\n";
-  saveQueue = saveQueue.then(() => writeTextAtomically(queuePath, snapshot));
+  // stringify 放进串行链：并发完成时同一时刻最多一次全量序列化，worker 不再阻塞事件循环。
+  // 紧凑 JSON（无缩进）把 9.5MB 队列的序列化与写盘成本压到最低；调试用 jq 展开即可。
+  saveQueue = saveQueue.then(() => writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`));
   return saveQueue;
 }
 

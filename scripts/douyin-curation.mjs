@@ -212,10 +212,10 @@ async function sync(options) {
   function persistQueue() {
     queue.items = [...byId.values()];
     queue.updatedAt = new Date().toISOString();
-    const snapshot = JSON.stringify(queue, null, 2) + "\n";
+    // stringify 放进串行链，紧凑 JSON：并发完成时同一时刻最多一次全量序列化。
     saveQueue = saveQueue.then(async () => {
       await mkdir(path.dirname(queuePath), { mode: 0o700, recursive: true });
-      await writeFile(queuePath, snapshot, { mode: 0o600 });
+      await writeFile(queuePath, `${JSON.stringify(queue)}\n`, { mode: 0o600 });
     });
     return saveQueue;
   }
@@ -224,7 +224,8 @@ async function sync(options) {
   const analyzerWaiters = [];
 
   async function withAnalyzerSlot(callback) {
-    if (activeAnalyzers >= analyzerConcurrency) {
+    // 唤醒后必须重新检查：槽位可能已被新到达的调用抢占，否则会瞬时超并发。
+    while (activeAnalyzers >= analyzerConcurrency) {
       await new Promise((resolve) => analyzerWaiters.push(resolve));
     }
     activeAnalyzers += 1;

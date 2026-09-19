@@ -127,12 +127,8 @@ async function analyze(records) {
     derivedRoot,
     model: reader?.modelConfig ?? { model: "official-zh-readme", provider: "github" },
     onError: (failure) => console.error(`[解析失败] ${failure.repository}: ${failure.message}`),
-    onRecord: async (analysis, record, completed, total) => {
+    onRecord: (analysis, record, completed, total) => {
       console.log(`[解析 ${completed}/${total}] ${record.repository.fullName}${analysis.reused ? "（复用）" : ""}`);
-      if (publishRankByRepository.has(record.repository.fullName)) {
-        await publishStarredRecords({ analyses: [analysis], records: [record], seedEntries: openSourceEntries });
-        console.log(`[公开投影] ${record.repository.fullName}`);
-      }
     },
     prompt: reader?.prompt,
   });
