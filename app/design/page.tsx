@@ -23,6 +23,7 @@ async function DesignFeed() {
       initialHasMore={designPage.hasMore}
       initialItems={designPage.items}
       loadErrorMessage="暂时无法加载更多设计收藏。"
+      loadedAllLabel="已加载全部设计收藏"
       snapshotKey="design-stream-v1"
       variant="design"
     />

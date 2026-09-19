@@ -32,6 +32,8 @@ export function CurationStream({
   snapshotKey,
   /** 加载失败且拿不到服务端文案时的兜底提示；design/douyin 板块传各自板块名。 */
   loadErrorMessage = "暂时无法加载更多策展内容。",
+  /** 全部加载完成的收尾文案，同样随板块传入。 */
+  loadedAllLabel = "已加载全部策展内容",
   /** 设计收藏在列表内直接呈现可播放视频，详情入口缩为标题链接以避免嵌套交互。 */
   variant = "default",
 }: {
@@ -42,6 +44,7 @@ export function CurationStream({
   /** 会话快照的 sessionStorage key；两个板块各自独立，互不覆盖。 */
   snapshotKey?: string;
   loadErrorMessage?: string;
+  loadedAllLabel?: string;
   variant?: "default" | "design";
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -160,7 +163,7 @@ export function CurationStream({
             <button onClick={() => void loadMore()} type="button">重试</button>
           </>
         ) : null}
-        {!hasMore && !loadError ? <span>{items.length === 0 ? emptyLabel : "已加载全部策展内容"}</span> : null}
+        {!hasMore && !loadError ? <span>{items.length === 0 ? emptyLabel : loadedAllLabel}</span> : null}
       </li>
     </ol>
     </div>
