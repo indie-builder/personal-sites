@@ -55,6 +55,7 @@ import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
 import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.dimensionLabels
+import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
@@ -216,7 +217,7 @@ private fun <T> FeedPageUi(
                 CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
             }
 
-            state.error != null && state.items.isEmpty() -> FeedError(
+            state.error != null && state.items.isEmpty() -> ErrorRetry(
                 message = state.error ?: "",
                 modifier = Modifier.fillMaxSize(),
             ) { viewModel.retry(section) }
@@ -268,7 +269,7 @@ private fun FeedFooter(state: FeedState<*>, onRetry: () -> Unit) {
             )
         }
 
-        state.error != null -> FeedError(message = state.error ?: "", modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
+        state.error != null -> ErrorRetry(message = state.error ?: "", modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
 
         !state.hasMore && state.items.isNotEmpty() -> Text(
             text = "已经到底了",
@@ -278,27 +279,6 @@ private fun FeedFooter(state: FeedState<*>, onRetry: () -> Unit) {
                 .fillMaxWidth()
                 .padding(vertical = 18.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun FeedError(message: String, modifier: Modifier = Modifier, onRetry: () -> Unit) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(text = message, style = SiteText.summary, color = SiteTheme.colors.muted)
-        Text(
-            text = "重试",
-            style = SiteText.eyebrow,
-            color = SiteTheme.colors.ink,
-            modifier = Modifier
-                .heightIn(min = SiteSpace.touch)
-                .clip(RoundedCornerShape(6.dp))
-                .clickable(onClickLabel = "重新加载内容", role = Role.Button) { onRetry() }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 }

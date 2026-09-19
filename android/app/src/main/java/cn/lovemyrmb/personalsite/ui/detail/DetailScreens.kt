@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -53,6 +52,7 @@ import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.aiNewsCategoryLabel
 import cn.lovemyrmb.personalsite.data.dimensionLabels
+import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.VideoCard
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.components.openExternally
@@ -127,9 +127,11 @@ private fun AiNewsDetailScreen(
         DetailTopBar(label = "每日动态", onBack = onBack)
         when {
             item != null -> AiNewsDetailBody(item!!, onOpenLink)
-            error != null -> DetailError(error ?: "", Modifier.weight(1f)) {
-                error = null
-                attempt++
+            error != null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                ErrorRetry(message = error ?: "") {
+                    error = null
+                    attempt++
+                }
             }
             else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
@@ -390,29 +392,6 @@ private fun CurationMediaSection(media: List<CurationMedia>, source: CurationSou
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DetailError(message: String, modifier: Modifier = Modifier, onRetry: () -> Unit) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
-    ) {
-        Text(text = message, style = SiteText.summary, color = SiteTheme.colors.muted)
-        Text(
-            text = "重试",
-            style = SiteText.eyebrow,
-            color = SiteTheme.colors.ink,
-            modifier = Modifier
-                .heightIn(min = SiteSpace.touch)
-                .clip(RoundedCornerShape(6.dp))
-                .clickable(onClickLabel = "重新加载内容", role = Role.Button) { onRetry() }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        )
     }
 }
 
