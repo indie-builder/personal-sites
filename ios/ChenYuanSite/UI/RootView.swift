@@ -110,7 +110,8 @@ struct RootView: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityIdentifier("bar-\(label)")
     }
 
     // MARK: 滚动隐藏（±16pt 阈值，反向滚动先清零累计位移）

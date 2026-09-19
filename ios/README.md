@@ -20,7 +20,8 @@ ios/
 │   ├── UI/                       # Theme / RootView(玻璃底栏) / Opening / Home / Detail / Ask / About
 │   ├── Assets.xcassets           # App 图标 + 头像
 │   └── opening_character.gif     # 开场人物序列（与 Web/安卓同素材）
-└── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、时间文案）
+├── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、时间文案）
+└── ChenYuanSiteUITests/          # XCUITest 无障碍回归（栏目 Tab / 底栏选中语义）
 ```
 
 ## 与安卓端的契约对齐
@@ -38,7 +39,7 @@ ios/
 xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro' build
 
-# 单元测试（34 例）
+# 单元测试（34 例）+ 无障碍 UI 测试（2 例）
 xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test
 
@@ -56,6 +57,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 | `-route-detail` | 拉取每日动态第一条并进入详情 |
 | `-ask-demo` | 打开问一问并自动发送「介绍一下陈远」（实测 SSE 链路） |
 | `-ask-reset` | `-ask-demo` 基础上，回答开始后再弹出「新对话」确认（验证重置流程） |
+| `-skip-opening` | 跳过开场动画（UI 测试/无触控截图用） |
 
 ## 已知边界
 

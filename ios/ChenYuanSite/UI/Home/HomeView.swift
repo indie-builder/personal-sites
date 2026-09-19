@@ -111,7 +111,8 @@ private struct SectionTabs: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                        .accessibilityIdentifier("home-tab-\(section.id)")
                         .id(section.index)
                     }
                 }
