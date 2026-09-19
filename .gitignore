@@ -43,3 +43,7 @@ test-results/
 
 # ZCode CLI per-session state; never commit.
 /.zcode/
+# skills CLI entry points for agents this repo does not track (Eve, AstrBot);
+# content stays duplicated on disk, canonical skills live in .agents/skills.
+/agent/
+/data/skills/
