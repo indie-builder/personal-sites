@@ -27,6 +27,8 @@ export function FeedPage({ children, label, section }: { children: ReactNode; la
       <SiteProfile mobileSection={section} />
       <SectionMotionLifecycle section={section} />
       <section aria-label={label} className="curation-home__feed site-section-motion">
+        {/* 条目标题是 h3，需要一个节级 h2 维持标题层级（与每日动态的日期分组标题同模式）。 */}
+        <h2 className="sr-only">{label}</h2>
         <ContentSectionNavigation current={section} />
         {children}
       </section>

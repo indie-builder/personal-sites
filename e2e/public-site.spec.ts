@@ -352,3 +352,14 @@ test("Ask has no automatically detectable accessibility violations", async ({ pa
   const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
   expect(results.violations).toEqual([]);
 });
+
+test("curation feeds have no automatically detectable accessibility violations", async ({ page }) => {
+  // reducedMotion 排除入场动画中途测出的对比度假阳性。
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const path of ["/curation", "/design", "/douyin", "/open-source"]) {
+    await page.goto(path);
+    await expect(page.locator(".curation-home__feed li").first()).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations, path).toEqual([]);
+  }
+});
