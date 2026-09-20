@@ -1,12 +1,15 @@
 import Foundation
+import Synchronization
 import Testing
 
 @testable import ChenYuanSite
 
 /// 问一问会话控制器的状态机规格（「新对话」确认弹窗背后的逻辑）：
-/// 输入校验、连接失败兜底、新对话重置、重试最近一问。
-/// 用 URLProtocol 桩让请求在任何环境（含 CI runner）都确定性失败，
-/// 不依赖真实网络行为。
+/// 输入校验、连接失败兜底、新对话重置、重试最近一问、流式中途取消。
+/// 用 URLProtocol 桩让请求在任何环境（含 CI runner）都确定性可控，
+/// 不依赖真实网络行为。用例共享进程级 URLProtocol/网络栈状态，
+/// 并行运行时桩事件偶发丢失（多次实测非确定失败），故串行执行。
+@Suite(.serialized)
 @MainActor
 struct AskControllerTests {
     /// 拦截一切请求并立即报连接失败：send 后毫秒级进入错误态。
@@ -20,9 +23,36 @@ struct AskControllerTests {
         override func stopLoading() {}
     }
 
+    /// 挂起请求直到测试放行（或 session 取消触发 stopLoading 释放）：
+    /// 用于验证流式中途 cancel 的状态迁移。信号量为类型共享，仅单测使用。
+    nonisolated private final class SuspendedURLProtocol: URLProtocol {
+        nonisolated(unsafe) static let gate = DispatchSemaphore(value: 0)
+        nonisolated(unsafe) static let received = Mutex(false)
+
+        override class func canInit(with request: URLRequest) -> Bool { true }
+        override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+        override func startLoading() {
+            Self.received.withLock { $0 = true }
+            Self.gate.wait()
+            // 竞态窗口下本调用可能晚于 stopLoading 返回：task 已取消，
+            // 此事件会被加载系统丢弃，不再送达 client 流。
+            client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
+        }
+        override func stopLoading() {
+            Self.gate.signal()
+        }
+    }
+
     private func makeController() -> AskController {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [FailingURLProtocol.self]
+        let client = AskClient(session: URLSession(configuration: configuration))
+        return AskController(client: client, visitorId: "test-visitor-000000000000")
+    }
+
+    private func makeSuspendedController() -> AskController {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SuspendedURLProtocol.self]
         let client = AskClient(session: URLSession(configuration: configuration))
         return AskController(client: client, visitorId: "test-visitor-000000000000")
     }
@@ -68,6 +98,23 @@ struct AskControllerTests {
         #expect(controller.streaming)
         #expect(controller.error == nil)
         await waitUntil { !self.isStreaming(controller) && controller.error != nil }
+    }
+
+    /// 流式中途取消（「停止生成」按钮）：消息标记 stopped、streaming 复位、
+    /// 不落入错误态（对应 UI 的「已停止生成」提示路径）。
+    @Test func cancelMidStreamMarksStoppedWithoutError() async {
+        let controller = makeSuspendedController()
+        controller.send("介绍一下陈远", scope: .profile)
+        #expect(controller.messages.count == 2)
+        #expect(controller.streaming)
+        // 等请求真正到达桩（挂起中），再触发取消。
+        await waitUntil { SuspendedURLProtocol.received.withLock { $0 } }
+        controller.cancel()
+        #expect(controller.messages.count == 2)
+        #expect(controller.messages[0].text == "介绍一下陈远")
+        #expect(controller.messages[1].status == .stopped)
+        #expect(!controller.streaming)
+        #expect(controller.error == nil)
     }
 
     private func isStreaming(_ controller: AskController) -> Bool {
