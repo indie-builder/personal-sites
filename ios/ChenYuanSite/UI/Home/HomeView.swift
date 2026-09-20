@@ -111,7 +111,8 @@ private struct SectionTabs: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                        .accessibilityIdentifier("home-tab-\(section.id)")
                         .id(section.index)
                     }
                 }
@@ -208,6 +209,22 @@ private struct FeedFooter: View {
     }
 }
 
+/// 每日动态行的导读预览：去标题前缀与起始标点，换行压平为空格。
+/// 多段摘要在两行预览里会渲染出空行且截断无省略号，与站点列表 CSS
+/// 的空白折叠行为不一致；完整分段导读只在详情页展示。
+nonisolated func aiNewsSummaryPreview(title: String, summary: String) -> String {
+    var text = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !trimmedTitle.isEmpty, text.hasPrefix(trimmedTitle) {
+        text = String(text.dropFirst(trimmedTitle.count))
+    }
+    // 对应安卓 trimStart(' ', '，', '。', '：', ':', '—', '-', '\n')。
+    while let first = text.first, " ，。：:—-\n".contains(first) {
+        text.removeFirst()
+    }
+    return text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+}
+
 /// 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。
 private struct AiNewsRow: View {
     let item: AiNewsListItem
@@ -243,16 +260,7 @@ private struct AiNewsRow: View {
     }
 
     private var summary: String {
-        var text = item.summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !title.isEmpty, text.hasPrefix(title) {
-            text = String(text.dropFirst(title.count))
-        }
-        // 对应安卓 trimStart(' ', '，', '。', '：', ':', '—', '-', '\n')。
-        while let first = text.first, " ，。：:—-\n".contains(first) {
-            text.removeFirst()
-        }
-        return text
+        aiNewsSummaryPreview(title: item.title, summary: item.summary)
     }
 
     private var meta: String {

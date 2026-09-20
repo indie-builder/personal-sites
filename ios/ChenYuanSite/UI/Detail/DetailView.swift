@@ -281,6 +281,7 @@ private struct DetailSection: View {
 }
 
 /// 策展媒体的展示：视频逐个播放卡，图片 1 张整宽、多张三列方格。
+/// 媒体数组对本视图生命周期不可变（来自跳转载体），位置键即稳定身份。
 private struct CurationMediaSection: View {
     let media: [CurationMedia]
     let source: CurationSource
@@ -290,7 +291,9 @@ private struct CurationMediaSection: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            ForEach(videos) { video in
+            // 与安卓 forEach 语义一致按位置标识：服务端同一媒体 URL 重复时
+            // （CurationMedia.id = url）不会产生重复 ForEach 身份。
+            ForEach(Array(videos.enumerated()), id: \.offset) { _, video in
                 VideoCard(media: video, source: source)
             }
             if photos.count == 1, let photo = photos.first {
@@ -309,7 +312,7 @@ private struct CurationMediaSection: View {
                 .accessibilityLabel("图片")
             } else if photos.count > 1 {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
-                    ForEach(photos) { photo in
+                    ForEach(Array(photos.enumerated()), id: \.offset) { _, photo in
                         AsyncImage(url: URL(string: photo.url)) { phase in
                             if let image = phase.image {
                                 image.resizable().scaledToFill()

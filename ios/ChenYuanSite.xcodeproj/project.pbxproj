@@ -30,10 +30,20 @@
 		A20000000000000000000021 = {isa = PBXBuildFile; fileRef = A10000000000000000000021; };
 		A20000000000000000000022 = {isa = PBXBuildFile; fileRef = A10000000000000000000022; };
 		A20000000000000000000023 = {isa = PBXBuildFile; fileRef = A10000000000000000000023; };
+		A20000000000000000000024 = {isa = PBXBuildFile; fileRef = A10000000000000000000024; };
+		A20000000000000000000025 = {isa = PBXBuildFile; fileRef = A10000000000000000000025; };
+		A20000000000000000000026 = {isa = PBXBuildFile; fileRef = A10000000000000000000026; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		A50000000000000000000011 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A40000000000000000000041;
+			proxyType = 1;
+			remoteGlobalIDString = A40000000000000000000011;
+			remoteInfo = ChenYuanSite;
+		};
+		A50000000000000000000014 = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A40000000000000000000041;
 			proxyType = 1;
@@ -47,6 +57,11 @@
 			isa = PBXTargetDependency;
 			target = A40000000000000000000011;
 			targetProxy = A50000000000000000000011;
+		};
+		A50000000000000000000013 = {
+			isa = PBXTargetDependency;
+			target = A40000000000000000000011;
+			targetProxy = A50000000000000000000014;
 		};
 /* End PBXTargetDependency section */
 
@@ -74,14 +89,18 @@
 		A10000000000000000000021 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskProtocolTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownParserTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000023 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeLabelTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000024 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskControllerTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000025 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTraitsTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000026 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRowTests.swift; sourceTree = "<group>"; };
 		A50000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChenYuanSite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A50000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		A30000000000000000000001 = {
 			isa = PBXGroup;
-			children = (A30000000000000000000002, A30000000000000000000009, A30000000000000000000010);
+			children = (A30000000000000000000002, A30000000000000000000009, A30000000000000000000011, A30000000000000000000010);
 			sourceTree = "<group>";
 		};
 		A30000000000000000000002 = {
@@ -156,14 +175,22 @@
 				A10000000000000000000021,
 				A10000000000000000000022,
 				A10000000000000000000023,
+				A10000000000000000000024,
+				A10000000000000000000026,
 			);
 			path = ChenYuanSiteTests;
 			sourceTree = "<group>";
 		};
 		A30000000000000000000010 = {
 			isa = PBXGroup;
-			children = (A50000000000000000000001, A50000000000000000000002);
+			children = (A50000000000000000000001, A50000000000000000000002, A50000000000000000000003);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000011 = {
+			isa = PBXGroup;
+			children = (A10000000000000000000025);
+			path = ChenYuanSiteUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -198,6 +225,20 @@
 			productReference = A50000000000000000000002;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		A40000000000000000000013 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A40000000000000000000024;
+			buildPhases = (
+				A40000000000000000000006,
+				A40000000000000000000007,
+			);
+			buildRules = ();
+			dependencies = (A50000000000000000000013);
+			name = ChenYuanSiteUITests;
+			productName = ChenYuanSiteUITests;
+			productReference = A50000000000000000000003;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -210,6 +251,7 @@
 				TargetAttributes = {
 					A40000000000000000000011 = {CreatedOnToolsVersion = 27.0;};
 					A40000000000000000000012 = {CreatedOnToolsVersion = 27.0; TestTargetID = A40000000000000000000011;};
+					A40000000000000000000013 = {CreatedOnToolsVersion = 27.0; TestTargetID = A40000000000000000000011;};
 				};
 			};
 			buildConfigurationList = A40000000000000000000023;
@@ -220,7 +262,7 @@
 			productRefGroup = A30000000000000000000010;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (A40000000000000000000011, A40000000000000000000012);
+			targets = (A40000000000000000000011, A40000000000000000000012, A40000000000000000000013);
 		};
 /* End PBXProject section */
 
@@ -266,7 +308,15 @@
 				A20000000000000000000021,
 				A20000000000000000000022,
 				A20000000000000000000023,
+				A20000000000000000000024,
+				A20000000000000000000026,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000006 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A20000000000000000000025);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -279,6 +329,12 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A40000000000000000000005 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000007 = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = ();
@@ -374,6 +430,44 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ChenYuanSite.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ChenYuanSite";
+			};
+			name = Release;
+		};
+		A40000000000000000000037 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cn.lovemyrmb.personalsite.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ChenYuanSite;
+			};
+			name = Debug;
+		};
+		A40000000000000000000038 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cn.lovemyrmb.personalsite.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ChenYuanSite;
 			};
 			name = Release;
 		};
@@ -498,6 +592,12 @@
 		A40000000000000000000023 = {
 			isa = XCConfigurationList;
 			buildConfigurations = (A40000000000000000000035, A40000000000000000000036);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A40000000000000000000024 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A40000000000000000000037, A40000000000000000000038);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};

@@ -170,14 +170,17 @@ private let technicalTerms = [
 ]
 private let laneDurations: [Float] = [63, 69, 60, 81, 72, 66]
 
+/// 六条泳道：词条按下标取模分组（与安卓 lanes 一致）。
+private let marqueeLanes: [[String]] = {
+    (0..<6).map { lane in technicalTerms.enumerated().filter { $0.offset % 6 == lane }.map { $0.element } }
+}()
+
 /// 六条泳道的词条跑马灯 + 点阵背景：可见时才推进动画。
 private struct TechnicalTerms: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var visible = false
     @State private var startDate = Date()
-
-    private var lanes: [[String]] {
-        (0..<6).map { lane in technicalTerms.enumerated().filter { $0.offset % 6 == lane }.map { $0.element } }
-    }
+    @State private var layout = MarqueeLayout()
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !visible)) { context in
@@ -196,54 +199,79 @@ private struct TechnicalTerms: View {
         .onDisappear { visible = false }
     }
 
-    private func draw(context: GraphicsContext, size: CGSize, elapsed: Float) {
-        let step: CGFloat = 9
-        let dotRadius: CGFloat = 0.65
-        var x: CGFloat = 0
-        while x <= size.width + step {
-            var y: CGFloat = 0
-            while y <= size.height + step {
-                context.fill(
-                    Path(ellipseIn: CGRect(x: x - dotRadius, y: y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)),
-                    with: .color(SiteTheme.ink.opacity(0.12)),
-                )
-                y += step
+    /// 布局缓存：词条 resolve/measure 与点阵路径只在尺寸/外观变化时重建，
+    /// 帧推进只做绘制（对齐安卓 drawWithCache 的缓存语义）。
+    /// ResolvedText 会按 resolve 当时的 colorScheme 烘焙样式，故外观入失效键。
+    private final class MarqueeLayout {
+        var canvasSize = CGSize(width: -1, height: -1)
+        var colorScheme: ColorScheme?
+        var dots = Path()
+        var resolved: [[GraphicsContext.ResolvedText]] = []
+        var widths: [[CGFloat]] = []
+        var lengths: [CGFloat] = []
+        var pillHeight: CGFloat = 0
+        var top: [CGFloat] = []
+
+        func rebuild(size: CGSize, context: GraphicsContext) {
+            canvasSize = size
+            let step: CGFloat = 9
+            let dotRadius: CGFloat = 0.65
+            var dots = Path()
+            var x: CGFloat = 0
+            while x <= size.width + step {
+                var y: CGFloat = 0
+                while y <= size.height + step {
+                    dots.addEllipse(
+                        in: CGRect(x: x - dotRadius, y: y - dotRadius, width: dotRadius * 2, height: dotRadius * 2),
+                    )
+                    y += step
+                }
+                x += step
             }
-            x += step
+            self.dots = dots
+
+            let padding: CGFloat = 8
+            let gap: CGFloat = 112
+            let fontSize: CGFloat = 12
+            resolved = marqueeLanes.map { words in words.map { context.resolve(Text($0).font(.system(size: fontSize))) } }
+            widths = resolved.map { texts in texts.map { $0.measure(in: CGSize(width: 600, height: 40)).width + padding * 2 } }
+            lengths = widths.map { row in row.reduce(0, +) + gap * CGFloat(row.count) }
+            pillHeight = 22
+            top = (0..<marqueeLanes.count).map { CGFloat($0) * (size.height - pillHeight) / CGFloat(marqueeLanes.count - 1) }
         }
+    }
 
-        let pillHeight: CGFloat = 22
-        let padding: CGFloat = 8
+    private func draw(context: GraphicsContext, size: CGSize, elapsed: Float) {
+        if layout.canvasSize != size || layout.colorScheme != colorScheme {
+            layout.rebuild(size: size, context: context)
+            layout.colorScheme = colorScheme
+        }
+        context.fill(layout.dots, with: .color(SiteTheme.ink.opacity(0.12)))
+
         let gap: CGFloat = 112
-        let fontSize: CGFloat = 12
+        let padding: CGFloat = 8
 
-        for (lane, words) in lanes.enumerated() {
-            let resolved = words.map { context.resolve(Text($0).font(.system(size: fontSize))) }
-            let measuredWidths = resolved.map { resolved in
-                resolved.measure(in: CGSize(width: 600, height: 40)).width
-            }
-            let widths: [CGFloat] = measuredWidths.map { $0 + padding * 2 }
-            let totalWordsWidth: CGFloat = widths.reduce(0, +)
-            let length: CGFloat = totalWordsWidth + gap * CGFloat(words.count)
+        for (lane, words) in marqueeLanes.enumerated() {
+            let widths = layout.widths[lane]
+            let length = layout.lengths[lane]
             let rawPhase: Float = (elapsed + Float(lane) * 1.7) / laneDurations[lane]
             let phaseOffset = CGFloat(rawPhase - rawPhase.rounded(.down))
-            let top: CGFloat = CGFloat(lane) * (size.height - pillHeight) / 5
+            let top = layout.top[lane]
+            let pill = RoundedRectangle(cornerRadius: 3, style: .continuous)
 
             var cursor: CGFloat = -phaseOffset * length
             var guardCounter = 0
             while cursor < size.width, guardCounter < 96 {
                 guardCounter += 1
                 for (index, _) in words.enumerated() {
-                    let width: CGFloat = widths[index]
+                    let width = widths[index]
                     if cursor + width > 0, cursor < size.width {
-                        let rect = CGRect(x: cursor, y: top, width: width, height: pillHeight)
-                        let pill = RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .path(in: rect)
-                        context.fill(pill, with: .color(SiteTheme.background.opacity(0.96)))
-                        context.stroke(pill, with: .color(SiteTheme.ink.opacity(0.25)), lineWidth: 0.7)
-                        let resolvedText = resolved[index]
-                        // draw(at:) 以文本中心定位：文本中心在胶囊中线处。
-                        context.draw(resolvedText, at: CGPoint(x: cursor + widths[index] / 2, y: top + pillHeight / 2))
+                        let rect = CGRect(x: cursor, y: top, width: width, height: layout.pillHeight)
+                        let pillPath = pill.path(in: rect)
+                        context.fill(pillPath, with: .color(SiteTheme.background.opacity(0.96)))
+                        context.stroke(pillPath, with: .color(SiteTheme.ink.opacity(0.25)), lineWidth: 0.7)
+                        // ResolvedText 可跨帧复用（环境一致），绘制不重复排版。
+                        context.draw(layout.resolved[lane][index], at: CGPoint(x: cursor + width / 2, y: top + layout.pillHeight / 2))
                     }
                     cursor += width + gap
                 }

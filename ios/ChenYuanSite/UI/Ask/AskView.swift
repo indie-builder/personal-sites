@@ -8,7 +8,10 @@ private let recommendedQuestions: [(question: String, scope: AskScope)] = [
 ]
 
 /// 全屏原生问答：SSE 流式回答、引用编号应用内阅读、停止/重试/新对话。
+/// demoResetPrompt 是 -ask-reset 演示参数的触发信号（见 RootView）。
 struct AskView: View {
+    var demoResetPrompt = false
+
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -41,6 +44,24 @@ struct AskView: View {
             }
         }
         .background(SiteTheme.background)
+        .alert(
+            "开始新对话？",
+            isPresented: $confirmReset,
+        ) {
+            Button("取消", role: .cancel) {}
+            Button("新对话", role: .destructive) {
+                controller.newConversation()
+                input = ""
+                followLatest = true
+            }
+        } message: {
+            Text("当前对话和输入草稿将清空。")
+        }
+        // 演示信号挂在 body 顶层：引用阅读页打开时也能触发确认弹窗。
+        .onChange(of: demoResetPrompt) { _, prompted in
+            guard prompted else { return }
+            confirmReset = true
+        }
         .onDisappear { controller.cancel() }
     }
 
@@ -213,7 +234,9 @@ struct AskView: View {
             if !message.sources.isEmpty {
                 Text(message.text.isEmpty ? "检索到的资料" : "参考资料 · 点击查看依据")
                     .siteMetaStyle(SiteTheme.muted)
-                ForEach(Array(message.sources.enumerated()), id: \.element.id) { number, source in
+                // 按位置标识（对齐安卓 forEachIndexed）：服务端 id 重复时
+                // 不会产生重复 ForEach 身份；编号即列表序号，与正文【n】一致。
+                ForEach(Array(message.sources.enumerated()), id: \.offset) { number, source in
                     Button {
                         openSource(message, number)
                     } label: {

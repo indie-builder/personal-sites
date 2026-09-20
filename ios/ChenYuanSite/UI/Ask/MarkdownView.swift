@@ -388,8 +388,25 @@ struct MarkdownView: View {
 
     @Environment(\.openURL) private var systemOpenURL
 
+    /// remember(text) 语义（对齐安卓 AnswerMarkdown 的 remember(text) { parse }）：
+    /// 解析结果按文本缓存，滚动、流式期间状态翻转等非文本重渲染不再重复整篇解析。
+    @State private var parseCache = ParseCache()
+
+    private final class ParseCache {
+        var text: String?
+        var blocks: [MarkdownBlock] = []
+    }
+
     var body: some View {
-        BlockListView(blocks: MarkdownParser.parse(text), sourceCount: sourceCount, onSource: onSource)
+        let blocks: [MarkdownBlock]
+        if parseCache.text == text {
+            blocks = parseCache.blocks
+        } else {
+            blocks = MarkdownParser.parse(text)
+            parseCache.text = text
+            parseCache.blocks = blocks
+        }
+        return BlockListView(blocks: blocks, sourceCount: sourceCount, onSource: onSource)
             .textSelection(.enabled)
             .tint(SiteTheme.ink)
             .environment(\.openURL, OpenURLAction { url in

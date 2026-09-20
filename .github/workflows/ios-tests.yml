@@ -1,0 +1,60 @@
+name: iOS tests
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-tests.yml'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # 依赖镜像默认 Xcode 26+（工程部署目标 iOS 26、Swift 6）。
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Pick an available iPhone simulator
+        id: simulator
+        run: |
+          device=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/[[:space:]]*$//')
+          if [ -z "$device" ]; then
+            echo "no iPhone simulator found on runner image" >&2
+            exit 1
+          fi
+          echo "Using simulator: $device"
+          echo "name=$device" >> "$GITHUB_OUTPUT"
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
+            -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
+            build-for-testing 2>&1 | tail -20
+      - name: Run tests
+        run: |
+          set -o pipefail
+          # 单克隆执行：两个测试目标并行时 runner 内存吃紧会被 SIGKILL（exit 137）。
+          rm -rf ios-test-results.xcresult
+          xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
+            -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
+            -maximum-parallel-testing-workers 1 \
+            -resultBundlePath ios-test-results.xcresult \
+            test-without-building 2>&1 | tail -60
+      - name: Upload result bundle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ios-test-results.xcresult
+          if-no-files-found: ignore
