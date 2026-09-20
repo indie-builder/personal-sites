@@ -54,6 +54,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 | --- | --- |
 | `-route-ask` | 打开问一问 |
 | `-route-about` | 打开关于我 |
+| `-route-design` | 直达设计收藏栏目（缩略图/深色截图用） |
 | `-route-detail` | 拉取每日动态第一条并进入详情 |
 | `-ask-demo` | 打开问一问并自动发送「介绍一下陈远」（实测 SSE 链路） |
 | `-ask-reset` | `-ask-demo` 基础上，回答开始后再弹出「新对话」确认（验证重置流程） |

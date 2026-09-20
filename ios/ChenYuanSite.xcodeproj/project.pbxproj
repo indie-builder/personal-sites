@@ -33,6 +33,7 @@
 		A20000000000000000000024 = {isa = PBXBuildFile; fileRef = A10000000000000000000024; };
 		A20000000000000000000025 = {isa = PBXBuildFile; fileRef = A10000000000000000000025; };
 		A20000000000000000000026 = {isa = PBXBuildFile; fileRef = A10000000000000000000026; };
+		A20000000000000000000027 = {isa = PBXBuildFile; fileRef = A10000000000000000000027; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +93,7 @@
 		A10000000000000000000024 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskControllerTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000025 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTraitsTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000026 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRowTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000027 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailDecoderTests.swift; sourceTree = "<group>"; };
 		A50000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChenYuanSite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -177,6 +179,7 @@
 				A10000000000000000000023,
 				A10000000000000000000024,
 				A10000000000000000000026,
+				A10000000000000000000027,
 			);
 			path = ChenYuanSiteTests;
 			sourceTree = "<group>";
@@ -310,6 +313,7 @@
 				A20000000000000000000023,
 				A20000000000000000000024,
 				A20000000000000000000026,
+				A20000000000000000000027,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

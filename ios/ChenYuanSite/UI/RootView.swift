@@ -137,12 +137,14 @@ struct RootView: View {
     }
 
     /// 演示/联调用启动参数：-route-ask 直达问一问，-route-about 直达关于我，
-    /// -route-detail 拉取每日动态第一条并进入详情，-ask-demo 自动发送预设问题，
-    /// -ask-reset 在 -ask-demo 基础上再弹出「新对话」确认。
+    /// -route-design 直达设计收藏栏目，-route-detail 拉取每日动态第一条并进入
+    /// 详情，-ask-demo 自动发送预设问题，-ask-reset 在 -ask-demo 基础上再弹出
+    /// 「新对话」确认。
     private func applyLaunchArguments() {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-route-ask") { showAsk = true }
         if arguments.contains("-route-about") { path = [.about] }
+        if arguments.contains("-route-design") { selectedSection = Section.design.index }
         if arguments.contains("-ask-demo") || arguments.contains("-ask-reset") {
             showAsk = true
             Task {
