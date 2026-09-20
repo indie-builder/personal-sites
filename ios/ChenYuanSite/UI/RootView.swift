@@ -14,7 +14,7 @@ struct RootView: View {
     @Environment(\.openURL) private var openURL
 
     @State private var path: [Route] = []
-    @State private var selectedSection = 0
+    @State private var selectedSection = Section.aiNews
     @State private var showAsk = false
     @State private var askResetDemo = false
     @State private var barVisible = true
@@ -36,25 +36,20 @@ struct RootView: View {
                     )
                     .navigationDestination(for: Route.self) { route in
                         switch route {
-                        case .detail:
-                            DetailRouteView(onScrollDelta: noteScroll)
-                        case .about:
-                            AboutView(bottomPadding: barTotal, onScrollDelta: noteScroll)
+                        case .detail: DetailRouteView(onScrollDelta: noteScroll)
+                        case .about: AboutView(bottomPadding: barTotal, onScrollDelta: noteScroll)
                         }
                     }
                 }
                 .background(SiteTheme.background)
 
                 if barVisible {
-                    glassBar
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    glassBar.transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .animation(.snappy(duration: 0.22, extraBounce: 0), value: barVisible)
             .frame(width: proxy.size.width, height: proxy.size.height)
-            .fullScreenCover(isPresented: $showAsk) {
-                AskView(demoResetPrompt: askResetDemo)
-            }
+            .fullScreenCover(isPresented: $showAsk) { AskView(demoResetPrompt: askResetDemo) }
             .onAppear { applyLaunchArguments() }
             .onChange(of: selectedSection) { _, _ in showBar() }
             .onChange(of: path) { _, _ in showBar() }
@@ -62,25 +57,17 @@ struct RootView: View {
         .background(SiteTheme.background)
     }
 
-    // MARK: 底栏
-
     private var glassBar: some View {
         HStack(spacing: 0) {
             barItem(icon: "waveform.path.ecg", label: "动态", selected: path.isEmpty) {
                 withAnimation(.easeOut(duration: 0.2)) { path = [] }
-                withAnimation(.easeOut(duration: 0.22)) { selectedSection = 0 }
+                withAnimation(.easeOut(duration: 0.22)) { selectedSection = .aiNews }
                 showBar()
             }
-            barItem(icon: "ellipsis.bubble", label: "问一问", selected: false) {
-                showAsk = true
-            }
-            barItem(icon: "briefcase", label: "作品集", selected: false) {
-                openURL(Self.portfolioURL)
-            }
+            barItem(icon: "ellipsis.bubble", label: "问一问", selected: false) { showAsk = true }
+            barItem(icon: "briefcase", label: "作品集", selected: false) { openURL(Self.portfolioURL) }
             barItem(icon: "person", label: "关于我", selected: path.last == .about) {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    path = path.last == .about ? [] : [.about]
-                }
+                withAnimation(.easeOut(duration: 0.2)) { path = path.last == .about ? [] : [.about] }
             }
         }
         .padding(5)
@@ -93,19 +80,14 @@ struct RootView: View {
     private func barItem(icon: String, label: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 22))
-                    .foregroundStyle(SiteTheme.ink)
-                Text(label)
-                    .font(SiteText.meta)
+                Image(systemName: icon).font(.system(size: 22)).foregroundStyle(SiteTheme.ink)
+                Text(label).font(SiteText.meta)
                     .foregroundStyle(selected ? SiteTheme.ink : SiteTheme.muted)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
-                if selected {
-                    Capsule().fill(SiteTheme.ink.opacity(0.09))
-                }
+                if selected { Capsule().fill(SiteTheme.ink.opacity(0.09)) }
             }
             .contentShape(Capsule())
         }
@@ -136,33 +118,30 @@ struct RootView: View {
         path.append(.detail)
     }
 
-    /// 演示/联调用启动参数：-route-ask 直达问一问，-route-about 直达关于我，
-    /// -route-design 直达设计收藏栏目，-route-detail 拉取每日动态第一条并进入
-    /// 详情，-ask-demo 自动发送预设问题，-ask-reset 在 -ask-demo 基础上再弹出
-    /// 「新对话」确认。
+    /// 演示/联调用启动参数（README 有参数表）。
     private func applyLaunchArguments() {
-        let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("-route-ask") { showAsk = true }
-        if arguments.contains("-route-about") { path = [.about] }
-        if arguments.contains("-route-design") { selectedSection = Section.design.index }
-        if arguments.contains("-ask-demo") || arguments.contains("-ask-reset") {
+        let flag = ProcessInfo.processInfo.arguments.contains
+        if flag("-route-ask") { showAsk = true }
+        if flag("-route-about") { path = [.about] }
+        if flag("-route-design") { selectedSection = .design }
+        if flag("-ask-demo") || flag("-ask-reset") {
             showAsk = true
             Task {
                 try? await Task.sleep(for: .seconds(0.5))
                 env.askController.send("介绍一下陈远", scope: .profile)
             }
         }
-        if arguments.contains("-ask-reset") {
+        if flag("-ask-reset") {
             Task {
                 try? await Task.sleep(for: .seconds(3))
                 askResetDemo = true
             }
         }
-        if arguments.contains("-route-detail") {
+        if flag("-route-detail") {
             Task {
-                let page = try? await env.api.aiNews(offset: 0, limit: 1)
-                guard let item = page?.items.first else { return }
-                openDetail(.aiNews(item.id))
+                let page = try? await env.api.feed(.aiNews, offset: 0) as FeedPage<AiNewsItem>
+                guard let id = page?.items.first?.id else { return }
+                openDetail(.aiNews(id))
             }
         }
     }
