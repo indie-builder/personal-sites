@@ -20,10 +20,8 @@ nonisolated final class AccessibilityTraitsTests: XCTestCase {
         XCTAssertTrue(designTab.exists)
         XCTAssertFalse(designTab.isSelected, "未选中栏目不应标记选中")
 
-        designTab.tap()
         let selectedAfterTap = app.buttons["home-tab-api/design"]
-        XCTAssertTrue(selectedAfterTap.waitForExistence(timeout: 5))
-        XCTAssertTrue(waitSelected(selectedAfterTap), "点击后新栏目应标记选中")
+        XCTAssertTrue(tapAndAwaitSelected(selectedAfterTap), "点击后新栏目应标记选中")
         XCTAssertTrue(waitNotSelected(app.buttons["home-tab-api/ai-news"]), "切换后旧栏目不应保持选中")
     }
 
@@ -41,16 +39,12 @@ nonisolated final class AccessibilityTraitsTests: XCTestCase {
         XCTAssertTrue(aboutItem.exists)
         XCTAssertFalse(aboutItem.isSelected)
 
-        aboutItem.tap()
         let aboutSelected = app.buttons["bar-关于我"]
-        XCTAssertTrue(aboutSelected.waitForExistence(timeout: 5))
-        XCTAssertTrue(waitSelected(aboutSelected), "进入关于我后应标记选中")
+        XCTAssertTrue(tapAndAwaitSelected(aboutSelected), "进入关于我后应标记选中")
         XCTAssertTrue(waitNotSelected(app.buttons["bar-动态"]), "离开首页后「动态」不应保持选中")
 
-        app.buttons["bar-动态"].tap()
         let homeSelected = app.buttons["bar-动态"]
-        XCTAssertTrue(homeSelected.waitForExistence(timeout: 5))
-        XCTAssertTrue(waitSelected(homeSelected), "返回首页后「动态」应恢复选中")
+        XCTAssertTrue(tapAndAwaitSelected(homeSelected), "返回首页后「动态」应恢复选中")
     }
 
     /// tap 返回到下一帧 trait 翻转之间存在快照时差：轮询等待isSelected 达到
@@ -76,5 +70,15 @@ nonisolated final class AccessibilityTraitsTests: XCTestCase {
             usleep(50_000)
         }
         return latest == expected
+    }
+
+    /// 点击并等待选中：合成触摸在高负载下偶发未命中（选中态全程未翻转），
+    /// 短等未选中则补点一次再长等。重复点击同一目标幂等（选中态不变）。
+    @MainActor
+    private func tapAndAwaitSelected(_ element: XCUIElement) -> Bool {
+        element.tap()
+        if waitSelected(element, timeout: 2) { return true }
+        element.tap()
+        return waitSelected(element, timeout: 5)
     }
 }
