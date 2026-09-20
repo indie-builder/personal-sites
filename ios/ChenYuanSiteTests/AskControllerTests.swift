@@ -24,7 +24,8 @@ struct AskControllerTests {
     }
 
     /// 挂起请求直到测试放行（或 session 取消触发 stopLoading 释放）：
-    /// 用于验证流式中途 cancel 的状态迁移。信号量为类型共享，仅单测使用。
+    /// 用于验证流式中途 cancel 的状态迁移。信号量为类型共享，仅当前
+    /// 单个用例使用；若将来复用，须在用例开头复位 received/gate。
     nonisolated private final class SuspendedURLProtocol: URLProtocol {
         nonisolated(unsafe) static let gate = DispatchSemaphore(value: 0)
         nonisolated(unsafe) static let received = Mutex(false)

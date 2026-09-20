@@ -45,7 +45,7 @@ jobs:
         run: |
           set -o pipefail
           # 单克隆执行：两个测试目标并行时 runner 内存吃紧会被 SIGKILL（exit 137）。
-          rm -f ios-test-results.xcresult
+          rm -rf ios-test-results.xcresult
           xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
             -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
             -maximum-parallel-testing-workers 1 \
