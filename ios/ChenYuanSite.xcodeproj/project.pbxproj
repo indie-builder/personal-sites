@@ -35,6 +35,7 @@
 		A20000000000000000000026 = {isa = PBXBuildFile; fileRef = A10000000000000000000026; };
 		A20000000000000000000027 = {isa = PBXBuildFile; fileRef = A10000000000000000000027; };
 		A20000000000000000000028 = {isa = PBXBuildFile; fileRef = A10000000000000000000028; };
+		A20000000000000000000029 = {isa = PBXBuildFile; fileRef = A10000000000000000000029; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +97,7 @@
 		A10000000000000000000026 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRowTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000027 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailDecoderTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000028 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineRendererTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000029 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandscapeSmokeTests.swift; sourceTree = "<group>"; };
 		A50000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChenYuanSite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -195,7 +197,7 @@
 		};
 		A30000000000000000000011 = {
 			isa = PBXGroup;
-			children = (A10000000000000000000025);
+			children = (A10000000000000000000025, A10000000000000000000029);
 			path = ChenYuanSiteUITests;
 			sourceTree = "<group>";
 		};
@@ -324,7 +326,7 @@
 		A40000000000000000000006 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (A20000000000000000000025);
+			files = (A20000000000000000000025, A20000000000000000000029);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
