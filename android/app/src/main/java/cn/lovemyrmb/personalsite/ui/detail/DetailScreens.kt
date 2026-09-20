@@ -19,9 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.AiNewsItem
 import cn.lovemyrmb.personalsite.data.CurationItem
 import cn.lovemyrmb.personalsite.data.CurationMedia
@@ -90,7 +88,7 @@ private fun DetailTopBar(label: String, onBack: () -> Unit) {
     ) {
         androidx.compose.material3.IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = SiteIcons.ArrowBack,
                 contentDescription = "返回",
                 tint = SiteTheme.colors.ink,
             )
@@ -333,7 +331,7 @@ private fun SourceCta(label: String, host: String, onClick: () -> Unit) {
             )
             Spacer(Modifier.width(6.dp))
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                imageVector = SiteIcons.OpenInNew,
                 contentDescription = null,
                 tint = SiteTheme.colors.background,
                 modifier = Modifier.size(16.dp),

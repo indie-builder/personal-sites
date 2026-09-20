@@ -17,15 +17,17 @@
 
 ## 构建与运行
 
-要求：JDK 17+、Android SDK（compileSdk 35）。
+要求：JDK 17+、Android SDK（compileSdk 37）。Gradle 9 的启动器本身也要求 17+，构建前把 `JAVA_HOME` 指向 JDK 17（本机默认 java 是 1.8）：
 
 ```bash
 cd android
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 ./gradlew :app:assembleDebug        # 构建 APK：app/build/outputs/apk/debug/
 ./gradlew :app:installDebug         # 安装到已连接设备/模拟器
 ```
 
-- `gradle.properties` 里 `org.gradle.java.home` 指向本机 JDK 17 路径，换机器需调整。
+- `gradle.properties` 里 `org.gradle.java.home` 指向本机 JDK 17 路径（daemon 用），换机器需调整；`android.builtInKotlin=false` / `android.newDsl=false` 是 AGP 9 的过渡开关，锁定独立 KGP 2.4 路线，AGP 10 前需迁回内置 Kotlin。
+- 图标由 `ui/icons/SiteIcons.kt` 内联（Material Symbols 源码矢量），不依赖已停更的 `material-icons-extended`。
 - `local.properties` 由 Android Studio 生成（`sdk.dir`），不入库。
 
 ## 工程结构

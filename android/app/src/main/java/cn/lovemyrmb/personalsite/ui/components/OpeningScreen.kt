@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
 /** Web 开场原素材：人物序列、电池五格充电、800ms 上滑揭幕。 */
 @Composable
 fun OpeningScreen(onComplete: () -> Unit) {
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     var character by remember { mutableStateOf<AnimatedImageDrawable?>(null) }
     val time = remember { Animatable(0f) }
@@ -43,7 +43,7 @@ fun OpeningScreen(onComplete: () -> Unit) {
     LaunchedEffect(Unit) {
         if (!ValueAnimator.areAnimatorsEnabled()) { onComplete(); return@LaunchedEffect }
         character = withContext(Dispatchers.IO) {
-            runCatching { ImageDecoder.decodeDrawable(ImageDecoder.createSource(context.resources, R.raw.opening_character)) as AnimatedImageDrawable }.getOrNull()
+            runCatching { ImageDecoder.decodeDrawable(ImageDecoder.createSource(resources, R.raw.opening_character)) as AnimatedImageDrawable }.getOrNull()
         }
         if (character == null) onComplete()
     }

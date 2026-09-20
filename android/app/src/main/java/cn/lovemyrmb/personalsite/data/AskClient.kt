@@ -92,10 +92,7 @@ class AskClient(
                         onEvent(AskEvent.Error(errorMessage(resp)))
                         return
                     }
-                    val source = resp.body?.source() ?: run {
-                        onEvent(AskEvent.Error("暂时无法回答，请稍后再试。"))
-                        return
-                    }
+                    val source = resp.body.source()
                     var currentEvent = ""
                     val data = StringBuilder()
                     var terminal = false
@@ -154,7 +151,7 @@ class AskClient(
     /** 非 2xx：服务端统一返回 {"error": "..."}；缺失、为空、非字符串或非 JSON 时回退固定文案。 */
     private fun errorMessage(resp: Response): String {
         val fallback = if (resp.code == 429) "提问过于频繁，请稍后再试。" else "暂时无法回答，请稍后再试。"
-        val body = runCatching { resp.body?.string() }.getOrNull() ?: return fallback
+        val body = runCatching { resp.body.string() }.getOrNull() ?: return fallback
         val message = body.takeIf { it.isNotBlank() }?.let { text ->
             runCatching {
                 (json.decodeFromString(JsonObject.serializer(), text)["error"] as? JsonPrimitive)

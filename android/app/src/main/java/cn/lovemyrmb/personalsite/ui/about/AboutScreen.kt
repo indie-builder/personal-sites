@@ -3,9 +3,6 @@ package cn.lovemyrmb.personalsite.ui.about
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,6 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.R
 import cn.lovemyrmb.personalsite.ui.components.openExternally
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
@@ -57,7 +55,7 @@ fun AboutScreen(bottomPadding: Dp) {
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Text(label, style = SiteText.meta, color = SiteTheme.colors.muted)
-                            Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp), tint = SiteTheme.colors.muted)
+                            Icon(SiteIcons.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp), tint = SiteTheme.colors.muted)
                         }
                     }
                 }
@@ -78,7 +76,7 @@ fun AboutScreen(bottomPadding: Dp) {
                 ) {
                     Text("2014—至今", style = SiteText.label, color = SiteTheme.colors.ink)
                     Text("个人经历", style = SiteText.meta, color = SiteTheme.colors.muted, modifier = Modifier.weight(1f))
-                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp), tint = SiteTheme.colors.ink)
+                    Icon(SiteIcons.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp), tint = SiteTheme.colors.ink)
                 }
                 Spacer(Modifier.height(SiteSpace.section))
             }

@@ -25,9 +25,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -159,21 +158,19 @@ private fun SectionTabs(selectedPage: Int, onSelect: (Int) -> Unit) {
                 .size(32.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape),
         )
-    ScrollableTabRow(
+    SecondaryScrollableTabRow(
         modifier = Modifier.weight(1f),
         selectedTabIndex = selectedPage,
         containerColor = SiteTheme.colors.background,
         contentColor = SiteTheme.colors.ink,
         edgePadding = 4.dp,
         divider = {},
-        indicator = { tabPositions ->
-            if (selectedPage < tabPositions.size) {
-                SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedPage]).padding(horizontal = SiteSpace.page),
-                    height = 2.dp,
-                    color = SiteTheme.colors.ink,
-                )
-            }
+        indicator = {
+            SecondaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(selectedPage).padding(horizontal = SiteSpace.page),
+                height = 2.dp,
+                color = SiteTheme.colors.ink,
+            )
         },
     ) {
         sections.forEachIndexed { index, section ->
@@ -269,7 +266,7 @@ private fun FeedFooter(state: FeedState<*>, onRetry: () -> Unit) {
             )
         }
 
-        state.error != null -> ErrorRetry(message = state.error ?: "", modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
+        state.error != null -> ErrorRetry(message = state.error, modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
 
         !state.hasMore && state.items.isNotEmpty() -> Text(
             text = "已经到底了",

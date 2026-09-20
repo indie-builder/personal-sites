@@ -1,5 +1,6 @@
 package cn.lovemyrmb.personalsite.ui.ask
 
+import android.content.ClipData
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,15 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Check
 import kotlinx.coroutines.delay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,14 +24,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.*
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
@@ -60,7 +53,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val focus = remember { FocusRequester() }
     var input by rememberSaveable { mutableStateOf("") }
     var searchScope by rememberSaveable { mutableStateOf(AskScope.ALL) }
@@ -101,7 +94,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().imePadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = SiteSpace.compact), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+            IconButton(onClick = onDismiss) { Icon(SiteIcons.ArrowBack, "返回") }
             Column(Modifier.weight(1f)) {
                 Text("问一问", style = SiteText.title, color = SiteTheme.colors.ink)
                 Text("基于站内资料 · 引用可在应用内阅读", style = SiteText.meta, color = SiteTheme.colors.muted)
@@ -157,11 +150,14 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                         var copied by remember(message.id) { mutableStateOf(false) }
                         LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
                         Row(horizontalArrangement = Arrangement.spacedBy(SiteSpace.compact)) {
-                            if (message.text.isNotBlank()) IconButton(onClick = { clipboard.setText(AnnotatedString(message.text)); copied = true }, modifier = Modifier.size(SiteSpace.touch)) {
-                                Icon(if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy, if (copied) "已复制" else "复制回答", tint = SiteTheme.colors.muted, modifier = Modifier.size(18.dp))
+                            if (message.text.isNotBlank()) IconButton(onClick = {
+                                copied = true
+                                scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("answer", message.text))) }
+                            }, modifier = Modifier.size(SiteSpace.touch)) {
+                                Icon(if (copied) SiteIcons.Check else SiteIcons.ContentCopy, if (copied) "已复制" else "复制回答", tint = SiteTheme.colors.muted, modifier = Modifier.size(18.dp))
                             }
                             if (index == state.messages.lastIndex && !state.streaming) IconButton(onClick = { followLatest = true; controller.retryLast() }, modifier = Modifier.size(SiteSpace.touch)) {
-                                Icon(Icons.Outlined.Refresh, if (message.status == AskMessage.Status.ERROR) "重试回答" else "重新生成回答", tint = SiteTheme.colors.muted, modifier = Modifier.size(18.dp))
+                                Icon(SiteIcons.Refresh, if (message.status == AskMessage.Status.ERROR) "重试回答" else "重新生成回答", tint = SiteTheme.colors.muted, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -171,7 +167,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
             if (!followLatest && list.canScrollForward) FilledTonalIconButton(
                 onClick = { followLatest = true; scope.launch { list.animateScrollToItem(state.messages.size) } },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = SiteSpace.compact),
-            ) { Icon(Icons.Filled.ArrowDownward, "回到最新回复") }
+            ) { Icon(SiteIcons.ArrowDownward, "回到最新回复") }
         }
         Surface(modifier = Modifier.fillMaxWidth().padding(horizontal = SiteSpace.paragraph, vertical = SiteSpace.compact), shape = RoundedCornerShape(24.dp), color = SiteTheme.colors.line) {
             Column(Modifier.padding(SiteSpace.compact)) {
@@ -190,7 +186,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                     Box(Modifier.weight(1f)) {
                         TextButton(onClick = { scopeMenu = true }, enabled = !state.streaming) {
                             Text(searchScope.label, style = SiteText.meta)
-                            Icon(Icons.Filled.ArrowDropDown, "选择资料范围", modifier = Modifier.size(18.dp))
+                            Icon(SiteIcons.ArrowDropDown, "选择资料范围", modifier = Modifier.size(18.dp))
                         }
                         DropdownMenu(expanded = scopeMenu, onDismissRequest = { scopeMenu = false }) {
                             AskScope.entries.forEach { entry -> DropdownMenuItem(text = { Text(entry.label) }, onClick = { searchScope = entry; scopeMenu = false }) }
@@ -200,7 +196,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                         if (input.trim().length > 1000) "最多 1000 字" else "至少 2 个字", style = SiteText.meta, color = MaterialTheme.colorScheme.error,
                     )
                     FilledIconButton(onClick = { if (state.streaming) controller.cancel() else send() }, enabled = state.streaming || validInput, shape = CircleShape, modifier = Modifier.size(SiteSpace.touch)) {
-                        Icon(if (state.streaming) Icons.Filled.Stop else Icons.Filled.ArrowUpward, if (state.streaming) "停止生成" else "发送")
+                        Icon(if (state.streaming) SiteIcons.Stop else SiteIcons.ArrowUpward, if (state.streaming) "停止生成" else "发送")
                     }
                 }
             }
@@ -216,7 +212,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
 private fun SourceReader(source: AskSource, number: Int, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().navigationBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回对话") }
+            IconButton(onClick = onBack) { Icon(SiteIcons.ArrowBack, "返回对话") }
             Text("引用 $number", style = SiteText.title, color = SiteTheme.colors.ink)
         }
         SelectionContainer(modifier = Modifier.weight(1f)) {
