@@ -9,36 +9,22 @@ import Testing
 struct InlineRendererTests {
     @Test func sourceRefRendersInAppLink() {
         let attributed = InlineRenderer.render([.sourceRef(0)], sourceCount: 2)
-        var links: [URL] = []
-        for run in attributed.runs {
-            if let link = run.link { links.append(link) }
-        }
-        #expect(links == [URL(string: "chenyuan://source/1")])
         #expect(String(attributed.characters) == "[1]")
-    }
+        #expect(attributed.runs.compactMap(\.link) == [URL(string: "chenyuan://source/1")])
 
-    @Test func outOfRangeSourceRefFallsBackToPlainText() {
-        let attributed = InlineRenderer.render([.sourceRef(5)], sourceCount: 2)
-        #expect(String(attributed.characters) == "[6]")
-        for run in attributed.runs {
-            #expect(run.link == nil, "越界编号不应渲染为链接")
-        }
+        // 越界编号回退纯文本。
+        let fallback = InlineRenderer.render([.sourceRef(5)], sourceCount: 2)
+        #expect(String(fallback.characters) == "[6]")
+        #expect(fallback.runs.compactMap(\.link).isEmpty)
     }
 
     @Test func inlineCodeCarriesBackgroundStyle() {
         let attributed = InlineRenderer.render([.code("x")], sourceCount: 1)
-        var hasBackground = false
-        for run in attributed.runs {
-            if run.swiftUI.backgroundColor != nil { hasBackground = true }
-        }
-        #expect(hasBackground)
+        #expect(attributed.runs.contains { $0.swiftUI.backgroundColor != nil })
     }
 
     @Test func mixedInlinesConcatenateInOrder() {
-        let attributed = InlineRenderer.render(
-            [.text("结论"), .sourceRef(1), .text("。")],
-            sourceCount: 2,
-        )
+        let attributed = InlineRenderer.render([.text("结论"), .sourceRef(1), .text("。")], sourceCount: 2)
         #expect(String(attributed.characters) == "结论[2]。")
     }
 }

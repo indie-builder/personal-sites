@@ -11,28 +11,17 @@ struct HomeRowTests {
             summary: "哎呀，哎呀。谁能想到呢？\n\nOpenAI 和 Anthropic 故意煽动对 AI 的恐慌。\n\n目的？监管俘获。",
         )
         #expect(preview == "哎呀，哎呀。谁能想到呢？ OpenAI 和 Anthropic 故意煽动对 AI 的恐慌。 目的？监管俘获。")
+        #expect(aiNewsSummaryPreview(title: "另一篇", summary: "正文的介绍。") == "正文的介绍。")
+        #expect(aiNewsSummaryPreview(title: "t", summary: "a\r\nb") == "a b")
+        #expect(aiNewsSummaryPreview(title: "t", summary: "a \n b") == "a b")
     }
 
     @Test func stripsTitlePrefixAndLeadingPunctuation() {
-        let preview = aiNewsSummaryPreview(
-            title: "标题在前",
-            summary: "标题在前。这是正文。",
-        )
-        #expect(preview == "这是正文。")
+        #expect(aiNewsSummaryPreview(title: "标题在前", summary: "标题在前。这是正文。") == "这是正文。")
     }
 
     @Test func blankSummaryStaysBlank() {
         #expect(aiNewsSummaryPreview(title: "标题", summary: "   \n  ") == "")
         #expect(aiNewsSummaryPreview(title: "标题", summary: "") == "")
-    }
-
-    @Test func summaryWithoutTitleKeepsWholeText() {
-        let preview = aiNewsSummaryPreview(title: "另一篇", summary: "正文的介绍。")
-        #expect(preview == "正文的介绍。")
-    }
-
-    @Test func crlfAndMixedWhitespaceCollapse() {
-        #expect(aiNewsSummaryPreview(title: "t", summary: "a\r\nb") == "a b")
-        #expect(aiNewsSummaryPreview(title: "t", summary: "a \n b") == "a b")
     }
 }
