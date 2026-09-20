@@ -116,6 +116,7 @@ private let greetings = [
 
 /// 打字机问候：为全部脚本预留最大字体度量，避免切换时布局跳动。
 private struct ProfileGreeting: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var greeting = greetings[0]
     @State private var visible = false
 
@@ -139,7 +140,8 @@ private struct ProfileGreeting: View {
         .onAppear { visible = true }
         .onDisappear { visible = false }
         .task(id: visible) {
-            guard visible else { return }
+            // 减弱动态时保持静态问候（对齐安卓 areAnimatorsEnabled 分支）。
+            guard visible, !reduceMotion else { return }
             var index = 0
             greeting = greetings[0]
             while !Task.isCancelled {
@@ -178,13 +180,15 @@ private let marqueeLanes: [[String]] = {
 /// 六条泳道的词条跑马灯 + 点阵背景：可见时才推进动画。
 private struct TechnicalTerms: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var visible = false
     @State private var startDate = Date()
     @State private var layout = MarqueeLayout()
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !visible)) { context in
-            let elapsed = Float(context.date.timeIntervalSince(startDate))
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !visible || reduceMotion)) { context in
+            // 减弱动态时冻结在初始相位（对齐安卓 areAnimatorsEnabled 分支）。
+            let elapsed: Float = reduceMotion ? 0 : Float(context.date.timeIntervalSince(startDate))
             Canvas { context, size in
                 draw(context: context, size: size, elapsed: elapsed)
             }
