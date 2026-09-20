@@ -39,7 +39,7 @@ ios/
 xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro' build
 
-# 单元测试（40 例）+ 无障碍 UI 测试（2 例）
+# 单元测试（44 例）+ 无障碍 UI 测试（2 例）
 xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test
 
