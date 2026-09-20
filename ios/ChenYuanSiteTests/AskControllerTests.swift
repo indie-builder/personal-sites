@@ -121,9 +121,10 @@ struct AskControllerTests {
         controller.streaming
     }
 
+    /// 上限 15s：CI runner 过载时（单个同步测试可达 12s）事件送达仍能收敛。
     private func waitUntil(
         _ condition: @MainActor () -> Bool,
-        timeout: Duration = .seconds(5),
+        timeout: Duration = .seconds(15),
     ) async {
         let deadline = ContinuousClock.now + timeout
         while !condition() {
