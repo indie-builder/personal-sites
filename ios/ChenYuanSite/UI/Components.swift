@@ -15,13 +15,8 @@ struct DownsampledThumbnail: View {
 
     var body: some View {
         ZStack {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                SiteTheme.line
-            }
+            if let image { Image(uiImage: image).resizable().scaledToFill() }
+            else { SiteTheme.line }
         }
         .task(id: urlString) {
             image = await Self.decodedImage(urlString: urlString, targetSize: targetSize)
@@ -38,7 +33,6 @@ struct DownsampledThumbnail: View {
 
     /// 解码走独立加载路径（不经 URLSession 共享缓存、不可随行取消）：
     /// 每 URL 每进程至多完整解码一次（NSCache 兜底），滚动复用不重复解码。
-
     nonisolated private static func decodedImage(urlString: String, targetSize: CGSize) async -> UIImage? {
         // ×4：长宽比失配的源图（如 16:9 源填充 4:3 槽位）在 @3x 下仍够清晰。
         let maxPixel = Int(max(targetSize.width, targetSize.height) * 4)
@@ -46,9 +40,7 @@ struct DownsampledThumbnail: View {
         if let cached = cache.object(forKey: key) { return cached }
         guard let url = URL(string: urlString) else { return nil }
         let decoded = await ThumbnailDecoder.decode(url: url, maxPixelSize: maxPixel)
-        if let decoded {
-            cache.setObject(decoded, forKey: key)
-        }
+        if let decoded { cache.setObject(decoded, forKey: key) }
         return decoded
     }
 }
@@ -70,6 +62,61 @@ nonisolated enum ThumbnailDecoder {
     }
 }
 
+// MARK: - 共享小部件
+
+/// 44pt 返回按钮（详情顶栏 / 问一问头部 / 引用阅读共用）。
+struct BackButton: View {
+    var label = "返回"
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(SiteTheme.ink)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// 方形图标按钮（复制 / 重试 / 回到底部等）。
+struct IconButton: View {
+    let systemName: String
+    var pointSize: CGFloat = 15
+    var side: CGFloat = SiteSpace.touch
+    var tint: Color = SiteTheme.muted
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: pointSize))
+                .foregroundStyle(tint)
+                .frame(width: side, height: side)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+/// 网络图占位统一为 line 底色；fill 需要外层裁切与宽高比。
+struct RemoteImage: View {
+    let url: URL?
+    var contentMode: ContentMode = .fill
+
+    var body: some View {
+        AsyncImage(url: url) { phase in
+            if let image = phase.image { image.resizable().aspectRatio(nil, contentMode: contentMode) }
+            else { SiteTheme.line }
+        }
+    }
+}
+
 /// 加载失败的「消息 + 重试」组合：重试满足 48pt 触控高度与 Button 语义。
 struct ErrorRetry: View {
     let message: String
@@ -77,9 +124,7 @@ struct ErrorRetry: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Text(message)
-                .siteSummaryStyle()
-                .multilineTextAlignment(.center)
+            Text(message).siteSummaryStyle().multilineTextAlignment(.center)
             Button(action: onRetry) {
                 Text("重试")
                     .font(SiteText.eyebrow)
@@ -100,10 +145,7 @@ struct ErrorRetry: View {
 /// 发丝分隔线（对应安卓 HorizontalRule：左右留 24 页边距）。
 struct HorizontalRule: View {
     var body: some View {
-        Rectangle()
-            .fill(SiteTheme.line)
-            .frame(height: 0.33)
-            .padding(.horizontal, SiteSpace.page)
+        Rectangle().fill(SiteTheme.line).frame(height: 0.33).padding(.horizontal, SiteSpace.page)
     }
 }
 
@@ -117,12 +159,8 @@ struct SourceCta: View {
         VStack(alignment: .center, spacing: 6) {
             Button(action: action) {
                 HStack(spacing: 6) {
-                    Text(label)
-                        .font(SiteText.listTitle)
-                        .foregroundStyle(SiteTheme.background)
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(SiteTheme.background)
+                    Text(label).font(SiteText.listTitle).foregroundStyle(SiteTheme.background)
+                    Image(systemName: "arrow.up.right").font(.system(size: 14, weight: .medium)).foregroundStyle(SiteTheme.background)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, SiteSpace.page)
@@ -131,12 +169,16 @@ struct SourceCta: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
-            .accessibilityAddTraits(.isButton)
-            Text(host)
-                .siteMetaStyle()
-                .frame(maxWidth: .infinity)
+            Text(host).siteMetaStyle().frame(maxWidth: .infinity)
         }
     }
+}
+
+// MARK: - 文案辅助
+
+/// 元信息行：非空片段以「 · 」相连（列表行 / 详情页眉通用）。
+nonisolated func metaLine(_ parts: String?...) -> String {
+    parts.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
 }
 
 // MARK: - 时间文案（与安卓 TimeText.kt 一致的措辞）
@@ -155,18 +197,15 @@ nonisolated func relativeTimeLabel(_ iso: String?, now: Date = Date()) -> String
     return nil
 }
 
-/// ISO 时间 → 「M月d日」；解析失败返回 nil。
-nonisolated func dayLabel(_ iso: String?, now: Date = Date()) -> String? {
+/// 列表条目的时间标签：相对时间优先，超一个月回退「M月d日」；解析失败返回 nil。
+nonisolated func feedTimeLabel(_ iso: String?) -> String? {
     guard let date = parseISO(iso) else { return nil }
+    let label = relativeTimeLabel(iso)
+    if label != nil { return label }
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "zh_CN")
     formatter.dateFormat = "M月d日"
     return formatter.string(from: date)
-}
-
-/// 列表条目的时间标签：优先相对时间，超一个月回退日期。
-nonisolated func feedTimeLabel(_ iso: String?) -> String? {
-    relativeTimeLabel(iso) ?? dayLabel(iso)
 }
 
 nonisolated private func parseISO(_ iso: String?) -> Date? {
@@ -175,9 +214,7 @@ nonisolated private func parseISO(_ iso: String?) -> Date? {
     let withFraction = ISO8601DateFormatter()
     withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     if let date = withFraction.date(from: iso) { return date }
-    let plain = ISO8601DateFormatter()
-    plain.formatOptions = [.withInternetDateTime]
-    return plain.date(from: iso)
+    return ISO8601DateFormatter().date(from: iso)
 }
 
 // MARK: - URL 展示辅助（对应安卓 DetailScreens 内部函数）
@@ -193,5 +230,12 @@ nonisolated func originalActionLabel(_ url: String) -> String {
     case "mp.weixin.qq.com": "在微信查看原文"
     case "github.com": "在 GitHub 查看"
     default: "查看原文"
+    }
+}
+
+extension Array {
+    /// 越界安全取值（问一问引用、开场帧等按下标取列表项的场景）。
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

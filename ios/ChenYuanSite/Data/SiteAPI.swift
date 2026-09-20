@@ -8,58 +8,20 @@ nonisolated struct SiteAPI: Sendable {
     private let session: URLSession
     private let decoder = JSONDecoder()
 
-    init(session: URLSession = Self.makeSession()) {
+    /// 与安卓 feed 客户端一致：连接/读取空闲超时 15/60s。
+    init(session: URLSession = .site(request: 15, resource: 60)) {
         self.session = session
     }
 
-    private static func makeSession() -> URLSession {
-        let configuration = URLSessionConfiguration.default
-        // 与安卓 feed 客户端一致：连接/读取空闲超时 10-15s。
-        configuration.timeoutIntervalForRequest = 15
-        configuration.timeoutIntervalForResource = 60
-        configuration.waitsForConnectivity = false
-        return URLSession(configuration: configuration)
-    }
-
-    func aiNews(offset: Int, limit: Int) async throws -> FeedPage<AiNewsListItem> {
-        try await page(Section.aiNews.path, offset: offset, limit: limit)
-    }
-
-    func curation(offset: Int, limit: Int) async throws -> FeedPage<CurationItem> {
-        try await page(Section.curation.path, offset: offset, limit: limit)
-    }
-
-    func design(offset: Int, limit: Int) async throws -> FeedPage<CurationItem> {
-        try await page(Section.design.path, offset: offset, limit: limit)
-    }
-
-    func douyin(offset: Int, limit: Int) async throws -> FeedPage<CurationItem> {
-        try await page(Section.douyin.path, offset: offset, limit: limit)
-    }
-
-    func openSource(offset: Int, limit: Int) async throws -> FeedPage<OpenSourceListEntry> {
-        try await page(Section.openSource.path, offset: offset, limit: limit)
+    /// 栏目分页：{path}?offset=&limit=。
+    func feed<T: Decodable>(_ section: Section, offset: Int) async throws -> FeedPage<T> {
+        let page: FeedPage<T> = try await get(url: Self.url(section.path, ["offset": "\(offset)", "limit": "\(section.pageSize)"]))
+        return page
     }
 
     func aiNewsDetail(id: String) async throws -> AiNewsItem {
-        let response: AiNewsDetailResponse = try await get(path: "api/ai-news/\(id)")
+        let response: AiNewsDetailResponse = try await get(url: Self.url("api/ai-news/\(id)"))
         return response.item
-    }
-
-    private func page<T: Decodable>(_ path: String, offset: Int, limit: Int) async throws -> FeedPage<T> {
-        var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
-        components.path += path
-        components.queryItems = [
-            URLQueryItem(name: "offset", value: String(offset)),
-            URLQueryItem(name: "limit", value: String(limit)),
-        ]
-        return try await get(url: components.url!)
-    }
-
-    private func get<T: Decodable>(path: String) async throws -> T {
-        var components = URLComponents(url: Self.baseURL, resolvingAgainstBaseURL: false)!
-        components.path += path
-        return try await get(url: components.url!)
     }
 
     private func get<T: Decodable>(url: URL) async throws -> T {
@@ -68,6 +30,16 @@ nonisolated struct SiteAPI: Sendable {
             throw SiteAPIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
         return try decoder.decode(T.self, from: data)
+    }
+
+    /// baseURL + path（可带 query 参数）。
+    nonisolated static func url(_ path: String, _ query: [String: String] = [:]) -> URL {
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.path += path
+        if !query.isEmpty {
+            components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+        return components.url!
     }
 }
 
@@ -79,16 +51,16 @@ nonisolated enum SiteAPIError: Error {
 nonisolated enum MediaURLs {
     static func video(platform: String, videoURL: String) -> URL? {
         guard let url = URL(string: videoURL) else { return nil }
-        guard platform == "x" else { return url }
-        var components = URLComponents(url: SiteAPI.baseURL, resolvingAgainstBaseURL: false)!
-        components.path += "api/x-media"
-        components.queryItems = [URLQueryItem(name: "url", value: videoURL)]
-        return components.url
+        return platform == "x" ? SiteAPI.url("api/x-media", ["url": videoURL]) : url
     }
+}
 
-    static func sitePage(_ path: String) -> URL {
-        var components = URLComponents(url: SiteAPI.baseURL, resolvingAgainstBaseURL: false)!
-        components.path += path
-        return components.url!
+/// 站点客户端共用的 URLSession 构造。
+nonisolated extension URLSession {
+    static func site(request: TimeInterval, resource: TimeInterval) -> URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = request
+        configuration.timeoutIntervalForResource = resource
+        return URLSession(configuration: configuration)
     }
 }

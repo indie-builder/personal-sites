@@ -1,176 +1,143 @@
 import Foundation
 
-// 站点公共接口模型：与安卓端 data/Models.kt 一一对应（JSON 字段名一致）。
-// 服务端字段可能缺省或为 null，全部按安卓 coerceInputValues 语义给默认值。
+// 站点公共接口模型：与安卓端 data/Models.kt 对应（JSON 字段名一致）。
+// 解码统一走 JSONKey + decode(_:default:)/decodeOptional(_:) 容错读取：
+// 字段缺失、为 null 或类型不符时取默认值，对齐安卓 Json
+// { ignoreUnknownKeys, coerceInputValues }。
+
+/// JSON 键直取：键名即字段名，模型无需逐个声明 CodingKeys。
+nonisolated struct JSONKey: CodingKey {
+    let stringValue: String
+
+    init(_ string: String) { stringValue = string }
+    init?(stringValue: String) { self.stringValue = stringValue }
+    var intValue: Int? { nil }
+    init?(intValue: Int) { nil }
+}
+
+nonisolated extension KeyedDecodingContainer where K == JSONKey {
+    /// 非可选字段的容错读取。
+    func decode<Value: Decodable>(_ key: String, default: Value) throws -> Value {
+        (try? decodeIfPresent(Value.self, forKey: JSONKey(key))) ?? `default`
+    }
+
+    /// 可选字段的容错读取：类型不符同样收敛为 nil。
+    func decodeOptional<Value: Decodable>(_ key: String) throws -> Value? {
+        try? decodeIfPresent(Value.self, forKey: JSONKey(key))
+    }
+}
 
 /// 站点公共信息流接口的统一分页包装：{ hasMore, items }。
 /// Decodable 为条件遵循，保持 PagedFeed 对元素类型无额外约束。
 nonisolated struct FeedPage<Value> {
-    var hasMore: Bool = false
+    var hasMore = false
     var items: [Value] = []
-
-    init(hasMore: Bool, items: [Value]) {
-        self.hasMore = hasMore
-        self.items = items
-    }
 }
 
 nonisolated extension FeedPage: Decodable where Value: Decodable {
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        hasMore = try container.decodeIfPresent(Bool.self, forKey: .hasMore) ?? false
-        items = try container.decodeIfPresent([Value].self, forKey: .items) ?? []
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        hasMore = try c.decode("hasMore", default: false)
+        items = try c.decode("items", default: [])
     }
-
-    private enum CodingKeys: String, CodingKey { case hasMore, items }
 }
 
 nonisolated extension FeedPage: @unchecked Sendable where Value: Sendable {}
 
-nonisolated struct AiNewsListItem: Decodable, Identifiable, Sendable {
-    var category: String = ""
-    var id: String = ""
-    var publishedAt: String?
-    var selected: Bool = false
-    var sourceName: String = ""
-    var summary: String = ""
-    var title: String = ""
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        category = try c.decodeString(.category)
-        id = try c.decodeString(.id)
-        publishedAt = try c.decodeIfPresent(String.self, forKey: .publishedAt)
-        selected = try c.decodeIfPresent(Bool.self, forKey: .selected) ?? false
-        sourceName = try c.decodeString(.sourceName)
-        summary = try c.decodeString(.summary)
-        title = try c.decodeString(.title)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case category, id, publishedAt, selected, sourceName, summary, title
-    }
-}
-
-/// /api/ai-news/{id} 返回的完整条目（含 reason/score/url）。
+/// /api/ai-news 列表与详情共用条目（详情多出 reason/score/url，列表缺省为空）。
 nonisolated struct AiNewsItem: Decodable, Identifiable, Sendable {
-    var category: String = ""
-    var id: String = ""
+    var category = ""
+    var id = ""
     var publishedAt: String?
-    var reason: String = ""
-    var score: Int?
-    var selected: Bool = false
-    var sourceName: String = ""
-    var summary: String = ""
-    var title: String = ""
-    var url: String = ""
+    var reason = ""
+    var selected = false
+    var sourceName = ""
+    var summary = ""
+    var title = ""
+    var url = ""
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        category = try c.decodeString(.category)
-        id = try c.decodeString(.id)
-        publishedAt = try c.decodeIfPresent(String.self, forKey: .publishedAt)
-        reason = try c.decodeString(.reason)
-        score = try c.decodeIfPresent(Int.self, forKey: .score)
-        selected = try c.decodeIfPresent(Bool.self, forKey: .selected) ?? false
-        sourceName = try c.decodeString(.sourceName)
-        summary = try c.decodeString(.summary)
-        title = try c.decodeString(.title)
-        url = try c.decodeString(.url)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case category, id, publishedAt, reason, score, selected, sourceName, summary, title, url
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        category = try c.decode("category", default: "")
+        id = try c.decode("id", default: "")
+        publishedAt = try c.decodeOptional("publishedAt")
+        reason = try c.decode("reason", default: "")
+        selected = try c.decode("selected", default: false)
+        sourceName = try c.decode("sourceName", default: "")
+        summary = try c.decode("summary", default: "")
+        title = try c.decode("title", default: "")
+        url = try c.decode("url", default: "")
     }
 }
 
+/// /api/ai-news/{id} 的应答包装。
 nonisolated struct AiNewsDetailResponse: Decodable, Sendable {
-    var item: AiNewsItem
+    let item: AiNewsItem
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        item = try c.decode(AiNewsItem.self, forKey: .item)
+        item = try decoder.container(keyedBy: JSONKey.self).decode(AiNewsItem.self, forKey: JSONKey("item"))
     }
-
-    private enum CodingKeys: String, CodingKey { case item }
 }
 
 nonisolated struct CurationAuthor: Decodable, Sendable {
-    static let empty = CurationAuthor()
-
-    var handle: String = ""
-    var name: String = ""
+    var handle = ""
+    var name = ""
 
     init() {}
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        handle = try c.decodeString(.handle)
-        name = try c.decodeString(.name)
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        handle = try c.decode("handle", default: "")
+        name = try c.decode("name", default: "")
     }
-
-    private enum CodingKeys: String, CodingKey { case handle, name }
 }
 
 nonisolated struct CurationMedia: Decodable, Identifiable, Sendable {
-    var durationMs: Int64?
     var height: Int?
     var previewUrl: String?
-    var type: String = "photo"
-    var url: String = ""
-    var videoUrl: String?
     var width: Int?
+    var url = ""
+    var videoUrl: String?
 
     /// Identifiable 一致性保留；渲染按位置键（对齐安卓 forEach 语义），
     /// 无消费点依赖 url 唯一性。
     var id: String { url }
 
-    var isVideo: Bool { type == "video" || type == "animated_gif" }
     var posterURL: String { previewUrl ?? url }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        durationMs = try c.decodeIfPresent(Int64.self, forKey: .durationMs)
-        height = try c.decodeIfPresent(Int.self, forKey: .height)
-        previewUrl = try c.decodeIfPresent(String.self, forKey: .previewUrl)
-        type = try c.decodeString(.type, default: "photo")
-        url = try c.decodeString(.url)
-        videoUrl = try c.decodeIfPresent(String.self, forKey: .videoUrl)
-        width = try c.decodeIfPresent(Int.self, forKey: .width)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case durationMs, height, previewUrl, type, url, videoUrl, width
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        height = try c.decodeOptional("height")
+        previewUrl = try c.decodeOptional("previewUrl")
+        width = try c.decodeOptional("width")
+        url = try c.decode("url", default: "")
+        videoUrl = try c.decodeOptional("videoUrl")
     }
 }
 
 nonisolated struct CurationSource: Decodable, Sendable {
-    static let empty = CurationSource()
-
-    var label: String = ""
-    var platform: String = ""
-    var url: String = ""
+    var label = ""
+    var platform = ""
+    var url = ""
 
     init() {}
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        label = try c.decodeString(.label)
-        platform = try c.decodeString(.platform)
-        url = try c.decodeString(.url)
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        label = try c.decode("label", default: "")
+        platform = try c.decode("platform", default: "")
+        url = try c.decode("url", default: "")
     }
-
-    private enum CodingKeys: String, CodingKey { case label, platform, url }
 }
 
 /// 每日关注 / 设计收藏 / 抖音收藏共用的条目结构。
 nonisolated struct CurationItem: Decodable, Identifiable, Sendable {
-    var author: CurationAuthor = CurationAuthor.empty
+    var author = CurationAuthor()
     var collectedAt: String?
-    var id: String = ""
+    var id = ""
     var media: [CurationMedia] = []
     var publishedAt: String?
-    var source: CurationSource = CurationSource.empty
+    var source = CurationSource()
     var summary: String?
     var tags: [String] = []
     var text: String?
@@ -181,102 +148,59 @@ nonisolated struct CurationItem: Decodable, Identifiable, Sendable {
     var displayTime: String? { publishedAt ?? collectedAt }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        author = (try? c.decodeIfPresent(CurationAuthor.self, forKey: .author)) ?? CurationAuthor.empty
-        collectedAt = try c.decodeIfPresent(String.self, forKey: .collectedAt)
-        id = try c.decodeString(.id)
-        media = (try? c.decodeIfPresent([CurationMedia].self, forKey: .media)) ?? []
-        publishedAt = try c.decodeIfPresent(String.self, forKey: .publishedAt)
-        source = (try? c.decodeIfPresent(CurationSource.self, forKey: .source)) ?? CurationSource.empty
-        summary = try c.decodeIfPresent(String.self, forKey: .summary)
-        tags = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
-        text = try c.decodeIfPresent(String.self, forKey: .text)
-        title = try c.decodeIfPresent(String.self, forKey: .title)
-        attachments = (try? c.decodeIfPresent([String].self, forKey: .attachments)) ?? []
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case author, collectedAt, id, media, publishedAt, source, summary, tags, text, title, attachments
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        author = try c.decode("author", default: CurationAuthor())
+        collectedAt = try c.decodeOptional("collectedAt")
+        id = try c.decode("id", default: "")
+        media = try c.decode("media", default: [])
+        publishedAt = try c.decodeOptional("publishedAt")
+        source = try c.decode("source", default: CurationSource())
+        summary = try c.decodeOptional("summary")
+        tags = try c.decode("tags", default: [])
+        text = try c.decodeOptional("text")
+        title = try c.decodeOptional("title")
+        attachments = try c.decode("attachments", default: [])
     }
 }
 
 nonisolated struct OpenSourceListEntry: Decodable, Identifiable, Sendable {
-    var category: String = ""
-    var checkedAt: String = ""
+    var checkedAt = ""
     var dimensions: [String] = []
-    var repository: String = ""
-    /// 用作分页去重与跳转 id。
-    var slug: String = ""
-    var sourceSummary: String = ""
-    var status: String = ""
-    var type: String = ""
+    var repository = ""
+    var slug = ""
+    var sourceSummary = ""
+    var status = ""
+    var type = ""
 
+    /// 用作分页去重与跳转 id。
     var id: String { slug }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        category = try c.decodeString(.category)
-        checkedAt = try c.decodeString(.checkedAt)
-        dimensions = (try? c.decodeIfPresent([String].self, forKey: .dimensions)) ?? []
-        repository = try c.decodeString(.repository)
-        slug = try c.decodeString(.slug)
-        sourceSummary = try c.decodeString(.sourceSummary)
-        status = try c.decodeString(.status)
-        type = try c.decodeString(.type)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case category, checkedAt, dimensions, repository, slug, sourceSummary, status, type
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        checkedAt = try c.decode("checkedAt", default: "")
+        dimensions = try c.decode("dimensions", default: [])
+        repository = try c.decode("repository", default: "")
+        slug = try c.decode("slug", default: "")
+        sourceSummary = try c.decode("sourceSummary", default: "")
+        status = try c.decode("status", default: "")
+        type = try c.decode("type", default: "")
     }
 }
 
 /// 顶部栏目：label 是站点导航用词，path 是公共 API 路径，pageSize 与站点客户端一致。
-enum Section: CaseIterable, Identifiable, Sendable {
-    case aiNews
-    case curation
-    case design
-    case douyin
-    case openSource
+nonisolated struct Section: Identifiable, Hashable, Sendable {
+    let label: String
+    let path: String
+    let pageSize: Int
 
     var id: String { path }
 
-    /// TabView/底栏使用的固定序号。
-    var index: Int {
-        switch self {
-        case .aiNews: 0
-        case .curation: 1
-        case .design: 2
-        case .douyin: 3
-        case .openSource: 4
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .aiNews: "每日动态"
-        case .curation: "每日关注"
-        case .design: "设计收藏"
-        case .douyin: "抖音收藏"
-        case .openSource: "开源关注"
-        }
-    }
-
-    var path: String {
-        switch self {
-        case .aiNews: "api/ai-news"
-        case .curation: "api/curation"
-        case .design: "api/design"
-        case .douyin: "api/douyin"
-        case .openSource: "api/open-source"
-        }
-    }
-
-    var pageSize: Int {
-        switch self {
-        case .aiNews: 50
-        default: 20
-        }
-    }
+    static let allCases = [aiNews, curation, design, douyin, openSource]
+    static let aiNews = Section(label: "每日动态", path: "api/ai-news", pageSize: 50)
+    static let curation = Section(label: "每日关注", path: "api/curation", pageSize: 20)
+    static let design = Section(label: "设计收藏", path: "api/design", pageSize: 20)
+    static let douyin = Section(label: "抖音收藏", path: "api/douyin", pageSize: 20)
+    static let openSource = Section(label: "开源关注", path: "api/open-source", pageSize: 20)
 }
 
 /// 开源关注维度 id 的中文标签（与 lib/open-source-types.ts 对齐）。
@@ -294,7 +218,7 @@ nonisolated let dimensionLabels: [String: String] = [
     "ai-ingestion": "AI 数据入口",
 ]
 
-nonisolated private let aiNewsCategoryLabels: [String: String] = [
+nonisolated private let aiNewsCategoryLabels = [
     "ai-models": "模型",
     "ai-products": "产品",
     "industry": "行业",
@@ -304,12 +228,4 @@ nonisolated private let aiNewsCategoryLabels: [String: String] = [
 
 nonisolated func aiNewsCategoryLabel(_ category: String) -> String {
     aiNewsCategoryLabels[category] ?? category
-}
-
-// 与安卓 Json { ignoreUnknownKeys, coerceInputValues } 等价的容错读取。
-nonisolated extension KeyedDecodingContainer {
-    func decodeString(_ key: K, default: String = "") throws -> String {
-        let value = try? decodeIfPresent(String.self, forKey: key)
-        return value ?? `default`
-    }
 }

@@ -67,17 +67,28 @@ enum SiteSpace {
     static let touch: CGFloat = 48
 }
 
+/// 纵向留白占位（Spacer().frame(height:) 的收紧写法）。
+func gap(_ height: CGFloat) -> some View {
+    Spacer().frame(height: height)
+}
+
 // 全站通用文本修饰：一处定义行距，避免每个 Text 手写。
 extension View {
     func siteBodyStyle(_ color: Color = SiteTheme.ink) -> some View {
         font(SiteText.body).lineSpacing(SiteText.bodyLineSpacing).foregroundStyle(color)
     }
-
     func siteSummaryStyle(_ color: Color = SiteTheme.muted) -> some View {
         font(SiteText.summary).lineSpacing(SiteText.summaryLineSpacing).foregroundStyle(color)
     }
-
     func siteMetaStyle(_ color: Color = SiteTheme.quiet) -> some View {
         font(SiteText.meta).lineSpacing(SiteText.metaLineSpacing).foregroundStyle(color)
+    }
+
+    /// 列表行通用容器：页边距、纵向留白与整行点按热区。
+    func listRow(vertical: CGFloat) -> some View {
+        padding(.horizontal, SiteSpace.page)
+            .padding(.vertical, vertical)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
     }
 }
