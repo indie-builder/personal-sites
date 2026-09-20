@@ -205,6 +205,7 @@ struct AskView: View {
                 Spacer()
                 Text(message.text)
                     .siteBodyStyle()
+                    .textSelection(.enabled)
                     .padding(.horizontal, SiteSpace.paragraph)
                     .padding(.vertical, SiteSpace.related)
                     .background(SiteTheme.line)

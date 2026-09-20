@@ -290,16 +290,10 @@ private struct CurationRow: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let media = item.media.first {
-                    AsyncImage(url: URL(string: media.posterURL)) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFill()
-                        } else {
-                            SiteTheme.line
-                        }
-                    }
-                    .frame(width: 104, height: 78)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .background(SiteTheme.line)
+                    DownsampledThumbnail(urlString: media.posterURL, targetSize: CGSize(width: 104, height: 78))
+                        .frame(width: 104, height: 78)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .background(SiteTheme.line)
                 }
             }
             .padding(.horizontal, SiteSpace.page)

@@ -45,7 +45,12 @@ struct OpeningView: View {
             complete()
             return
         }
-        loadFrames()
+        // GIF 逐帧解码移出主线程：启动路径上同步解码全部帧会阻塞首帧。
+        let decoded = await Task.detached(priority: .userInitiated) {
+            Self.loadFrames()
+        }.value
+        frames = decoded.frames
+        frameDurations = decoded.durations
         guard !frames.isEmpty else {
             complete()
             return
@@ -80,10 +85,13 @@ struct OpeningView: View {
         onComplete()
     }
 
-    private func loadFrames() {
+    /// GIF 序列一次性解码（对应安卓 repeatCount = 0）；在后台线程执行。
+    private nonisolated static func loadFrames() -> (frames: [CGImage], durations: [Double]) {
+        var frames: [CGImage] = []
+        var durations: [Double] = []
         guard let url = Bundle.main.url(forResource: "opening_character", withExtension: "gif"),
             let source = CGImageSourceCreateWithURL(url as CFURL, nil)
-        else { return }
+        else { return (frames, durations) }
         let count = CGImageSourceGetCount(source)
         for index in 0..<count {
             if let image = CGImageSourceCreateImageAtIndex(source, index, nil) {
@@ -96,8 +104,9 @@ struct OpeningView: View {
             {
                 delay = max(value, 0.02)
             }
-            frameDurations.append(delay)
+            durations.append(delay)
         }
+        return (frames, durations)
     }
 }
 

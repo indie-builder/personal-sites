@@ -249,7 +249,6 @@ private struct TechnicalTerms: View {
         context.fill(layout.dots, with: .color(SiteTheme.ink.opacity(0.12)))
 
         let gap: CGFloat = 112
-        let padding: CGFloat = 8
 
         for (lane, words) in marqueeLanes.enumerated() {
             let widths = layout.widths[lane]
