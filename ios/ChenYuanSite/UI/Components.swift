@@ -7,7 +7,7 @@ import SwiftUI
 /// 解码进内存（2048px 源图在 104pt 缩略位上解码内存放大约 27 倍），
 /// 且 LazyVStack 行复用时反复解码；此处以 NSCache 按地址+尺寸缓存结果。
 /// 大图展示位（详情页整宽照片、视频封面）不适用——全分辨率是有意保留。
-nonisolated struct DownsampledThumbnail: View {
+struct DownsampledThumbnail: View {
     let urlString: String
     let targetSize: CGSize
 
