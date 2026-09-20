@@ -2,7 +2,7 @@
 
 一个以个人工程身份为锚点的桌面优先站点——不是静态简历，而是一份运行中的工程档案：用持续更新的策展与判断证明工程身份。
 
-仅交付 Web 端，兼容桌面与手机浏览器；移动端沿用相同栏目、内容与问答能力。
+主交付为 Web 端，兼容桌面与手机浏览器；移动端沿用相同栏目、内容与问答能力，另有原生客户端：`android/`（Kotlin + Jetpack Compose）与 `ios/`（Swift 6 + SwiftUI，iOS 26+），均只消费站点公共 GET API，构建与验证见各自目录的 README。
 
 **线上地址：** https://default-coder.lovemyrmb.cn/
 
