@@ -234,7 +234,9 @@ struct AskView: View {
             if !message.sources.isEmpty {
                 Text(message.text.isEmpty ? "检索到的资料" : "参考资料 · 点击查看依据")
                     .siteMetaStyle(SiteTheme.muted)
-                ForEach(Array(message.sources.enumerated()), id: \.element.id) { number, source in
+                // 按位置标识（对齐安卓 forEachIndexed）：服务端 id 重复时
+                // 不会产生重复 ForEach 身份；编号即列表序号，与正文【n】一致。
+                ForEach(Array(message.sources.enumerated()), id: \.offset) { number, source in
                     Button {
                         openSource(message, number)
                     } label: {

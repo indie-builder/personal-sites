@@ -121,7 +121,8 @@ nonisolated struct CurationMedia: Decodable, Identifiable, Sendable {
     var videoUrl: String?
     var width: Int?
 
-    /// 与安卓一致：同一媒体以 url 作为稳定标识。
+    /// Identifiable 一致性保留；渲染按位置键（对齐安卓 forEach 语义），
+    /// 无消费点依赖 url 唯一性。
     var id: String { url }
 
     var isVideo: Bool { type == "video" || type == "animated_gif" }
