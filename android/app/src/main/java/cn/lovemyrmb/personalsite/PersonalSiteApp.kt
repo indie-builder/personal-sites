@@ -28,13 +28,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.automirrored.outlined.Chat
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,6 +71,7 @@ import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 
 private const val BAR_HEIGHT = 72
@@ -92,6 +86,7 @@ private val glassBarActions = listOf(
     GlassBarAction("关于我", NavigationIcons.About, null),
 )
 
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
     val navController = rememberNavController()
