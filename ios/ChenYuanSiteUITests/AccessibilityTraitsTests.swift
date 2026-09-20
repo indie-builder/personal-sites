@@ -55,13 +55,14 @@ nonisolated final class AccessibilityTraitsTests: XCTestCase {
 
     /// tap 返回到下一帧 trait 翻转之间存在快照时差：轮询等待isSelected 达到
     /// 期望值再断言，避免偶发快照过早（waitForExistence 对已存在元素立即返回）。
+    /// 上限 5s：CI 重负载 runner 上快照与帧提交都可能显著变慢。
     @MainActor
-    private func waitSelected(_ element: XCUIElement, timeout: TimeInterval = 2) -> Bool {
+    private func waitSelected(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
         waitTrait(element, expected: true, timeout: timeout)
     }
 
     @MainActor
-    private func waitNotSelected(_ element: XCUIElement, timeout: TimeInterval = 2) -> Bool {
+    private func waitNotSelected(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
         waitTrait(element, expected: false, timeout: timeout)
     }
 
