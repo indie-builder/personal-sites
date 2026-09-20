@@ -4,10 +4,10 @@ import Observation
 /// 信息流页面的统一 UI 状态：首屏加载 / 追加 / 下拉刷新 / 失败各有标记。
 struct FeedState<Value> {
     var items: [Value] = []
-    var hasMore: Bool = true
-    var initial: Bool = true
-    var loadingMore: Bool = false
-    var refreshing: Bool = false
+    var hasMore = true
+    var initial = true
+    var loadingMore = false
+    var refreshing = false
     var error: String?
 }
 
@@ -94,14 +94,7 @@ final class PagedFeed<Value> {
         // 与站点一致：客户端按 id 去重，取整造成的重复条目直接丢弃。
         var seen = Set<String>(minimumCapacity: merged.count)
         let deduped = merged.filter { seen.insert(idOf($0)).inserted }
-        state = FeedState(
-            items: deduped,
-            hasMore: page.hasMore,
-            initial: false,
-            loadingMore: false,
-            refreshing: false,
-            error: nil,
-        )
+        state = FeedState(items: deduped, hasMore: page.hasMore, initial: false)
     }
 
     private func fail() {
@@ -117,27 +110,17 @@ final class PagedFeed<Value> {
 @MainActor
 @Observable
 final class HomeModel {
-    let aiNews: PagedFeed<AiNewsListItem>
+    let aiNews: PagedFeed<AiNewsItem>
     let curation: PagedFeed<CurationItem>
     let design: PagedFeed<CurationItem>
     let douyin: PagedFeed<CurationItem>
     let openSource: PagedFeed<OpenSourceListEntry>
 
     init(api: SiteAPI) {
-        aiNews = PagedFeed(idOf: { $0.id }) { offset in
-            try await api.aiNews(offset: offset, limit: Section.aiNews.pageSize)
-        }
-        curation = PagedFeed(idOf: { $0.id }) { offset in
-            try await api.curation(offset: offset, limit: Section.curation.pageSize)
-        }
-        design = PagedFeed(idOf: { $0.id }) { offset in
-            try await api.design(offset: offset, limit: Section.design.pageSize)
-        }
-        douyin = PagedFeed(idOf: { $0.id }) { offset in
-            try await api.douyin(offset: offset, limit: Section.douyin.pageSize)
-        }
-        openSource = PagedFeed(idOf: { $0.slug }) { offset in
-            try await api.openSource(offset: offset, limit: Section.openSource.pageSize)
-        }
+        aiNews = PagedFeed(idOf: { $0.id }) { try await api.feed(.aiNews, offset: $0) }
+        curation = PagedFeed(idOf: { $0.id }) { try await api.feed(.curation, offset: $0) }
+        design = PagedFeed(idOf: { $0.id }) { try await api.feed(.design, offset: $0) }
+        douyin = PagedFeed(idOf: { $0.id }) { try await api.feed(.douyin, offset: $0) }
+        openSource = PagedFeed(idOf: { $0.slug }) { try await api.feed(.openSource, offset: $0) }
     }
 }

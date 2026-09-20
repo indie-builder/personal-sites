@@ -6,6 +6,13 @@ nonisolated enum AskEvent: Equatable, Sendable {
     case delta(String)
     case done
     case error(String)
+
+    var isTerminal: Bool {
+        switch self {
+        case .done, .error: true
+        default: false
+        }
+    }
 }
 
 nonisolated enum AskScope: String, CaseIterable, Identifiable, Sendable {
@@ -16,8 +23,6 @@ nonisolated enum AskScope: String, CaseIterable, Identifiable, Sendable {
     case openSource = "open-source"
 
     var id: String { rawValue }
-
-    var apiValue: String { rawValue }
 
     var label: String {
         switch self {
@@ -41,14 +46,8 @@ nonisolated struct AskSource: Decodable, Identifiable, Hashable, Sendable {
     var section: String?
 
     init(
-        id: String = "",
-        sourceId: String = "",
-        content: String = "",
-        scope: String = "",
-        publishedAt: String? = nil,
-        title: String = "",
-        sourceUrl: String = "",
-        section: String? = nil,
+        id: String = "", sourceId: String = "", content: String = "", scope: String = "",
+        publishedAt: String? = nil, title: String = "", sourceUrl: String = "", section: String? = nil,
     ) {
         self.id = id
         self.sourceId = sourceId
@@ -61,19 +60,15 @@ nonisolated struct AskSource: Decodable, Identifiable, Hashable, Sendable {
     }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decodeString(.id)
-        sourceId = try c.decodeString(.sourceId)
-        content = try c.decodeString(.content)
-        scope = try c.decodeString(.scope)
-        publishedAt = try c.decodeIfPresent(String.self, forKey: .publishedAt)
-        title = try c.decodeString(.title)
-        sourceUrl = try c.decodeString(.sourceUrl)
-        section = try c.decodeIfPresent(String.self, forKey: .section)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case id, sourceId, content, scope, publishedAt, title, sourceUrl, section
+        let c = try decoder.container(keyedBy: JSONKey.self)
+        id = try c.decode("id", default: "")
+        sourceId = try c.decode("sourceId", default: "")
+        content = try c.decode("content", default: "")
+        scope = try c.decode("scope", default: "")
+        publishedAt = try c.decodeOptional("publishedAt")
+        title = try c.decode("title", default: "")
+        sourceUrl = try c.decode("sourceUrl", default: "")
+        section = try c.decodeOptional("section")
     }
 }
 
@@ -81,31 +76,21 @@ nonisolated struct AskSource: Decodable, Identifiable, Hashable, Sendable {
 /// 非 2xx 优先采用服务端 error 字段文案（route 契约），网络失败回退固定中文提示，
 /// 全部以 AskEvent.error 返回由 UI 呈现。逐条移植安卓 AskClient 的帧协议语义。
 nonisolated struct AskClient: Sendable {
-    var baseURL: URL = SiteAPI.baseURL
+    var baseURL = SiteAPI.baseURL
 
     private let session: URLSession
 
-    init(session: URLSession = Self.makeSession()) {
+    /// ask 专用长超时（安卓 readTimeout 300s 对应空闲读超时）。
+    init(session: URLSession = .site(request: 300, resource: 600)) {
         self.session = session
-    }
-
-    private static func makeSession() -> URLSession {
-        let configuration = URLSessionConfiguration.default
-        // ask 专用长超时（安卓 readTimeout 300s 对应空闲读超时）。
-        configuration.timeoutIntervalForRequest = 300
-        configuration.timeoutIntervalForResource = 600
-        return URLSession(configuration: configuration)
     }
 
     func events(question: String, conversationId: String, visitorId: String, scope: AskScope) -> AsyncThrowingStream<AskEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 await streamEvents(
-                    question: question,
-                    conversationId: conversationId,
-                    visitorId: visitorId,
-                    scope: scope,
-                    continuation: continuation,
+                    question: question, conversationId: conversationId,
+                    visitorId: visitorId, scope: scope, continuation: continuation,
                 )
             }
             continuation.onTermination = { _ in task.cancel() }
@@ -113,10 +98,7 @@ nonisolated struct AskClient: Sendable {
     }
 
     private func streamEvents(
-        question: String,
-        conversationId: String,
-        visitorId: String,
-        scope: AskScope,
+        question: String, conversationId: String, visitorId: String, scope: AskScope,
         continuation: AsyncThrowingStream<AskEvent, Error>.Continuation,
     ) async {
         struct Payload: Encodable {
@@ -130,7 +112,7 @@ nonisolated struct AskClient: Sendable {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONEncoder().encode(
-            Payload(conversationId: conversationId, visitorId: visitorId, question: question, scope: scope.apiValue),
+            Payload(conversationId: conversationId, visitorId: visitorId, question: question, scope: scope.rawValue),
         )
 
         // 连接阶段失败：超时与网络不可用分别给文案（对应安卓 onFailure）。
@@ -209,9 +191,7 @@ nonisolated struct AskClient: Sendable {
                             buffer.append(byte)
                         }
                     }
-                    if !buffer.isEmpty {
-                        continuation.yield(String(decoding: buffer, as: UTF8.self))
-                    }
+                    if !buffer.isEmpty { continuation.yield(String(decoding: buffer, as: UTF8.self)) }
                 } catch is CancellationError {
                     // 上游取消时正常关闭行流。
                 } catch {
@@ -229,10 +209,7 @@ nonisolated struct AskClient: Sendable {
         if data.isEmpty || data == "{}" {
             return event == "done" ? .done : nil
         }
-        guard
-            let json = try? JSONSerialization.jsonObject(with: Data(data.utf8), options: []),
-            let object = json as? [String: Any]
-        else {
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(data.utf8))) as? [String: Any] else {
             return .error("回答数据格式异常，请重试。")
         }
         if let delta = object["delta"] {
@@ -282,17 +259,11 @@ nonisolated struct AskClient: Sendable {
     /// 非 2xx：服务端统一返回 {"error": "..."}；缺失、为空、非字符串或非 JSON 时回退固定文案。
     static func errorMessage(status: Int, body: Data) -> String {
         let fallback = status == 429 ? "提问过于频繁，请稍后再试。" : "暂时无法回答，请稍后再试。"
-        guard let text = String(data: body, encoding: .utf8), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return fallback
-        }
         guard
-            let json = try? JSONSerialization.jsonObject(with: body),
-            let object = json as? [String: Any],
+            let object = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
             let message = object["error"] as? String,
             !message.trimmingCharacters(in: .whitespaces).isEmpty
-        else {
-            return fallback
-        }
+        else { return fallback }
         return message
     }
 
@@ -302,14 +273,5 @@ nonisolated struct AskClient: Sendable {
             if urlError.code == .cancelled { return "网络不可用，请检查连接后重试。" }
         }
         return "网络不可用，请检查连接后重试。"
-    }
-}
-
-nonisolated extension AskEvent {
-    var isTerminal: Bool {
-        switch self {
-        case .done, .error: true
-        default: false
-        }
     }
 }

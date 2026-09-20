@@ -105,12 +105,10 @@ final class AskController {
     }
 
     func retryLast() {
-        guard !streaming else { return }
-        let current = messages
-        guard current.count >= 2, current.last?.role == .answer else { return }
-        let question = current[current.count - 2]
+        guard !streaming, messages.count >= 2, messages.last?.role == .answer else { return }
+        let question = messages[messages.count - 2]
         guard question.role == .question else { return }
-        messages = Array(current.dropLast(2))
+        messages = Array(messages.dropLast(2))
         send(question.text, scope: question.scope)
     }
 

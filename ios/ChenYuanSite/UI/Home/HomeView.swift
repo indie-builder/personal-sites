@@ -3,73 +3,59 @@ import SwiftUI
 /// 首页：顶部栏目导航 + 横向翻页 + 五类信息流（首屏加载、下拉刷新、触底追加、失败重试）。
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var env
-    @Binding var selectedSection: Int
+    @Binding var selectedSection: Section
     let bottomBarPadding: CGFloat
     let onScrollDelta: (CGFloat) -> Void
     let onOpenDetail: (DetailEntry) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionTabs(selectedIndex: selectedSection) { index in
-                withAnimation(.easeOut(duration: 0.22)) { selectedSection = index }
+            SectionTabs(selected: selectedSection) { section in
+                withAnimation(.easeOut(duration: 0.22)) { selectedSection = section }
             }
             TabView(selection: $selectedSection) {
-                FeedPageUI(
-                    feed: env.homeModel.aiNews,
-                    section: .aiNews,
-                    bottomPadding: bottomBarPadding,
-                    onScrollDelta: onScrollDelta,
-                ) { news in
-                    AiNewsRow(item: news) { onOpenDetail(.aiNews(news.id)) }
-                }
-                .tag(Section.aiNews.index)
-                FeedPageUI(
-                    feed: env.homeModel.curation,
-                    section: .curation,
-                    bottomPadding: bottomBarPadding,
-                    onScrollDelta: onScrollDelta,
-                ) { item in
-                    CurationRow(item: item) { onOpenDetail(.curation(.curation, item)) }
-                }
-                .tag(Section.curation.index)
-                FeedPageUI(
-                    feed: env.homeModel.design,
-                    section: .design,
-                    bottomPadding: bottomBarPadding,
-                    onScrollDelta: onScrollDelta,
-                ) { item in
-                    CurationRow(item: item) { onOpenDetail(.curation(.design, item)) }
-                }
-                .tag(Section.design.index)
-                FeedPageUI(
-                    feed: env.homeModel.douyin,
-                    section: .douyin,
-                    bottomPadding: bottomBarPadding,
-                    onScrollDelta: onScrollDelta,
-                ) { item in
-                    CurationRow(item: item) { onOpenDetail(.curation(.douyin, item)) }
-                }
-                .tag(Section.douyin.index)
-                FeedPageUI(
-                    feed: env.homeModel.openSource,
-                    section: .openSource,
-                    bottomPadding: bottomBarPadding,
-                    onScrollDelta: onScrollDelta,
-                ) { entry in
-                    OpenSourceRow(entry: entry) { onOpenDetail(.openSource(entry)) }
-                }
-                .tag(Section.openSource.index)
+                ForEach(Section.allCases) { page($0).tag($0) }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .background(SiteTheme.background)
     }
+
+    @ViewBuilder
+    private func page(_ section: Section) -> some View {
+        switch section {
+        case .aiNews:
+            FeedPageUI(feed: env.homeModel.aiNews, section: section, bottomPadding: bottomBarPadding, onScrollDelta: onScrollDelta) { item in
+                AiNewsRow(item: item) { onOpenDetail(.aiNews(item.id)) }
+            }
+        case .openSource:
+            FeedPageUI(feed: env.homeModel.openSource, section: section, bottomPadding: bottomBarPadding, onScrollDelta: onScrollDelta) { entry in
+                OpenSourceRow(entry: entry) { onOpenDetail(.openSource(entry)) }
+            }
+        default:
+            // 策展三栏（每日关注 / 设计收藏 / 抖音收藏）共用 CurationItem 行。
+            FeedPageUI(feed: env.homeModel.curated(section), section: section, bottomPadding: bottomBarPadding, onScrollDelta: onScrollDelta) { item in
+                CurationRow(item: item) { onOpenDetail(.curation(section, item)) }
+            }
+        }
+    }
+}
+
+/// 策展三栏共用的分页器查表。
+extension HomeModel {
+    func curated(_ section: Section) -> PagedFeed<CurationItem> {
+        switch section {
+        case .curation: curation
+        case .design: design
+        default: douyin
+        }
+    }
 }
 
 /// 顶部栏目导航：头像 + 横向滚动、单色文字 + 短下划线。
 private struct SectionTabs: View {
-    let selectedIndex: Int
-    let onSelectIndex: (Int) -> Void
+    let selected: Section
+    let onSelect: (Section) -> Void
 
     @Namespace private var underline
 
@@ -78,49 +64,46 @@ private struct SectionTabs: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .center, spacing: 0) {
                     Image("profile_avatar")
-                        .resizable()
-                        .scaledToFill()
+                        .resizable().scaledToFill()
                         .frame(width: 32, height: 32)
                         .clipShape(Circle())
                         .padding(.leading, SiteSpace.paragraph)
                         .padding(.trailing, SiteSpace.micro)
                         .accessibilityLabel("陈远的头像")
-                    ForEach(Section.allCases) { section in
-                        let selected = section.index == selectedIndex
-                        Button {
-                            onSelectIndex(section.index)
-                        } label: {
-                            VStack(spacing: 5) {
-                                Text(section.label)
-                                    .font(selected ? SiteText.tabSelected : SiteText.tab)
-                                    .foregroundStyle(selected ? SiteTheme.ink : SiteTheme.muted)
-                                    .padding(.horizontal, 14)
-                                Group {
-                                    if selected {
-                                        Capsule()
-                                            .fill(SiteTheme.ink)
-                                            .frame(height: 2)
-                                            .matchedGeometryEffect(id: "tab-underline", in: underline)
-                                    } else {
-                                        Color.clear.frame(height: 2)
-                                    }
-                                }
-                            }
-                            .padding(.vertical, 13)
-                            .frame(minHeight: SiteSpace.touch)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-                        .accessibilityIdentifier("home-tab-\(section.id)")
-                        .id(section.index)
+                    ForEach(Section.allCases) { tab($0).accessibilityIdentifier("home-tab-\($0.id)").id($0.id) }
+                }
+            }
+            .onChange(of: selected) { _, newValue in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(newValue.id, anchor: .center) }
+            }
+        }
+    }
+
+    private func tab(_ section: Section) -> some View {
+        let isSelected = section == selected
+        return Button {
+            onSelect(section)
+        } label: {
+            VStack(spacing: 5) {
+                Text(section.label)
+                    .font(isSelected ? SiteText.tabSelected : SiteText.tab)
+                    .foregroundStyle(isSelected ? SiteTheme.ink : SiteTheme.muted)
+                    .padding(.horizontal, 14)
+                Group {
+                    if isSelected {
+                        Capsule().fill(SiteTheme.ink).frame(height: 2)
+                            .matchedGeometryEffect(id: "tab-underline", in: underline)
+                    } else {
+                        Color.clear.frame(height: 2)
                     }
                 }
             }
-            .onChange(of: selectedIndex) { _, newValue in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(newValue, anchor: .center) }
-            }
+            .padding(.vertical, 13)
+            .frame(minHeight: SiteSpace.touch)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -132,26 +115,20 @@ private struct FeedPageUI<Value: Identifiable, Row: View>: View {
     let onScrollDelta: (CGFloat) -> Void
     @ViewBuilder let row: (Value) -> Row
 
+    @ViewBuilder
     var body: some View {
-        Group {
-            if feed.state.initial {
+        if feed.state.initial {
                 VStack {
                     Spacer()
-                    ProgressView()
-                        .tint(SiteTheme.muted)
-                        .controlSize(.small)
+                    ProgressView().tint(SiteTheme.muted).controlSize(.small)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
                 .task { feed.loadInitial() }
             } else if let error = feed.state.error, feed.state.items.isEmpty {
-                ScrollView {
-                    ErrorRetry(message: error) { feed.retry() }
-                        .frame(minHeight: 420)
-                }
-            } else {
-                feedList
-            }
+                ScrollView { ErrorRetry(message: error) { feed.retry() }.frame(minHeight: 420) }
+        } else {
+            feedList
         }
     }
 
@@ -162,13 +139,7 @@ private struct FeedPageUI<Value: Identifiable, Row: View>: View {
                     row(item)
                     HorizontalRule()
                 }
-                FeedFooter(
-                    loadingMore: feed.state.loadingMore,
-                    error: feed.state.error,
-                    hasMore: feed.state.hasMore,
-                    isEmpty: feed.state.items.isEmpty,
-                ) { feed.retry() }
-                .onAppear {
+                footer.onAppear {
                     if feed.state.hasMore { feed.loadMore() }
                 }
             }
@@ -179,32 +150,16 @@ private struct FeedPageUI<Value: Identifiable, Row: View>: View {
             onScrollDelta(new - old)
         }
     }
-}
 
-/// 页脚：追加转圈 / 失败重试 / 到底三态。
-private struct FeedFooter: View {
-    let loadingMore: Bool
-    let error: String?
-    let hasMore: Bool
-    let isEmpty: Bool
-    let onRetry: () -> Void
-
-    var body: some View {
-        if loadingMore {
-            HStack {
-                ProgressView()
-                    .tint(SiteTheme.muted)
-                    .controlSize(.small)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-        } else if let error {
-            ErrorRetry(message: error, onRetry: onRetry)
-        } else if !hasMore, !isEmpty {
-            Text("已经到底了")
-                .siteMetaStyle()
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
+    /// 页脚：追加转圈 / 失败重试 / 到底三态。
+    @ViewBuilder
+    private var footer: some View {
+        if feed.state.loadingMore {
+            ProgressView().tint(SiteTheme.muted).controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 18)
+        } else if let error = feed.state.error {
+            ErrorRetry(message: error) { feed.retry() }
+        } else if !feed.state.hasMore, !feed.state.items.isEmpty {
+            Text("已经到底了").siteMetaStyle().frame(maxWidth: .infinity).padding(.vertical, 18)
         }
     }
 }
@@ -215,9 +170,7 @@ private struct FeedFooter: View {
 nonisolated func aiNewsSummaryPreview(title: String, summary: String) -> String {
     var text = summary.trimmingCharacters(in: .whitespacesAndNewlines)
     let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !trimmedTitle.isEmpty, text.hasPrefix(trimmedTitle) {
-        text = String(text.dropFirst(trimmedTitle.count))
-    }
+    if !trimmedTitle.isEmpty, text.hasPrefix(trimmedTitle) { text = String(text.dropFirst(trimmedTitle.count)) }
     // 对应安卓 trimStart(' ', '，', '。', '：', ':', '—', '-', '\n')。
     while let first = text.first, " ，。：:—-\n".contains(first) {
         text.removeFirst()
@@ -227,46 +180,25 @@ nonisolated func aiNewsSummaryPreview(title: String, summary: String) -> String 
 
 /// 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。
 private struct AiNewsRow: View {
-    let item: AiNewsListItem
+    let item: AiNewsItem
     let onOpen: () -> Void
 
     var body: some View {
         Button(action: onOpen) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(item.title)
-                    .font(SiteText.title)
-                    .foregroundStyle(SiteTheme.ink)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                if !summary.isEmpty {
-                    Spacer().frame(height: SiteSpace.compact)
-                    Text(summary)
-                        .siteSummaryStyle()
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer().frame(height: SiteSpace.related)
-                Text(meta)
-                    .siteMetaStyle()
-                    .lineLimit(1)
+                Text(item.title).font(SiteText.title).foregroundStyle(SiteTheme.ink).lineLimit(2).multilineTextAlignment(.leading)
+                if !preview.isEmpty { Text(preview).siteSummaryStyle().lineLimit(2).multilineTextAlignment(.leading).padding(.top, SiteSpace.compact) }
+                Text(meta).siteMetaStyle().lineLimit(1).padding(.top, SiteSpace.related)
             }
-            .padding(.horizontal, SiteSpace.page)
-            .padding(.vertical, SiteSpace.item)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            .listRow(vertical: SiteSpace.item)
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(.isButton)
     }
 
-    private var summary: String {
-        aiNewsSummaryPreview(title: item.title, summary: item.summary)
-    }
+    private var preview: String { aiNewsSummaryPreview(title: item.title, summary: item.summary) }
 
     private var meta: String {
-        [feedTimeLabel(item.publishedAt), item.sourceName.isEmpty ? nil : item.sourceName]
-            .compactMap { $0 }
-            .joined(separator: " · ")
+        metaLine(feedTimeLabel(item.publishedAt), item.sourceName.isEmpty ? nil : item.sourceName)
     }
 }
 
@@ -279,14 +211,8 @@ private struct CurationRow: View {
         Button(action: onOpen) {
             HStack(alignment: .center, spacing: SiteSpace.paragraph) {
                 VStack(alignment: .leading, spacing: SiteSpace.compact) {
-                    Text(headline)
-                        .font(SiteText.listTitle)
-                        .foregroundStyle(SiteTheme.ink)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                    Text(meta)
-                        .siteMetaStyle()
-                        .lineLimit(1)
+                    Text(headline).font(SiteText.listTitle).foregroundStyle(SiteTheme.ink).lineLimit(3).multilineTextAlignment(.leading)
+                    Text(meta).siteMetaStyle().lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let media = item.media.first {
@@ -296,12 +222,9 @@ private struct CurationRow: View {
                         .background(SiteTheme.line)
                 }
             }
-            .padding(.horizontal, SiteSpace.page)
-            .padding(.vertical, SiteSpace.paragraph)
-            .contentShape(Rectangle())
+            .listRow(vertical: SiteSpace.paragraph)
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(.isButton)
     }
 
     /// 行标题：优先 title，回退正文首行（策展条目常无独立标题）。
@@ -315,15 +238,13 @@ private struct CurationRow: View {
     }
 
     private var meta: String {
-        var parts: [String?] = [feedTimeLabel(item.displayTime)]
-        let attachmentPrefix = item.attachments.prefix(2).joined(separator: "·")
-        parts.append(attachmentPrefix.isEmpty ? nil : attachmentPrefix)
-        switch item.source.platform {
-        case "x": parts.append(item.author.handle.isEmpty ? nil : "@\(item.author.handle)")
-        case "douyin": parts.append(item.author.name.isEmpty ? nil : item.author.name)
-        default: parts.append(nil)
+        let attachments = item.attachments.prefix(2).joined(separator: "·")
+        let author: String? = switch item.source.platform {
+        case "x": item.author.handle.isEmpty ? nil : "@\(item.author.handle)"
+        case "douyin": item.author.name.isEmpty ? nil : item.author.name
+        default: nil
         }
-        return parts.compactMap { $0 }.joined(separator: " · ")
+        return metaLine(feedTimeLabel(item.displayTime), attachments.isEmpty ? nil : attachments, author)
     }
 }
 
@@ -335,32 +256,20 @@ private struct OpenSourceRow: View {
     var body: some View {
         Button(action: onOpen) {
             VStack(alignment: .leading, spacing: SiteSpace.compact) {
-                Text(entry.repository)
-                    .font(SiteText.listTitle)
-                    .foregroundStyle(SiteTheme.ink)
-                    .lineLimit(1)
-                Text(entry.sourceSummary)
-                    .siteSummaryStyle()
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Text(meta)
-                    .siteMetaStyle()
-                    .lineLimit(1)
+                Text(entry.repository).font(SiteText.listTitle).foregroundStyle(SiteTheme.ink).lineLimit(1)
+                Text(entry.sourceSummary).siteSummaryStyle().lineLimit(2).multilineTextAlignment(.leading)
+                Text(meta).siteMetaStyle().lineLimit(1)
             }
-            .padding(.horizontal, SiteSpace.page)
-            .padding(.vertical, SiteSpace.paragraph)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            .listRow(vertical: SiteSpace.paragraph)
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(.isButton)
     }
 
     private var meta: String {
-        [
+        metaLine(
             entry.status.isEmpty ? nil : entry.status,
             entry.dimensions.first.map { dimensionLabels[$0] ?? $0 },
             feedTimeLabel(entry.checkedAt),
-        ].compactMap { $0 }.joined(separator: " · ")
+        )
     }
 }
