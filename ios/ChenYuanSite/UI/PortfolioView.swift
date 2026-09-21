@@ -22,10 +22,12 @@ struct PortfolioView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
             ScrollView {
-                if error {
-                    ErrorRetry(message: "暂时无法读取作品集。") { attempt += 1 }
-                } else if products.isEmpty {
-                    ProgressView("正在读取作品…").padding(40)
+                if products.isEmpty {
+                    if error {
+                        ErrorRetry(message: "暂时无法读取作品集。") { attempt += 1 }
+                    } else {
+                        ProgressView("正在读取作品…").padding(40)
+                    }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(products) { product in
@@ -64,6 +66,10 @@ struct PortfolioView: View {
                             .accessibilityIdentifier("portfolio-\(product.id)")
                             Divider().overlay(SiteTheme.line)
                         }
+                        // 已有内容时刷新失败不顶掉列表（对齐 Home 信息流与集合页的页脚重试）。
+                        if error {
+                            ErrorRetry(message: "刷新失败，请重试。") { attempt += 1 }
+                        }
                     }
                     .padding(.horizontal, SiteSpace.page)
                     .padding(.bottom, bottomPadding + 16)
@@ -90,6 +96,9 @@ struct PortfolioView: View {
         do {
             let response: PortfolioProducts = try await PortfolioAPI().get()
             products = response.items
+            // 与入口清一次的差别：并发的前一次失败回调可能晚于本次入口清，
+            // 成功落地时再清一次，避免「有内容 + 误报刷新失败」的页脚残留。
+            error = false
         } catch { if !Task.isCancelled { self.error = true } }
     }
 }
