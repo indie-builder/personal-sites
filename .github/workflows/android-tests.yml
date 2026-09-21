@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   test:
-    # JVM 单测与静态 UI 检查在 ubuntu 即可；仪器化测试需要模拟器，暂不进 CI。
+    # JVM 单测、静态 UI 检查与仪器化测试（模拟器）都进远程门禁。
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -54,6 +54,12 @@ jobs:
       - name: Check opening GIF frames
         working-directory: android
         run: node scripts/check-opening-frames.mjs
+      - name: Enable KVM group perms
+        # 首跑发现 runner 用户无 /dev/kvm 权限，模拟器回退 TCG 软件仿真启动超时。
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Run instrumented tests
         # 仪器化测试（AskScreen 等）用 OkHttp 拦截器自 mock SSE，不触网；
         # minSdk 31，选 runner 镜像现成的 API 34 google_apis x86_64 系统镜像。
