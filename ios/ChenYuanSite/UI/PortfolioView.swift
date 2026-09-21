@@ -24,9 +24,13 @@ struct PortfolioView: View {
             ScrollView {
                 if products.isEmpty {
                     if error {
+                        // 与 Home 信息流错误态一致：给 420 高度支撑让内容大致居中，
+                        // 不紧贴页头。
                         ErrorRetry(message: "暂时无法读取作品集。") { attempt += 1 }
+                            .frame(minHeight: 420)
                     } else {
-                        ProgressView("正在读取作品…").padding(40)
+                        ProgressView("正在读取作品…")
+                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 420)
                     }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
