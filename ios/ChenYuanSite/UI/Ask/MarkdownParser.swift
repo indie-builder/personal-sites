@@ -34,7 +34,7 @@ nonisolated enum MarkdownParser {
     static func parse(_ text: String) -> [MarkdownBlock] {
         var blocks: [MarkdownBlock] = []
         // 结尾保证有一个空行，方便收尾 flush。
-        var lines = text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n") + [""]
+        let lines = text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n") + [""]
         var paragraph: [String] = []
 
         func flushParagraph() {
