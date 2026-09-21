@@ -222,19 +222,50 @@ struct IconButton: View {
 }
 
 /// 网络图占位统一为 line 底色；fill 需要外层裁切与宽高比。
+/// 加载失败给出「重试」入口（attempt 变更重建 AsyncImage 重新拉取）；
+/// 微小展示位（如 24pt 工具图标，容不下 44pt 触控目标）传
+/// showsRetry: false 只显示占位图标，随页面刷新恢复。
 struct RemoteImage: View {
     let url: URL?
     var contentMode: ContentMode = .fill
+    var showsRetry = true
+
+    @State private var attempt = 0
 
     var body: some View {
         AsyncImage(url: url) { phase in
-            if let image = phase.image { image.resizable().aspectRatio(nil, contentMode: contentMode) }
-            else if phase.error != nil {
-                ContentUnavailableView("图片未加载", systemImage: "photo")
+            if let image = phase.image {
+                image.resizable().aspectRatio(nil, contentMode: contentMode)
+            } else if phase.error != nil {
+                if showsRetry { retryView } else { placeholderGlyph }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .id(attempt)
+    }
+
+    private var retryView: some View {
+        Button {
+            attempt += 1
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "arrow.clockwise").font(.system(size: 15, weight: .medium))
+                Text("重试").font(SiteText.eyebrow)
+            }
+            .foregroundStyle(SiteTheme.muted)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minWidth: SiteSpace.touch, minHeight: SiteSpace.touch)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("图片加载失败，点击重试")
+        .accessibilityIdentifier("image-retry")
+    }
+
+    private var placeholderGlyph: some View {
+        Image(systemName: "photo").foregroundStyle(SiteTheme.muted)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

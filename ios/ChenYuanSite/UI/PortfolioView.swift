@@ -521,7 +521,7 @@ struct PortfolioToolsView: View {
                                     Button { openURL(url) } label: {
                                         HStack(spacing: 10) {
                                             if !tool.icon.isEmpty {
-                                                RemoteImage(url: URL(string: tool.icon), contentMode: .fit).frame(width: 24, height: 24)
+                                                RemoteImage(url: URL(string: tool.icon), contentMode: .fit, showsRetry: false).frame(width: 24, height: 24)
                                             }
                                             Text(tool.name).font(SiteText.label).lineLimit(2).multilineTextAlignment(.leading)
                                             Spacer()
