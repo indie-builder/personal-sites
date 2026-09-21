@@ -36,6 +36,8 @@ jobs:
           node-version: 24
       - name: Set up Gradle caching
         uses: gradle/actions/setup-gradle@v6
+        with:
+          validate-wrappers: true
       - name: Drop machine-specific daemon JVM path
         # gradle.properties 的 org.gradle.java.home 指向作者本机 JDK 路径；
         # CI 删除该行后由 setup-java 注入的 JAVA_HOME 决定 daemon JVM。
@@ -52,10 +54,28 @@ jobs:
       - name: Check opening GIF frames
         working-directory: android
         run: node scripts/check-opening-frames.mjs
+      - name: Run instrumented tests
+        # 仪器化测试（AskScreen 等）用 OkHttp 拦截器自 mock SSE，不触网；
+        # minSdk 31，选 runner 镜像现成的 API 34 google_apis x86_64 系统镜像。
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          script: cd android && ./gradlew :app:connectedDebugAndroidTest --console=plain
       - name: Upload unit test report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: unit-test-report
           path: android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+      - name: Upload instrumented test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: instrumented-test-report
+          path: |
+            android/app/build/reports/androidTests/connected/
+            android/app/build/outputs/androidTest-results/connected/
           if-no-files-found: ignore
