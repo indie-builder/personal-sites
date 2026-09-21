@@ -98,7 +98,12 @@ class PagedFeed<T>(
                         initial = false,
                         loadingMore = false,
                         refreshing = false,
-                        error = "暂时无法加载更多内容，请重试。",
+                        // 空列表按读取场景表述（与 iOS 端一致）；刷新/追加按操作语义区分。
+                        error = when {
+                            current.items.isEmpty() -> "暂时无法读取内容，请重试。"
+                            refreshing -> "暂时无法刷新内容，请重试。"
+                            else -> "暂时无法加载更多内容，请重试。"
+                        },
                     )
                     if (append || refreshing) android.util.Log.w("PagedFeed", "feed load failed", e)
                 },

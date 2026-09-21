@@ -155,7 +155,7 @@ class PagedFeedTest {
         advanceUntilIdle()
         val state = feed.state.value
         assertEquals(listOf("1"), state.items.map(Row::id))
-        assertNotNull(state.error)
+        assertEquals("暂时无法加载更多内容，请重试。", state.error)
         assertFalse(state.loadingMore)
         feed.retry()
         advanceUntilIdle()
@@ -172,7 +172,8 @@ class PagedFeedTest {
         }
         feed.loadInitial()
         advanceUntilIdle()
-        assertNotNull(feed.state.value.error)
+        // 首屏失败没有"更多"可加载，文案须按读取场景表述。
+        assertEquals("暂时无法读取内容，请重试。", feed.state.value.error)
         assertTrue(feed.state.value.items.isEmpty())
         fail = false
         feed.retry()
@@ -180,5 +181,46 @@ class PagedFeedTest {
         assertEquals(listOf("a"), feed.state.value.items.map(Row::id))
         assertNull(feed.state.value.error)
         assertFalse(feed.state.value.initial)
+    }
+
+    @Test
+    fun refreshFailureAfterInitialFailureStillReportsReadCopy() = runTest {
+        var fail = true
+        val feed = PagedFeed(this, idOf = Row::id) {
+            if (fail) throw IOException("network")
+            FeedPage(false, listOf(Row("a")))
+        }
+        feed.loadInitial()
+        advanceUntilIdle()
+        assertEquals("暂时无法读取内容，请重试。", feed.state.value.error)
+        // 首屏失败后（initial=false）refresh 守卫放行；列表仍空，文案必须仍是"读取"而非"刷新"。
+        feed.refresh()
+        advanceUntilIdle()
+        assertEquals("暂时无法读取内容，请重试。", feed.state.value.error)
+        fail = false
+        feed.retry()
+        advanceUntilIdle()
+        assertEquals(listOf("a"), feed.state.value.items.map(Row::id))
+    }
+
+    @Test
+    fun refreshFailureKeepsItemsAndReportsRefreshCopy() = runTest {
+        var fail = false
+        val feed = PagedFeed(this, idOf = Row::id) {
+            if (fail) throw IOException("network")
+            FeedPage(true, listOf(Row("old")))
+        }
+        feed.loadInitial()
+        advanceUntilIdle()
+        fail = true
+        feed.refresh()
+        advanceUntilIdle()
+        assertEquals(listOf("old"), feed.state.value.items.map(Row::id))
+        assertEquals("暂时无法刷新内容，请重试。", feed.state.value.error)
+        assertFalse(feed.state.value.refreshing)
+        fail = false
+        feed.refresh()
+        advanceUntilIdle()
+        assertNull(feed.state.value.error)
     }
 }
