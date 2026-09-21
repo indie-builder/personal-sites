@@ -51,6 +51,11 @@ kotlin {
     }
 }
 
+composeCompiler {
+    // 只读数据模型统一标记稳定（stability_config.conf），跳过信息流/问答列表的无效重组
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("stability_config.conf"))
+}
+
 dependencies {
     implementation(libs.commonmark)
     implementation(libs.commonmark.ext.gfm.tables)

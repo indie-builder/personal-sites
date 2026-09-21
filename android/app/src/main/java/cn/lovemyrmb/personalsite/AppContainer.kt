@@ -6,6 +6,7 @@ import cn.lovemyrmb.personalsite.data.AskController
 import cn.lovemyrmb.personalsite.data.EntryHolder
 import cn.lovemyrmb.personalsite.data.SITE_BASE_URL
 import cn.lovemyrmb.personalsite.data.SiteApi
+import cn.lovemyrmb.personalsite.data.VideoPreloader
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -56,6 +57,9 @@ class AppContainer(context: Context) {
             prefs.edit().putString(KEY_VISITOR_ID, it).apply()
         }
     }
+
+    /** 视频预加载：首次出现视频卡片时才初始化磁盘缓存与预加载管理器。 */
+    val videoPreloader: VideoPreloader by lazy { VideoPreloader(appContext) }
 
     val entryHolder = EntryHolder()
 

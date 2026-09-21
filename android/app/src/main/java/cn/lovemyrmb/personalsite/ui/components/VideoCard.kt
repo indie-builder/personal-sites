@@ -36,6 +36,7 @@ import cn.lovemyrmb.personalsite.ui.theme.SiteText
 /**
  * 策展媒体的视频卡片：默认展示封面 + 播放圆钮，点击后换 ExoPlayer 原生播放。
  * X 平台视频自动经 /api/x-media 代理（MediaUrls.video）。
+ * 卡片可见时经 LocalVideoPreloader 预取片头到磁盘缓存，播放用共享缓存的播放器点开即播。
  */
 @Composable
 fun VideoCard(
@@ -44,9 +45,18 @@ fun VideoCard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val preloader = LocalVideoPreloader.current
     var playing by remember(media.url) { mutableStateOf(false) }
+    val videoUri = remember(media.url, source.platform) {
+        MediaUrls.video(source.platform, media.videoUrl ?: media.url)
+    }
     val aspect = media.width?.takeIf { it > 0 && media.height != null && media.height > 0 }
         ?.let { it.toFloat() / media.height!!.toFloat() } ?: 16f / 9f
+
+    DisposableEffect(videoUri, playing) {
+        if (!playing) preloader?.preload(videoUri)
+        onDispose { if (!playing) preloader?.cancel(videoUri) }
+    }
 
     Box(
         modifier = modifier
@@ -56,9 +66,9 @@ fun VideoCard(
             .background(SiteTheme.colors.line),
     ) {
         if (playing) {
-            val player = remember(media.url) {
-                ExoPlayer.Builder(context).build().apply {
-                    setMediaItem(MediaItem.fromUri(MediaUrls.video(source.platform, media.videoUrl ?: media.url)))
+            val player = remember(videoUri, preloader) {
+                (preloader?.buildPlayer() ?: ExoPlayer.Builder(context).build()).apply {
+                    setMediaItem(MediaItem.fromUri(videoUri))
                     prepare()
                     playWhenReady = true
                 }

@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.Box
+import cn.lovemyrmb.personalsite.ui.components.LocalVideoPreloader
 import cn.lovemyrmb.personalsite.ui.components.OpeningScreen
 import cn.lovemyrmb.personalsite.ui.theme.PersonalSiteTheme
 
@@ -23,9 +24,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             PersonalSiteTheme {
                 var opening by rememberSaveable { mutableStateOf(true) }
-                Box {
-                    PersonalSiteApp(container)
-                    if (opening) OpeningScreen(onComplete = { opening = false })
+                CompositionLocalProvider(LocalVideoPreloader provides container.videoPreloader) {
+                    Box {
+                        PersonalSiteApp(container)
+                        if (opening) OpeningScreen(onComplete = { opening = false })
+                    }
                 }
             }
         }

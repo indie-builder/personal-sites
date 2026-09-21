@@ -28,6 +28,7 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 
 - `gradle.properties` 里 `org.gradle.java.home` 指向本机 JDK 17 路径（daemon 用），换机器需调整；`android.builtInKotlin=false` / `android.newDsl=false` 是 AGP 9 的过渡开关，锁定独立 KGP 2.4 路线，AGP 10 前需迁回内置 Kotlin。
 - 图标由 `ui/icons/SiteIcons.kt` 内联（Material Symbols 源码矢量），不依赖已停更的 `material-icons-extended`。
+- 性能：只读数据模型经 `stability_config.conf` 标记 Compose 稳定（跳过无效重组）；视频卡片可见时经 `data/VideoPreloader.kt`（media3 DefaultPreloadManager + SimpleCache，64MB LRU）预取片头 5 秒到磁盘缓存，播放用共享缓存的播放器点开即播。
 - `local.properties` 由 Android Studio 生成（`sdk.dir`），不入库。
 
 ## 工程结构
