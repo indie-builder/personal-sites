@@ -7,7 +7,15 @@ ADB_BIN="${ADB:-$(command -v adb)}"
 APP="cn.lovemyrmb.personalsite"
 
 "$ADB_BIN" shell am force-stop "$APP" || true
-"$ADB_BIN" shell am start -W -n "$APP/.MainActivity" >/dev/null
+# connectedDebugAndroidTest 结束后 AGP 会卸载应用，先重装再启动。
+"$ADB_BIN" install -r app/build/outputs/apk/debug/app-debug.apk >/dev/null || {
+  echo "app install failed" >&2
+  exit 1
+}
+"$ADB_BIN" shell am start -W -n "$APP/.MainActivity" >/dev/null || {
+  echo "app start failed" >&2
+  exit 1
+}
 # 开场动画约 5.8 秒；系统动画被禁用时开场自行结束，多余等待无害。
 sleep 10
 # 开场任意点击即跳过。
