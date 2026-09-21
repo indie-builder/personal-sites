@@ -172,7 +172,7 @@ fun PersonalSiteApp(container: AppContainer) {
             }
             composable("portfolio") {
                 PortfolioScreen(
-                    api = container.portfolioApi,
+                    viewModel = portfolioViewModel,
                     bottomPadding = bottomBarTotal,
                     onOpenCollection = { navController.navigate("portfolio/$it") },
                     onOpenLink = { openExternally(context, it) },

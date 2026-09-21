@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import retrofit2.http.GET
@@ -97,16 +98,58 @@ data class PortfolioMeta(
     val attribution: String = "",
 )
 
+/** 落地页产品列表状态：items 为 null 表示尚未成功加载过。 */
+data class PortfolioProductsState(
+    val items: List<PortfolioProduct>? = null,
+    val refreshing: Boolean = false,
+    val refreshError: Boolean = false,
+)
+
 /**
  * 作品集浏览状态：分页复用 [PagedFeed]（去重/触底/失败文案与站点栏目一致），
  * 每个筛选组合一个实例（LRU 上限 8，搜索逐字输入时旧实例被淘汰）。
  */
 class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
+    private val _products = MutableStateFlow(PortfolioProductsState())
+    val products: StateFlow<PortfolioProductsState> = _products.asStateFlow()
+
     private val _meta = MutableStateFlow<Map<String, PortfolioMeta>>(emptyMap())
     val meta: StateFlow<Map<String, PortfolioMeta>> = _meta.asStateFlow()
 
+    private var productsLoaded = false
+
     private val feeds = object : LinkedHashMap<String, PagedFeed<PortfolioItem>>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PagedFeed<PortfolioItem>>) = size > 8
+    }
+
+    /** 首次进入拉取产品列表；已成功加载过则复用，配置变更不重拉。 */
+    fun loadProducts() {
+        if (productsLoaded || _products.value.refreshing) return
+        requestProducts()
+    }
+
+    /** 下拉刷新；失败时保留已有列表并置 refreshError 供轻提示。 */
+    fun refreshProducts() {
+        if (_products.value.refreshing) return
+        requestProducts()
+    }
+
+    private fun requestProducts() {
+        _products.value = _products.value.copy(refreshing = true, refreshError = false)
+        viewModelScope.launch {
+            val result = runCatching { api.products().items }
+            val current = _products.value
+            result.fold(
+                onSuccess = { items ->
+                    productsLoaded = true
+                    _products.value = PortfolioProductsState(items = items, refreshing = false)
+                },
+                onFailure = { e ->
+                    android.util.Log.w("Portfolio", "products load failed", e)
+                    _products.value = current.copy(refreshing = false, refreshError = true)
+                },
+            )
+        }
     }
 
     fun feedKey(collection: String, q: String, cat: String, theme: String) = "$collection|$q|$cat|$theme"

@@ -93,23 +93,13 @@ private fun PortfolioProduct.nativeCollection(): String? = when (id) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortfolioScreen(
-    api: PortfolioApi,
+    viewModel: PortfolioViewModel,
     bottomPadding: Dp,
     onOpenCollection: (String) -> Unit,
     onOpenLink: (String) -> Unit,
 ) {
-    var products by remember { mutableStateOf<List<PortfolioProduct>?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var refreshing by remember { mutableStateOf(false) }
-    var attempt by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(attempt) {
-        error = null
-        runCatching { api.products().items }
-            .onSuccess { products = it }
-            .onFailure { error = "暂时无法读取作品集。" }
-        refreshing = false
-    }
+    val state by viewModel.products.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.loadProducts() }
 
     Column(
         modifier = Modifier
@@ -125,17 +115,34 @@ fun PortfolioScreen(
             Spacer(Modifier.height(SiteSpace.paragraph))
         }
         PullToRefreshBox(
-            isRefreshing = refreshing,
-            onRefresh = { refreshing = true; attempt++ },
+            // 首拉用居中转圈，仅已有内容时才显示顶部刷新指示器，避免双圈。
+            isRefreshing = state.refreshing && state.items != null,
+            onRefresh = { viewModel.refreshProducts() },
             modifier = Modifier.fillMaxSize(),
         ) {
+            val products = state.items
             when {
-                error != null && products == null -> ErrorRetry(message = error ?: "", modifier = Modifier.fillMaxSize()) { attempt++ }
+                products == null && state.refreshError -> ErrorRetry(
+                    message = "暂时无法读取作品集。",
+                    modifier = Modifier.fillMaxSize(),
+                ) { viewModel.refreshProducts() }
                 products == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
                 }
                 else -> LazyColumn {
-                    itemsIndexed(products.orEmpty(), key = { _, product -> product.id }) { _, product ->
+                    if (state.refreshError) {
+                        item(key = "refresh-error") {
+                            Text(
+                                text = "刷新失败，仍显示上次内容，可下拉重试。",
+                                style = SiteText.meta,
+                                color = SiteTheme.colors.quiet,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = SiteSpace.page, vertical = SiteSpace.compact),
+                            )
+                        }
+                    }
+                    itemsIndexed(products, key = { _, product -> product.id }) { _, product ->
                         val collection = product.nativeCollection()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

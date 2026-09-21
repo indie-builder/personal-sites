@@ -9,7 +9,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -27,7 +29,15 @@ class PortfolioViewModelTest {
 
     private class FakeApi : PortfolioApi {
         var requests = 0
-        override suspend fun products() = PortfolioProducts()
+        var productFailures = 0
+        override suspend fun products(): PortfolioProducts {
+            requests++
+            if (productFailures > 0) {
+                productFailures--
+                throw java.io.IOException("network")
+            }
+            return PortfolioProducts(items = listOf(PortfolioProduct(id = "p1", name = "布局参考")))
+        }
         override suspend fun collection(
             collection: String,
             q: String,
@@ -80,5 +90,37 @@ class PortfolioViewModelTest {
         repeat(8) { viewModel.feed("layouts", "${it + 1}", "", "") }
         advanceUntilIdle()
         assertNotEquals(oldest, viewModel.feed("layouts", "0", "", ""))
+    }
+
+    @Test
+    fun loadProductsCachesAndRefreshFailureKeepsItems() = runTest(dispatcher) {
+        val api = FakeApi()
+        val viewModel = PortfolioViewModel(api)
+        // 首拉失败：items 仍为 null，productsLoaded 未置位。
+        api.productFailures = 1
+        viewModel.loadProducts()
+        advanceUntilIdle()
+        assertNull(viewModel.products.value.items)
+        // 重新进入落地页时 loadProducts 必须重试而非被缓存挡住。
+        viewModel.loadProducts()
+        advanceUntilIdle()
+        assertEquals(2, api.requests)
+        assertEquals("布局参考", viewModel.products.value.items!!.single().name)
+        // 已加载后 loadProducts 是空操作，不重复请求。
+        viewModel.loadProducts()
+        advanceUntilIdle()
+        assertEquals(2, api.requests)
+        // 刷新失败保留已有列表并置 refreshError。
+        api.productFailures = 1
+        viewModel.refreshProducts()
+        advanceUntilIdle()
+        val state = viewModel.products.value
+        assertEquals("布局参考", state.items!!.single().name)
+        assertTrue(state.refreshError)
+        assertFalse(state.refreshing)
+        // 恢复后刷新成功清除错误。
+        viewModel.refreshProducts()
+        advanceUntilIdle()
+        assertFalse(viewModel.products.value.refreshError)
     }
 }
