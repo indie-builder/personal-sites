@@ -134,10 +134,11 @@ struct AskControllerTests {
         controller.streaming
     }
 
-    /// 上限 15s：CI runner 过载时（单个同步测试可达 12s）事件送达仍能收敛。
+    /// 收敛上限：CI runner 过载时（实测单次事件送达可超 15s）仍能收敛；
+    /// 条件本身必然成立，上限只防挂死。
     private func waitUntil(
         _ condition: @MainActor () -> Bool,
-        timeout: Duration = .seconds(15),
+        timeout: Duration = .seconds(60),
     ) async {
         let deadline = ContinuousClock.now + timeout
         while !condition() {

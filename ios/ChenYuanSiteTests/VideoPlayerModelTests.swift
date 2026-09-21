@@ -80,10 +80,11 @@ struct VideoPlayerModelTests {
         return false
     }
 
-    /// 上限 15s：与 AskControllerTests 相同的收敛策略，防 CI 过载抖动。
+    /// 收敛上限：CI runner 过载时 AVFoundation 媒体服务可能 15s+ 才落账
+    /// （实测 32s 失败案例），条件本身必然成立，上限只防挂死。
     private func waitUntil(
         _ condition: @MainActor () -> Bool,
-        timeout: Duration = .seconds(15),
+        timeout: Duration = .seconds(60),
     ) async {
         let deadline = ContinuousClock.now + timeout
         while !condition() {
