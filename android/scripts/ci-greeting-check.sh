@@ -3,7 +3,15 @@
 # 「关于我」页顶部，再执行布局检查。要求 adb 在 PATH（emulator-runner 会话）。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-ADB_BIN="${ADB:?ADB 未设置且 PATH 中无 adb；CI 由 emulator-runner 提供，本地需显式传入}"
+# CI 由 emulator-runner 把 adb 放进 PATH（不设 ADB）；本地可显式传 ADB。
+ADB_BIN="${ADB:-}"
+if [ -z "$ADB_BIN" ]; then
+  ADB_BIN="$(command -v adb || true)"
+fi
+if [ -z "$ADB_BIN" ]; then
+  echo "adb not found：CI 应由 emulator-runner 提供 PATH；本地请显式传 ADB=..." >&2
+  exit 1
+fi
 # 单设备假设：mjs 半程（check-greeting-layout.mjs）读同一 ANDROID_SERIAL。
 export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
 APP="cn.lovemyrmb.personalsite"
