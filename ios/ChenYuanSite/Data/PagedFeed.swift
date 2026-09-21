@@ -102,7 +102,7 @@ final class PagedFeed<Value> {
         state.initial = false
         state.loadingMore = false
         state.refreshing = false
-        state.error = "暂时无法加载更多内容，请重试。"
+        state.error = state.items.isEmpty ? "暂时无法读取内容，请重试。" : "暂时无法更新内容，请重试。"
     }
 }
 

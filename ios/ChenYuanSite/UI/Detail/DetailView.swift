@@ -45,7 +45,7 @@ private struct DetailScaffold<Content: View>: View {
             }
             .padding(.horizontal, SiteSpace.compact)
             .padding(.vertical, SiteSpace.micro)
-            ScrollView { content().padding(.horizontal, SiteSpace.page) }
+            ScrollView { content().padding(.horizontal, SiteSpace.page).padding(.bottom, SiteSpace.section).textSelection(.enabled) }
                 .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { old, new in
                     onScrollDelta(new - old)
                 }
@@ -167,11 +167,11 @@ private struct CurationDetailScreen: View {
                 }
                 if let summary = item.summary, !summary.isEmpty, summary != item.title {
                     gap(SiteSpace.related)
-                    Text(summary).siteBodyStyle()
+                    DetailSection(eyebrow: "导读", text: summary)
                 }
                 if let text = item.text, !text.isEmpty, text != item.title, text != item.summary {
                     gap(SiteSpace.paragraph)
-                    Text(text).siteBodyStyle()
+                    DetailSection(eyebrow: "原帖", text: text)
                 }
                 if !item.media.isEmpty {
                     gap(SiteSpace.paragraph)
@@ -184,7 +184,7 @@ private struct CurationDetailScreen: View {
                 if !item.source.url.isEmpty {
                     gap(SiteSpace.item)
                     SourceCta(
-                        label: item.source.platform == "x" ? "在 X 查看原帖" : "查看原链接",
+                        label: item.source.platform == "x" ? "在 X 查看原帖" : item.source.platform == "douyin" ? "在抖音观看" : "查看原链接",
                         host: hostOf(item.source.url),
                     ) {
                         if let url = URL(string: item.source.url) { openURL(url) }
@@ -246,6 +246,8 @@ private struct CurationMediaSection: View {
     let media: [CurationMedia]
     let source: CurationSource
 
+    @State private var selectedPhoto: CurationMedia?
+
     private var videos: [CurationMedia] { media.filter { $0.videoUrl != nil } }
     private var photos: [CurationMedia] { media.filter { $0.videoUrl == nil } }
 
@@ -255,24 +257,37 @@ private struct CurationMediaSection: View {
                 VideoCard(media: video, source: source)
             }
             if photos.count == 1, let photo = photos.first {
-                RemoteImage(url: URL(string: photo.url), contentMode: .fit)
+                photoButton(photo, contentMode: .fit)
                     .aspectRatio(mediaAspect(photo, fallback: 4.0 / 3.0), contentMode: .fit)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .background(SiteTheme.line)
-                    .accessibilityLabel("图片")
+
             } else if photos.count > 1 {
                 LazyVGrid(columns: [GridItem](repeating: .init(.flexible(), spacing: 6), count: 3), spacing: 6) {
                     ForEach(Array(photos.enumerated()), id: \.offset) { _, photo in
-                        RemoteImage(url: URL(string: photo.url))
+                        photoButton(photo)
                             .aspectRatio(1, contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .background(SiteTheme.line)
-                            .accessibilityLabel("图片")
+
                     }
                 }
             }
         }
+        .fullScreenCover(item: $selectedPhoto) { photo in
+            PhotoReader(urlString: photo.url)
+        }
+    }
+
+    private func photoButton(_ photo: CurationMedia, contentMode: ContentMode = .fill) -> some View {
+        Button { selectedPhoto = photo } label: {
+            RemoteImage(url: URL(string: photo.url), contentMode: contentMode)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("全屏查看图片")
+        .accessibilityHint("支持双击和双指缩放")
+        .accessibilityIdentifier("detail-photo")
     }
 }
 
@@ -316,5 +331,119 @@ private struct VideoCard: View {
         let avPlayer = AVPlayer(url: url)
         avPlayer.play()
         player = avPlayer
+    }
+}
+
+
+/// 原生滚动缩放承载图片；全屏呈现不销毁详情列表的阅读位置。
+struct PhotoReader: View {
+    let urlString: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var image: UIImage?
+    @State private var failed = false
+    @State private var attempt = 0
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let image {
+                    ZoomablePhoto(image: image)
+                        .accessibilityLabel("图片，双指缩放或双击放大")
+                } else if failed {
+                    ErrorRetry(message: "图片暂时无法加载。") { attempt += 1 }
+                } else {
+                    ProgressView("正在加载图片…")
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(SiteTheme.background)
+            .navigationTitle("查看图片")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                        .accessibilityIdentifier("photo-close")
+                }
+            }
+            .task(id: attempt) {
+                failed = false
+                guard let url = URL(string: urlString) else { failed = true; return }
+                image = await ThumbnailDecoder.decode(url: url, maxPixelSize: 4096)
+                failed = image == nil
+            }
+        }
+    }
+}
+
+private struct ZoomablePhoto: UIViewRepresentable {
+    let image: UIImage
+
+    func makeUIView(context: Context) -> PhotoScrollView {
+        let view = PhotoScrollView()
+        view.photo.image = image
+        return view
+    }
+
+    func updateUIView(_ view: PhotoScrollView, context: Context) {}
+}
+
+private final class PhotoScrollView: UIScrollView, UIScrollViewDelegate {
+    let photo = UIImageView()
+    private var previousSize = CGSize.zero
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        delegate = self
+        minimumZoomScale = 1
+        maximumZoomScale = 5
+        bouncesZoom = true
+        showsHorizontalScrollIndicator = false
+        showsVerticalScrollIndicator = false
+        photo.contentMode = .scaleAspectFit
+        addSubview(photo)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleZoom(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTap)
+        accessibilityCustomActions = [
+            UIAccessibilityCustomAction(name: "放大图片", target: self, selector: #selector(accessibleZoomIn)),
+            UIAccessibilityCustomAction(name: "还原图片", target: self, selector: #selector(accessibleZoomOut)),
+        ]
+        isAccessibilityElement = true
+        accessibilityLabel = "图片"
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if bounds.size != previousSize {
+            previousSize = bounds.size
+            setZoomScale(1, animated: false)
+            photo.frame = CGRect(origin: .zero, size: bounds.size)
+            contentSize = bounds.size
+        }
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? { photo }
+
+    @objc private func toggleZoom(_ recognizer: UITapGestureRecognizer) {
+        let animated = !UIAccessibility.isReduceMotionEnabled
+        if zoomScale > 1 { setZoomScale(1, animated: animated) }
+        else {
+            let point = recognizer.location(in: photo)
+            let size = CGSize(width: bounds.width / 3, height: bounds.height / 3)
+            zoom(to: CGRect(x: point.x - size.width / 2, y: point.y - size.height / 2,
+                            width: size.width, height: size.height), animated: animated)
+        }
+    }
+
+    @objc private func accessibleZoomIn() -> Bool {
+        setZoomScale(min(zoomScale + 1, maximumZoomScale), animated: !UIAccessibility.isReduceMotionEnabled)
+        return true
+    }
+
+    @objc private func accessibleZoomOut() -> Bool {
+        setZoomScale(1, animated: !UIAccessibility.isReduceMotionEnabled)
+        return true
     }
 }

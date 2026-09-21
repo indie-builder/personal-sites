@@ -19,6 +19,9 @@ struct AskMessage: Identifiable, Equatable {
 @MainActor
 @Observable
 final class AskController {
+    var draft = ""
+    var searchScope: AskScope = .all
+
     private(set) var messages: [AskMessage] = []
     private(set) var streaming = false
     private(set) var error: String?
@@ -100,6 +103,8 @@ final class AskController {
         cancel()
         conversationId = Self.newConversationId()
         messages = []
+        draft = ""
+        searchScope = .all
         streaming = false
         error = nil
     }

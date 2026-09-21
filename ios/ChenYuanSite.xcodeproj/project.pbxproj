@@ -36,6 +36,8 @@
 		A20000000000000000000029 = {isa = PBXBuildFile; fileRef = A10000000000000000000029; };
 		A20000000000000000000030 = {isa = PBXBuildFile; fileRef = A10000000000000000000030; };
 		A20000000000000000000031 = {isa = PBXBuildFile; fileRef = A10000000000000000000031; };
+		A20000000000000000000032 = {isa = PBXBuildFile; fileRef = A10000000000000000000032; };
+		A20000000000000000000033 = {isa = PBXBuildFile; fileRef = A10000000000000000000033; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -101,6 +103,8 @@
 		A50000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChenYuanSite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A50000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChenYuanSiteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000032 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioAPI.swift; sourceTree = "<group>"; };
+		A10000000000000000000033 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -125,6 +129,7 @@
 		A30000000000000000000003 = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000032,
 				A10000000000000000000003,
 				A10000000000000000000004,
 				A10000000000000000000005,
@@ -137,6 +142,7 @@
 		A30000000000000000000004 = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000033,
 				A10000000000000000000009,
 				A10000000000000000000010,
 				A10000000000000000000011,
@@ -287,6 +293,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A20000000000000000000033,
+				A20000000000000000000032,
 				A20000000000000000000001,
 				A20000000000000000000002,
 				A20000000000000000000003,

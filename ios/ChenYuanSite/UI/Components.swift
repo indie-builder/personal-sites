@@ -64,6 +64,28 @@ nonisolated enum ThumbnailDecoder {
 
 // MARK: - 共享小部件
 
+/// 固定身份入口：头像与姓名作为整体，不随栏目横向滚动。
+struct ProfileLink: View {
+    var body: some View {
+        NavigationLink(value: Route.about) {
+            HStack(spacing: 6) {
+                Image("profile_avatar")
+                    .resizable().scaledToFill()
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                Text("陈远")
+                    .font(SiteText.tabSelected)
+                    .foregroundStyle(SiteTheme.ink)
+            }
+            .frame(minWidth: 44, minHeight: SiteSpace.touch)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("关于陈远")
+        .accessibilityIdentifier("profile-link")
+    }
+}
+
 /// 44pt 返回按钮（详情顶栏 / 问一问头部 / 引用阅读共用）。
 struct BackButton: View {
     var label = "返回"
@@ -112,7 +134,11 @@ struct RemoteImage: View {
     var body: some View {
         AsyncImage(url: url) { phase in
             if let image = phase.image { image.resizable().aspectRatio(nil, contentMode: contentMode) }
-            else { SiteTheme.line }
+            else if phase.error != nil {
+                ContentUnavailableView("图片未加载", systemImage: "photo")
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
 }
@@ -131,7 +157,7 @@ struct ErrorRetry: View {
                     .foregroundStyle(SiteTheme.ink)
                     .padding(.horizontal, SiteSpace.paragraph)
                     .padding(.vertical, SiteSpace.compact)
-                    .frame(minHeight: 32)
+                    .frame(minHeight: SiteSpace.touch)
             }
             .buttonStyle(.plain)
             .frame(minHeight: SiteSpace.touch)

@@ -58,6 +58,18 @@ struct AskControllerTests {
         return AskController(client: client, visitorId: "test-visitor-000000000000")
     }
 
+    @Test func newConversationClearsDraftAndScope() {
+        let controller = makeController()
+        controller.draft = "还没发送的问题"
+        controller.searchScope = .profile
+        controller.cancel()
+        #expect(controller.draft == "还没发送的问题")
+        #expect(controller.searchScope == .profile)
+        controller.newConversation()
+        #expect(controller.draft.isEmpty)
+        #expect(controller.searchScope == .all)
+    }
+
     @Test func sendRejectsShortQuestion() {
         let controller = makeController()
         controller.send("问")

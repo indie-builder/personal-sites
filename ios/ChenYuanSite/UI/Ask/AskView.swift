@@ -14,17 +14,16 @@ struct AskView: View {
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
 
-    @State private var input = ""
-    @State private var searchScope: AskScope = .all
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var followLatest = true
     @State private var isScrolling = false
     @State private var selectedSource: SelectedSource?
     @State private var confirmReset = false
     @FocusState private var inputFocused: Bool
 
-    struct SelectedSource: Equatable {
+    struct SelectedSource: Equatable, Identifiable {
+        var id: String { "\(messageID)-\(index)" }
         let messageID: Int
         let index: Int
     }
@@ -32,16 +31,15 @@ struct AskView: View {
     private var controller: AskController { env.askController }
 
     var body: some View {
-        Group {
-            if let selectedSource, let message = controller.messages.first(where: { $0.id == selectedSource.messageID }),
-                let source = message.sources[safe: selectedSource.index] {
-                SourceReader(source: source, number: selectedSource.index + 1) { self.selectedSource = nil }
-            } else {
-                VStack(spacing: 0) {
-                    header
-                    messageList
-                    composer
-                }
+        VStack(spacing: 0) {
+            header
+            messageList
+            composer
+        }
+        .sheet(item: $selectedSource) { selection in
+            if let message = controller.messages.first(where: { $0.id == selection.messageID }),
+               let source = message.sources[safe: selection.index] {
+                SourceReader(source: source, number: selection.index + 1) { selectedSource = nil }
             }
         }
         .background(SiteTheme.background)
@@ -49,7 +47,6 @@ struct AskView: View {
             Button("取消", role: .cancel) {}
             Button("新对话", role: .destructive) {
                 controller.newConversation()
-                input = ""
                 followLatest = true
             }
         } message: {
@@ -71,9 +68,13 @@ struct AskView: View {
             }
             Spacer()
             Button("新对话") {
-                if !controller.messages.isEmpty || !input.isEmpty { confirmReset = true }
+                if !controller.messages.isEmpty || !controller.draft.isEmpty { confirmReset = true }
             }
-            .font(SiteText.meta).foregroundStyle(SiteTheme.ink).buttonStyle(.plain).padding(.trailing, SiteSpace.compact)
+            .font(SiteText.meta).foregroundStyle(SiteTheme.ink)
+            .frame(minWidth: 48, minHeight: 48)
+            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .disabled(controller.messages.isEmpty && controller.draft.isEmpty)
         }
         .padding(.horizontal, SiteSpace.compact)
     }
@@ -105,13 +106,13 @@ struct AskView: View {
                 if !followLatest {
                     Button {
                         followLatest = true
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("conversation-end", anchor: .bottom) }
+                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { proxy.scrollTo("conversation-end", anchor: .bottom) }
                     } label: {
                         Image(systemName: "arrow.down")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(SiteTheme.ink)
-                            .frame(width: 40, height: 40)
-                            .background(SiteTheme.glass)
+                            .frame(width: 48, height: 48)
+                            .background(SiteTheme.background)
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
@@ -121,9 +122,6 @@ struct AskView: View {
             }
             .onChange(of: controller.messages.count) { _, _ in scrollToLatest(proxy) }
             .onChange(of: controller.messages.last?.text) { _, _ in scrollToLatest(proxy) }
-            .onChange(of: selectedSource) { _, _ in
-                if selectedSource == nil { scrollToLatest(proxy) }
-            }
         }
     }
 
@@ -138,8 +136,8 @@ struct AskView: View {
             Text("关于陈远、每日关注或开源内容，都可以从这里开始。").siteBodyStyle(SiteTheme.muted)
             ForEach(recommendedQuestions, id: \.question) { recommendation in
                 Button {
-                    input = recommendation.question
-                    searchScope = recommendation.scope
+                    controller.draft = recommendation.question
+                    controller.searchScope = recommendation.scope
                     inputFocused = true
                 } label: {
                     Text(recommendation.question)
@@ -147,6 +145,7 @@ struct AskView: View {
                         .foregroundStyle(SiteTheme.ink)
                         .padding(.horizontal, SiteSpace.paragraph)
                         .padding(.vertical, 8)
+                        .frame(minHeight: 48)
                         .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(SiteTheme.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -243,15 +242,16 @@ struct AskView: View {
     }
 
     private var composer: some View {
-        let trimmedLength = input.trimmingCharacters(in: .whitespacesAndNewlines).count
+        let trimmedLength = controller.draft.trimmingCharacters(in: .whitespacesAndNewlines).count
         let validInput = (2...1000).contains(trimmedLength)
         return VStack(spacing: SiteSpace.compact) {
-            TextField("输入你的问题…", text: $input, axis: .vertical)
+            TextField("输入你的问题…", text: Binding(get: { controller.draft }, set: { controller.draft = $0 }), axis: .vertical)
                 .font(SiteText.body)
                 .lineSpacing(SiteText.bodyLineSpacing)
                 .lineLimit(1...6)
                 .padding(SiteSpace.compact)
                 .focused($inputFocused)
+                .accessibilityIdentifier("ask-input")
                 .tint(SiteTheme.ink)
             HStack(spacing: SiteSpace.compact) {
                 scopeMenu
@@ -273,15 +273,15 @@ struct AskView: View {
     private var scopeMenu: some View {
         Menu {
             ForEach(AskScope.allCases) { scope in
-                Button(scope.label) { searchScope = scope }
+                Button(scope.label) { controller.searchScope = scope }
             }
         } label: {
             HStack(spacing: 2) {
-                Text(searchScope.label).font(SiteText.meta)
+                Text(controller.searchScope.label).font(SiteText.meta)
                 Image(systemName: "chevron.down").font(.system(size: 10, weight: .medium))
             }
             .foregroundStyle(SiteTheme.ink)
-            .padding(.vertical, 6)
+            .frame(minWidth: 48, minHeight: 48)
             .contentShape(Rectangle())
         }
         .disabled(controller.streaming)
@@ -302,13 +302,14 @@ struct AskView: View {
         .buttonStyle(.plain)
         .disabled(!active)
         .accessibilityLabel(controller.streaming ? "停止生成" : "发送")
+        .accessibilityIdentifier("ask-send")
     }
 
     private func send(validInput: Bool) {
         guard validInput, !controller.streaming else { return }
         followLatest = true
-        controller.send(input, scope: searchScope)
-        input = ""
+        controller.send(controller.draft, scope: controller.searchScope)
+        controller.draft = ""
         inputFocused = false
     }
 

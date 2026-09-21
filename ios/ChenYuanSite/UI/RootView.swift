@@ -3,15 +3,17 @@ import SwiftUI
 enum Route: Hashable {
     case detail
     case about
+    case portfolio
+    case portfolioCollection(String)
+    case portfolioTools
+    case portfolioSite
 }
 
 /// 根视图：NavigationStack 内容 + 悬浮胶囊玻璃底栏。
-/// 底栏在列表滚动时按 ±16pt 阈值隐藏/显示，切页与跳转时复位（与安卓一致）。
+/// 向下阅读累计 16pt 后隐藏底栏；回滑立即显示，切页与跳转时复位。
 struct RootView: View {
-    static let portfolioURL = URL(string: "https://portfolio.default-coder.lovemyrmb.cn/")!
-
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var path: [Route] = []
     @State private var selectedSection = Section.aiNews
@@ -37,17 +39,29 @@ struct RootView: View {
                     .navigationDestination(for: Route.self) { route in
                         switch route {
                         case .detail: DetailRouteView(onScrollDelta: noteScroll)
-                        case .about: AboutView(bottomPadding: barTotal, onScrollDelta: noteScroll)
+                        case .portfolio: PortfolioView(bottomPadding: barTotal)
+                        case .portfolioCollection(let collection): PortfolioCollectionView(collection: collection)
+                        case .portfolioTools: PortfolioToolsView()
+                        case .portfolioSite: PortfolioSiteView()
+                        case .about:
+                            VStack(spacing: 0) {
+                                HStack {
+                                    BackButton { path.removeLast() }
+                                    Spacer()
+                                }
+                                .padding(.horizontal, SiteSpace.paragraph)
+                                AboutView(bottomPadding: barTotal, onScrollDelta: noteScroll)
+                            }
                         }
                     }
                 }
                 .background(SiteTheme.background)
 
-                if barVisible {
+                if barVisible && (path.isEmpty || path.last == .about || path.last == .portfolio) {
                     glassBar.transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .animation(.snappy(duration: 0.22, extraBounce: 0), value: barVisible)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.22, extraBounce: 0), value: barVisible)
             .frame(width: proxy.size.width, height: proxy.size.height)
             .fullScreenCover(isPresented: $showAsk) { AskView(demoResetPrompt: askResetDemo) }
             .onAppear { applyLaunchArguments() }
@@ -60,14 +74,16 @@ struct RootView: View {
     private var glassBar: some View {
         HStack(spacing: 0) {
             barItem(icon: "waveform.path.ecg", label: "动态", selected: path.isEmpty) {
-                withAnimation(.easeOut(duration: 0.2)) { path = [] }
-                withAnimation(.easeOut(duration: 0.22)) { selectedSection = .aiNews }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { path = [] }
                 showBar()
             }
             barItem(icon: "ellipsis.bubble", label: "问一问", selected: false) { showAsk = true }
-            barItem(icon: "briefcase", label: "作品集", selected: false) { openURL(Self.portfolioURL) }
+            barItem(icon: "briefcase", label: "作品集", selected: path.last == .portfolio) {
+                if path.last != .portfolio { path = [.portfolio] }
+                showBar()
+            }
             barItem(icon: "person", label: "关于我", selected: path.last == .about) {
-                withAnimation(.easeOut(duration: 0.2)) { path = path.last == .about ? [] : [.about] }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { path = [.about] }
             }
         }
         .padding(5)
@@ -96,15 +112,18 @@ struct RootView: View {
         .accessibilityIdentifier("bar-\(label)")
     }
 
-    // MARK: 滚动隐藏（±16pt 阈值，反向滚动先清零累计位移）
+    // MARK: 向下阅读隐藏，回滑立即显示
 
     private func noteScroll(_ delta: CGFloat) {
-        if travel * delta < 0 { travel = 0 }
-        travel += delta
-        if abs(travel) >= threshold {
-            // iOS contentOffset 向下滚动时增大：向下浏览隐藏底栏。
-            barVisible = travel < 0
-            travel = 0
+        guard delta != 0 else { return }
+        if delta < 0 {
+            showBar()
+        } else {
+            travel += delta
+            if travel >= threshold {
+                barVisible = false
+                travel = 0
+            }
         }
     }
 
@@ -122,6 +141,7 @@ struct RootView: View {
     private func applyLaunchArguments() {
         let flag = ProcessInfo.processInfo.arguments.contains
         if flag("-route-ask") { showAsk = true }
+        if flag("-route-portfolio") { path = [.portfolio] }
         if flag("-route-about") { path = [.about] }
         if flag("-route-design") { selectedSection = .design }
         if flag("-ask-demo") || flag("-ask-reset") {
