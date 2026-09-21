@@ -31,7 +31,7 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 - 图标由 `ui/icons/SiteIcons.kt` 内联（Material Symbols 源码矢量），不依赖已停更的 `material-icons-extended`。
 - 性能：只读数据模型经 `stability_config.conf` 标记 Compose 稳定（跳过无效重组）；视频卡片可见时经 `data/VideoPreloader.kt`（media3 DefaultPreloadManager + SimpleCache，64MB LRU）预取片头 5 秒到磁盘缓存，播放用共享缓存的播放器点开即播。
 - `local.properties` 由 Android Studio 生成（`sdk.dir`），不入库。
-- CI（`.github/workflows/android-tests.yml`）在 `android/` 变更时运行 `:app:assembleDebug`、`:app:testDebugUnitTest` 与 `scripts/check-typography.mjs`、`scripts/check-opening-frames.mjs`；`check-greeting-layout.mjs` 需要运行中的应用与模拟器，仅在本地执行。
+- CI（`.github/workflows/android-tests.yml`）在 `android/` 变更时运行 `:app:assembleDebug`、`:app:testDebugUnitTest`、`:app:connectedDebugAndroidTest`（API 34 模拟器）与 `scripts/check-typography.mjs`、`scripts/check-opening-frames.mjs`、`scripts/ci-greeting-check.sh`（在模拟器上引导到「关于我」后执行 `check-greeting-layout.mjs`）。
 
 ## 工程结构
 
