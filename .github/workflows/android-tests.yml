@@ -1,0 +1,59 @@
+name: Android tests
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-tests.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # JVM 单测与静态 UI 检查在 ubuntu 即可；仪器化测试需要模拟器，暂不进 CI。
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Set up Gradle caching
+        uses: gradle/actions/setup-gradle@v6
+      - name: Drop machine-specific daemon JVM path
+        # gradle.properties 的 org.gradle.java.home 指向作者本机 JDK 路径；
+        # CI 删除该行后由 setup-java 注入的 JAVA_HOME 决定 daemon JVM。
+        run: sed -i '/^org.gradle.java.home/d' android/gradle.properties
+      - name: Build and run unit tests
+        working-directory: android
+        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest --console=plain
+      - name: Check centralized typography
+        working-directory: android
+        run: node scripts/check-typography.mjs
+      - name: Check opening GIF frames
+        working-directory: android
+        # ubuntu runner 预装 ffmpeg；脚本只读仓库内 GIF 资产。
+        run: node scripts/check-opening-frames.mjs
+      - name: Upload unit test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
