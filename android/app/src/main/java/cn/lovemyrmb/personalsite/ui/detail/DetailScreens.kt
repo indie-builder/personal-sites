@@ -2,22 +2,18 @@ package cn.lovemyrmb.personalsite.ui.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -31,18 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.AiNewsItem
 import cn.lovemyrmb.personalsite.data.CurationItem
-import cn.lovemyrmb.personalsite.data.CurationMedia
-import cn.lovemyrmb.personalsite.data.CurationSource
 import cn.lovemyrmb.personalsite.data.DetailEntry
 import cn.lovemyrmb.personalsite.data.MediaUrls
 import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
@@ -50,8 +38,9 @@ import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.aiNewsCategoryLabel
 import cn.lovemyrmb.personalsite.data.dimensionLabels
+import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
-import cn.lovemyrmb.personalsite.ui.components.VideoCard
+import cn.lovemyrmb.personalsite.ui.components.SourceCta
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.components.openExternally
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
@@ -309,88 +298,6 @@ private fun DetailSection(eyebrow: String, body: String) {
     Text(text = eyebrow, style = SiteText.eyebrow, color = SiteTheme.colors.quiet)
     Spacer(Modifier.height(SiteSpace.compact))
     Text(text = body, style = SiteText.body, color = SiteTheme.colors.ink)
-}
-
-@Composable
-private fun SourceCta(label: String, host: String, onClick: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(SiteTheme.colors.ink)
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = SiteSpace.page, vertical = 14.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = label,
-                style = SiteText.listTitle,
-                color = SiteTheme.colors.background,
-            )
-            Spacer(Modifier.width(6.dp))
-            Icon(
-                imageVector = SiteIcons.OpenInNew,
-                contentDescription = null,
-                tint = SiteTheme.colors.background,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-        Text(
-            text = host,
-            style = SiteText.meta,
-            color = SiteTheme.colors.quiet,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-    }
-}
-
-/** 策展媒体的展示：视频逐个播放卡，图片 1 张整宽、多张三列方格。 */
-@Composable
-private fun CurationMediaSection(media: List<CurationMedia>, source: CurationSource) {
-    val videos = media.filter { it.videoUrl != null }
-    val photos = media.filter { it.videoUrl == null }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        videos.forEach { video -> VideoCard(media = video, source = source) }
-        when (photos.size) {
-            0 -> Unit
-            1 -> {
-                val photo = photos.first()
-                val aspect = photo.width?.takeIf { it > 0 && (photo.height ?: 0) > 0 }
-                    ?.let { it.toFloat() / photo.height!!.toFloat() } ?: 4f / 3f
-                AsyncImage(
-                    model = photo.url,
-                    contentDescription = "图片",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(aspect)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(SiteTheme.colors.line),
-                )
-            }
-
-            else -> photos.chunked(3).forEach { rowPhotos ->
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    rowPhotos.forEach { photo ->
-                        AsyncImage(
-                            model = photo.url,
-                            contentDescription = "图片",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(SiteTheme.colors.line),
-                        )
-                    }
-                    repeat(3 - rowPhotos.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
-    }
 }
 
 private fun hostOf(url: String): String = runCatching {
