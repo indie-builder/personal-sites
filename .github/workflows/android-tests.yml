@@ -46,13 +46,15 @@ jobs:
       - name: Check centralized typography
         working-directory: android
         run: node scripts/check-typography.mjs
+      - name: Install ffmpeg
+        # 首跑发现 ubuntu-latest 镜像不含 ffmpeg（check-opening-frames 依赖）。
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Check opening GIF frames
         working-directory: android
-        # ubuntu runner 预装 ffmpeg；脚本只读仓库内 GIF 资产。
         run: node scripts/check-opening-frames.mjs
       - name: Upload unit test report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-report
           path: android/app/build/reports/tests/testDebugUnitTest/
