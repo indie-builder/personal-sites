@@ -81,11 +81,13 @@ final class VideoPlayerModel {
     private(set) var phase: Phase = .idle
     private var statusObservation: NSKeyValueObservation?
     private var observingPlayer: AVPlayer?
+    private var observingItemID: ObjectIdentifier?
     private var lastURL: URL?
 
     /// 音频会话全应用共享一份：计数在播的视频卡，最后一个让出者才释放，
-    /// 避免同页多卡中一张滚出视图时误停其他卡的会话。仅主线程访问。
-    private static var playingCount = 0
+    /// 避免同页多卡中一张滚出视图时误停其他卡的会话。仅主线程访问；
+    /// internal 供测试断言收支（测试用例开头清零）。
+    static var playingCount = 0
 
     /// 开始播放：立即进入 playing（原生控制条自会缓冲）；
     /// 条目状态落定（就绪或失败）即结束观察；失败则转入错误态并让出会话。
@@ -99,10 +101,13 @@ final class VideoPlayerModel {
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
         observingPlayer = player
-        // KVO 回调发生在媒体的任意线程：只携带基础值跳回主线程判定。
+        observingItemID = ObjectIdentifier(item)
+        // KVO 回调发生在媒体的任意线程：只携带基础值跳回主线程判定；
+        // 条目以 ObjectIdentifier 标识（Sendable），迟到的旧回调可被识别丢弃。
         statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observed, _ in
-            let status = (observed as? AVPlayerItem)?.status ?? .unknown
-            Task { @MainActor [weak self] in self?.handleStatus(status) }
+            let status = observed.status
+            let itemID = ObjectIdentifier(observed)
+            Task { @MainActor [weak self] in self?.handleStatus(status, itemID: itemID) }
         }
         phase = .playing(player)
         player.play()
@@ -118,6 +123,7 @@ final class VideoPlayerModel {
     func pause() {
         statusObservation?.invalidate()
         statusObservation = nil
+        observingItemID = nil
         if case .playing(let player) = phase {
             player.pause()
             releasePlaybackSlot()
@@ -126,16 +132,17 @@ final class VideoPlayerModel {
     }
 
     /// 条目状态回调：一次落定即结束观察；迟到的旧回调
-    /// （播放器已被替换或已回封面）不得覆盖新状态。
-    private func handleStatus(_ status: AVPlayerItem.Status) {
+    /// （条目已被替换或已回封面）在身份守卫处直接丢弃——
+    /// 不覆盖新状态、不重复让出槽位、不触碰新条目的观察。
+    private func handleStatus(_ status: AVPlayerItem.Status, itemID: ObjectIdentifier) {
         switch status {
         case .unknown: return
         case .readyToPlay, .failed: break
         @unknown default: return
         }
+        guard case .playing(let current) = phase, current === observingPlayer, itemID == observingItemID else { return }
         statusObservation?.invalidate()
         statusObservation = nil
-        guard case .playing(let current) = phase, current === observingPlayer else { return }
         if status == .failed {
             phase = .failed
             releasePlaybackSlot()
