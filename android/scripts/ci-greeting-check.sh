@@ -3,7 +3,9 @@
 # 「关于我」页顶部，再执行布局检查。要求 adb 在 PATH（emulator-runner 会话）。
 set -euo pipefail
 cd "$(dirname "$0")/.."
-ADB_BIN="${ADB:-$(command -v adb)}"
+ADB_BIN="${ADB:?ADB 未设置且 PATH 中无 adb；CI 由 emulator-runner 提供，本地需显式传入}"
+# 单设备假设：mjs 半程（check-greeting-layout.mjs）读同一 ANDROID_SERIAL。
+export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
 APP="cn.lovemyrmb.personalsite"
 
 "$ADB_BIN" shell am force-stop "$APP" || true
@@ -22,11 +24,17 @@ sleep 10
 "$ADB_BIN" shell input tap 160 320
 sleep 2
 
-# uiautomator 偶发拿不到 idle 状态，重试一次。
-xml="$("$ADB_BIN" exec-out uiautomator dump /dev/tty || "$ADB_BIN" exec-out uiautomator dump /dev/tty)"
-about="$(echo "$xml" | tr '>' '\n' | grep 'text="关于我"' | grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | head -1)"
+# uiautomator 偶发拿不到 idle 状态，间隔重试一次。
+xml="$("$ADB_BIN" exec-out uiautomator dump /dev/tty || true)"
+if [ -z "$xml" ]; then
+  sleep 2
+  xml="$("$ADB_BIN" exec-out uiautomator dump /dev/tty || true)"
+fi
+# 管道以 || true 收口：pipefail 下「找不到关于我」不应静默退出，须走友好报错。
+about="$(echo "$xml" | tr '>' '\n' | grep 'text="关于我"' | grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | head -1 || true)"
 if [ -z "$about" ]; then
   echo "关于我 tab not found on home screen" >&2
+  echo "$xml" | head -c 500 >&2
   exit 1
 fi
 l="$(echo "$about" | sed -E 's/.*\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\].*/\1/')"
