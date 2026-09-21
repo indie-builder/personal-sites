@@ -68,11 +68,8 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
-          script: |
-            cd android
-            ./gradlew :app:connectedDebugAndroidTest --console=plain
-            # 顺带在已启动的模拟器上执行问候布局检查（三个 UI 检查脚本的最后一个）。
-            ./scripts/ci-greeting-check.sh
+          # 该 action 逐行用独立 sh -c 执行，跨行不保留 cwd，必须单行 && 连接。
+          script: cd android && ./gradlew :app:connectedDebugAndroidTest --console=plain && ./scripts/ci-greeting-check.sh
       - name: Upload unit test report
         if: failure()
         uses: actions/upload-artifact@v7
