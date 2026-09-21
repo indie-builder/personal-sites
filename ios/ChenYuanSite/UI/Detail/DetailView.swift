@@ -304,8 +304,9 @@ private struct VideoCard: View {
         ZStack {
             switch playback.phase {
             case .idle:
-                RemoteImage(url: URL(string: media.posterURL))
-                    .accessibilityLabel("视频封面")
+                // 封面失败时重试入口靠底展示，与居中播放钮互不遮挡；
+                // 不给封面施加整体 a11y 标签，避免把重试钮合成进单元素。
+                RemoteImage(url: URL(string: media.posterURL), retryAlignment: .bottom)
                 Button {
                     if let videoURL { playback.play(url: videoURL) }
                 } label: {

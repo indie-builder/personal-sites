@@ -591,7 +591,7 @@ private struct PortfolioVideo: View {
         ZStack {
             switch playback.phase {
             case .idle:
-                RemoteImage(url: URL(string: poster), contentMode: .fit)
+                RemoteImage(url: URL(string: poster), contentMode: .fit, retryAlignment: .bottom)
                 Button {
                     if let url = URL(string: urlString) { playback.play(url: url) }
                 } label: {

@@ -225,10 +225,13 @@ struct IconButton: View {
 /// 加载失败给出「重试」入口（attempt 变更重建 AsyncImage 重新拉取）；
 /// 微小展示位（如 24pt 工具图标，容不下 44pt 触控目标）传
 /// showsRetry: false 只显示占位图标，随页面刷新恢复。
+/// 视频封面等中央被其他控件占用的槽位传 retryAlignment: .bottom，
+/// 让重试入口与中央控件互不遮挡。
 struct RemoteImage: View {
     let url: URL?
     var contentMode: ContentMode = .fill
     var showsRetry = true
+    var retryAlignment: Alignment = .center
 
     @State private var attempt = 0
 
@@ -253,8 +256,9 @@ struct RemoteImage: View {
                 Image(systemName: "arrow.clockwise").font(.system(size: 15, weight: .medium))
                 Text("重试").font(SiteText.eyebrow)
             }
+            .padding(SiteSpace.compact)
             .foregroundStyle(SiteTheme.muted)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: retryAlignment)
             .frame(minWidth: SiteSpace.touch, minHeight: SiteSpace.touch)
             .contentShape(Rectangle())
         }
