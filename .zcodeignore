@@ -1,0 +1,77 @@
+.DS_Store
+/.codex/config.toml
+.env
+.env.*
+!.env.example
+.vercel
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+.turbo/
+*.tsbuildinfo
+/data/sensitive/
+/knowledge/sensitive/
+# Legacy names remain ignored so an old checkout cannot accidentally reintroduce
+# sensitive source data under the former directory names.
+/data/private/
+/knowledge/private/
+/tools/smaug/.state/
+/tools/smaug/smaug.config.json
+/tools/smaug/bookmarks.md
+# Sensitive source kept only for local recovery; never recreate it at repo root.
+/陈远-Agent工程师_全栈工程师_资深java工程师.md
+/var/
+# Python virtual environments (e.g. video-promo/analysis/.venv) must never enter git;
+# their native binaries exceed GitHub's 100 MiB hard limit and fail git:safety.
+.venv/
+# Local scratch logs/snapshots and the 1.5G video-promo workspace; never commit.
+/.tmp/
+/video-promo/
+# Third-party video-shotcraft skill install (50M of demo/gallery assets) and its
+# symlinked entry points; other skills under .agents/skills stay tracked.
+/.agents/skills/video-shotcraft/
+/.claude/skills/video-shotcraft
+/.pi/skills/video-shotcraft
+# Generated design review screenshots; other .impeccable review artifacts stay tracked.
+/.impeccable/review/design-*.png
+
+# Local image-generation scratch output (avatar drafts); never commit.
+/output/
+
+# ZCode CLI per-session state; never commit.
+/.zcode/
+# skills CLI entry points for agents this repo does not track (Eve, AstrBot);
+# content stays duplicated on disk, canonical skills live in .agents/skills.
+/agent/
+/data/skills/
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+bower_components/
+jspm_packages/
+__pycache__/
+site-packages/
+venv/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）
