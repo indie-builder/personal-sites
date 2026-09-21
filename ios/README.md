@@ -19,7 +19,7 @@ ios/
 │   ├── Data/                     # Models / SiteAPI / PagedFeed / AskClient / AskController
 │   ├── UI/
 │   │   ├── Theme.swift           # 色彩/字号/间距令牌 + 全站通用修饰（siteBodyStyle 等）
-│   │   ├── Components.swift      # 共享部件（缩略图/返回钮/图标钮/重试块/时间文案）
+│   │   ├── Components.swift      # 共享部件（缩略图/返回钮/图标钮/重试块/视频播放状态/时间文案）
 │   │   ├── RootView.swift        # 四项玻璃底栏 + 路由 + 滚动隐藏
 │   │   ├── OpeningView.swift     # 开场动画
 │   │   └── Home|Detail|Ask|About # 各页面
@@ -75,6 +75,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 ## 已知边界
 
 - 问一问草稿与范围随会话保留，退出再进入不会丢失；仅存于内存，进程死亡不恢复；安卓的 Ctrl+Enter 发送在 iOS 触屏上无对应项
+- 视频为前台播放：未开启后台音频，锁屏或来电中断会暂停，恢复需手动重播；播放开始后的卡顿不转错误态（仅加载阶段提供失败反馈与重试）
 - 开场 GIF 通过 ImageIO 抽帧播放一次；「减弱动态效果」开启时直接跳过开场
 - 未做：iPad 专属布局（当前为兼容性自适应）、推送、App Store 图标集细分尺寸（单尺寸 1024）
 
@@ -84,6 +85,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 - 详情隐藏全局底栏，保留返回操作与完整来源出口；策展导读和原帖分区呈现。
 - 顶部栏目同时支持横滑和“选择栏目”菜单；成功空列表给出空态与刷新入口。
 - 图片支持全屏、双指和双击缩放，以及辅助功能放大／还原动作；单图最大解码边长 4096px。
+- 视频播放使用 playback 音频类别：声音不受静音键影响，播放失败给出错误态与重试；离开卡片暂停并释放音频会话。
 - 引用使用独立阅读弹层，保留原对话视图与阅读位置。自定义导航和滚动动画遵循减弱动态效果。
 
 默认保持紧凑固定字号，不扩展大字号适配逻辑。

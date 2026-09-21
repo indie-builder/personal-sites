@@ -585,28 +585,31 @@ struct PortfolioSiteView: View {
 private struct PortfolioVideo: View {
     let urlString: String
     let poster: String
-    @State private var player: AVPlayer?
+    @State private var playback = VideoPlayerModel()
 
     var body: some View {
         ZStack {
-            if let player { VideoPlayer(player: player) }
-            else {
+            switch playback.phase {
+            case .idle:
                 RemoteImage(url: URL(string: poster), contentMode: .fit)
                 Button {
-                    guard let url = URL(string: urlString) else { return }
-                    let next = AVPlayer(url: url)
-                    player = next
-                    next.play()
+                    if let url = URL(string: urlString) { playback.play(url: url) }
                 } label: {
                     Image(systemName: "play.fill").font(.system(size: 22))
                         .foregroundStyle(SiteTheme.ink).frame(width: 52, height: 52)
                         .background(SiteTheme.background, in: Circle())
                 }
                 .buttonStyle(.plain).accessibilityLabel("播放视频")
+            case .playing(let player):
+                VideoPlayer(player: player)
+            case .failed:
+                ErrorRetry(message: "视频暂时无法播放。") { playback.retry() }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(SiteTheme.background)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .onDisappear { player?.pause() }
-        .onChange(of: urlString) { _, _ in player?.pause(); player = nil }
+        .onDisappear { playback.pause() }
+        .onChange(of: urlString) { _, _ in playback.pause() }
     }
 }
