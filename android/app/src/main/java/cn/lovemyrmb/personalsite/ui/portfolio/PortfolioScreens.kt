@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -272,7 +273,7 @@ fun PortfolioCollectionScreen(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("portfolio-search"),
             )
             if (query.isNotEmpty()) {
                 IconButton(onClick = { query = "" }, modifier = Modifier.size(SiteSpace.touch)) {
