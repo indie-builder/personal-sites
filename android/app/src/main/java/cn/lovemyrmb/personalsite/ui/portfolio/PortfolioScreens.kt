@@ -61,7 +61,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.data.CurationMedia
 import cn.lovemyrmb.personalsite.data.CurationSource
 import cn.lovemyrmb.personalsite.data.PORTFOLIO_BASE_URL
@@ -74,6 +73,7 @@ import cn.lovemyrmb.personalsite.data.PortfolioProduct
 import cn.lovemyrmb.personalsite.data.PortfolioReaderHolder
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
+import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.FeedFooter
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
@@ -167,10 +167,9 @@ fun PortfolioScreen(
                                     color = SiteTheme.colors.quiet,
                                 )
                             }
-                            AsyncImage(
+                            SiteAsyncImage(
                                 model = product.cover.takeIf { it.isNotBlank() },
                                 contentDescription = null,
-                                contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .width(100.dp)
                                     .height(112.dp)
@@ -504,7 +503,7 @@ private fun GridItem(item: PortfolioItem, collection: String, onOpen: () -> Unit
                 .clip(RoundedCornerShape(8.dp))
                 .background(SiteTheme.colors.line),
         ) {
-            AsyncImage(
+            SiteAsyncImage(
                 model = item.thumbnail.takeIf { it.isNotBlank() },
                 contentDescription = null,
                 contentScale = if (collection == "layouts") ContentScale.Fit else ContentScale.Crop,

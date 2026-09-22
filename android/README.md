@@ -49,5 +49,5 @@ app/src/main/java/cn/lovemyrmb/personalsite/
     ├── portfolio/             # 作品集落地页 / 图鉴集合 / 阅读器
     ├── about/                 # 履历小票 Sheet
     ├── ask/                   # 全屏原生问答页面
-    └── components/            # 视频卡、媒体区、页脚三态、来源 CTA、时间工具、Custom Tabs
+    └── components/            # 视频卡、图片自动重试、媒体区、页脚三态、来源 CTA、时间工具、Custom Tabs
 ```

@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.data.CurationMedia
 import cn.lovemyrmb.personalsite.data.CurationSource
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
@@ -31,7 +30,7 @@ fun CurationMediaSection(media: List<CurationMedia>, source: CurationSource) {
                 val photo = photos.first()
                 val aspect = photo.width?.takeIf { it > 0 && (photo.height ?: 0) > 0 }
                     ?.let { it.toFloat() / photo.height!!.toFloat() } ?: 4f / 3f
-                AsyncImage(
+                SiteAsyncImage(
                     model = photo.url,
                     contentDescription = "图片",
                     contentScale = ContentScale.FillWidth,
@@ -46,10 +45,9 @@ fun CurationMediaSection(media: List<CurationMedia>, source: CurationSource) {
             else -> photos.chunked(3).forEach { rowPhotos ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     rowPhotos.forEach { photo ->
-                        AsyncImage(
+                        SiteAsyncImage(
                             model = photo.url,
                             contentDescription = "图片",
-                            contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)

@@ -55,6 +55,7 @@ import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
+import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.FeedFooter
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
@@ -326,10 +327,9 @@ private fun CurationRow(item: CurationItem, section: Section, onOpen: () -> Unit
             )
         }
         item.media.firstOrNull()?.let { media ->
-            AsyncImage(
+            SiteAsyncImage(
                 model = media.posterUrl,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .width(104.dp)
                     .aspectRatio(4f / 3f)

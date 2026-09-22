@@ -30,7 +30,6 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.CurationMedia
 import cn.lovemyrmb.personalsite.data.CurationSource
@@ -106,10 +105,9 @@ fun VideoCard(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            AsyncImage(
+            SiteAsyncImage(
                 model = media.posterUrl,
                 contentDescription = "视频封面",
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
                     .clickable { playing = true },
