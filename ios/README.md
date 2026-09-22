@@ -25,7 +25,7 @@ ios/
 │   │   └── Home|Detail|Ask|About # 各页面
 │   ├── Assets.xcassets           # App 图标 + 头像
 │   └── opening_character.gif     # 开场人物序列（与 Web/安卓同素材）
-├── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、时间文案）
+├── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、视频播放状态机、时间文案）
 └── ChenYuanSiteUITests/          # XCUITest 无障碍回归（栏目 Tab / 底栏选中语义）
 ```
 
