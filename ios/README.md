@@ -44,16 +44,16 @@ ios/
 ## 开发与验证
 
 ```bash
-# 编译（模拟器）
+# 编译（模拟器；-derivedDataPath 使下方安装命令的产物路径确定）
 xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
-  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' build
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath ios/build build
 
 # 单元测试 + UI 测试（选中语义、草稿保留、栏目恢复、横屏冒烟）
 xcodebuild -project ios/ChenYuanSite.xcodeproj -scheme ChenYuanSite \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test
 
 # 安装到已启动的模拟器
-xcrun simctl install <UDID> ios/build/Sym/Debug-iphonesimulator/ChenYuanSite.app
+xcrun simctl install <UDID> ios/build/Build/Products/Debug-iphonesimulator/ChenYuanSite.app
 xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 ```
 
