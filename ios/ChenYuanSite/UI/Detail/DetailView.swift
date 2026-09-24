@@ -291,23 +291,24 @@ private struct CurationMediaSection: View {
     }
 }
 
-/// 视频卡片：默认展示封面 + 播放圆钮，点击后用 AVPlayer 原生播放。
+/// 视频卡片：默认展示封面 + 播放圆钮，点击后用 AVPlayer 原生播放；
+/// 加载失败转入错误态可重试（状态机见 VideoPlayerModel）。
 /// X 平台视频自动经 /api/x-media 代理（MediaURLs.video）。
 private struct VideoCard: View {
     let media: CurationMedia
     let source: CurationSource
 
-    @State private var player: AVPlayer?
+    @State private var playback = VideoPlayerModel()
 
     var body: some View {
         ZStack {
-            if let player {
-                VideoPlayer(player: player).clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                RemoteImage(url: URL(string: media.posterURL))
-                    .accessibilityLabel("视频封面")
+            switch playback.phase {
+            case .idle:
+                // 封面失败时重试入口靠底展示，与居中播放钮互不遮挡；
+                // 不给封面施加整体 a11y 标签，避免把重试钮合成进单元素。
+                RemoteImage(url: URL(string: media.posterURL), retryAlignment: .bottom)
                 Button {
-                    startPlaying()
+                    if let videoURL { playback.play(url: videoURL) }
                 } label: {
                     ZStack {
                         Circle().fill(SiteTheme.glass)
@@ -317,20 +318,22 @@ private struct VideoCard: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("播放视频")
+            case .playing(let player):
+                VideoPlayer(player: player).clipShape(RoundedRectangle(cornerRadius: 8))
+            case .failed:
+                ErrorRetry(message: "视频暂时无法播放。") { playback.retry() }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .aspectRatio(mediaAspect(media, fallback: 16.0 / 9.0), contentMode: .fit)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .background(SiteTheme.line)
-        .onDisappear { player?.pause() }
+        .onDisappear { playback.pause() }
     }
 
-    private func startPlaying() {
-        guard let videoURL = media.videoUrl, let url = MediaURLs.video(platform: source.platform, videoURL: videoURL) else { return }
-        let avPlayer = AVPlayer(url: url)
-        avPlayer.play()
-        player = avPlayer
+    private var videoURL: URL? {
+        media.videoUrl.flatMap { MediaURLs.video(platform: source.platform, videoURL: $0) }
     }
 }
 

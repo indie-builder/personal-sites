@@ -22,10 +22,16 @@ struct PortfolioView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
             ScrollView {
-                if error {
-                    ErrorRetry(message: "暂时无法读取作品集。") { attempt += 1 }
-                } else if products.isEmpty {
-                    ProgressView("正在读取作品…").padding(40)
+                if products.isEmpty {
+                    if error {
+                        // 与 Home 信息流错误态一致：给 420 高度支撑让内容大致居中，
+                        // 不紧贴页头。
+                        ErrorRetry(message: "暂时无法读取作品集。") { attempt += 1 }
+                            .frame(minHeight: 420)
+                    } else {
+                        ProgressView("正在读取作品…")
+                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 420)
+                    }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(products) { product in
@@ -64,6 +70,10 @@ struct PortfolioView: View {
                             .accessibilityIdentifier("portfolio-\(product.id)")
                             Divider().overlay(SiteTheme.line)
                         }
+                        // 已有内容时刷新失败不顶掉列表（对齐 Home 信息流与集合页的页脚重试）。
+                        if error {
+                            ErrorRetry(message: "刷新失败，请重试。") { attempt += 1 }
+                        }
                     }
                     .padding(.horizontal, SiteSpace.page)
                     .padding(.bottom, bottomPadding + 16)
@@ -90,6 +100,9 @@ struct PortfolioView: View {
         do {
             let response: PortfolioProducts = try await PortfolioAPI().get()
             products = response.items
+            // 与入口清一次的差别：并发的前一次失败回调可能晚于本次入口清，
+            // 成功落地时再清一次，避免「有内容 + 误报刷新失败」的页脚残留。
+            error = false
         } catch { if !Task.isCancelled { self.error = true } }
     }
 }
@@ -521,7 +534,7 @@ struct PortfolioToolsView: View {
                                     Button { openURL(url) } label: {
                                         HStack(spacing: 10) {
                                             if !tool.icon.isEmpty {
-                                                RemoteImage(url: URL(string: tool.icon), contentMode: .fit).frame(width: 24, height: 24)
+                                                RemoteImage(url: URL(string: tool.icon), contentMode: .fit, showsRetry: false).frame(width: 24, height: 24)
                                             }
                                             Text(tool.name).font(SiteText.label).lineLimit(2).multilineTextAlignment(.leading)
                                             Spacer()
@@ -585,28 +598,31 @@ struct PortfolioSiteView: View {
 private struct PortfolioVideo: View {
     let urlString: String
     let poster: String
-    @State private var player: AVPlayer?
+    @State private var playback = VideoPlayerModel()
 
     var body: some View {
         ZStack {
-            if let player { VideoPlayer(player: player) }
-            else {
-                RemoteImage(url: URL(string: poster), contentMode: .fit)
+            switch playback.phase {
+            case .idle:
+                RemoteImage(url: URL(string: poster), contentMode: .fit, retryAlignment: .bottom)
                 Button {
-                    guard let url = URL(string: urlString) else { return }
-                    let next = AVPlayer(url: url)
-                    player = next
-                    next.play()
+                    if let url = URL(string: urlString) { playback.play(url: url) }
                 } label: {
                     Image(systemName: "play.fill").font(.system(size: 22))
                         .foregroundStyle(SiteTheme.ink).frame(width: 52, height: 52)
                         .background(SiteTheme.background, in: Circle())
                 }
                 .buttonStyle(.plain).accessibilityLabel("播放视频")
+            case .playing(let player):
+                VideoPlayer(player: player)
+            case .failed:
+                ErrorRetry(message: "视频暂时无法播放。") { playback.retry() }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(SiteTheme.background)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .onDisappear { player?.pause() }
-        .onChange(of: urlString) { _, _ in player?.pause(); player = nil }
+        .onDisappear { playback.pause() }
+        .onChange(of: urlString) { _, _ in playback.pause() }
     }
 }
