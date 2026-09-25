@@ -1,142 +1,116 @@
 import "server-only";
 
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { streamText, type ModelMessage } from "ai";
+import { createHmac, randomUUID } from "node:crypto";
+import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { z } from "zod";
+
+import { requireAskApiKey, resolveAskModelConfig } from "@/lib/ask-model.mjs";
+import type { AskSource } from "@/lib/ask-types";
 import { getAdminSupabaseClient } from "@/lib/supabase.server";
 
-import { createHmac } from "node:crypto";
-import { chmod, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-
-
-import { readPersistableSessionFile } from "@/lib/ask-session-file";
-import type { AskSource } from "@/lib/ask-types";
-import { getFinalAssistantFailure, getFinalAssistantText } from "@/lib/agent-response.mjs";
-import { requireAskApiKey, resolveAskModelConfig } from "@/lib/ask-model.mjs";
-import { configureBigModelRuntime } from "@/lib/bigmodel.mjs";
-
-const DEFAULT_SESSION_RETENTION_HOURS = 24;
 const MAX_SOURCE_CHARACTERS = 2_400;
-const ASK_SESSION_BUCKET = "ask-sessions";
-const ASK_RUNTIME_DIRECTORY = "ask-runtime";
+const MAX_HISTORY_TURNS = 4;
+const SESSION_BUCKET = "ask-sessions";
+const SESSION_DIRECTORY = path.join(process.cwd(), "var", "ask-sessions");
+// ponytail: process-local lock; use transactional session rows if concurrent cross-instance turns become common.
 const sessionLocks = new Map<string, Promise<void>>();
+let lastCleanupAt = 0;
 
-const askSystemPrompt = `你是“陈远｜每日关注”的公开资料问答助手。只依据每一轮随消息给出的公开资料包回答；不能使用工具、文件、网络、数据库、技能或任何未提供的上下文。使用中文，简洁、准确、可追溯。资料不足、资料互相矛盾或无法确认时，直接说明“现有公开资料不足以确认”，不要猜测。回答中在相关断言后用【来源编号】标注资料包编号。`;
+const turnSchema = z.object({ question: z.string(), answer: z.string() });
+type Turn = z.infer<typeof turnSchema>;
 
-function getSessionRetentionMilliseconds() {
-  const configured = process.env.ASK_SESSION_RETENTION_HOURS;
-  if (!configured) return DEFAULT_SESSION_RETENTION_HOURS * 60 * 60 * 1_000;
-  const hours = Number(configured);
-  if (!Number.isFinite(hours) || hours <= 0) {
-    throw new Error("ASK_SESSION_RETENTION_HOURS 必须是大于 0 的小时数。");
+const systemPrompt = `你是陈远的公开资料问答助手。使用中文，简洁、准确、可追溯。历史问答只用于理解指代；事实和引用只能依据本轮公开资料包，不能使用其他知识。资料不足或互相矛盾时，直接说明“现有公开资料不足以确认”。在相关断言后用【来源编号】标注依据。`;
+
+function sessionKey(visitorId: string, conversationId: string) {
+  const secret = process.env.ASK_SESSION_SECRET;
+  if (!secret || secret.length < 32) throw new Error("缺少 ASK_SESSION_SECRET（至少 32 个字符）。");
+  return `v2_${createHmac("sha256", secret).update(`${visitorId}:${conversationId}`).digest("hex")}.jsonl`;
+}
+
+function storage() {
+  return getAdminSupabaseClient("无法持久保存公开问答会话。").storage.from(SESSION_BUCKET);
+}
+
+function parseTurns(text: string): Turn[] {
+  return z.array(turnSchema).parse(text.split("\n").filter(Boolean).map((line) => JSON.parse(line)));
+}
+
+async function readTurns(key: string): Promise<Turn[]> {
+  if (process.env.VERCEL === "1") {
+    const { data, error } = await storage().download(key);
+    if (error && String(error.statusCode) !== "404") throw new Error(`读取公开问答会话失败：${error.message}`);
+    return data ? parseTurns(await data.text()).slice(-MAX_HISTORY_TURNS) : [];
   }
-  return hours * 60 * 60 * 1_000;
-}
-
-function usesRemoteSessionStorage() {
-  return process.env.VERCEL === "1";
-}
-
-function getSessionDirectory() {
-  return usesRemoteSessionStorage()
-    ? path.join(tmpdir(), "ask-sessions")
-    : path.join(process.cwd(), "var", "ask-sessions");
-}
-
-/**
- * Pi's credential and resource stores are process-local implementation data,
- * not part of an anonymous visitor's persisted conversation. Vercel does not
- * provide a writable home directory, so never let Pi fall back to ~/.pi/agent.
- */
-function getRuntimeDirectory() {
-  return path.join(tmpdir(), ASK_RUNTIME_DIRECTORY);
-}
-
-function getRemoteSessionPath(sessionId: string) {
-  return `${sessionId}.jsonl`;
-}
-
-function getRestoredSessionFileName(sessionId: string) {
-  return `ask_${sessionId}.jsonl`;
-}
-
-function getSessionStorageClient() {
-  return getAdminSupabaseClient("无法持久保存公开问答会话。");
-}
-
-function isMissingRemoteSession(error: { message?: string; status?: number; statusCode?: string } | null) {
-  return error?.statusCode === "404" && /object not found/i.test(error.message ?? "");
-}
-
-async function ensurePrivateDirectory(getDirectory: () => string) {
-  const directory = getDirectory();
-  await mkdir(/* turbopackIgnore: true */ directory, { mode: 0o700, recursive: true });
-  await chmod(/* turbopackIgnore: true */ directory, 0o700);
-  return directory;
-}
-
-const ensureSessionDirectory = () => ensurePrivateDirectory(getSessionDirectory);
-const ensureRuntimeDirectory = () => ensurePrivateDirectory(getRuntimeDirectory);
-
-async function restoreRemoteSession(sessionId: string, sessionDirectory: string) {
-  if (!usesRemoteSessionStorage()) return;
-
-  const { data, error } = await getSessionStorageClient().storage
-    .from(ASK_SESSION_BUCKET)
-    .download(getRemoteSessionPath(sessionId));
-  if (error) {
-    if (isMissingRemoteSession(error)) return;
-    throw new Error(`读取公开问答会话失败：${error.message}`);
+  try {
+    return parseTurns(await readFile(path.join(SESSION_DIRECTORY, key), "utf8")).slice(-MAX_HISTORY_TURNS);
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return [];
+    throw error;
   }
-  if (!data) return;
-
-  const sessionFile = path.join(sessionDirectory, getRestoredSessionFileName(sessionId));
-  await writeFile(/* turbopackIgnore: true */ sessionFile, Buffer.from(await data.arrayBuffer()), { mode: 0o600 });
-  await chmod(/* turbopackIgnore: true */ sessionFile, 0o600);
 }
 
-async function persistRemoteSession(sessionId: string, sessionFile: string | undefined) {
-  if (!usesRemoteSessionStorage() || !sessionFile) return;
-
-  const contents = await readPersistableSessionFile(sessionFile);
-  if (!contents) return;
-  const { error } = await getSessionStorageClient().storage
-    .from(ASK_SESSION_BUCKET)
-    .upload(getRemoteSessionPath(sessionId), contents, {
+async function writeTurns(key: string, turns: Turn[]) {
+  const contents = `${turns.slice(-MAX_HISTORY_TURNS).map((turn) => JSON.stringify(turn)).join("\n")}\n`;
+  if (process.env.VERCEL === "1") {
+    const { error } = await storage().upload(key, contents, {
       cacheControl: "0",
       contentType: "application/x-ndjson",
       upsert: true,
     });
-  if (error) throw new Error(`保存公开问答会话失败：${error.message}`);
-}
-
-async function cleanExpiredRemoteSessions() {
-  if (!usesRemoteSessionStorage()) return;
-
-  const { data, error } = await getSessionStorageClient().storage
-    .from(ASK_SESSION_BUCKET)
-    .list("", { limit: 1_000, sortBy: { column: "updated_at", order: "asc" } });
-  if (error) throw new Error(`清理公开问答会话失败：${error.message}`);
-
-  const expiresBefore = Date.now() - getSessionRetentionMilliseconds();
-  const expiredPaths = (data ?? [])
-    .filter((entry) => entry.name.endsWith(".jsonl") && Date.parse(entry.updated_at ?? "") < expiresBefore)
-    .map((entry) => entry.name);
-  if (expiredPaths.length === 0) return;
-
-  const { error: removeError } = await getSessionStorageClient().storage.from(ASK_SESSION_BUCKET).remove(expiredPaths);
-  if (removeError) throw new Error(`删除过期公开问答会话失败：${removeError.message}`);
-}
-
-function requiredSessionSecret() {
-  const value = process.env.ASK_SESSION_SECRET;
-  if (!value || value.length < 32) {
-    throw new Error("缺少 ASK_SESSION_SECRET（至少 32 个字符）；无法安全创建匿名问答会话。");
+    if (error) throw new Error(`保存公开问答会话失败：${error.message}`);
+    return;
   }
-  return value;
+  await mkdir(SESSION_DIRECTORY, { recursive: true, mode: 0o700 });
+  await chmod(SESSION_DIRECTORY, 0o700);
+  const temporary = path.join(SESSION_DIRECTORY, `${key}.${randomUUID()}.tmp`);
+  await writeFile(temporary, contents, { mode: 0o600 });
+  await rename(temporary, path.join(SESSION_DIRECTORY, key));
 }
 
-function getSessionId(visitorId: string, conversationId: string) {
-  return createHmac("sha256", requiredSessionSecret()).update(`${visitorId}:${conversationId}`).digest("hex");
+async function cleanExpiredSessions() {
+  const now = Date.now();
+  if (now - lastCleanupAt < 60 * 60 * 1_000) return;
+  lastCleanupAt = now;
+  const hours = Number(process.env.ASK_SESSION_RETENTION_HOURS ?? 24);
+  if (!Number.isFinite(hours) || hours <= 0) throw new Error("ASK_SESSION_RETENTION_HOURS 必须大于 0。");
+  const expiresBefore = now - hours * 60 * 60 * 1_000;
+  if (process.env.VERCEL === "1") {
+    const { data, error } = await storage().list("", { limit: 1_000, sortBy: { column: "updated_at", order: "asc" } });
+    if (error) throw new Error(`清理公开问答会话失败：${error.message}`);
+    const expired = (data ?? []).filter((entry) => entry.name.endsWith(".jsonl") && Date.parse(entry.updated_at ?? "") < expiresBefore).map((entry) => entry.name);
+    if (expired.length > 0) {
+      const { error: removeError } = await storage().remove(expired);
+      if (removeError) throw new Error(`清理公开问答会话失败：${removeError.message}`);
+    }
+    return;
+  }
+  const entries = await readdir(SESSION_DIRECTORY, { withFileTypes: true }).catch((error: unknown) => {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  });
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+    const file = path.join(SESSION_DIRECTORY, entry.name);
+    if ((await stat(file)).mtimeMs < expiresBefore) await rm(file, { force: true });
+  }
+}
+
+async function withSessionLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const previous = sessionLocks.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  const tail = previous.catch(() => undefined).then(() => current);
+  sessionLocks.set(key, tail);
+  await previous.catch(() => undefined);
+  try {
+    return await operation();
+  } finally {
+    release();
+    void tail.finally(() => { if (sessionLocks.get(key) === tail) sessionLocks.delete(key); });
+  }
 }
 
 function formatSources(sources: AskSource[]) {
@@ -144,142 +118,6 @@ function formatSources(sources: AskSource[]) {
     `【${index + 1}】${source.title}${source.section ? ` · ${source.section}` : ""}`,
     source.content.slice(0, MAX_SOURCE_CHARACTERS),
   ].join("\n")).join("\n\n");
-}
-
-const SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1_000;
-let lastSessionCleanupAt = 0;
-
-async function cleanExpiredSessions() {
-  const sessionDirectory = await ensureSessionDirectory();
-  const now = Date.now();
-  // 过期会话清理属于保洁操作，模块级降频到每小时最多一次，
-  // 避免每个请求都 readdir + stat 全量扫描（含远程 storage.list）。
-  if (now - lastSessionCleanupAt < SESSION_CLEANUP_INTERVAL_MS) return sessionDirectory;
-  lastSessionCleanupAt = now;
-  const retentionMilliseconds = getSessionRetentionMilliseconds();
-  const entries = await readdir(/* turbopackIgnore: true */ sessionDirectory, { withFileTypes: true });
-  await Promise.all(entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".jsonl"))
-    .map(async (entry) => {
-      const filePath = path.join(/* turbopackIgnore: true */ sessionDirectory, entry.name);
-      const metadata = await stat(/* turbopackIgnore: true */ filePath);
-      if (now - metadata.mtimeMs > retentionMilliseconds) {
-        await rm(/* turbopackIgnore: true */ filePath, { force: true });
-      }
-    }));
-  await cleanExpiredRemoteSessions();
-  return sessionDirectory;
-}
-
-async function getSessionManager(
-  sessionId: string,
-  SessionManager: typeof import("@earendil-works/pi-coding-agent").SessionManager,
-) {
-  const sessionDirectory = await cleanExpiredSessions();
-  const sessionSuffix = `_${sessionId}.jsonl`;
-  const findLocalSessionFile = async () => (await readdir(/* turbopackIgnore: true */ sessionDirectory))
-    .filter((entry) => entry.endsWith(sessionSuffix))
-    .sort()
-    .at(-1);
-
-  // 本地已有会话文件时直接复用；只有本地缺失（例如 serverless 新实例
-  // 继续旧会话）才按需从远程下载恢复这一条会话。
-  let existing = await findLocalSessionFile();
-  if (!existing) {
-    await restoreRemoteSession(sessionId, sessionDirectory);
-    existing = await findLocalSessionFile();
-  }
-
-  const manager = existing
-    ? SessionManager.open(path.join(/* turbopackIgnore: true */ sessionDirectory, existing), sessionDirectory, process.cwd())
-    : SessionManager.create(process.cwd(), sessionDirectory, { id: sessionId });
-  await secureSessionFile(manager.getSessionFile());
-  return manager;
-}
-
-async function secureSessionFile(sessionFile: string | undefined) {
-  if (!sessionFile) return;
-  try {
-    await chmod(/* turbopackIgnore: true */ sessionFile, 0o600);
-  } catch (error) {
-    // Pi allocates a new session path before its first message creates the file.
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return;
-    throw error;
-  }
-}
-
-async function withSessionLock<T>(sessionId: string, operation: () => Promise<T>) {
-  const previous = sessionLocks.get(sessionId) ?? Promise.resolve();
-  let releaseCurrent: (() => void) | undefined;
-  const current = new Promise<void>((resolve) => { releaseCurrent = resolve; });
-  const tail = previous.catch(() => undefined).then(() => current);
-  sessionLocks.set(sessionId, tail);
-  await previous.catch(() => undefined);
-  try {
-    return await operation();
-  } finally {
-    releaseCurrent?.();
-    void tail.finally(() => {
-      if (sessionLocks.get(sessionId) === tail) sessionLocks.delete(sessionId);
-    });
-  }
-}
-
-/**
- * Pi 的模块加载、ModelRuntime、模型解析与 ResourceLoader 都与单次会话状态无关，
- * 在模块级缓存复用（serverless 下模块级缓存是常规做法），避免每个请求在
- * LLM 首 token 之前重复动态 import、ModelRuntime.create 和 ResourceLoader.reload。
- * createAgentSession 仍按请求新建，保证会话状态隔离。
- */
-async function loadPiRuntime() {
-  // Pi imports optional Node integrations internally. Keep that code out of
-  // static page generation; it is needed only after a real POST request.
-  const {
-    createAgentSession,
-    DefaultResourceLoader,
-    ModelRuntime,
-    SessionManager,
-  } = await import("@earendil-works/pi-coding-agent");
-  const modelConfig = resolveAskModelConfig();
-  requireAskApiKey();
-
-  const runtimeDirectory = await ensureRuntimeDirectory();
-  const runtime = await ModelRuntime.create({
-    allowModelNetwork: false,
-    authPath: path.join(runtimeDirectory, "auth.json"),
-    modelsPath: null,
-  });
-  await configureBigModelRuntime(runtime, modelConfig.model);
-  const model = runtime.getModel(modelConfig.provider, modelConfig.model);
-  if (!model) throw new Error(`Pi 未找到模型：${modelConfig.provider}/${modelConfig.model}`);
-
-  const resourceLoader = new DefaultResourceLoader({
-    agentDir: runtimeDirectory,
-    appendSystemPromptOverride: () => [],
-    cwd: process.cwd(),
-    noContextFiles: true,
-    noExtensions: true,
-    noPromptTemplates: true,
-    noSkills: true,
-    noThemes: true,
-    systemPromptOverride: () => askSystemPrompt,
-  });
-  await resourceLoader.reload();
-
-  return { createAgentSession, model, resourceLoader, runtime, runtimeDirectory, SessionManager };
-}
-
-type PiRuntime = Awaited<ReturnType<typeof loadPiRuntime>>;
-
-let piRuntimePromise: Promise<PiRuntime> | undefined;
-
-function getPiRuntime() {
-  piRuntimePromise ??= loadPiRuntime().catch((error: unknown) => {
-    // 初始化失败不缓存 rejected Promise，允许后续请求重试。
-    piRuntimePromise = undefined;
-    throw error;
-  });
-  return piRuntimePromise;
 }
 
 export async function streamAskAnswer({
@@ -297,62 +135,42 @@ export async function streamAskAnswer({
   sources: AskSource[];
   visitorId: string;
 }) {
-  const sessionId = getSessionId(visitorId, conversationId);
-  return withSessionLock(sessionId, async () => {
-    const {
-      createAgentSession,
-      model,
-      resourceLoader,
-      runtime,
-      runtimeDirectory,
-      SessionManager,
-    } = await getPiRuntime();
-
-    const sessionManager = await getSessionManager(sessionId, SessionManager);
-    const { session } = await createAgentSession({
-      agentDir: runtimeDirectory,
-      cwd: process.cwd(),
-      model,
-      modelRuntime: runtime,
-      noTools: "all",
-      resourceLoader,
-      sessionManager,
-      thinkingLevel: "off",
+  const key = sessionKey(visitorId, conversationId);
+  return withSessionLock(key, async () => {
+    await cleanExpiredSessions();
+    const history = await readTurns(key);
+    const { baseUrl, model } = resolveAskModelConfig();
+    const anthropic = createAnthropic({ baseURL: `${baseUrl}/v1`, apiKey: requireAskApiKey() });
+    const messages: ModelMessage[] = [
+      ...history.flatMap((turn): ModelMessage[] => [
+        { role: "user", content: turn.question },
+        { role: "assistant", content: turn.answer },
+      ]),
+      { role: "user", content: `本轮问题：${question}\n\n本轮公开资料包：\n${formatSources(sources)}` },
+    ];
+    let failure: unknown;
+    let answer = "";
+    const result = streamText({
+      model: anthropic(model),
+      system: systemPrompt,
+      messages,
+      maxOutputTokens: 8_192,
+      providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+      abortSignal: signal,
+      onError: ({ error }) => { failure = error; },
     });
-    const abortSession = () => { void session.abort(); };
-    signal?.addEventListener("abort", abortSession, { once: true });
-    if (signal?.aborted) abortSession();
-    let streamedText = "";
-    const unsubscribe = session.subscribe((event) => {
-      if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-        streamedText += event.assistantMessageEvent.delta;
-        onText(event.assistantMessageEvent.delta);
-      }
-    });
-
+    for await (const delta of result.textStream) {
+      answer += delta;
+      onText(delta);
+    }
+    if (failure) throw failure;
+    if (!answer.trim() || (await result.finishReason) === "error") throw new Error("模型未生成有效回答。");
+    if (signal?.aborted) return;
     try {
-      await session.prompt(`本轮问题：${question}\n\n本轮公开资料包：\n${formatSources(sources)}\n\n请只根据本轮资料包回答，并使用资料编号标注依据。`);
-      const failure = getFinalAssistantFailure(session);
-      if (failure) throw new Error(failure);
-      const finalText = getFinalAssistantText(session);
-      if (finalText && finalText !== streamedText) {
-        onText(finalText.startsWith(streamedText) ? finalText.slice(streamedText.length) : finalText);
-      }
-    } finally {
-      signal?.removeEventListener("abort", abortSession);
-      unsubscribe();
-      try {
-        await secureSessionFile(sessionManager.getSessionFile());
-        try {
-          await persistRemoteSession(sessionId, sessionManager.getSessionFile());
-        } catch (error) {
-          // The generated reply is still valid if its next-turn context cannot
-          // be saved. Never replace it with a generic streaming error.
-          console.error("Public ask session persistence failed", error);
-        }
-      } finally {
-        session.dispose();
-      }
+      await writeTurns(key, [...history, { question, answer }]);
+    } catch (error) {
+      // 已送达的回答仍有效；持久化失败不覆盖流式结果。
+      console.error("Public ask session persistence failed", error);
     }
   });
 }
