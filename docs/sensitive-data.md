@@ -16,7 +16,6 @@
 | `data/sensitive/x-curation/generated/insight-snapshots/` | 按内容摘要去重的全库趋势与健康历史快照 | 仅本机保存，禁止 Git 与网站读取 |
 | `data/sensitive/douyin-curation/` | 抖音视频分析、转写、OCR、待审草稿和实体候选 | 仅本机保存，禁止 Git |
 | `data/curation.sqlite` | 已审核公开的每日关注、开源关注与 Ask 文本投影 | 随代码提交；仅部署端只读查询 |
-| `packages/inspora/inspora.db` | 作品集灵感集的公开抓取目录与媒体索引 | 随代码提交；页面只通过包的公开查询 API 读取，不返回内部原始字段 |
 | `data/sensitive/local-vectors.sqlite` | 本地文档与公开投影的 sqlite-vec 混合检索索引 | 仅本机保存，禁止 Git |
 | `knowledge/sensitive/` | 私有知识库及其个人来源分区 | 仅本机保存，禁止 Git |
 | `tools/smaug/.state/` | 抓取游标、待处理书签和运行状态 | 仅本机保存，禁止 Git |

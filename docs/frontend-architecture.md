@@ -19,8 +19,6 @@ RootLayout
    ├─ /design/[id]              设计收藏详情（ISR，复用策展详情骨架与设计子集相邻导航）
    ├─ /douyin                   抖音收藏版块（仅抖音来源，ISR，revalidate = 300）
    ├─ /open-source              开源关注版块（ISR，revalidate = 300）
-   ├─ /portfolio                站内作品时间轴，独立分区布局
-   │  └─ /portfolio/products/*   布局参考、灵感集、设计工具与个人网站
    │  ├─ Profile rail（与首页相同）
    │  └─ 内容导航 + 公开资料问答（个人简介、每日关注、开源关注）
    ├─ /feed.xml                 最近公开内容的 RSS 2.0 聚合
@@ -44,7 +42,6 @@ RootLayout
 |---|---|---|---|
 | 全局壳 | `app/layout.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
 | 首页 | `app/page.tsx` | 动态首页编排；服务端解析遗留 `?view=`，稳定输出 `HomeMain` 身份轨与刊头，仅流式补入当前数据列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
-| 作品集 | `app/portfolio/`、`components/portfolio/`、`lib/portfolio/` | 保留作品时间轴与专属阅读交互；四类公开内容由 `packages/` 提供 | 复制第二个 Next 应用或把原站私有数据带进页面 |
 | 版块页 | `app/ai-news/page.tsx`、`app/curation/page.tsx`、`app/design/page.tsx`、`app/douyin/page.tsx`、`app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
 | 详情页 | `app/curation/[id]/page.tsx`、`app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |

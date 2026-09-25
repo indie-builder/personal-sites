@@ -41,11 +41,6 @@ test-results/
 # Local image-generation scratch output (avatar drafts); never commit.
 /output/
 
-# Portfolio source downloads and rendered promo outputs are reproducible locally.
-/packages/layout-compositions/.upstream/
-/packages/personal-sites/promo/out/
-*.part
-
 # ZCode CLI per-session state; never commit.
 /.zcode/
 # skills CLI entry points for agents this repo does not track (Eve, AstrBot);

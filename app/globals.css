@@ -28,7 +28,6 @@
 * { box-sizing:border-box; }
 html { background:var(--surface); scroll-behavior:smooth; }
 body { min-width:20rem; min-height:100vh; margin:0; background:var(--surface); color:var(--ink); font-family:var(--font-sans); text-rendering:geometricPrecision; }
-html[data-curation-theme="dark"] body { background:#181818; }
 a { color:inherit; }
 button,input,textarea { font:inherit; }
 img { display:block; }
