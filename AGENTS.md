@@ -55,7 +55,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - Inspect `git status` before editing or staging. Stage only agreed paths; `tools/smaug` is a nested repository and must stay out of outer-repo commits.
 - Run `pnpm git:safety` before commits that could touch content or configuration. Do not bypass the pre-push guard or rewrite history without explicit approval.
-- Keep commits local unless a push is explicitly requested. Use Chinese Conventional Commit subjects for project changes.
+- For routine changes, create a topic branch, review the diff, push it, and open a PR. Push directly to the default branch only when the user requests it.
+- Merge or force-push only when the user explicitly requests it. Use Chinese Conventional Commit subjects for project changes.
 - AI commits include the agent's actual attribution:
 
   ```text
