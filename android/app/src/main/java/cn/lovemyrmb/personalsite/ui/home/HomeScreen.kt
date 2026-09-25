@@ -55,6 +55,8 @@ import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
+import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
+import cn.lovemyrmb.personalsite.ui.components.FeedFooter
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
@@ -249,36 +251,7 @@ private fun HorizontalRule() {
     )
 }
 
-/** 条目之间的细分隔线已由 HorizontalRule 提供；页脚负责追加/到底/失败三态。 */
-@Composable
-private fun FeedFooter(state: FeedState<*>, onRetry: () -> Unit) {
-    when {
-        state.loadingMore -> Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 18.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                color = SiteTheme.colors.muted,
-                strokeWidth = 2.dp,
-            )
-        }
-
-        state.error != null -> ErrorRetry(message = state.error, modifier = Modifier.fillMaxWidth(), onRetry = onRetry)
-
-        !state.hasMore && state.items.isNotEmpty() -> Text(
-            text = "已经到底了",
-            style = SiteText.meta,
-            color = SiteTheme.colors.quiet,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 18.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-    }
-}
+/** 条目之间的细分隔线已由 HorizontalRule 提供；页脚三态见 components/FeedFooter。 */
 
 /** 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。 */
 @Composable
@@ -354,10 +327,9 @@ private fun CurationRow(item: CurationItem, section: Section, onOpen: () -> Unit
             )
         }
         item.media.firstOrNull()?.let { media ->
-            AsyncImage(
+            SiteAsyncImage(
                 model = media.posterUrl,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .width(104.dp)
                     .aspectRatio(4f / 3f)

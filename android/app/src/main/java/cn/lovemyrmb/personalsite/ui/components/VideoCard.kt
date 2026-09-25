@@ -22,10 +22,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.CurationMedia
 import cn.lovemyrmb.personalsite.data.CurationSource
@@ -68,13 +72,32 @@ fun VideoCard(
         if (playing) {
             val player = remember(videoUri, preloader) {
                 (preloader?.buildPlayer() ?: ExoPlayer.Builder(context).build()).apply {
+                    // 音频焦点由 ExoPlayer 代管：与其他应用音频互让、响应媒体键；
+                    // becomingNoisy 在拔出耳机时自动暂停。
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(C.USAGE_MEDIA)
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                            .build(),
+                        /* handleAudioFocus = */ true,
+                    )
+                    setHandleAudioBecomingNoisy(true)
                     setMediaItem(MediaItem.fromUri(videoUri))
                     prepare()
                     playWhenReady = true
                 }
             }
-            DisposableEffect(media.url) {
+            DisposableEffect(videoUri) {
                 onDispose { player.release() }
+            }
+            // 应用退到后台即暂停：回前台不自动续播，由用户在控制条手动继续。
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(player, lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_STOP) player.pause()
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
             AndroidView(
                 factory = { PlayerView(it).apply { useController = true } },
@@ -82,10 +105,9 @@ fun VideoCard(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            AsyncImage(
+            SiteAsyncImage(
                 model = media.posterUrl,
                 contentDescription = "视频封面",
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
                     .clickable { playing = true },

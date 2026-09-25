@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
+// CI（ci-greeting-check.sh）必须先设 ADB；默认路径仅供本机 macOS 直跑。
 const adb = process.env.ADB || '/opt/homebrew/share/android-commandlinetools/platform-tools/adb';
 const serial = process.env.ANDROID_SERIAL || 'emulator-5554';
 const run = (...args) => execFileSync(adb, ['-s', serial, ...args], { encoding: 'utf8' });

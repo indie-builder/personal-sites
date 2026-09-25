@@ -58,6 +58,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cn.lovemyrmb.personalsite.data.HomeViewModel
+import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.data.Section
 import kotlinx.coroutines.launch
 import cn.lovemyrmb.personalsite.ui.ask.AskScreen
@@ -66,6 +67,9 @@ import cn.lovemyrmb.personalsite.ui.components.openExternally
 import cn.lovemyrmb.personalsite.ui.components.NavigationIcons
 import cn.lovemyrmb.personalsite.ui.detail.DetailRoute
 import cn.lovemyrmb.personalsite.ui.home.HomeScreen
+import cn.lovemyrmb.personalsite.ui.portfolio.PortfolioCollectionScreen
+import cn.lovemyrmb.personalsite.ui.portfolio.PortfolioItemReader
+import cn.lovemyrmb.personalsite.ui.portfolio.PortfolioScreen
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import dev.chrisbanes.haze.HazeState
@@ -76,14 +80,14 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 
 private const val BAR_HEIGHT = 72
 
-private data class GlassBarAction(val label: String, val icon: ImageVector, val url: String?)
+private data class GlassBarAction(val label: String, val icon: ImageVector)
 
 // 首页入口与身份外链共用悬浮玻璃底栏。
 private val glassBarActions = listOf(
-    GlassBarAction("动态", NavigationIcons.Activity, null),
-    GlassBarAction("问一问", NavigationIcons.Ask, null),
-    GlassBarAction("作品集", NavigationIcons.Portfolio, "https://portfolio.default-coder.lovemyrmb.cn/"),
-    GlassBarAction("关于我", NavigationIcons.About, null),
+    GlassBarAction("动态", NavigationIcons.Activity),
+    GlassBarAction("问一问", NavigationIcons.Ask),
+    GlassBarAction("作品集", NavigationIcons.Portfolio),
+    GlassBarAction("关于我", NavigationIcons.About),
 )
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
@@ -93,6 +97,7 @@ fun PersonalSiteApp(container: AppContainer) {
     val hazeState = remember { HazeState() }
     val context = LocalContext.current
     val viewModel: HomeViewModel = viewModel(factory = PersonalSiteViewModelFactory(container))
+    val portfolioViewModel: PortfolioViewModel = viewModel(factory = PersonalSiteViewModelFactory(container))
     val askController = container.askController
     val pagerState = rememberPagerState(pageCount = { Section.entries.size })
     val scope = rememberCoroutineScope()
@@ -165,6 +170,36 @@ fun PersonalSiteApp(container: AppContainer) {
                     bottomPadding = bottomBarTotal,
                 )
             }
+            composable("portfolio") {
+                PortfolioScreen(
+                    viewModel = portfolioViewModel,
+                    bottomPadding = bottomBarTotal,
+                    onOpenCollection = { navController.navigate("portfolio/$it") },
+                    onOpenLink = { openExternally(context, it) },
+                )
+            }
+            composable("portfolio/{collection}") { entry ->
+                val collection = entry.arguments?.getString("collection").orEmpty()
+                PortfolioCollectionScreen(
+                    collection = collection,
+                    viewModel = portfolioViewModel,
+                    bottomPadding = bottomBarTotal,
+                    onBack = { navController.popBackStack() },
+                    onOpenItem = { items, index ->
+                        container.portfolioReader.open(collection, items, index)
+                        navController.navigate("portfolio-reader")
+                    },
+                )
+            }
+            composable("portfolio-reader") {
+                PortfolioItemReader(
+                    payload = container.portfolioReader.pending,
+                    api = container.portfolioApi,
+                    bottomPadding = bottomBarTotal,
+                    onBack = { navController.popBackStack() },
+                    onOpenLink = { openExternally(context, it) },
+                )
+            }
             composable("ask") {
                 AskScreen(controller = askController, onDismiss = { navController.popBackStack() })
             }
@@ -199,8 +234,11 @@ fun PersonalSiteApp(container: AppContainer) {
                 glassBarActions.forEach { action ->
                     val isHome = action.label == "动态"
                     val isAbout = action.label == "关于我"
-                    val selected = (isHome && backStackEntry?.destination?.route == "home") ||
-                        (isAbout && backStackEntry?.destination?.route == "about")
+                    val isPortfolio = action.label == "作品集"
+                    val route = backStackEntry?.destination?.route.orEmpty()
+                    val selected = (isHome && route == "home") ||
+                        (isAbout && route == "about") ||
+                        (isPortfolio && route.startsWith("portfolio"))
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -208,7 +246,6 @@ fun PersonalSiteApp(container: AppContainer) {
                             .clip(CircleShape)
                             .background(if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent)
                             .selectable(selected = selected, role = Role.Tab) {
-                                val url = action.url
                                 when {
                                     isHome -> {
                                         openTab("home")
@@ -216,8 +253,12 @@ fun PersonalSiteApp(container: AppContainer) {
                                         barVisible = true
                                     }
                                     isAbout -> openTab("about")
+                                    isPortfolio -> navController.navigate("portfolio") {
+                                        popUpTo("home") { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                     action.label == "问一问" -> navController.navigate("ask") { launchSingleTop = true }
-                                    url != null -> openExternally(context, url)
                                 }
                             },
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -246,6 +287,8 @@ private class PersonalSiteViewModelFactory(
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
         when (modelClass) {
             HomeViewModel::class.java -> HomeViewModel(container.api) as T
+            cn.lovemyrmb.personalsite.data.PortfolioViewModel::class.java ->
+                cn.lovemyrmb.personalsite.data.PortfolioViewModel(container.portfolioApi) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: $modelClass")
         }
 }

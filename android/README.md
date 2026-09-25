@@ -8,6 +8,7 @@
 - **原生详情**：每日动态走 `GET /api/ai-news/[id]`；每日关注、设计收藏、抖音收藏直接渲染列表携带的全文与媒体（图片网格 + ExoPlayer 视频，X 平台视频经站内 `/api/x-media` 代理）；开源关注为轻详情，仓库浏览跳站点网页。
 - **悬浮玻璃底栏**：动态 / 问一问 / 作品集 / 关于我。栏目和详情页共用实时背景模糊、透光描边与胶囊选中态；向下浏览隐藏，向上回看显示，切换栏目或页面时恢复显示。
 - **原生个人首页**：GitHub、语雀外链在头像上方右对齐，姓名与原头像形成身份区；“2014—至今 · 个人经历”整行打开原生履历弹层。简介按主叙述与补充段落组织，以技术词条收尾。问答仅保留底栏入口。词条在离屏、后台暂停，关闭系统动画时静止展示。页面设计规范见 `DESIGN.md`。
+- **作品集**：底栏入口打开原生落地页（产品列表）；「布局参考」「灵感集」两个图鉴集合全链路原生——书架分类、搜索与分类/主题筛选（250ms 防抖）、网格触底分页、全屏阅读器（前后翻页、图片网格与视频播放、来源 CTA）；「设计工程工具」「个人网站」暂跳站点网页。分页复用 `PagedFeed`，数据来自作品集公共 API（`data/PortfolioApi.kt`）。
 - **问一问**：全屏原生对话页、多行输入、资料范围选择、推荐问题、新对话确认、停止/重试/复制；引用编号和来源行打开 App 内资料正文，不跳浏览器。进入后隐藏底栏，返回时保留会话，离开时停止生成。完整契约见 [ask-experience.md](docs/ask-experience.md)。
 - 深浅色跟随系统；minSdk 31（Android 12+，磨砂 RenderEffect 全覆盖）。
 
@@ -30,6 +31,7 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 - 图标由 `ui/icons/SiteIcons.kt` 内联（Material Symbols 源码矢量），不依赖已停更的 `material-icons-extended`。
 - 性能：只读数据模型经 `stability_config.conf` 标记 Compose 稳定（跳过无效重组）；视频卡片可见时经 `data/VideoPreloader.kt`（media3 DefaultPreloadManager + SimpleCache，64MB LRU）预取片头 5 秒到磁盘缓存，播放用共享缓存的播放器点开即播。
 - `local.properties` 由 Android Studio 生成（`sdk.dir`），不入库。
+- CI（`.github/workflows/android-tests.yml`）在 `android/` 变更时运行 `:app:assembleDebug`、`:app:testDebugUnitTest`、`:app:connectedDebugAndroidTest`（API 34 模拟器）与 `scripts/check-typography.mjs`、`scripts/check-opening-frames.mjs`、`scripts/ci-greeting-check.sh`（在模拟器上引导到「关于我」后执行 `check-greeting-layout.mjs`）。
 
 ## 工程结构
 
@@ -39,12 +41,13 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
 app/src/main/java/cn/lovemyrmb/personalsite/
 ├── MainActivity.kt / SiteApplication
 ├── AppContainer.kt            # 手写轻量 DI：JSON/OkHttp/Retrofit/访客 id
-├── data/                      # 模型、Retrofit 接口、分页 PagedFeed、AskClient(SSE)
+├── data/                      # 模型、Retrofit 接口、分页 PagedFeed、AskClient(SSE)、PortfolioApi
 └── ui/
     ├── theme/                 # 站点黑白灰单色体系（DESIGN.md 令牌）
     ├── home/                  # 五栏目 Tab + Pager + 三类信息流行
     ├── detail/                # 三种详情页
+    ├── portfolio/             # 作品集落地页 / 图鉴集合 / 阅读器
     ├── about/                 # 履历小票 Sheet
     ├── ask/                   # 全屏原生问答页面
-    └── components/            # 视频卡、时间工具、Custom Tabs
+    └── components/            # 视频卡、图片自动重试、媒体区、页脚三态、来源 CTA、时间工具、Custom Tabs
 ```

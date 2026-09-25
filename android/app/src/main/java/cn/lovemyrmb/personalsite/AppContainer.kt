@@ -4,6 +4,9 @@ import android.content.Context
 import cn.lovemyrmb.personalsite.data.AskClient
 import cn.lovemyrmb.personalsite.data.AskController
 import cn.lovemyrmb.personalsite.data.EntryHolder
+import cn.lovemyrmb.personalsite.data.PORTFOLIO_BASE_URL
+import cn.lovemyrmb.personalsite.data.PortfolioApi
+import cn.lovemyrmb.personalsite.data.PortfolioReaderHolder
 import cn.lovemyrmb.personalsite.data.SITE_BASE_URL
 import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.VideoPreloader
@@ -45,6 +48,13 @@ class AppContainer(context: Context) {
         .build()
         .create(SiteApi::class.java)
 
+    val portfolioApi: PortfolioApi = Retrofit.Builder()
+        .baseUrl(PORTFOLIO_BASE_URL)
+        .client(feedClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(PortfolioApi::class.java)
+
     val askClient: AskClient = AskClient(
         askOkClient, json,
         if (BuildConfig.DEBUG && BuildConfig.LOCAL_ASK_PORT > 0) "http://127.0.0.1:${BuildConfig.LOCAL_ASK_PORT}/" else SITE_BASE_URL,
@@ -62,6 +72,9 @@ class AppContainer(context: Context) {
     val videoPreloader: VideoPreloader by lazy { VideoPreloader(appContext) }
 
     val entryHolder = EntryHolder()
+
+    /** 作品集阅读器的跳转载体（列表 → 全屏阅读，含同屏条目）。 */
+    val portfolioReader = PortfolioReaderHolder()
 
     /**
      * 问一问会话：按 docs/ask-experience.md 保存在当前 App 进程中。

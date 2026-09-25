@@ -1,8 +1,10 @@
 package cn.lovemyrmb.personalsite.ui.ask
 
 import android.content.ClipData
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +28,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -45,6 +48,12 @@ private val recommendedQuestions = listOf(
     "最近关注哪些 AI 技术？" to AskScope.AI_NEWS,
     "有哪些值得了解的开源项目？" to AskScope.OPEN_SOURCE,
 )
+
+/** 推荐问题芯片：点击填入草稿并选对应范围（行为契约见 docs/ask-experience.md）。 */
+@Composable
+private fun RecommendedChip(question: String, onSelect: () -> Unit) {
+    OutlinedButton(onClick = onSelect) { Text(question) }
+}
 
 /** Full-screen native conversation. References open the returned source content in-app. */
 @Composable
@@ -104,15 +113,34 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph), verticalArrangement = Arrangement.spacedBy(SiteSpace.section)) {
                 if (state.messages.isEmpty()) item {
-                    Column(Modifier.padding(top = 40.dp), verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
+                    // 横屏高度有限：推荐问题横向滚动排布并压缩顶部留白，避免被输入区裁切。
+                    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    Column(Modifier.padding(top = if (landscape) SiteSpace.compact else 40.dp), verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
                         Text("有什么想了解的？", style = SiteText.pageTitle, color = SiteTheme.colors.ink)
                         Text("关于陈远、每日关注或开源内容，都可以从这里开始。", style = SiteText.body, color = SiteTheme.colors.muted)
-                        recommendedQuestions.forEach { (question, questionScope) ->
-                            OutlinedButton(onClick = {
-                                input = question
-                                searchScope = questionScope
-                                focus.requestFocus(); keyboard?.show()
-                            }) { Text(question) }
+                        if (landscape) {
+                            Row(
+                                Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(SiteSpace.compact),
+                            ) {
+                                recommendedQuestions.forEach { (question, questionScope) ->
+                                    RecommendedChip(question) {
+                                        input = question
+                                        searchScope = questionScope
+                                        focus.requestFocus(); keyboard?.show()
+                                    }
+                                }
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
+                                recommendedQuestions.forEach { (question, questionScope) ->
+                                    RecommendedChip(question) {
+                                        input = question
+                                        searchScope = questionScope
+                                        focus.requestFocus(); keyboard?.show()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
