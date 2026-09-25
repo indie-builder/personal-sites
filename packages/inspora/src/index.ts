@@ -1,24 +1,22 @@
 /**
  * inspora 数据包查询 API —— web 端只通过这里取数，不直接读 DB、不手拼路径。
  * 数据由 `scripts/sync.mjs` 生成：inspora.db（SQLite）+ public/inspora/（海报/缩略图/头像）。
- * 大图与视频热链原站（media.inspora.design），本地文件存在时优先用本地副本。
+ * 大图与视频热链原站（media.inspora.design），已下载的海报、缩略图、头像走本地静态资源。
  */
 import { DatabaseSync } from 'node:sqlite';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PKG_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.resolve(PKG_DIR, '../inspora.db');
-const PUBLIC_DIR = path.resolve(PKG_DIR, '../../../public');
 
 /** 媒体 base：缺省为空（本地 public 路径）；设 NEXT_PUBLIC_MEDIA_BASE_URL（对象存储公开域名）后返回绝对 URL */
 const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? '').replace(/\/+$/, '');
 const MEDIA_VERSION = process.env.NEXT_PUBLIC_MEDIA_VERSION;
 
-/** 本地副本存在用本地（含外置 base），否则回退热链原站 */
+/** 同步管线只保存这三类本地副本；旧大图和视频路径回退热链原站。 */
 function mediaUrl(localPath: string | null, upstream: string | null): string | null {
-  if (localPath && existsSync(path.join(PUBLIC_DIR, localPath))) {
+  if (localPath && /^\/inspora\/(?:posters|thumbnails|avatars)\//.test(localPath)) {
     return `${MEDIA_BASE}${localPath}${MEDIA_VERSION ? `?v=${MEDIA_VERSION}` : ''}`;
   }
   return upstream;

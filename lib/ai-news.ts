@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
 import type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
-import { byScoreThenRecency, occurrences } from "@/lib/search-score";
 import { getPublicSupabaseClient } from "@/lib/supabase.server";
 
 export type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
@@ -87,41 +86,28 @@ export const getAiNewsItem = cache(async (id: string): Promise<AiNewsItem | null
   return data ? toAiNewsItem(aiNewsRowSchema.parse(data)) : null;
 });
 
-let askCorpusCache: { expiresAt: number; items: AiNewsItem[] } | undefined;
+const aiNewsSearchRowSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  reason: z.string(),
+  published_at: z.string().nullable(),
+  score: z.number(),
+});
 
-async function getAiNewsAskCorpus() {
-  if (askCorpusCache && askCorpusCache.expiresAt > Date.now()) return askCorpusCache.items;
-  const { data, error } = await getPublicAiNewsClient()
-    .from("ai_news_public_items")
-    .select("content,selected")
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(2500);
-  if (error) throw new Error(`读取 Supabase 每日动态检索语料失败：${error.message}`);
-  const items = z.array(aiNewsRowSchema).parse(data).map(toAiNewsItem);
-  askCorpusCache = { expiresAt: Date.now() + 300_000, items };
-  return items;
-}
-
-/** 每日动态仍以 Supabase 为源，Ask 直接读取现有公开表，不再维护第二份远端索引。 */
+/** 在公开投影中检索，只传回匹配的少量来源。 */
 export async function searchAiNewsDocuments(query: string, limit = 6): Promise<AiNewsSearchDocument[]> {
-  const needle = query.trim().toLocaleLowerCase("en-US");
-  if (!needle) return [];
-  return (await getAiNewsAskCorpus())
-    .map((item) => {
-      const title = item.title.toLocaleLowerCase("en-US");
-      const summary = item.summary.toLocaleLowerCase("en-US");
-      const supporting = `${item.reason}\n${item.category}\n${item.sourceName}`.toLocaleLowerCase("en-US");
-      return {
-        content: [item.summary, item.reason].filter(Boolean).join("\n\n"),
-        id: `ai-news:${item.id}`,
-        publishedAt: item.publishedAt,
-        score: occurrences(title, needle) * 8 + occurrences(summary, needle) * 2 + occurrences(supporting, needle),
-        sourceId: item.id,
-        sourceUrl: `/ai-news/${encodeURIComponent(item.id)}`,
-        title: item.title,
-      };
-    })
-    .filter((item) => item.score > 0)
-    .sort(byScoreThenRecency)
-    .slice(0, limit);
+  if (!query.trim()) return [];
+  const { data, error } = await getPublicAiNewsClient()
+    .rpc("search_ai_news_public_items", { p_query: query, p_limit: limit });
+  if (error) throw new Error(`检索 Supabase 每日动态失败：${error.message}`);
+  return z.array(aiNewsSearchRowSchema).parse(data).map((item) => ({
+    content: [item.summary, item.reason].filter(Boolean).join("\n\n"),
+    id: `ai-news:${item.id}`,
+    publishedAt: item.published_at,
+    score: item.score,
+    sourceId: item.id,
+    sourceUrl: `/ai-news/${encodeURIComponent(item.id)}`,
+    title: item.title,
+  }));
 }
