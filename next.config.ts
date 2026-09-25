@@ -8,7 +8,7 @@ const portfolioMedia = ["inspora", "layout-compositions", "personal-sites"];
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["data/curation.sqlite"],
-    "/portfolio/products/muse": ["packages/inspora/inspora.db", "public/inspora/**/*"],
+    "/portfolio/products/muse": ["packages/inspora/inspora.db"],
   },
   experimental: {
     // 每日动态/首页改为动态渲染后，SPA 导航默认每次都重新打服务端（含返回列表），

@@ -13,6 +13,12 @@ test("作品集与个人站同域运行", async ({ page, request }) => {
     const response = await page.goto(href);
     expect(response?.status()).toBe(200);
     await expect(page.locator("#workspace-content")).toBeVisible();
+    if (slug === "muse") {
+      const preview = page.locator('video[poster^="/inspora/posters/"]').first();
+      await expect(preview).toBeVisible();
+      expect(await preview.getAttribute("src")).toMatch(/^https:\/\//u);
+      expect((await request.get((await preview.getAttribute("poster"))!)).status()).toBe(200);
+    }
     await page.goto("/portfolio");
   }
 
