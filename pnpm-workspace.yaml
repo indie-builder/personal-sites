@@ -19,6 +19,9 @@ minimumReleaseAgeExclude:
   - '@earendil-works/pi-protocol@0.84.4'
   - '@earendil-works/pi-telemetry@0.84.4'
   - '@earendil-works/pi-tui@0.84.4'
+  - '@ai-sdk/anthropic@4.0.63'
+  - '@ai-sdk/gateway@4.0.92'
+  - ai@7.0.114
 overrides:
   '@types/react': 19.3.0
   '@types/react-dom': 19.3.0

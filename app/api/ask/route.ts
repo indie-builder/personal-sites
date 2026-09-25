@@ -52,10 +52,10 @@ export async function POST(request: Request) {
       const write = (event: string, data: unknown) => controller.enqueue(encoder.encode(sseEvent(event, data)));
       try {
         const sources = await searchAskDocuments(parsed.data.question, parsed.data.scope);
-        write("sources", { sources });
         if (sources.length === 0) {
           const message = "现有公开资料不足以确认这个问题。你可以换一个更具体的关键词，或切换检索范围后再试。";
           write("text", { delta: message });
+          write("sources", { sources });
           write("done", {});
           return;
         }
@@ -69,6 +69,7 @@ export async function POST(request: Request) {
           sources,
           visitorId: parsed.data.visitorId,
         });
+        write("sources", { sources });
         write("done", {});
       } catch (error) {
         if (request.signal.aborted) return;

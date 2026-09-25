@@ -69,9 +69,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
               />
             </MarkerIcon>
             <MarkerContent>
-              {message.citations.length > 0
-                ? "已检索公开资料，正在生成回答…"
-                : "正在检索公开资料…"}
+              正在查找资料并整理回答…
             </MarkerContent>
           </Marker>
         ) : null}

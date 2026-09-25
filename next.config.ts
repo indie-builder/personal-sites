@@ -18,9 +18,7 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   reactStrictMode: true,
-  // Pi resolves optional model integrations at runtime, which Turbopack cannot
-  // statically analyze inside a Route Handler.
-  serverExternalPackages: ["@earendil-works/pi-coding-agent", "better-sqlite3"],
+  serverExternalPackages: ["better-sqlite3"],
   transpilePackages: [
     "@personal-design/layout-compositions",
     "@personal-design/inspora",

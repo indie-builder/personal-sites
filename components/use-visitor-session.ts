@@ -3,7 +3,7 @@
 import { useLayoutEffect, useCallback, useRef, useState, type RefObject } from "react";
 
 /**
- * 访客会话：指纹只用于限流，等用户表现出提问意图（聚焦输入框或提交）后再加载计算。
+ * 访客指纹用于匿名会话；限流由服务端按 IP 执行。聚焦或提交后才计算指纹。
  * 会话建立失败时给出可重试状态；重试成功后把焦点交还输入框。
  */
 export function useVisitorSession(focusTargetRef: RefObject<HTMLTextAreaElement | null>) {
@@ -18,7 +18,14 @@ export function useVisitorSession(focusTargetRef: RefObject<HTMLTextAreaElement 
         const { default: FingerprintJS } = await import("@fingerprintjs/fingerprintjs");
         const agent = await FingerprintJS.load();
         const result = await agent.get();
-        const session = { conversationId: crypto.randomUUID(), visitorId: result.visitorId };
+        const key = "personal-site:ask-conversation-id";
+        let conversationId = crypto.randomUUID();
+        try {
+          const stored = window.sessionStorage.getItem(key);
+          if (stored && /^[A-Za-z0-9_-]{16,128}$/.test(stored)) conversationId = stored;
+          else window.sessionStorage.setItem(key, conversationId);
+        } catch {} // 禁用 sessionStorage 时仍允许当前页面提问。
+        const session = { conversationId, visitorId: result.visitorId };
         setVisitorId(session.visitorId);
         return session;
       } catch {

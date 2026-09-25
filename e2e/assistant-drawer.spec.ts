@@ -75,6 +75,26 @@ test("drawer keeps mobile input readable, restores drafts and renders replies", 
   await page.screenshot({ path: test.info().outputPath("drawer-mobile.png") });
 });
 
+test("drawer keeps the same model conversation after closing and reopening", async ({ page }) => {
+  const conversationIds: string[] = [];
+  await page.route("**/api/ask", async (route) => {
+    conversationIds.push(route.request().postDataJSON().conversationId);
+    await route.fulfill({ contentType: "text/event-stream", body: 'event: text\ndata: {"delta":"已根据公开资料回答。"}\n\nevent: done\ndata: {}\n\n' });
+  });
+  await page.goto("/curation");
+  for (const question of ["先介绍你的工程经历", "刚才的经历里有什么重点"]) {
+    await page.getByRole("button", { name: "和像素助手聊聊" }).click();
+    const dialog = page.getByRole("dialog", { name: "问一问" });
+    await dialog.getByRole("textbox", { name: "输入问题" }).fill(question);
+    await dialog.getByRole("button", { name: "发送问题" }).click();
+    await expect(dialog.getByText("已根据公开资料回答。").last()).toBeVisible();
+    await dialog.getByRole("button", { name: "关闭问一问" }).click();
+    await expect(dialog).toBeHidden();
+  }
+  expect(conversationIds).toHaveLength(2);
+  expect(conversationIds[1]).toBe(conversationIds[0]);
+});
+
 test("drawer transitions do not resize the page on every animation frame", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize({ width: 1440, height: 900 });

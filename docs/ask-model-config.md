@@ -1,13 +1,15 @@
 # 问答模型配置
 
-公开 `/api/ask` 使用 BigModel 的 Anthropic 兼容接口：
+公开 `/api/ask` 使用 AI SDK 的 `streamText` 与 Anthropic Provider，连接 BigModel 的兼容接口：
 
-- Provider：`bigmodel-coding`
-- Base URL：`https://open.bigmodel.cn/api/anthropic`
+- Provider：`@ai-sdk/anthropic`，使用智谱兼容端点
+- Base URL：`https://open.bigmodel.cn/api/anthropic/v1`
 - 默认模型：`glm-5.3-flash`，通过服务端 `ASK_MODEL` 覆盖
 - 凭据：服务端 `BIGMODEL_API_KEY`，仅置于本地忽略的 `.env.local` 或部署平台的加密环境变量
 
-公开问答与 X、GitHub Star、抖音资料解析共用 `lib/bigmodel.mjs` 注册的端点和 `BIGMODEL_API_KEY`。统一默认模型由 `BIGMODEL_MODEL` 配置；问答可用 `ASK_MODEL` 指定另一款 GLM。解析默认使用 Pi 运行时直连智谱，不回退到其他供应商或按量端点。
+问答保留 `/api/ask` 的 `text`、`sources`、`done`、`error` SSE 契约：正文先以 `text` 增量输出，完成后发送 `sources`，最后发送 `done`。检索公开资料后，AI SDK 接收本轮资料包、历史问答与可选的历史摘要；历史超过 64,000 字符时自动总结较早轮次并保留最近四轮原文。阈值可用服务端 `ASK_COMPACT_AFTER_CHARACTERS` 调整；压缩失败不覆盖原会话。会话以一行 JSON 格式的 NDJSON 保存于私有 Supabase Storage，本地开发保存在 `var/ask-sessions/`。问答不加载 Pi、工具或技能。X、GitHub Star、抖音的离线资料解析仍使用 Pi 运行时和同一 `BIGMODEL_API_KEY`。
+
+统一默认模型由 `BIGMODEL_MODEL` 配置；问答可用 `ASK_MODEL` 指定另一款 GLM。不回退到其他供应商或按量端点。
 
 旧供应商的读取函数、快捷命令和本地凭据已移除。缺少智谱 Key 时直接报错；模型只接受 `glm-*`，旧 `PI_PROVIDER` / `PI_MODEL` 不再生效。部署平台的旧模型环境变量也应移除。`curation:sync:glm` 是新的快捷命令；历史内容中的模型出处不改写。
 
