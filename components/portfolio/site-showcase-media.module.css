@@ -1,0 +1,12 @@
+.video { display:block; width:100%; height:auto; max-height:78dvh; aspect-ratio:16/9; background:var(--color-plate); border-radius:var(--radius-media); }
+.status { margin:12px 0 0; font-size:13px; color:var(--color-ink-soft); line-height:1.75; }
+.status { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+
+.video { cursor:pointer; }
+.video:focus-visible { outline:2px solid var(--color-ink); outline-offset:4px; }
+
+.media { position:relative; }
+.playHint { position:absolute; right:16px; bottom:16px; display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:var(--radius-pill); background:var(--color-paper); color:var(--color-ink); font-size:12px; pointer-events:none; opacity:0; transition:opacity 140ms; }
+.media[data-playing=false] .playHint,.media:focus-within .playHint { opacity:1; }
+@media(hover:hover) { .media:hover .playHint { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .playHint { transition:none; } }

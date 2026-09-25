@@ -4,6 +4,7 @@ import { FocusStream, type FocusView } from "@/components/focus-stream";
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import type { SiteSection } from "@/components/site-section-navigation";
 import { SiteProfile } from "@/components/site-profile";
+import { PortfolioGatewayEntrance } from "@/components/portfolio/portfolio-gateway-entrance";
 
 type HomeMainProps = {
   children: ReactNode;
@@ -15,6 +16,7 @@ type HomeMainProps = {
 export function HomeMain({ children, initialView, mobileSection }: HomeMainProps) {
   return (
     <main className={`curation-home${mobileSection === "home" ? " curation-home--mobile-home" : ""}`} id="site-main" tabIndex={-1}>
+      <PortfolioGatewayEntrance direction="back" />
       <SiteProfile animateOnFirstHomeVisit mobileSection={mobileSection} />
       <SectionMotionLifecycle section={mobileSection} />
       <FocusStream initialView={initialView}>{children}</FocusStream>

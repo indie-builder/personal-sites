@@ -7,6 +7,7 @@ import { AskAssistant } from "@/components/ask-assistant";
 import { InteractiveDotField } from "@/components/interactive-dot-field";
 import { ProfileIntroduction } from "@/components/profile-introduction";
 import { ProfileTransitionBridge } from "@/components/profile-transition-bridge";
+import { PortfolioGatewayLink } from "@/components/portfolio/portfolio-gateway-link";
 import { MobileSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { siteProfile } from "@/config/site-profile.mjs";
@@ -47,10 +48,10 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
               <BookOpen aria-hidden="true" />
               语雀
             </a>
-            <a href="https://portfolio.default-coder.lovemyrmb.cn/" rel="noreferrer" target="_blank">
+            <PortfolioGatewayLink href="/portfolio">
               <BriefcaseBusiness aria-hidden="true" />
               作品集
-            </a>
+            </PortfolioGatewayLink>
             <AboutPrint />
           </nav>
         </div>

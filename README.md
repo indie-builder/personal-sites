@@ -14,6 +14,7 @@
 | 每日动态 | `/ai-news` | AI/Agent 领域动态，每 5 分钟自动同步 |
 | 每日关注 | `/curation` | X（Twitter）点赞/书签的中文策展与判读 |
 | 开源关注 | `/open-source` | GitHub Star 仓库的中文阅读版与个人判读 |
+| 作品集 | `/portfolio` | 作品时间轴、布局参考、灵感集与设计工程工具 |
 | 角色问答 | 点击个人简介中的像素角色 | 基于公开资料的匿名问答抽屉；独立 `/ask` 页面已下线 |
 
 ## 技术栈
@@ -36,7 +37,7 @@ X SQLite 公开投影 + Supabase 公开表（ai_news_public_items 等）
 ## 本地开发
 
 ```bash
-pnpm install          # Node.js >= 22.19，包管理器 pnpm@11
+pnpm install          # Node.js >= 22.19，包管理器版本以 package.json 为准
 pnpm dev:domain       # https://personal-site.localhost（Turbopack）
 pnpm typecheck        # TypeScript 7（scripts/tsc7.mjs）
 pnpm lint
@@ -54,6 +55,7 @@ pnpm health:production # 连续三次探测线上统一健康端点
 - **每日动态**：`pnpm ai-news:sync`；Supabase Cron 每 5 分钟调用受保护的 Vercel 接口做 24h 增量同步，GitHub Actions 每天 04:17（北京时间）回填 7 天并保留手动恢复入口，详见 `docs/ai-news-sync.md`。
 - **开源关注**：`pnpm github:starred:sync`，详见 `docs/github-starred-sync.md`。
 - **每日关注**：`pnpm curation:*` 系列命令生成 `data/curation.sqlite`，详见 `docs/supabase-x-sync.md`。
+- **作品集**：`pnpm portfolio:sync:layouts`、`portfolio:sync:muse`、`portfolio:sync:tools`、`portfolio:sync:site`；各来源独立增量或生成公开媒体，目录和设计关系见 `docs/portfolio-integration.md`。
 
 公开发现入口包括 `/sitemap.xml`、`/robots.txt`、`/feed.xml` 与全站 Open Graph 图片；RSS 聚合每日动态、每日关注、开源关注的最近更新。
 
@@ -68,4 +70,5 @@ pnpm health:production # 连续三次探测线上统一健康端点
 - `PRODUCT.md` — 产品定位与设计原则
 - `DESIGN.md` — 视觉与设计规则
 - `docs/frontend-architecture.md` — 前端架构
+- `docs/portfolio-integration.md` — 作品集迁入后的目录、路由与设计规划
 - `AGENTS.md` — 协作与工程约定

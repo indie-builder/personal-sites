@@ -1,0 +1,12 @@
+.surface { --color-paper:#202020; --color-ink:#fafafa; --color-ink-soft:#bdbdbd; --color-plate:#353535; --color-hairline-strong:#5c5c5c; --color-border-hover:#848484; --color-subtle:#494949; position: fixed; inset: 0; z-index: 80; outline: none; color: #fafafa; }
+.surface :focus-visible { outline: 2px solid #fafafa; outline-offset: 3px; }
+.backdrop { position: absolute; inset: 0; border:0; padding:0; background: #202020f5; }
+.control { flex-shrink:0; }
+.close { position: absolute; top: 16px; right: 16px; }
+.previous, .next { position: absolute; top: calc(50% - 22px); }
+.previous { left: 16px; }
+.next { right: 16px; }
+.caption { position: absolute; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; line-height: 1.75; }
+.status { position: absolute; top: 72px; left: 16px; right: 16px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; font-size: 13px; line-height: 1.75; color: #fafafa; }
+.status span { background: #202020; padding: 4px 8px; border-radius: 4px; }
+@media (max-width: 639px) { .previous, .next { display: none; } }
