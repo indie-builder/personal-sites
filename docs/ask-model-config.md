@@ -7,7 +7,7 @@
 - 默认模型：`glm-5.3-flash`，通过服务端 `ASK_MODEL` 覆盖
 - 凭据：服务端 `BIGMODEL_API_KEY`，仅置于本地忽略的 `.env.local` 或部署平台的加密环境变量
 
-问答保留 `/api/ask` 的 `sources`、`text`、`done`、`error` SSE 契约。检索公开资料后，AI SDK 只接收本轮资料包与最近四轮问答；会话以 NDJSON 保存于私有 Supabase Storage，本地开发保存在 `var/ask-sessions/`。问答不加载 Pi、工具或技能。X、GitHub Star、抖音的离线资料解析仍使用 Pi 运行时和同一 `BIGMODEL_API_KEY`。
+问答保留 `/api/ask` 的 `sources`、`text`、`done`、`error` SSE 契约。检索公开资料后，AI SDK 接收本轮资料包、历史问答与可选的历史摘要；历史超过 64,000 字符时自动总结较早轮次并保留最近四轮原文。阈值可用服务端 `ASK_COMPACT_AFTER_CHARACTERS` 调整；压缩失败不覆盖原会话。会话以一行 JSON 格式的 NDJSON 保存于私有 Supabase Storage，本地开发保存在 `var/ask-sessions/`。问答不加载 Pi、工具或技能。X、GitHub Star、抖音的离线资料解析仍使用 Pi 运行时和同一 `BIGMODEL_API_KEY`。
 
 统一默认模型由 `BIGMODEL_MODEL` 配置；问答可用 `ASK_MODEL` 指定另一款 GLM。不回退到其他供应商或按量端点。
 
