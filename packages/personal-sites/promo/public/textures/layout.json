@@ -1,0 +1,180 @@
+{
+  "curation": {
+    "items": [
+      {
+        "h": 105,
+        "selector": "aside img",
+        "text": "",
+        "w": 105,
+        "x": 30,
+        "y": 30
+      },
+      {
+        "h": 190.3359375,
+        "selector": "section.curation-home__bio",
+        "text": "Hallo,十余年项目开发经验，横跨 Java、Python、TypeScript 与前端；从业务平台、云服务到企业 AI，一直在做需要长期负责的工程系统。十余",
+        "w": 669.59375,
+        "x": 30,
+        "y": 372.59375
+      }
+    ],
+    "pageH": 3959,
+    "url": "https://default-coder.lovemyrmb.cn/curation",
+    "width": 1920
+  },
+  "design": {
+    "items": [
+      {
+        "h": 182.875,
+        "selector": "article",
+        "text": "2026年9月5日 收录X · @askwhykartik设计系统 · UI/UX · 产品设计9个为AI代理生成DESIGN.md的网站整理9个生成或提供 D",
+        "w": 770,
+        "x": 801.59375,
+        "y": 141.4765625
+      },
+      {
+        "h": 182.875,
+        "selector": "article",
+        "text": "2026年9月5日 收录X · @Manixh02UI/UX · 设计系统antislop：用规则过滤 AI 界面与文案同质化以 38 条规则、活力工具箱和交付",
+        "w": 770,
+        "x": 801.59375,
+        "y": 325.3515625
+      },
+      {
+        "h": 182.875,
+        "selector": "article",
+        "text": "2026年9月5日 收录X · @Jolyne_AI设计系统 · UI/UX · 视觉设计designlang：一键提取网站设计系统用一条命令将网站 DOM 转",
+        "w": 770,
+        "x": 801.59375,
+        "y": 509.2265625
+      },
+      {
+        "h": 646.4375,
+        "selector": "article",
+        "text": "2026年9月5日 收录X · @BThreeAgencyUI/UX · 动效设计 · 视觉设计BThreeAgency 用动效打造有生命力的 Hero 首屏通",
+        "w": 770,
+        "x": 801.59375,
+        "y": 693.1015625
+      }
+    ],
+    "pageH": 7026,
+    "url": "https://default-coder.lovemyrmb.cn/design",
+    "width": 1920
+  },
+  "opensource": {
+    "items": [
+      {
+        "h": 142.703125,
+        "selector": "a[href^=\"/open-source/\"]",
+        "text": "Skills 与工作流持续跟踪jakubkrehel/skillsjakubkrehel/skills 是一组涵盖 UI、排版、颜色、无障碍、布局与产品文案的 ",
+        "w": 770,
+        "x": 801.59375,
+        "y": 148.875
+      },
+      {
+        "h": 142.703125,
+        "selector": "a[href^=\"/open-source/\"]",
+        "text": "Skills 与工作流计划试用microsoft/skill-recorderSkill Recorder 是一款桌面应用，可录制用户的屏幕操作会话，并通过 G",
+        "w": 770,
+        "x": 801.59375,
+        "y": 292.578125
+      },
+      {
+        "h": 142.703125,
+        "selector": "a[href^=\"/open-source/\"]",
+        "text": "Skills 与工作流已提炼oil-oil/oil-frontendoil-frontend 是一套约束 AI 产品前端实现的 Agent Skill，用于统一",
+        "w": 770,
+        "x": 801.59375,
+        "y": 436.28125
+      },
+      {
+        "h": 142.703125,
+        "selector": "a[href^=\"/open-source/\"]",
+        "text": "智能体系统持续跟踪herdrdev/herdrherdr 是一个 Rust 编写的终端复用器，为 coding agent 提供会话持久化、窗格管理和 sock",
+        "w": 770,
+        "x": 801.59375,
+        "y": 579.984375
+      }
+    ],
+    "pageH": 1767,
+    "url": "https://default-coder.lovemyrmb.cn/open-source",
+    "width": 1920
+  },
+  "detail": {
+    "items": [
+      {
+        "h": 2871.390625,
+        "selector": "article",
+        "text": "返回开源关注oil-oil/oil-frontend判读中文前端规范对 Agent 的表达更直接，尤其适合观察产品设计规则如何进入编码过程。仓库文档中文阅读版仓",
+        "w": 800,
+        "x": 801.59375,
+        "y": 0
+      }
+    ],
+    "pageH": 2871,
+    "url": "https://default-coder.lovemyrmb.cn/open-source/oil-oil-oil-frontend",
+    "width": 1920
+  },
+  "news": {
+    "items": [
+      {
+        "h": 141.75,
+        "selector": "a[href^=\"/ai-news/\"]",
+        "text": "00:40X：Gabriel行业电影《ARTIFICIAL》首支预告片发布，Andrew Garfield 饰演 Sam AltmanLuca Guadagni",
+        "w": 770,
+        "x": 801.59375,
+        "y": 154.4765625
+      },
+      {
+        "h": 141.75,
+        "selector": "a[href^=\"/ai-news/\"]",
+        "text": "00:38X：Rohan PaulState Machines：为AI智能体重构企业级测试环境State Machines推出首个可生成企业环境的测试基础设施，",
+        "w": 770,
+        "x": 801.59375,
+        "y": 297.2265625
+      },
+      {
+        "h": 144.359375,
+        "selector": "a[href^=\"/ai-news/\"]",
+        "text": "00:35X：Boris Cherny教程Boris Cherny 称 OpenAI 新模型在提示词注入风险上接近 Gemini Flash 与 Claude ",
+        "w": 770,
+        "x": 801.59375,
+        "y": 439.9765625
+      },
+      {
+        "h": 141.75,
+        "selector": "a[href^=\"/ai-news/\"]",
+        "text": "00:28X：cb_doge行业研究发现 Meta 平台投放 350+ 条含 AI 生成儿童性虐待材料的付费广告研究者发现，Meta 在 Facebook、In",
+        "w": 770,
+        "x": 801.59375,
+        "y": 585.3359375
+      },
+      {
+        "h": 105,
+        "selector": "aside img",
+        "text": "",
+        "w": 105,
+        "x": 30,
+        "y": 30
+      },
+      {
+        "h": 184,
+        "selector": "[aria-label=\"技术词条动效\"]",
+        "text": "retry.policyplanner.agentReact.jsDockerExpress.jsMyBatisNginxretry.policyplanner",
+        "w": 669.59375,
+        "x": 30,
+        "y": 161.3984375
+      }
+    ],
+    "pageH": 6210,
+    "url": "https://default-coder.lovemyrmb.cn/",
+    "width": 1920
+  },
+  "sourceLink": {
+    "height": 31.03125,
+    "width": 154.2265625,
+    "x": 801.59375,
+    "y": 2699.359375,
+    "url": "https://default-coder.lovemyrmb.cn/open-source/oil-oil-oil-frontend"
+  }
+}

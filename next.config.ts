@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
 
+const mediaBase = process.env.NEXT_PUBLIC_MEDIA_BASE_URL;
+const mediaHost = mediaBase ? new URL(mediaBase).hostname : null;
+const mediaVersion = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.MEDIA_VERSION ?? "";
+const portfolioMedia = ["inspora", "layout-compositions", "personal-sites"];
+
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["data/curation.sqlite"],
+    "/portfolio/products/muse": ["packages/inspora/inspora.db", "public/inspora/**/*"],
   },
   experimental: {
     // 每日动态/首页改为动态渲染后，SPA 导航默认每次都重新打服务端（含返回列表），
@@ -15,6 +21,27 @@ const nextConfig: NextConfig = {
   // Pi resolves optional model integrations at runtime, which Turbopack cannot
   // statically analyze inside a Route Handler.
   serverExternalPackages: ["@earendil-works/pi-coding-agent", "better-sqlite3"],
+  transpilePackages: [
+    "@personal-design/layout-compositions",
+    "@personal-design/inspora",
+    "@personal-design/design-engineer-tools",
+    "@personal-design/personal-sites",
+  ],
+  env: { NEXT_PUBLIC_MEDIA_VERSION: mediaVersion },
+  images: {
+    localPatterns: [
+      { pathname: "/**", search: "" },
+      ...(mediaVersion
+        ? portfolioMedia.map((directory) => ({ pathname: `/${directory}/**`, search: `?v=${mediaVersion}` }))
+        : []),
+    ],
+    remotePatterns: [
+      "media.inspora.design",
+      "cdn.jsdelivr.net",
+      "cdn.bestdesignsonx.com",
+      ...(mediaHost ? [mediaHost] : []),
+    ].map((hostname) => ({ protocol: "https" as const, hostname })),
+  },
   typedRoutes: true,
   // public/ 下的静态资源没有内容哈希，给一周浏览器缓存而非 immutable。
   async headers() {

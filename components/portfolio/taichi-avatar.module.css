@@ -1,0 +1,22 @@
+.root { position:relative; flex-shrink:0; }
+.trigger { display:grid; place-items:center; width:44px; height:44px; padding:6px; border:0; border-radius:50%; background:transparent; cursor:pointer; }
+.trigger img { display:block; width:32px; height:32px; border-radius:50%; }
+.trigger:focus-visible { outline:2px solid var(--color-ink); outline-offset:3px; }
+.trigger[aria-disabled='true'] { cursor:default; }
+@media(hover:hover) and (pointer:fine) { .trigger:hover { background:var(--color-plate); } }
+.stage { position:absolute; top:36px; left:0; width:280px; height:190px; z-index:20; pointer-events:none; }
+.actor { position:absolute; top:0; left:0; width:112px; height:126px; color:var(--color-ink); opacity:0; transform-origin:50% 50%; }
+.actor svg { width:100%; height:100%; overflow:visible; }
+.body { transform-origin:80px 110px; }
+.actor [data-joint] { transform-box:view-box; transform-origin:0 0; }
+.jacket { fill:var(--color-ink); stroke:var(--color-ink); }
+.seam { stroke:var(--color-paper); opacity:.65; stroke-width:1.2; }
+.skin { fill:#f5eee3; stroke:#202020; }
+.face { stroke:#202020; }
+.hair { fill:#202020; stroke:#f5eee3; stroke-width:.7; }
+.sleeveOutline { stroke:var(--color-ink); stroke-width:19; }
+.sleeve { stroke:var(--color-ink); stroke-width:21; }
+.trouserOutline { stroke:var(--color-ink); stroke-width:21; }
+.trouser { stroke:var(--color-ink); stroke-width:19; }
+.hand { fill:#f5eee3; stroke:#202020; }
+.shoe { fill:var(--color-paper); }

@@ -338,8 +338,8 @@ test("public discovery endpoints remain machine readable", async ({ request }) =
   }
 
   const health = await request.get("/api/health/data");
-  expect(health.ok()).toBe(true);
   const healthBody = await health.json();
+  expect(health.status()).toBe(healthBody.healthy ? 200 : 503);
   expect(healthBody).toMatchObject({
     askIndex: { healthy: true, missingFts: 0, orphanFts: 0 },
     database: { healthy: true, quickCheck: "ok" },
