@@ -3,6 +3,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+
 import { awaitModelResponse as awaitModelResponseWithTimeout, runPiPrompt } from "../analysis/model-runner.mjs";
 import { runWorkerPool } from "../analysis/runtime.mjs";
 import { resolvePiModelConfig, stripJsonFence } from "../../lib/pi-runtime.mjs";
