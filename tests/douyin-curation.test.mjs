@@ -11,7 +11,7 @@ import {
   toDouyinVideo,
   toQueueItem,
 } from "../modules/douyin-sync/import.mjs";
-import { parseArgs, settleConcurrently } from "../scripts/douyin-curation.mjs";
+import { buildAnalyzerArgs, parseArgs, settleConcurrently } from "../scripts/douyin-curation.mjs";
 import { parseFullSyncArgs } from "../scripts/douyin-full-sync.mjs";
 
 test("Douyin manifest and analyzer output form an auditable queue item", () => {
@@ -92,6 +92,15 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
   });
   assert.equal(parseFullSyncArgs(["--dry-run"]).dryRun, true);
   assert.throws(() => parseArgs(["approve", "douyin:123"]), /不接受/u);
+});
+
+test("Douyin retries refresh analyzer results and key Whisper settings explicitly", () => {
+  const args = buildAnalyzerArgs("video.mp4", "frames", {
+    env: { WHISPER_MODEL: "small", WHISPER_LANGUAGE: "zh" },
+    forceRefresh: true,
+  });
+  assert.deepEqual(args.slice(-5), ["--model", "small", "--language", "zh", "--force-refresh"]);
+  assert.equal(buildAnalyzerArgs("video.mp4", "frames", { env: {} }).includes("--force-refresh"), false);
 });
 
 test("Curated tags are normalized against the configured taxonomy whitelist", () => {

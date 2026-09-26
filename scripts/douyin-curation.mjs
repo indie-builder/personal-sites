@@ -98,24 +98,25 @@ export async function settleConcurrently(targets, concurrency, processTarget) {
   return failures;
 }
 
-async function analyzeVideo(video) {
+export function buildAnalyzerArgs(videoPath, outputDirectory, { forceRefresh = false, env = process.env } = {}) {
+  const args = [
+    "-y", config.analyzer.package, "analyze", videoPath,
+    "--detail", config.analyzer.detail,
+    "--fields", config.analyzer.fields,
+    "--ocr-language", config.analyzer.ocrLanguage,
+    "--out", outputDirectory,
+  ];
+  if (env.WHISPER_MODEL) args.push("--model", env.WHISPER_MODEL);
+  if (env.WHISPER_LANGUAGE) args.push("--language", env.WHISPER_LANGUAGE);
+  if (forceRefresh) args.push("--force-refresh");
+  return args;
+}
+
+async function analyzeVideo(video, forceRefresh = false) {
   const outputDirectory = path.join(rawRoot, video.awemeId, "frames");
   const { stdout } = await execFileAsync(
     "npx",
-    [
-      "-y",
-      config.analyzer.package,
-      "analyze",
-      video.videoPath,
-      "--detail",
-      config.analyzer.detail,
-      "--fields",
-      config.analyzer.fields,
-      "--ocr-language",
-      config.analyzer.ocrLanguage,
-      "--out",
-      outputDirectory,
-    ],
+    buildAnalyzerArgs(video.videoPath, outputDirectory, { forceRefresh }),
     {
       cwd: repoRoot,
       env: { ...process.env, MCP_WRITE_SIDECARS: "1" },
@@ -239,7 +240,7 @@ async function sync(options) {
 
   async function processVideo(video) {
     const id = `douyin:${video.awemeId}`;
-    const evidence = await withAnalyzerSlot(() => analyzeVideo(video));
+    const evidence = await withAnalyzerSlot(() => analyzeVideo(video, options.force || failuresById.has(id)));
     const rawEvidencePath = path.join(rawRoot, video.awemeId, "analysis.json");
     await writePrivateJson(rawEvidencePath, { evidence, source: video });
     const parsed = await promptCurationResponse(reader, buildCurationPrompt(video, evidence, config.taxonomy), config.taxonomy);
