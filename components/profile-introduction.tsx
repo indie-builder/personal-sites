@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useInView } from "motion/react";
 import { ProfileTextLines } from "@/components/profile-text-lines";
 import { GrowingParagraph } from "@/components/growing-paragraph";
 import { createTypewriterDriver } from "@/components/profile-typewriter";
+import { useMediaQuery } from "@/components/use-media-query";
 
 type ProfileIntroductionProps = {
   assistant?: ReactNode;
@@ -41,19 +42,6 @@ const GREETINGS = [
 
 const TITLE_PUNCTUATION = /[，、,.!?]/u;
 const PARAGRAPH_PUNCTUATION = /[，。；、.!?]/u;
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
-function subscribeToReducedMotion(onStoreChange: () => void) {
-  const queries = [REDUCED_MOTION_QUERY, "(max-width: 900px)"].map((query) => window.matchMedia(query));
-  queries.forEach((media) => media.addEventListener("change", onStoreChange));
-  return () => queries.forEach((media) => media.removeEventListener("change", onStoreChange));
-}
-
-// 手机优先完整阅读，桌面保留逐字语言切换。
-const getReducedMotionSnapshot = () => window.matchMedia(REDUCED_MOTION_QUERY).matches
-  || window.matchMedia("(max-width: 900px)").matches;
-const getServerReducedMotionSnapshot = () => false;
-
 type DisplayPhase = "english" | "erasing" | "chinese" | "complete";
 
 export function ProfileIntroduction({
@@ -64,11 +52,10 @@ export function ProfileIntroduction({
 }: ProfileIntroductionProps) {
   const introductionRef = useRef<HTMLElement>(null);
   const isVisible = useInView(introductionRef);
-  const reduceMotion = useSyncExternalStore(
-    subscribeToReducedMotion,
-    getReducedMotionSnapshot,
-    getServerReducedMotionSnapshot,
-  );
+  // 手机优先完整阅读，桌面保留逐字语言切换。
+  const motionPreference = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const compactLayout = useMediaQuery("(max-width: 900px)");
+  const reduceMotion = motionPreference || compactLayout;
   const [visibleCounts, setVisibleCounts] = useState(() => (
     animateOnFirstHomeVisit
       ? paragraphs.map(() => 0)

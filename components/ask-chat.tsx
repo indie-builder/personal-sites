@@ -6,6 +6,7 @@ import { SpriteWalker } from "@/components/assistant-sprite";
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { AskMessageItem, EMPTY_ENTER_DURATION, MESSAGE_ENTER_EASE, MotionMessageScrollerItem } from "@/components/ask-message";
 import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
+import { useMediaQuery } from "@/components/use-media-query";
 import { useVisitorSession } from "@/components/use-visitor-session";
 import { ArrowDown, ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
 import { motion } from "motion/react";
@@ -38,7 +39,7 @@ export function AskChat() {
   const [question, setQuestion] = useState("");
   const [restored, setRestored] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const requestController = useRef<AbortController | null>(null);
   // isStreaming 要等会话预热（异步）之后才置位：用同步标记挡住这个窗口里的
   // 重入（双击重试、重试与回车并发），避免重复请求与停止按钮失灵。
@@ -67,14 +68,6 @@ export function AskChat() {
   useEffect(() => {
     if (restored) writeAskChatSnapshot({ messages, question });
   }, [messages, question, restored]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setPrefersReducedMotion(media.matches);
-    updatePreference();
-    media.addEventListener("change", updatePreference);
-    return () => media.removeEventListener("change", updatePreference);
-  }, []);
 
   useEffect(() => () => {
     // 卸载（离开路由）时中止进行中的流式请求，避免对已卸载组件空跑完整回答。
