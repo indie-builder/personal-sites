@@ -116,32 +116,24 @@ class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
     private val _meta = MutableStateFlow<Map<String, PortfolioMeta>>(emptyMap())
     val meta: StateFlow<Map<String, PortfolioMeta>> = _meta.asStateFlow()
 
-    private var productsLoaded = false
-
     private val feeds = object : LinkedHashMap<String, PagedFeed<PortfolioItem>>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PagedFeed<PortfolioItem>>) = size > 8
     }
 
     /** 首次进入拉取产品列表；已成功加载过则复用，配置变更不重拉。 */
     fun loadProducts() {
-        if (productsLoaded || _products.value.refreshing) return
-        requestProducts()
+        if (_products.value.items == null) refreshProducts()
     }
 
     /** 下拉刷新；失败时保留已有列表并置 refreshError 供轻提示。 */
     fun refreshProducts() {
         if (_products.value.refreshing) return
-        requestProducts()
-    }
-
-    private fun requestProducts() {
         _products.value = _products.value.copy(refreshing = true, refreshError = false)
         viewModelScope.launch {
             val result = runCatching { api.products().items }
             val current = _products.value
             result.fold(
                 onSuccess = { items ->
-                    productsLoaded = true
                     _products.value = PortfolioProductsState(items = items, refreshing = false)
                 },
                 onFailure = { e ->
