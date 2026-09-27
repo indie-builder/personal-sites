@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { CurationStream } from "@/components/curation-stream";
-import { FeedPage, FeedSkeleton } from "@/components/page-shell";
+import { FeedPage } from "@/components/page-shell";
 import { getDesignCurationPage } from "@/lib/curation";
 import { withCanonical } from "@/lib/metadata";
 
@@ -33,9 +32,7 @@ async function DesignFeed() {
 export default function DesignPage() {
   return (
     <FeedPage label="设计收藏" section="design">
-      <Suspense fallback={<FeedSkeleton />}>
-        <DesignFeed />
-      </Suspense>
+      <DesignFeed />
     </FeedPage>
   );
 }

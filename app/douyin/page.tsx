@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { CurationStream } from "@/components/curation-stream";
-import { FeedPage, FeedSkeleton } from "@/components/page-shell";
+import { FeedPage } from "@/components/page-shell";
 import { getDouyinCurationPage } from "@/lib/curation";
 import { withCanonical } from "@/lib/metadata";
 
@@ -35,9 +34,7 @@ export default function DouyinPage() {
   // 壳（个人信息栏、版块导航）立即渲染，列表数据经 Suspense 流式补进。
   return (
     <FeedPage label="抖音收藏" section="douyin">
-      <Suspense fallback={<FeedSkeleton />}>
-        <DouyinFeed />
-      </Suspense>
+      <DouyinFeed />
     </FeedPage>
   );
 }

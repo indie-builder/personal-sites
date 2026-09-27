@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { CurationStream } from "@/components/curation-stream";
-import { FeedPage, FeedSkeleton } from "@/components/page-shell";
+import { FeedPage } from "@/components/page-shell";
 import { getCurationPage } from "@/lib/curation";
 import { withCanonical } from "@/lib/metadata";
 
@@ -24,9 +23,7 @@ async function CurationFeed() {
 export default function CurationPage() {
   return (
     <FeedPage label="每日关注" section="daily">
-      <Suspense fallback={<FeedSkeleton />}>
-        <CurationFeed />
-      </Suspense>
+      <CurationFeed />
     </FeedPage>
   );
 }
