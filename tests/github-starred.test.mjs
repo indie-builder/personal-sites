@@ -21,6 +21,27 @@ import { publishStarredRecords, toPublicOpenSourceItem } from "../modules/github
 import { buildRepositoryStructureMarkdown, isChineseMarkdown } from "../modules/github-starred/github-api.mjs";
 import { readLocalSourceRecords, syncRepositorySource, syncStarredRepositories } from "../modules/github-starred/source.mjs";
 
+function publicationFixture(fullName, nodeId, slug, { defaultBranch, sourceMarkdown = "# Original README\n" } = {}) {
+  const repositoryUrl = `https://github.com/${fullName}`;
+  return {
+    record: {
+      repository: { fullName, nodeId, repositoryUrl, starredAt: null, ...(defaultBranch ? { defaultBranch } : {}) },
+      sourceFetchedAt: "2026-08-09T00:00:00.000Z",
+      sourceKind: "readme",
+      sourceMarkdown,
+      sourceSha256: "sha",
+      sourceStructure: null,
+      sourceTruncated: false,
+    },
+    entry: {
+      category: "skills", caveats: [], dimensions: ["agent-skills"],
+      evidence: { checkedAt: "2026-08-09", kind: "readme", label: "README.md", note: "来源", url: `${repositoryUrl}/blob/main/README.md` },
+      judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: fullName,
+      scenarios: [], slug, sourceSummary: "摘要", status: "持续跟踪", type: "Skill", workflow: [],
+    },
+  };
+}
+
 test("中文阅读版校验代码、链接和 Agent 术语保持原样", () => {
   const source = "# Agent Skill\n\nUse `pnpm run build` with [GitHub](https://github.com/example/repo).\n\n```ts\nconst api = '/v1';\n```\n";
   const translated = "# Agent Skill\n\n使用 `pnpm run build` 配合 [GitHub](https://github.com/example/repo)。\n\n```ts\nconst api = '/v1';\n```\n";
@@ -261,31 +282,11 @@ test("智谱 GLM 未返回简介时以 GitHub 元数据生成一句话兜底", a
 });
 
 test("公开投影只携带选中的单仓库资料及双版本 Markdown", () => {
-  const record = {
-    repository: { defaultBranch: "main", fullName: "example/repo", nodeId: "node-1", repositoryUrl: "https://github.com/example/repo" },
-    sourceKind: "readme",
-    sourceMarkdown: "# Original README\n",
-  };
+  const { record, entry } = publicationFixture("example/repo", "node-1", "example-repo", { defaultBranch: "main" });
   const analysis = {
     contentMarkdown: "# 中文阅读版\n",
     model: { model: "gpt-5.6-luna", provider: "codex-cli" },
     oneLineSummary: "模型生成的一句话简介。",
-  };
-  const entry = {
-    category: "skills",
-    caveats: [],
-    dimensions: ["agent-skills"],
-    evidence: { checkedAt: "2026-08-09", kind: "readme", label: "README.md", note: "来源", url: "https://github.com/example/repo/blob/main/README.md" },
-    judgement: "判断",
-    nextStep: "下一步",
-    personalNote: "备注",
-    repository: "example/repo",
-    scenarios: [],
-    slug: "example-repo",
-    sourceSummary: "摘要",
-    status: "持续跟踪",
-    type: "Skill",
-    workflow: [],
   };
   const item = toPublicOpenSourceItem(record, analysis, entry, 2, "2026-08-09T00:00:00.000Z");
   assert.equal(item.repo_node_id, "node-1");
@@ -301,21 +302,7 @@ test("公开投影只携带选中的单仓库资料及双版本 Markdown", () =>
 test("发布器把公开投影和问答分块写入本地 SQLite", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "github-starred-sqlite-"));
   const databasePath = path.join(directory, "public.sqlite");
-  const record = {
-    repository: { fullName: "example/repo", nodeId: "node-1", repositoryUrl: "https://github.com/example/repo", starredAt: null },
-    sourceFetchedAt: "2026-08-09T00:00:00.000Z",
-    sourceKind: "readme",
-    sourceMarkdown: "# Original README\n",
-    sourceSha256: "sha",
-    sourceStructure: null,
-    sourceTruncated: false,
-  };
-  const entry = {
-    category: "skills", caveats: [], dimensions: ["agent-skills"],
-    evidence: { checkedAt: "2026-08-09", kind: "readme", label: "README.md", note: "来源", url: "https://github.com/example/repo/blob/main/README.md" },
-    judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/repo",
-    scenarios: [], slug: "example-repo", sourceSummary: "摘要", status: "持续跟踪", type: "Skill", workflow: [],
-  };
+  const { record, entry } = publicationFixture("example/repo", "node-1", "example-repo");
   const analysis = { contentMarkdown: "# 中文阅读版\n", generatedAt: "2026-08-09T00:00:00.000Z", model: { provider: "bigmodel-coding", model: "glm-5.3-flash" }, oneLineSummary: "智谱 GLM 生成的一句话简介。", parserVersion: "test", repoNodeId: "node-1", repository: "example/repo", sourceKind: "readme", sourceSha256: "sha", summaryModel: { provider: "bigmodel-coding", model: "glm-5.3-flash" }, summaryVersion: "test-summary" };
   try {
     const result = await publishStarredRecords({ analyses: [analysis], databasePath, records: [record], seedEntries: [entry] });
@@ -336,22 +323,7 @@ test("发布器把公开投影和问答分块写入本地 SQLite", async () => {
 test("撤回公开仓库时删除本地投影和问答分块", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "github-starred-withdraw-"));
   const databasePath = path.join(directory, "public.sqlite");
-  const record = {
-    repository: { fullName: "example/withdrawn", nodeId: "node-withdrawn", repositoryUrl: "https://github.com/example/withdrawn", starredAt: null },
-    sourceFetchedAt: "2026-08-09T00:00:00.000Z",
-    sourceKind: "readme",
-    sourceMarkdown: "# README\n",
-    sourceSha256: "sha",
-    sourceStructure: null,
-    sourceTruncated: false,
-  };
-
-  const entry = {
-    category: "skills", caveats: [], dimensions: ["agent-skills"],
-    evidence: { checkedAt: "2026-08-09", kind: "readme", label: "README.md", note: "来源", url: "https://github.com/example/withdrawn/blob/main/README.md" },
-    judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/withdrawn",
-    scenarios: [], slug: "example-withdrawn", sourceSummary: "摘要", status: "持续跟踪", type: "Skill", workflow: [],
-  };
+  const { record, entry } = publicationFixture("example/withdrawn", "node-withdrawn", "example-withdrawn", { sourceMarkdown: "# README\n" });
   const analysis = { contentMarkdown: "# 中文阅读版\n", oneLineSummary: "简介", repoNodeId: "node-withdrawn" };
   try {
     await publishStarredRecords({ analyses: [analysis], databasePath, records: [record], seedEntries: [entry] });
