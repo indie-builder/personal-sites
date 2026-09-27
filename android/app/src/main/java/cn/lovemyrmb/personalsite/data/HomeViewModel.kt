@@ -131,26 +131,4 @@ class HomeViewModel(private val api: SiteApi) : ViewModel() {
     private val curationFeeds = mapOf(Section.CURATION to curation, Section.DESIGN to design, Section.DOUYIN to douyin)
 
     fun curationFeed(section: Section): PagedFeed<CurationItem> = curationFeeds.getValue(section)
-
-    fun loadInitial(section: Section) {
-        feed(section).loadInitial()
-    }
-
-    fun refresh(section: Section) {
-        feed(section).refresh()
-    }
-
-    fun loadMore(section: Section) {
-        feed(section).loadMore()
-    }
-
-    fun retry(section: Section) {
-        feed(section).retry()
-    }
-
-    private fun feed(section: Section) = when (section) {
-        Section.AI_NEWS -> aiNews
-        Section.OPEN_SOURCE -> openSource
-        Section.CURATION, Section.DESIGN, Section.DOUYIN -> curationFeed(section)
-    }
 }

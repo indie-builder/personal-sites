@@ -78,13 +78,10 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
         ) { page ->
             val section = sections[page]
-            LaunchedEffect(section) { viewModel.loadInitial(section) }
             val contentPadding = PaddingValues(bottom = bottomBarPadding)
             when (section) {
                 Section.AI_NEWS -> FeedPageUi(
                     feed = viewModel.aiNews,
-                    section = section,
-                    viewModel = viewModel,
                     contentPadding = contentPadding,
                     keyOf = AiNewsListItem::id,
                 ) { item ->
@@ -93,8 +90,6 @@ fun HomeScreen(
 
                 Section.CURATION, Section.DESIGN, Section.DOUYIN -> FeedPageUi(
                     feed = viewModel.curationFeed(section),
-                    section = section,
-                    viewModel = viewModel,
                     contentPadding = contentPadding,
                     keyOf = CurationItem::id,
                 ) { item ->
@@ -103,8 +98,6 @@ fun HomeScreen(
 
                 Section.OPEN_SOURCE -> FeedPageUi(
                     feed = viewModel.openSource,
-                    section = section,
-                    viewModel = viewModel,
                     contentPadding = contentPadding,
                     keyOf = OpenSourceListEntry::slug,
                 ) { item ->
@@ -167,16 +160,15 @@ private fun SectionTabs(selectedPage: Int, onSelect: (Int) -> Unit) {
 @Composable
 private fun <T> FeedPageUi(
     feed: PagedFeed<T>,
-    section: Section,
-    viewModel: HomeViewModel,
     contentPadding: PaddingValues,
     keyOf: (T) -> String,
     row: @Composable (T) -> Unit,
 ) {
+    LaunchedEffect(feed) { feed.loadInitial() }
     val state by feed.state.collectAsStateWithLifecycle()
     PullToRefreshBox(
         isRefreshing = state.refreshing,
-        onRefresh = { viewModel.refresh(section) },
+        onRefresh = { feed.refresh() },
         modifier = Modifier.fillMaxSize(),
     ) {
         when {
@@ -187,7 +179,7 @@ private fun <T> FeedPageUi(
             state.error != null && state.items.isEmpty() -> ErrorRetry(
                 message = state.error ?: "",
                 modifier = Modifier.fillMaxSize(),
-            ) { viewModel.retry(section) }
+            ) { feed.retry() }
 
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -199,9 +191,9 @@ private fun <T> FeedPageUi(
                 }
                 item(key = "footer") {
                     LaunchedEffect(state.items.size, state.hasMore) {
-                        if (state.hasMore) viewModel.loadMore(section)
+                        if (state.hasMore) feed.loadMore()
                     }
-                    FeedFooter(state) { viewModel.retry(section) }
+                    FeedFooter(state) { feed.retry() }
                 }
             }
         }
