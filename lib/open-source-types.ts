@@ -1,3 +1,6 @@
+import type { z } from "zod";
+import type { openSourceEntrySchema } from "@/lib/open-source-schema";
+
 export const openSourceCategories = [
   { id: "all", label: "全部" },
   { id: "skills", label: "Skills 与工作流" },
@@ -22,39 +25,7 @@ export const openSourceDimensions = [
 
 export type OpenSourceCategory = (typeof openSourceCategories)[number]["id"];
 export type OpenSourceDimension = (typeof openSourceDimensions)[number]["id"];
-export type OpenSourceStatus = "持续跟踪" | "计划试用" | "已提炼";
-
-export type OpenSourceEvidence = {
-  checkedAt: string;
-  kind: "readme" | "repository";
-  label: string;
-  note: string;
-  url: string;
-};
-
-export type OpenSourceEntry = {
-  category: Exclude<OpenSourceCategory, "all">;
-  caveats: string[];
-  dimensions: OpenSourceDimension[];
-  evidence: OpenSourceEvidence;
-  judgement: string;
-  nextStep: string;
-  parsedMarkdown?: string | null;
-  personalNote: string;
-  repository: string;
-  repositoryDefaultBranch?: string | null;
-  repositoryUrl: string;
-  readingSource?: "official-zh-readme" | "model-translation";
-  readingSourcePath?: string | null;
-  scenarios: string[];
-  slug: string;
-  sourceMarkdown?: string | null;
-  sourceSummary: string;
-  sourceTitle?: string;
-  status: OpenSourceStatus;
-  type: string;
-  workflow: Array<{ description: string; label: string }>;
-};
+export type OpenSourceEntry = z.infer<typeof openSourceEntrySchema>;
 
 /**
  * The stream only needs this small public projection. Keeping the long
