@@ -7,7 +7,7 @@
 
 - **Swift 6**（严格并发 + Approachable Concurrency + MainActor 默认隔离）
 - **SwiftUI + `@Observable`**（iOS 26+，底栏使用 Liquid Glass `glassEffect`）
-- **零第三方依赖**：网络用 `URLSession`（SSE 用 `AsyncBytes` 手工按帧切行），图片用 `AsyncImage`（列表缩略位为 ImageIO 降采样），视频用 `AVPlayer`，Markdown 为自研轻量解析器（解析在 `UI/Ask/MarkdownParser.swift`、渲染在 `UI/Ask/MarkdownRendering.swift`，语法范围与安卓端 commonmark 渲染对齐）
+- **零第三方依赖**：网络用 `URLSession`（SSE 用 `AsyncBytes` 手工按帧切行），图片用 `AsyncImage`（列表缩略位为 ImageIO 降采样），视频用 `AVPlayer`，Markdown 为自研轻量解析器（块级解析在 `UI/Ask/MarkdownParser.swift`、行内解析在 `UI/Ask/MarkdownInlineParser.swift`、渲染在 `UI/Ask/MarkdownRendering.swift`，语法范围与安卓端 commonmark 渲染对齐）
 
 ## 目录结构
 

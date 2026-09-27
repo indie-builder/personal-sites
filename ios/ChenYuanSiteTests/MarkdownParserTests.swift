@@ -42,7 +42,7 @@ struct MarkdownParserTests {
     }
 
     @Test func inlineStyles() {
-        #expect(MarkdownParser.parseInline("**粗** *斜* ~~删~~ `码`") == [
+        #expect(MarkdownInlineParser.parse("**粗** *斜* ~~删~~ `码`") == [
             .strong([.text("粗")]),
             .text(" "),
             .emphasis([.text("斜")]),
@@ -54,13 +54,13 @@ struct MarkdownParserTests {
     }
 
     @Test func sourceReferencesParseOneBased() {
-        #expect(MarkdownParser.parseInline("看【1】和[2]") == [.text("看"), .sourceRef(0), .text("和"), .sourceRef(1)])
+        #expect(MarkdownInlineParser.parse("看【1】和[2]") == [.text("看"), .sourceRef(0), .text("和"), .sourceRef(1)])
         // 代码块内不解析引用编号。
-        #expect(MarkdownParser.parseInline("`【1】`") == [.code("【1】")])
+        #expect(MarkdownInlineParser.parse("`【1】`") == [.code("【1】")])
     }
 
     @Test func htmlInlineAndBlockStayLiteral() {
-        #expect(MarkdownParser.parseInline("前<br>后") == [.text("前"), .html("<br>"), .text("后")])
+        #expect(MarkdownInlineParser.parse("前<br>后") == [.text("前"), .html("<br>"), .text("后")])
         #expect(MarkdownParser.parse("<div>html</div>") == [.html("<div>html</div>")])
     }
 }
