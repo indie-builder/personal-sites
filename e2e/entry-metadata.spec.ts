@@ -43,7 +43,7 @@ test("open-source detail metadata derive from the visited entry", async ({ page 
 });
 
 test("home and list pages canonical to bare paths regardless of query params", async ({ page }) => {
-  await page.goto("/?view=daily");
+  await page.goto("/?utm_source=reader");
   expect(await canonicalPath(page)).toBe("/");
 
   for (const path of ["/ai-news", "/curation", "/design", "/douyin", "/open-source"]) {
