@@ -19,7 +19,9 @@ ios/
 │   ├── Data/                     # Models / SiteAPI / PagedFeed / AskClient / AskController
 │   ├── UI/
 │   │   ├── Theme.swift           # 色彩/字号/间距令牌 + 全站通用修饰（siteBodyStyle 等）
-│   │   ├── Components.swift      # 共享部件（缩略图/返回钮/图标钮/重试块/视频播放状态/时间文案）
+│   │   ├── Components.swift      # 共享按钮、错误态与时间文案
+│   │   ├── Thumbnail.swift       # 列表图片降采样与缓存
+│   │   ├── VideoPlayerModel.swift # 视频播放与音频会话状态
 │   │   ├── RootView.swift        # 四项玻璃底栏 + 路由 + 滚动隐藏
 │   │   ├── OpeningView.swift     # 开场动画
 │   │   └── Home|Detail|Ask|About # 各页面；Detail 分离路由、媒体与图片阅读器

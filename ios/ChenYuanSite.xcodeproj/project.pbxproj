@@ -43,6 +43,8 @@
 		A20000000000000000000036 = {isa = PBXBuildFile; fileRef = A10000000000000000000036; };
 		A20000000000000000000037 = {isa = PBXBuildFile; fileRef = A10000000000000000000037; };
 		A20000000000000000000038 = {isa = PBXBuildFile; fileRef = A10000000000000000000038; };
+		A20000000000000000000039 = {isa = PBXBuildFile; fileRef = A10000000000000000000039; };
+		A20000000000000000000040 = {isa = PBXBuildFile; fileRef = A10000000000000000000040; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,6 +117,8 @@
 		A10000000000000000000036 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioItemReader.swift; sourceTree = "<group>"; };
 		A10000000000000000000037 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailMedia.swift; sourceTree = "<group>"; };
 		A10000000000000000000038 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoReader.swift; sourceTree = "<group>"; };
+		A10000000000000000000039 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Thumbnail.swift; sourceTree = "<group>"; };
+		A10000000000000000000040 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -159,6 +163,8 @@
 				A10000000000000000000010,
 				A10000000000000000000011,
 				A10000000000000000000012,
+				A10000000000000000000039,
+				A10000000000000000000040,
 				A30000000000000000000005,
 				A30000000000000000000006,
 				A30000000000000000000007,
@@ -321,6 +327,8 @@
 				A20000000000000000000010,
 				A20000000000000000000011,
 				A20000000000000000000012,
+				A20000000000000000000039,
+				A20000000000000000000040,
 				A20000000000000000000013,
 				A20000000000000000000014,
 				A20000000000000000000037,
