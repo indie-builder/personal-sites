@@ -5,9 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-
-import { createCodexCliReader, createZcodeCliReader } from "../modules/analysis/readers.mjs";
+import { createAnalysisReader } from "../modules/analysis/readers.mjs";
 import {
   applyCurationAnalysis,
   applyDesignAnalysis,
@@ -22,8 +20,6 @@ import { expandUrl, classifyUrl, fetchGithubRepo, fetchArticleText } from "../mo
 import { buildPrompt, buildDesignPrompt, parseJsonResponse, parseDesignResponse } from "../modules/x-sync/prompts.mjs";
 import { writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
-import { configureBigModelRuntime } from "../lib/bigmodel.mjs";
-import { runPiPrompt } from "../modules/analysis/model-runner.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
@@ -62,12 +58,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ---------- AI 调用 ----------
 
-async function callPiModel(prompt, images, parser = parseJsonResponse) {
-  const model = runtime.getModel(piModel.provider, piModel.model);
-  if (!model) throw new Error(`Pi 未找到模型：${piModel.provider}/${piModel.model}`);
-  return parser(await runPiPrompt({ cwd: repoRoot, images, label: "智谱 GLM", model, prompt, runtime }));
-}
-
 // ---------- 主流程 ----------
 
 const queue = JSON.parse(await readFile(queuePath, "utf8"));
@@ -100,23 +90,18 @@ if (!DRY_RUN && ENGINE === "pi" && !process.env.BIGMODEL_API_KEY) {
   console.error("缺少 BIGMODEL_API_KEY 环境变量，Pi 无法使用 智谱 GLM Coding 模型。");
   process.exit(1);
 }
-const runtime = DRY_RUN || ENGINE !== "pi" ? null : await ModelRuntime.create({ allowModelNetwork: false });
-if (runtime) await configureBigModelRuntime(runtime, piModel.model);
-const zcodeReader = !DRY_RUN && ENGINE === "zcode" ? createZcodeCliReader({ config, repoRoot }) : null;
-const codexReader = !DRY_RUN && ENGINE === "codex-cli"
-  ? await createCodexCliReader({
-    config: { analysis: { codex_cli: { model: CODEX_MODEL, reasoning_effort: CODEX_REASONING_EFFORT } } },
-    repoRoot,
-  })
-  : null;
-const cliReader = zcodeReader ?? codexReader;
+const reader = DRY_RUN ? null : await createAnalysisReader({
+  engine: ENGINE,
+  config: { ...config, analysis: { ...config.analysis, codex_cli: { model: CODEX_MODEL, reasoning_effort: CODEX_REASONING_EFFORT } } },
+  repoRoot,
+  timeoutMilliseconds: ENGINE === "pi" ? null : undefined,
+});
 const MODEL_LABEL = ENGINE === "codex-cli"
   ? `codex-cli/${CODEX_MODEL}`
   : ENGINE === "zcode" ? "zcode/GLM-5.3-Flash" : `pi/${piModel.provider}/${piModel.model}`;
 
 async function callModel(prompt, images, parser = parseJsonResponse) {
-  if (cliReader) return parser(await cliReader.prompt(prompt, { imagePaths: images.map((image) => image.path) }));
-  return callPiModel(prompt, images, parser);
+  return parser(await reader.prompt(prompt, { images, imagePaths: images.map((image) => image.path) }));
 }
 
 let done = 0;

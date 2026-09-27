@@ -8,11 +8,11 @@ import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { awaitModelResponse as awaitModelResponseWithTimeout, runPiPrompt } from "./model-runner.mjs";
 import { resolvePiModelConfig } from "../../lib/pi-runtime.mjs";
 import { configureBigModelRuntime } from "../../lib/bigmodel.mjs";
+import { resolveAnalysisEngine } from "./runtime.mjs";
 
-export async function createBigModelReader({ config = {}, env = process.env, repoRoot }) {
+export async function createBigModelReader({ config = {}, env = process.env, repoRoot, timeoutMilliseconds = config.analysis?.request_timeout_ms ?? 240000 }) {
   const modelConfig = resolvePiModelConfig({ config, env });
   if (!env.BIGMODEL_API_KEY) throw new Error("缺少 BIGMODEL_API_KEY，无法调用智谱 GLM。");
-  const requestTimeoutMilliseconds = config.analysis?.request_timeout_ms ?? 240000;
   const runtime = await ModelRuntime.create({ allowModelNetwork: false });
   await configureBigModelRuntime(runtime, modelConfig.model, env);
   const model = runtime.getModel(modelConfig.provider, modelConfig.model);
@@ -20,17 +20,27 @@ export async function createBigModelReader({ config = {}, env = process.env, rep
 
   return {
     modelConfig,
-    async prompt(prompt) {
+    async prompt(prompt, { images = [] } = {}) {
       return runPiPrompt({
         cwd: repoRoot,
+        images,
         label: "智谱 GLM",
         model,
         prompt,
         runtime,
-        timeoutMilliseconds: requestTimeoutMilliseconds,
+        timeoutMilliseconds: timeoutMilliseconds ?? undefined,
       });
     },
   };
+}
+
+export async function createAnalysisReader({ engine, config = {}, repoRoot, env = process.env, timeoutMilliseconds }) {
+  switch (resolveAnalysisEngine(engine)) {
+    case "codex-cli": return createCodexCliReader({ config, repoRoot });
+    case "zcode": return createZcodeCliReader({ config, env, repoRoot });
+    case "pi": return createBigModelReader({ config, env, repoRoot, timeoutMilliseconds });
+    default: throw new Error(`未实现的分析引擎：${engine}`);
+  }
 }
 
 export function runCodexCli(command, args, { cwd, input, maxBuffer = 8 * 1024 * 1024, timeoutMilliseconds } = {}) {

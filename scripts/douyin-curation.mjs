@@ -6,7 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createCodexCliReader, createBigModelReader, createZcodeCliReader } from "../modules/analysis/readers.mjs";
+import { createAnalysisReader } from "../modules/analysis/readers.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import {
   buildCurationPrompt,
@@ -188,15 +188,11 @@ async function sync(options) {
 
   const concurrency = options.concurrency ?? (options.engine === "pi" ? 2 : options.engine === "zcode" ? 8 : 20);
   const analyzerConcurrency = options.analyzerConcurrency ?? 6;
-  const reader = options.refreshOnly ? null
-    : options.engine === "pi"
-      ? await createBigModelReader({ config: {}, repoRoot })
-      : options.engine === "zcode"
-        ? createZcodeCliReader({ config: {}, repoRoot })
-        : await createCodexCliReader({
-          config: { analysis: { codex_cli: { model: "gpt-5.6-terra", reasoning_effort: "high" } } },
-          repoRoot,
-        });
+  const reader = options.refreshOnly ? null : await createAnalysisReader({
+    engine: options.engine,
+    config: { analysis: { codex_cli: { model: "gpt-5.6-terra", reasoning_effort: "high" } } },
+    repoRoot,
+  });
 
   const targets = options.refreshOnly ? [] : videos.filter((video) => options.force || !byId.has(`douyin:${video.awemeId}`));
 
