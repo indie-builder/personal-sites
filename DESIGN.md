@@ -220,7 +220,7 @@ components:
 | 开源关注 | `components/open-source-stream.tsx` | 仓库判读与主题索引 |
 | 详情阅读 | `components/article-markdown.tsx`、`app/globals.css` | `.curation-detail__article`、`.curation-detail__section`、`.article-markdown`；对页使用 `--spread` 修饰边界 |
 | 问答与输入 | `components/ask-chat.tsx`、`components/ask-chat.module.css` | 仅供角色抽屉使用，保留消息滚动与原生输入组合器 |
-| 单选菜单 | `components/ui/dropdown-menu.tsx` | 日期分类、问答范围沿用各自样式，不照搬组件库默认外观 |
+| 每日动态分类菜单 | `components/ai-news-stream.tsx`、`app/globals.css` | 直接复用 Radix 单选菜单原语，保留站点自己的菜单样式 |
 | 主题与首访 | `components/theme-toggle.tsx`、`components/opening-loader.tsx` | 复用主题状态和会话揭幕，不新增页面级 Loading 仪式 |
 
 ### 像素助手（指定参考的局部例外）
