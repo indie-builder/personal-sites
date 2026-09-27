@@ -45,7 +45,7 @@ RootLayout
 | 版块页 | `app/ai-news/page.tsx`、`app/curation/page.tsx`、`app/design/page.tsx`、`app/douyin/page.tsx`、`app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
 | 详情页 | `app/curation/[id]/page.tsx`、`app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
-| 个人简介 | `components/profile-introduction.tsx` | 双语逐字输入/删除、最终中文正文与多语言标题轮换；每次进入首页都播放 | 静态履历数据源 |
+| 个人简介 | `components/profile-introduction.tsx`、`components/profile-typewriter.ts`、`components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
 | 内容导航 | `components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
 | 技术信号场 | `components/interactive-dot-field.tsx` | AI 术语与技术栈词库、稀疏视觉表达 | 标签过滤或导航 |
 | 策展数据 | `lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局、问答检索 |

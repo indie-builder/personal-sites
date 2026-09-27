@@ -80,14 +80,14 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 
 private const val BAR_HEIGHT = 72
 
-private data class GlassBarAction(val label: String, val icon: ImageVector)
+private data class GlassBarAction(val label: String, val icon: ImageVector, val route: String)
 
 // 首页入口与身份外链共用悬浮玻璃底栏。
 private val glassBarActions = listOf(
-    GlassBarAction("动态", NavigationIcons.Activity),
-    GlassBarAction("问一问", NavigationIcons.Ask),
-    GlassBarAction("作品集", NavigationIcons.Portfolio),
-    GlassBarAction("关于我", NavigationIcons.About),
+    GlassBarAction("动态", NavigationIcons.Activity, "home"),
+    GlassBarAction("问一问", NavigationIcons.Ask, "ask"),
+    GlassBarAction("作品集", NavigationIcons.Portfolio, "portfolio"),
+    GlassBarAction("关于我", NavigationIcons.About, "about"),
 )
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
@@ -232,13 +232,9 @@ fun PersonalSiteApp(container: AppContainer) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 glassBarActions.forEach { action ->
-                    val isHome = action.label == "动态"
-                    val isAbout = action.label == "关于我"
-                    val isPortfolio = action.label == "作品集"
                     val route = backStackEntry?.destination?.route.orEmpty()
-                    val selected = (isHome && route == "home") ||
-                        (isAbout && route == "about") ||
-                        (isPortfolio && route.startsWith("portfolio"))
+                    val selected = route == action.route ||
+                        (action.route == "portfolio" && route.startsWith("portfolio"))
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -246,19 +242,14 @@ fun PersonalSiteApp(container: AppContainer) {
                             .clip(CircleShape)
                             .background(if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent)
                             .selectable(selected = selected, role = Role.Tab) {
-                                when {
-                                    isHome -> {
+                                when (action.route) {
+                                    "home" -> {
                                         openTab("home")
                                         scope.launch { pagerState.scrollToPage(0) }
                                         barVisible = true
                                     }
-                                    isAbout -> openTab("about")
-                                    isPortfolio -> navController.navigate("portfolio") {
-                                        popUpTo("home") { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                    action.label == "问一问" -> navController.navigate("ask") { launchSingleTop = true }
+                                    "ask" -> navController.navigate("ask") { launchSingleTop = true }
+                                    else -> openTab(action.route)
                                 }
                             },
                         horizontalAlignment = Alignment.CenterHorizontally,
