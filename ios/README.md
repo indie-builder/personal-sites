@@ -22,7 +22,7 @@ ios/
 │   │   ├── Components.swift      # 共享部件（缩略图/返回钮/图标钮/重试块/视频播放状态/时间文案）
 │   │   ├── RootView.swift        # 四项玻璃底栏 + 路由 + 滚动隐藏
 │   │   ├── OpeningView.swift     # 开场动画
-│   │   └── Home|Detail|Ask|About # 各页面
+│   │   └── Home|Detail|Ask|About # 各页面；Detail 分离路由、媒体与图片阅读器
 │   ├── Assets.xcassets           # App 图标 + 头像
 │   └── opening_character.gif     # 开场人物序列（与 Web/安卓同素材）
 ├── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、视频播放状态机、时间文案）
