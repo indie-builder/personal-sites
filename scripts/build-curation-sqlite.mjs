@@ -11,7 +11,7 @@ import { toPublicDouyinItem } from "../modules/douyin-sync/curation-projection.m
 import { PUBLIC_CURATION_DATABASE_PATH, buildPublicCurationDatabase } from "../modules/focus-sync/public-sqlite.mjs";
 import { summarizeDesignClassifications } from "../modules/x-sync/design-classification.mjs";
 import { isReadyForPublication, toPublicCurationItem } from "../modules/x-sync/curation-projection.mjs";
-import { rebuildDefaultIndex } from "./local-vectors.mjs";
+import { rebuildDefaultIndex } from "../modules/local-vectors/indexer.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));

@@ -150,6 +150,6 @@ if (options.stage === "sync") {
 }
 
 if (!process.exitCode) {
-  const { rebuildDefaultIndex } = await import("./local-vectors.mjs");
+  const { rebuildDefaultIndex } = await import("../modules/local-vectors/indexer.mjs");
   await rebuildDefaultIndex();
 }
