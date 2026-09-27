@@ -16,7 +16,7 @@ import {
 import type { CurationItem } from "@/lib/curation-types";
 import { entryShareMetadata, withCanonical } from "@/lib/metadata";
 
-export type CurationEntryContext = "curation" | "design";
+type CurationEntryContext = "curation" | "design";
 
 /** 板块归属：详情返回链接、页面标题共用同一份解析。 */
 const SECTION_BY_CONTEXT: Record<CurationEntryContext, (item: CurationItem) => {
@@ -81,7 +81,7 @@ export function createCurationEntryRoute(context: CurationEntryContext) {
   return { EntryPage, generateMetadata };
 }
 
-export async function CurationEntry({
+async function CurationEntry({
   context,
   id,
 }: {

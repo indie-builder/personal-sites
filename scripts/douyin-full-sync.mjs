@@ -2,12 +2,12 @@
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
+import { readJsonOr } from "./lib/json-file.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataRoot = path.join(repoRoot, "data/sensitive/douyin-curation");
@@ -26,12 +26,7 @@ function run(command, args, { cwd = repoRoot, env = {} } = {}) {
 }
 
 async function pendingVideoCount() {
-  try {
-    return JSON.parse(await readFile(path.join(dataRoot, "pending-video-urls.json"), "utf8")).length;
-  } catch (error) {
-    if (error.code === "ENOENT") return 0;
-    throw error;
-  }
+  return (await readJsonOr(path.join(dataRoot, "pending-video-urls.json"), [])).length;
 }
 
 export function parseFullSyncArgs(args) {

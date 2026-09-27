@@ -9,7 +9,6 @@ describe("open-source curation", () => {
   it("only exposes a curated public subset with stable, unique routes", () => {
     expect(openSourceEntries).toHaveLength(10);
     expect(new Set(openSourceEntries.map((entry) => entry.slug)).size).toBe(openSourceEntries.length);
-    expect(openSourceEntries.every((entry) => entry.repositoryUrl.startsWith("https://github.com/"))).toBe(true);
     expect(openSourceEntries.every((entry) => entry.evidence.kind === "readme")).toBe(true);
     expect(openSourceEntries.every((entry) => entry.evidence.url.includes("/README"))).toBe(true);
   });

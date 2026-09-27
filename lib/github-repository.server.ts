@@ -22,9 +22,23 @@ const repositoryTreeSchema = z.object({
   truncated: z.boolean().optional(),
 });
 
-export class GitHubRepositoryBrowserError extends Error {
+class GitHubRepositoryBrowserError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);
+  }
+}
+
+export async function repositoryResponse(read: () => Promise<unknown>, noun: "原始仓库" | "原始文件") {
+  try {
+    return Response.json(await read(), {
+      headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600" },
+    });
+  } catch (error) {
+    if (error instanceof GitHubRepositoryBrowserError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
+    console.error(`读取${noun}失败`, error);
+    return Response.json({ error: `暂时无法读取${noun}。` }, { status: 500 });
   }
 }
 

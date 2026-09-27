@@ -24,7 +24,7 @@ export interface StreamSnapshotAdapter<Item, Extra> {
 }
 
 /** 加载更多的请求上限；超时后走可重试的兜底提示，不让骨架无限转下去。 */
-export const STREAM_FETCH_TIMEOUT_MS = 10_000;
+const STREAM_FETCH_TIMEOUT_MS = 10_000;
 
 /**
  * 请求下一页流数据。成功返回分页负载；失败返回面向访客的错误文案：

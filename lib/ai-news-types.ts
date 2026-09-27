@@ -2,18 +2,7 @@ import { z } from "zod";
 
 // 每日动态公开投影（Supabase ai_news_public_items.content）的结构；
 // 页面只消费同步进来的底层数据，不出现上游来源标识。
-export type AiNewsItem = {
-  category: string;
-  id: string;
-  publishedAt: string | null;
-  reason: string;
-  score: number | null;
-  selected: boolean;
-  sourceName: string;
-  summary: string;
-  title: string;
-  url: string;
-};
+export type AiNewsItem = z.infer<typeof aiNewsItemContentSchema> & { selected: boolean };
 
 // 列表页只需要这些字段；reason/score/url 仅详情页使用，列表查询做字段投影剔除。
 export type AiNewsListItem = Omit<AiNewsItem, "reason" | "score" | "url">;
@@ -72,7 +61,7 @@ const shanghaiWeekday = new Intl.DateTimeFormat("zh-CN", {
 });
 
 /** 北京时间日期分组的 key（YYYY-MM-DD）；无发布时间返回空串。 */
-export function getAiNewsDayKey(publishedAt: string | null) {
+function getAiNewsDayKey(publishedAt: string | null) {
   if (!publishedAt) return "";
   const parts = shanghaiDay.formatToParts(new Date(publishedAt));
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";

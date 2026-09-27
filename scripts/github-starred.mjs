@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 
 import { openSourceEntries } from "../config/open-source-curation.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
-import { analyzeStarredRecords, createCodexCliReader, createBigModelReader, createZcodeCliReader, ONE_LINE_SUMMARY_VERSION, readLocalAnalyses } from "../modules/github-starred/analysis.mjs";
+import { createAnalysisReader } from "../modules/analysis/readers.mjs";
+import { analyzeStarredRecords, ONE_LINE_SUMMARY_VERSION, readLocalAnalyses } from "../modules/github-starred/analysis.mjs";
 import { publishStarredRecords } from "../modules/github-starred/publish-to-sqlite.mjs";
 import { readLocalSourceRecords, syncStarredRepositories } from "../modules/github-starred/source.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
@@ -93,34 +94,24 @@ function uniqueRecords(records) {
   return [...new Map(records.map((record) => [record.repository.nodeId, record])).values()];
 }
 
+function completedSummaryIds(analyses) {
+  return new Set(analyses
+    .filter((analysis) => analysis.oneLineSummary && analysis.summaryVersion === ONE_LINE_SUMMARY_VERSION && !analysis.summaryFallback)
+    .map((analysis) => analysis.repoNodeId));
+}
+
 async function recordsMissingAnalysis(records) {
-  const analyses = await readLocalAnalyses(records, derivedRoot);
-  const completedRepositoryIds = new Set(
-    analyses
-      .filter((analysis) => analysis.oneLineSummary && analysis.summaryVersion === ONE_LINE_SUMMARY_VERSION && !analysis.summaryFallback)
-      .map((analysis) => analysis.repoNodeId),
-  );
+  const completedRepositoryIds = completedSummaryIds(await readLocalAnalyses(records, derivedRoot));
   return records.filter((record) => !completedRepositoryIds.has(record.repository.nodeId));
 }
 
 async function analyze(records) {
   const targets = prioritisePublishedRecords(selectRecords(records));
-  const existing = await readLocalAnalyses(targets, derivedRoot);
-  const summariesByNodeId = new Set(
-    existing
-      .filter((analysis) => analysis.oneLineSummary && analysis.summaryVersion === ONE_LINE_SUMMARY_VERSION && !analysis.summaryFallback)
-      .map((analysis) => analysis.repoNodeId),
-  );
+  const summariesByNodeId = completedSummaryIds(await readLocalAnalyses(targets, derivedRoot));
   const engineLabel = options.engine === "codex-cli" ? "Codex CLI" : options.engine === "zcode" ? "ZCode CLI" : "Pi Coding Agent / 智谱 GLM";
   console.log(`开始生成中文阅读版与一句话简介：${targets.length} 个仓库，并发 ${concurrency}；官方中文 README 直接使用，所有仓库的一句话简介由 ${engineLabel} 生成。`);
   const needsModel = targets.some((record) => !record.readingMarkdown || !summariesByNodeId.has(record.repository.nodeId));
-  const reader = needsModel
-    ? options.engine === "codex-cli"
-      ? await createCodexCliReader({ config, repoRoot })
-      : options.engine === "zcode"
-        ? createZcodeCliReader({ config, repoRoot })
-        : await createBigModelReader({ config, repoRoot })
-    : null;
+  const reader = needsModel ? await createAnalysisReader({ engine: options.engine, config, repoRoot }) : null;
   const results = await analyzeStarredRecords(targets, {
     chunkCharacters,
     concurrency,
@@ -159,6 +150,6 @@ if (options.stage === "sync") {
 }
 
 if (!process.exitCode) {
-  const { rebuildDefaultIndex } = await import("./local-vectors.mjs");
+  const { rebuildDefaultIndex } = await import("../modules/local-vectors/indexer.mjs");
   await rebuildDefaultIndex();
 }

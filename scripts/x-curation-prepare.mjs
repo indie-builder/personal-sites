@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import { mergeXMedia, normalizeXMedia } from "../modules/x-sync/media.mjs";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
-import { writeJsonAtomically, writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
+import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
 import { firstSeenMetadata, parseSourceOrderSnapshot } from "../modules/x-sync/source-order.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

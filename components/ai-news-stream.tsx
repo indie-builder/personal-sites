@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { CheckIcon, ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { DropdownMenu } from "radix-ui";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNewsCategories } from "@/lib/ai-news-types";
 import type { AiNewsListItem } from "@/lib/ai-news-types";
@@ -14,11 +15,19 @@ import { STREAM_EASE } from "./motion-tokens";
 import { useStreamDate } from "@/components/use-stream-date";
 import { useStreamFeed } from "./use-stream-feed";
 import { getCurationScrollTarget } from "./curation-scroll";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // 筛选切换时从头揭示的行数：与滚动追加共用 0.45rem 上浮 + 32ms 阶梯的语言，
 // 只揭示首屏可见的前几行，其余行直接呈现，避免长列表整体延迟。
 const FILTER_REVEAL_COUNT = 8;
+
+function CategoryItem({ children, value }: { children: ReactNode; value: string }) {
+  return <DropdownMenu.RadioItem data-slot="dropdown-menu-radio-item" value={value}>
+    {children}
+    <span data-slot="dropdown-menu-radio-item-indicator">
+      <DropdownMenu.ItemIndicator><CheckIcon aria-hidden="true" /></DropdownMenu.ItemIndicator>
+    </span>
+  </DropdownMenu.RadioItem>;
+}
 
 export function AiNewsStream({ initialHasMore, initialItems }: {
   initialHasMore: boolean;
@@ -112,21 +121,23 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
           <span className="ai-news__day-label">{visibleGroup?.label ?? "每日动态"}</span>
           {visibleGroup ? <span className="ai-news__day-meta">{visibleGroup.weekday} · {visibleGroup.items.length} 条</span> : null}
         </div>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
+      <DropdownMenu.Root modal={false}>
+        <DropdownMenu.Trigger asChild>
           <button aria-label={`筛选每日动态：${activeFilterLabel ?? "全部动态"}`} className="ai-news__category-select" type="button">
             <span>{activeFilterLabel ?? "全部动态"}</span>
             <ChevronDown aria-hidden="true" />
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={4} collisionPadding={16} className="ai-news__category-menu">
-          <DropdownMenuRadioGroup value={activeCategory ?? "all"} onValueChange={(value) => selectCategory(value === "all" ? null : value)}>
-            <DropdownMenuRadioItem value="all">全部动态</DropdownMenuRadioItem>
-            {hasSelected ? <DropdownMenuRadioItem value="selected">精选动态</DropdownMenuRadioItem> : null}
-            {categories.map((category) => <DropdownMenuRadioItem key={category.id} value={category.id}>{category.label}</DropdownMenuRadioItem>)}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content align="end" sideOffset={4} collisionPadding={16} className="ai-news__category-menu">
+            <DropdownMenu.RadioGroup value={activeCategory ?? "all"} onValueChange={(value) => selectCategory(value === "all" ? null : value)}>
+              <CategoryItem value="all">全部动态</CategoryItem>
+              {hasSelected ? <CategoryItem value="selected">精选动态</CategoryItem> : null}
+              {categories.map((category) => <CategoryItem key={category.id} value={category.id}>{category.label}</CategoryItem>)}
+            </DropdownMenu.RadioGroup>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
       </div>
 
       {/* key 随筛选变化强制整列重挂载，首行阶梯揭示才有机会播放；

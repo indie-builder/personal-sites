@@ -1,22 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyContent } from "@/components/ui/empty";
-import {
-  MessageScroller,
-  MessageScrollerButton,
-  MessageScrollerContent,
-  MessageScrollerProvider,
-  MessageScrollerViewport,
-} from "@/components/ui/message-scroller";
+import { MessageScroller } from "@shadcn/react/message-scroller";
 import { SpriteWalker } from "@/components/assistant-sprite";
-import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { AskMessageItem, EMPTY_ENTER_DURATION, MESSAGE_ENTER_EASE, MotionMessageScrollerItem } from "@/components/ask-message";
-import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
-import { useVisitorSession } from "@/components/use-visitor-session";
-import { ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
+import { useAskConversation } from "@/components/use-ask-conversation";
+import { useMediaQuery } from "@/components/use-media-query";
+import { ArrowDown, ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useRef, type ComponentProps } from "react";
 
 import styles from "./ask-chat.module.css";
 
@@ -30,78 +22,26 @@ const suggestedQuestions = [
 const suggestionIcons = [UserRound, Lightbulb, Code2];
 
 function AssistantWelcome() {
-  const greeting = useRef<HTMLParagraphElement>(null);
-  const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    const element = greeting.current;
-    if (!element) return;
-    const measure = () => {
-      setWidth(element.getBoundingClientRect().width);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
   return (
     <div className={styles.welcomeHeader}>
-      <div className={styles.welcomeWalker} style={{ width }}>
-        {width > 0 && <div className={styles.welcomeRise}><SpriteWalker /></div>}
+      <div className={styles.welcomeWalker}>
+        <div className={styles.welcomeRise}><SpriteWalker /></div>
       </div>
-      <p ref={greeting}>我是陈远的 AI 助手，想了解什么？</p>
+      <p>我是陈远的 AI 助手，想了解什么？</p>
     </div>
   );
 }
 
 export function AskChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [question, setQuestion] = useState("");
-  const [usedSuggestions, setUsedSuggestions] = useState<string[]>([]);
-  const [restored, setRestored] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const requestController = useRef<AbortController | null>(null);
-  // isStreaming 要等会话预热（异步）之后才置位：用同步标记挡住这个窗口里的
-  // 重入（双击重试、重试与回车并发），避免重复请求与停止按钮失灵。
-  const submitInFlight = useRef(false);
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const shouldFollowLatest = useRef(true);
   const isProgrammaticScroll = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const snapshotRead = useRef(false);
-  const { ensureVisitorSession, isRetryingSession, retryVisitorSession, visitorId } = useVisitorSession(textareaRef);
-
-  useLayoutEffect(() => {
-    // Lazy Markdown can suspend and reconnect layout effects. Restore only once
-    // per chat instance, never over a live response with its saved partial snapshot.
-    if (snapshotRead.current) return;
-    snapshotRead.current = true;
-    const snapshot = readAskChatSnapshot();
-    if (snapshot) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后、绘制前恢复浏览器会话，避免 SSR 不一致和草稿闪烁。
-      setMessages(snapshot.messages);
-      setQuestion(snapshot.question);
-      setUsedSuggestions(snapshot.messages.filter((message) => message.role === "user").map((message) => message.content));
-    }
-    setRestored(true);
-  }, []);
-
-  useEffect(() => {
-    if (restored) writeAskChatSnapshot({ messages, question });
-  }, [messages, question, restored]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setPrefersReducedMotion(media.matches);
-    updatePreference();
-    media.addEventListener("change", updatePreference);
-    return () => media.removeEventListener("change", updatePreference);
-  }, []);
-
-  useEffect(() => () => {
-    // 卸载（离开路由）时中止进行中的流式请求，避免对已卸载组件空跑完整回答。
-    requestController.current?.abort();
-  }, []);
+  const {
+    ensureVisitorSession, isRetryingSession, isStreaming, messages, question, retryVisitorSession,
+    setQuestion, stop, submit, visitorId,
+  } = useAskConversation(textareaRef, () => { shouldFollowLatest.current = true; });
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -148,86 +88,12 @@ export function AskChat() {
     return () => window.cancelAnimationFrame(frame);
   }, [messages, scrollToLatest]);
 
-  const updateAssistant = (id: string, update: (message: ChatMessage) => ChatMessage) => {
-    setMessages((current) => current.map((message) => message.id === id ? update(message) : message));
-  };
-
-  const submit = async (suggestion?: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
-    const trimmedQuestion = (suggestion ?? question).trim();
-    if (!trimmedQuestion || isStreaming || visitorId === "unavailable" || submitInFlight.current) return;
-    submitInFlight.current = true;
-
-    const session = await ensureVisitorSession();
-    if (session.visitorId === "unavailable") {
-      submitInFlight.current = false;
-      return;
-    }
-
-    const userId = crypto.randomUUID();
-    const assistantId = crypto.randomUUID();
-    if (suggestedQuestions.includes(trimmedQuestion)) {
-      setUsedSuggestions((current) => [...current, trimmedQuestion]);
-    }
-    shouldFollowLatest.current = true;
-    // 失败重试的问题来自历史消息而非输入框：保留输入框里正在编辑的草稿。
-    if (!preserveDraft) setQuestion("");
-    setIsStreaming(true);
-    const controller = new AbortController();
-    requestController.current = controller;
-    setMessages((current) => [...current,
-      { citations: [], content: trimmedQuestion, id: userId, isComplete: true, role: "user" },
-      { citations: [], content: "", id: assistantId, isComplete: false, role: "assistant" },
-    ]);
-
-    try {
-      const response = await fetch("/api/ask", {
-        body: JSON.stringify({ conversationId: session.conversationId, question: trimmedQuestion, scope: "all", visitorId: session.visitorId }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        signal: controller.signal,
-      });
-      if (!response.ok || !response.body) {
-        const payload = await response.json().catch(() => null) as { error?: unknown } | null;
-        throw new Error(typeof payload?.error === "string" ? payload.error : "回答暂时不可用，请稍后重试。");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-        const parsed = parseEvents(buffer);
-        buffer = parsed.remainder;
-        for (const item of parsed.events) {
-          updateAssistant(assistantId, (message) => applyStreamEvent(message, item));
-        }
-        if (done) break;
-      }
-      updateAssistant(assistantId, (message) => ({ ...message, isComplete: true }));
-    } catch (error) {
-      const stopped = controller.signal.aborted;
-      const message = stopped
-        ? "已停止生成。"
-        : error instanceof Error ? error.message : "回答暂时不可用，请稍后重试。";
-      updateAssistant(assistantId, (current) => ({
-        ...current,
-        interruption: { kind: stopped ? "stopped" : "error", message },
-        isComplete: true,
-      }));
-    } finally {
-      submitInFlight.current = false;
-      requestController.current = null;
-      setIsStreaming(false);
-    }
-  };
-
   const canSubmit = Boolean(question.trim() && visitorId !== "unavailable" && !isStreaming);
 
   // 追问引导：回答完成后给出还没用过的建议问题，沿用空态的细线行语言；
   // 点击只填入组合器并聚焦，是否发送仍由访客决定。
   const lastMessage = messages[messages.length - 1];
-  const followUpQuestions = suggestedQuestions.filter((item) => !usedSuggestions.includes(item));
+  const followUpQuestions = suggestedQuestions.filter((item) => !messages.some((message) => message.role === "user" && message.content === item));
   const showFollowUps = !isStreaming
     && lastMessage?.role === "assistant"
     && lastMessage.isComplete
@@ -256,11 +122,12 @@ export function AskChat() {
   return (
     <section aria-label="问一问" className={styles.root}>
 
-      <MessageScrollerProvider autoScroll={false} defaultScrollPosition="end">
-        <MessageScroller className={styles.scroller}>
-          <MessageScrollerViewport
+      <MessageScroller.Provider autoScroll={false} defaultScrollPosition="end">
+        <MessageScroller.Root className={styles.scroller}>
+          <MessageScroller.Viewport
             aria-label="问答记录"
             className={styles.viewport}
+            data-slot="message-scroller-viewport"
             onKeyDown={(event) => {
               if (["ArrowUp", "Home", "PageUp", " "].includes(event.key)) {
                 shouldFollowLatest.current = false;
@@ -279,7 +146,7 @@ export function AskChat() {
             }}
             ref={viewportRef}
           >
-            <MessageScrollerContent
+            <MessageScroller.Content
               aria-busy={isStreaming}
               className={styles.messages}
             >
@@ -291,9 +158,9 @@ export function AskChat() {
                   messageId="ask-empty-state"
                   transition={{ duration: EMPTY_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
                 >
-                  <Empty className={styles.empty}>
+                  <div className={styles.empty} data-slot="empty">
                     <AssistantWelcome />
-                    <EmptyContent className={styles.suggestions}>
+                    <div className={`${styles.emptyContent} ${styles.suggestions}`} data-slot="empty-content">
                       {suggestedQuestions.slice(0, 3).map((suggestion, suggestionIndex) => (
                         <motion.span
                           animate={{ y: 0 }}
@@ -311,8 +178,8 @@ export function AskChat() {
                           </Button>
                         </motion.span>
                       ))}
-                    </EmptyContent>
-                  </Empty>
+                    </div>
+                  </div>
                 </MotionMessageScrollerItem>
               ) : null}
 
@@ -354,19 +221,22 @@ export function AskChat() {
                   </div>
                 </motion.div>
               ) : null}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton
+            </MessageScroller.Content>
+          </MessageScroller.Viewport>
+          <MessageScroller.Button
             aria-label="回到最新消息"
             behavior={prefersReducedMotion ? "auto" : "smooth"}
             className={styles.scrollToLatest}
+            data-slot="message-scroller-button"
+            direction="end"
             onClick={() => {
               shouldFollowLatest.current = true;
               window.requestAnimationFrame(scrollToLatest);
             }}
-          />
-        </MessageScroller>
-      </MessageScrollerProvider>
+            render={<Button size="icon-sm" variant="secondary" />}
+          ><ArrowDown aria-hidden="true" /></MessageScroller.Button>
+        </MessageScroller.Root>
+      </MessageScroller.Provider>
 
       <form
         className={styles.form}
@@ -380,7 +250,7 @@ export function AskChat() {
           <div className={styles.drawerActions}>
             <button aria-label={isStreaming ? "停止生成" : "发送问题"} className={styles.drawerSend}
               disabled={!isStreaming && !canSubmit}
-              onClick={isStreaming ? () => requestController.current?.abort() : undefined}
+              onClick={isStreaming ? stop : undefined}
               type={isStreaming ? "button" : "submit"}>
               {isStreaming ? <Square aria-hidden="true" size={13} fill="currentColor" /> : <ArrowUp aria-hidden="true" size={15} strokeWidth={3} />}
             </button>

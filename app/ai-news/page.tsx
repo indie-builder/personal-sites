@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { AiNewsStream } from "@/components/ai-news-stream";
-import { FeedPage, FeedSkeleton } from "@/components/page-shell";
+import { FeedPage } from "@/components/page-shell";
 import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
 import { withCanonical } from "@/lib/metadata";
 
@@ -24,9 +23,7 @@ export default function AiNewsPage() {
   // 壳（个人信息栏、版块导航）立即渲染，动态数据经 Suspense 流式补进。
   return (
     <FeedPage label="每日动态" section="ai-news">
-      <Suspense fallback={<FeedSkeleton />}>
-        <AiNewsFeed />
-      </Suspense>
+      <AiNewsFeed />
     </FeedPage>
   );
 }

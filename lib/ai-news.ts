@@ -5,19 +5,12 @@ import { z } from "zod";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
 import type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
+import type { AskSource } from "@/lib/ask-types";
 import { getPublicSupabaseClient } from "@/lib/supabase.server";
 
 export type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
 
-export type AiNewsSearchDocument = {
-  content: string;
-  id: string;
-  publishedAt: string | null;
-  score: number;
-  sourceId: string;
-  sourceUrl: string;
-  title: string;
-};
+export type AiNewsSearchDocument = Omit<AskSource, "scope" | "section"> & { score: number };
 
 // 首页列表一次展示的最近动态条数上限，与客户端加载更多的页大小一致；
 // 完整数据都在 Supabase 公开投影里。

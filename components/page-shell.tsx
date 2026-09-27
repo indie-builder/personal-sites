@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import { ContentSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
@@ -10,9 +10,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import styles from "@/components/open-source.module.css";
 
 /** 列表页流式骨架：与列表加载更多的骨架共用同一套样式。 */
-export function FeedSkeleton() {
+export function FeedSkeleton({ label }: { label?: string }) {
   return (
-    <div aria-busy="true" aria-live="polite" className="curation-home__stream-skeleton">
+    <div aria-atomic={label ? "true" : undefined} aria-busy="true" aria-live="polite" className="curation-home__stream-skeleton" role={label ? "status" : undefined}>
+      {label ? <p className="curation-home__stream-loading">正在读取{label}…</p> : null}
       <span />
       <span className="is-medium" />
       <span className="is-short" />
@@ -30,7 +31,7 @@ export function FeedPage({ children, label, section }: { children: ReactNode; la
         {/* 条目标题是 h3，需要一个节级 h2 维持标题层级（与每日动态的日期分组标题同模式）。 */}
         <h2 className="sr-only">{label}</h2>
         <ContentSectionNavigation current={section} />
-        {children}
+        <Suspense fallback={<FeedSkeleton />}>{children}</Suspense>
       </section>
     </main>
   );

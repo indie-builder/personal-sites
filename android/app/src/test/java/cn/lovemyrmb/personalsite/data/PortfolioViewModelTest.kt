@@ -96,7 +96,7 @@ class PortfolioViewModelTest {
     fun loadProductsCachesAndRefreshFailureKeepsItems() = runTest(dispatcher) {
         val api = FakeApi()
         val viewModel = PortfolioViewModel(api)
-        // 首拉失败：items 仍为 null，productsLoaded 未置位。
+        // 首拉失败：items 仍为 null，不应把失败结果当成已缓存。
         api.productFailures = 1
         viewModel.loadProducts()
         advanceUntilIdle()

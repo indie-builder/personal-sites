@@ -1,6 +1,6 @@
 # GitHub Star 同步与中文阅读版
 
-`modules/github-starred/` 是独立的 GitHub Star 同步模块。它不会把完整 Star 列表或原始资料直接交给前端。
+`modules/github-starred/github-api.mjs` 读取 GitHub 公开仓库资料，`source.mjs` 管理本地私有快照与增量同步，分析和发布仍留在同目录；`modules/analysis/readers.mjs` 提供 Star、抖音和 X 策展共用的模型读取器。完整 Star 列表和原始资料不会直接交给前端。
 
 | 数据 | 本地 | 网站读取 |
 | --- | --- | --- |

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createCodexCliReader, createBigModelReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
+import { createAnalysisReader } from "../modules/analysis/readers.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import {
   buildCurationPrompt,
@@ -17,7 +17,9 @@ import {
   toDouyinVideo,
   toQueueItem,
 } from "../modules/douyin-sync/import.mjs";
+import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
+import { readJsonOr } from "./lib/json-file.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -64,25 +66,8 @@ export function parseArgs(args) {
   return options;
 }
 
-async function readQueue() {
-  try {
-    return JSON.parse(await readFile(queuePath, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return { items: [], version: 1 };
-    throw error;
-  }
-}
-
-async function writePrivateJson(filePath, value) {
-  await mkdir(path.dirname(filePath), { mode: 0o700, recursive: true });
-  await writeFile(filePath, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
-}
-
 async function readFavoriteOrders() {
-  const index = await readFile(favoriteIndexPath, "utf8").then(JSON.parse, (error) => {
-    if (error.code === "ENOENT") return { items: [] };
-    throw error;
-  });
+  const index = await readJsonOr(favoriteIndexPath, { items: [] });
   return new Map(index.items.map((item, order) => [`douyin:${item.id}`, order]));
 }
 
@@ -159,15 +144,12 @@ async function sync(options) {
     // 收藏顺序小的更新（收藏页最新在前），--limit 只截最新收藏。
     .sort((left, right) => (left.collectedOrder ?? Number.MAX_SAFE_INTEGER) - (right.collectedOrder ?? Number.MAX_SAFE_INTEGER))
     .slice(0, options.limit);
-  const queue = await readQueue();
+  const queue = await readJsonOr(queuePath, { items: [], version: 1 });
   const byId = new Map(queue.items.map((item) => [item.id, item]));
   for (const item of byId.values()) {
     item.collectedOrder = favoriteOrders.get(item.id) ?? item.collectedOrder ?? null;
   }
-  const previousFailures = await readFile(failuresPath, "utf8").then(JSON.parse, (error) => {
-    if (error.code === "ENOENT") return { items: [] };
-    throw error;
-  });
+  const previousFailures = await readJsonOr(failuresPath, { items: [] });
   const failuresById = new Map(previousFailures.items.map((item) => [item.id, item]));
 
   if (options.dryRun) {
@@ -188,15 +170,11 @@ async function sync(options) {
 
   const concurrency = options.concurrency ?? (options.engine === "pi" ? 2 : options.engine === "zcode" ? 8 : 20);
   const analyzerConcurrency = options.analyzerConcurrency ?? 6;
-  const reader = options.refreshOnly ? null
-    : options.engine === "pi"
-      ? await createBigModelReader({ config: {}, repoRoot })
-      : options.engine === "zcode"
-        ? createZcodeCliReader({ config: {}, repoRoot })
-        : await createCodexCliReader({
-          config: { analysis: { codex_cli: { model: "gpt-5.6-terra", reasoning_effort: "high" } } },
-          repoRoot,
-        });
+  const reader = options.refreshOnly ? null : await createAnalysisReader({
+    engine: options.engine,
+    config: { analysis: { codex_cli: { model: "gpt-5.6-terra", reasoning_effort: "high" } } },
+    repoRoot,
+  });
 
   const targets = options.refreshOnly ? [] : videos.filter((video) => options.force || !byId.has(`douyin:${video.awemeId}`));
 
@@ -214,10 +192,7 @@ async function sync(options) {
     queue.items = [...byId.values()];
     queue.updatedAt = new Date().toISOString();
     // stringify 放进串行链，紧凑 JSON：并发完成时同一时刻最多一次全量序列化。
-    saveQueue = saveQueue.then(async () => {
-      await mkdir(path.dirname(queuePath), { mode: 0o700, recursive: true });
-      await writeFile(queuePath, `${JSON.stringify(queue)}\n`, { mode: 0o600 });
-    });
+    saveQueue = saveQueue.then(() => writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`));
     return saveQueue;
   }
   await persistQueue();
@@ -242,7 +217,7 @@ async function sync(options) {
     const id = `douyin:${video.awemeId}`;
     const evidence = await withAnalyzerSlot(() => analyzeVideo(video, options.force || failuresById.has(id)));
     const rawEvidencePath = path.join(rawRoot, video.awemeId, "analysis.json");
-    await writePrivateJson(rawEvidencePath, { evidence, source: video });
+    await writeJsonAtomically(rawEvidencePath, { evidence, source: video });
     const parsed = await promptCurationResponse(reader, buildCurationPrompt(video, evidence, config.taxonomy), config.taxonomy);
     const grounded = groundEvidenceExcerpt(parsed.ai.excerpt, evidence);
     parsed.ai.excerpt = grounded.text;
@@ -264,7 +239,7 @@ async function sync(options) {
       id: `douyin:${target.awemeId}`,
     });
   }
-  await writePrivateJson(failuresPath, { items: [...failuresById.values()], updatedAt: new Date().toISOString(), version: 1 });
+  await writeJsonAtomically(failuresPath, { items: [...failuresById.values()], updatedAt: new Date().toISOString(), version: 1 });
   console.log(`抖音关注同步完成：成功 ${completed} 条，失败 ${failures.length} 条；队列条目将随下一次 pnpm curation:publish 发布。`);
   const grouped = new Map();
   for (const { error } of failures) {

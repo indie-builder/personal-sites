@@ -10,9 +10,9 @@
 RootLayout
 ├─ OpeningLoader（全屏遮罩，每个浏览器会话的首次完整页面加载播放）
 └─ 路由页面
-   ├─ /                         首页（动态渲染，每请求直读 Supabase/sqlite）
+   ├─ /                         首页（动态渲染，每请求直读 Supabase）
    │  ├─ Profile rail（sticky，位于数据 Suspense 外）
-   │  └─ 右侧默认每日动态；遗留 ?view= 由服务端解析，只有对应数据列表流式补入
+   │  └─ 右侧每日动态数据列表流式补入
    ├─ /ai-news                  每日动态版块（动态渲染，每请求直读 Supabase）
    ├─ /curation                 每日关注版块（仅 X 来源，ISR，revalidate = 300）
    ├─ /design                   设计收藏版块（X 高置信设计相关内容，ISR，视频站内播放）
@@ -41,14 +41,15 @@ RootLayout
 | 区域 | 主文件 | 责任 | 不应承担的责任 |
 |---|---|---|---|
 | 全局壳 | `app/layout.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
-| 首页 | `app/page.tsx` | 动态首页编排；服务端解析遗留 `?view=`，稳定输出 `HomeMain` 身份轨与刊头，仅流式补入当前数据列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
-| 版块页 | `app/ai-news/page.tsx`、`app/curation/page.tsx`、`app/design/page.tsx`、`app/douyin/page.tsx`、`app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
+| 首页 | `app/page.tsx` | 稳定输出身份轨与刊头，仅流式补入每日动态列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
+| 版块页 | `app/ai-news/page.tsx`、`app/curation/page.tsx`、`app/design/page.tsx`、`app/douyin/page.tsx`、`app/open-source/page.tsx` | 单版块的动态或 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
 | 详情页 | `app/curation/[id]/page.tsx`、`app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
-| 个人简介 | `components/profile-introduction.tsx` | 双语逐字输入/删除、最终中文正文与多语言标题轮换；每次进入首页都播放 | 静态履历数据源 |
+| 个人简介 | `components/profile-introduction.tsx`、`components/profile-typewriter.ts`、`components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
 | 内容导航 | `components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
 | 技术信号场 | `components/interactive-dot-field.tsx` | AI 术语与技术栈词库、稀疏视觉表达 | 标签过滤或导航 |
-| 策展数据 | `lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局 |
+| 策展数据 | `lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局、问答检索 |
+| 本地问答检索 | `lib/curation-search.server.ts` | 公开 SQLite 语料缓存、全文匹配与排序 | 策展页面查询 |
 | 公开发现 | `lib/discovery.server.ts` | 汇总公开 SQLite 与 Supabase，生成 Sitemap/RSS 数据 | 私有原始资料或运行时写入 |
 | 数据健康 | `lib/data-health.server.ts` + `modules/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
 
@@ -58,7 +59,7 @@ RootLayout
 
 ## 交付与移动浏览器
 
-项目只交付 Web。320px 与 390px 窄屏、手机横屏均使用同一套路由和数据。列表导航可横滑并保持当前项可见；筛选、导航与详情返回链接提供至少 44px 的触达区域。问答组合器依据可用视口高度排布，输入字号 16px，支持浏览器键盘引发的内容视口缩放，并保留用户缩放能力。
+Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 README。Web 的 320px 与 390px 窄屏、手机横屏均使用同一套路由和数据。列表导航可横滑并保持当前项可见；筛选、导航与详情返回链接提供至少 44px 的触达区域。问答组合器依据可用视口高度排布，输入字号 16px，支持浏览器键盘引发的内容视口缩放，并保留用户缩放能力。
 
 ## 桌面布局契约
 
@@ -110,7 +111,7 @@ RootLayout
 
 问答展开时隐藏左侧完整个人信息轨，并让原阅读流在剩余画布内居中；右侧继续显示聊天。关闭后恢复双栏身份轨、个人轨滚动位置与触发焦点。个人轨仅通过 CSS 隐藏，不卸载助手状态，保证挂载到 body 的聊天区继续工作。
 
-抽屉聊天的欢迎轨道宽度按欢迎文字的实际行宽测量，两者居中同轴并保持 10px 间距。抽屉使用独立的原生 textarea 组合器，避免继承完整 Ask 页的工具栏：桌面初始 84px 高、16px 圆角、两侧和底部 18px 外距、30px 圆形上箭头（44px 点击范围），手机输入字号 16px。抽屉统一检索全部公开资料，独立问答路由及其范围、清空控件已删除。会话快照只在实例初次恢复时读取，Markdown 懒加载引起的 layout effect 重连不能覆盖正在完成的回答。
+抽屉聊天的欢迎轨道与文字共用 CSS 内容宽度，两者居中同轴并保持 10px 间距。抽屉使用独立的原生 textarea 组合器，避免继承完整 Ask 页的工具栏：桌面初始 84px 高、16px 圆角、两侧和底部 18px 外距、30px 圆形上箭头（44px 点击范围），手机输入字号 16px。抽屉统一检索全部公开资料，独立问答路由及其范围、清空控件已删除。会话快照只在实例初次恢复时读取，Markdown 懒加载引起的 layout effect 重连不能覆盖正在完成的回答。
 
 助手入场由简介完成状态控制：英文输入 → 英文删除 → 中文完整输出之前不挂载入口；完成后通过独立的 480ms 冒头动画入场，动画落定后才解锁步行与点击。减少动态效果时直接显示可用终态，卸载时取消入场动画。
 

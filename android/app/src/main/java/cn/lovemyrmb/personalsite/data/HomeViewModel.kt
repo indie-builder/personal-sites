@@ -88,9 +88,6 @@ class PagedFeed<T>(
                         items = deduped,
                         hasMore = page.hasMore,
                         initial = false,
-                        loadingMore = false,
-                        refreshing = false,
-                        error = null,
                     )
                 },
                 onFailure = { e ->
@@ -128,28 +125,7 @@ class HomeViewModel(private val api: SiteApi) : ViewModel() {
     val openSource = PagedFeed(viewModelScope, idOf = OpenSourceListEntry::slug) { offset ->
         api.openSource(offset, Section.OPEN_SOURCE.pageSize)
     }
+    private val curationFeeds = mapOf(Section.CURATION to curation, Section.DESIGN to design, Section.DOUYIN to douyin)
 
-    fun loadInitial(section: Section) {
-        feed(section).loadInitial()
-    }
-
-    fun refresh(section: Section) {
-        feed(section).refresh()
-    }
-
-    fun loadMore(section: Section) {
-        feed(section).loadMore()
-    }
-
-    fun retry(section: Section) {
-        feed(section).retry()
-    }
-
-    private fun feed(section: Section) = when (section) {
-        Section.AI_NEWS -> aiNews
-        Section.CURATION -> curation
-        Section.DESIGN -> design
-        Section.DOUYIN -> douyin
-        Section.OPEN_SOURCE -> openSource
-    }
+    fun curationFeed(section: Section): PagedFeed<CurationItem> = curationFeeds.getValue(section)
 }

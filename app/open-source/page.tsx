@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { OpenSourceStream } from "@/components/open-source-stream";
-import { FeedPage, FeedSkeleton } from "@/components/page-shell";
+import { FeedPage } from "@/components/page-shell";
 import { withCanonical } from "@/lib/metadata";
 import { getOpenSourceListEntries } from "@/lib/open-source";
 
@@ -23,9 +22,7 @@ async function OpenSourceFeed() {
 export default function OpenSourcePage() {
   return (
     <FeedPage label="开源关注" section="open-source">
-      <Suspense fallback={<FeedSkeleton />}>
-        <OpenSourceFeed />
-      </Suspense>
+      <OpenSourceFeed />
     </FeedPage>
   );
 }

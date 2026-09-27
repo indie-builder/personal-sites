@@ -5,22 +5,14 @@ import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
-import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
-import {
-  Message,
-  MessageContent,
-  MessageFooter,
-  MessageHeader,
-} from "@/components/ui/message";
-import { MessageScrollerItem } from "@/components/ui/message-scroller";
+import { MessageScroller } from "@shadcn/react/message-scroller";
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
 
 import { STREAM_EASE } from "./motion-tokens";
 import styles from "./ask-chat.module.css";
 
-const MotionMessageScrollerItem = motion.create(MessageScrollerItem);
+const MotionMessageScrollerItem = motion.create(MessageScroller.Item);
 const MotionSearch = motion.create(Search);
 
 // react-markdown 生态只在收到第一条回答时才需要，按需加载。
@@ -28,7 +20,7 @@ const AskAnswerMarkdown = dynamic(() => import("@/components/ask-answer-markdown
 
 export { MotionMessageScrollerItem };
 
-export const MESSAGE_ENTER_DURATION = 0.24;
+const MESSAGE_ENTER_DURATION = 0.24;
 export const EMPTY_ENTER_DURATION = 0.32;
 export const MESSAGE_ENTER_EASE = STREAM_EASE;
 
@@ -40,26 +32,27 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
   onRetry?: () => void;
   prefersReducedMotion: boolean;
 }) {
+  const isUser = message.role === "user";
   return (
-    <Message align={message.role === "user" ? "end" : "start"} className={styles.message}>
-      <MessageContent>
+    <div className={`group/message ${styles.message}`} data-align={isUser ? "end" : "start"} data-slot="message">
+      <div className={styles.messageContent} data-slot="message-content">
         {/* 对齐方向已表达说话人；铭牌只保留给读屏，不占垂直节奏。 */}
-        <MessageHeader className="sr-only">
-          {message.role === "user" ? "你" : "归档助手"}
-        </MessageHeader>
+        <div className="sr-only" data-slot="message-header">
+          {isUser ? "你" : "归档助手"}
+        </div>
         {message.content ? (
-          <Bubble align={message.role === "user" ? "end" : "start"} variant={message.role === "user" ? "default" : "ghost"}>
-            <BubbleContent aria-live={message.role === "assistant" ? "polite" : undefined} className={`${styles.bubble} ${message.role === "user" ? styles.userBubble : styles.assistantBubble}`}>
+          <div className={styles.bubbleFrame} data-align={isUser ? "end" : "start"} data-slot="bubble" data-variant={isUser ? "default" : "ghost"}>
+            <div aria-live={isUser ? undefined : "polite"} className={`${styles.bubbleContent} ${isUser ? styles.userBubble : styles.assistantBubble}`} data-slot="bubble-content">
               {/* 流式期间渲染纯文本：Markdown 组件对每个 delta 全量重解析是 O(n²)，
                   落定（isComplete）后才挂 ReactMarkdown；bubble 的 pre-wrap 保证换行不丢。 */}
-              {message.role === "assistant" && message.isComplete
+              {!isUser && message.isComplete
                 ? <AskAnswerMarkdown source={message.content} />
                 : message.content}
-            </BubbleContent>
-          </Bubble>
+            </div>
+          </div>
         ) : isStreamingPlaceholder ? (
-          <Marker className={styles.status} role="status">
-            <MarkerIcon>
+          <div className={styles.status} data-slot="marker" role="status">
+            <span aria-hidden="true" className={styles.statusIcon} data-slot="marker-icon">
               <MotionSearch
                 animate={prefersReducedMotion ? { opacity: 1 } : { opacity: [1, 0.3, 1] }}
                 initial={false}
@@ -67,11 +60,11 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
                   ? { duration: 0 }
                   : { duration: 1.15, ease: "easeInOut", repeat: Infinity }}
               />
-            </MarkerIcon>
-            <MarkerContent>
+            </span>
+            <span className={styles.statusContent} data-slot="marker-content">
               正在查找资料并整理回答…
-            </MarkerContent>
-          </Marker>
+            </span>
+          </div>
         ) : null}
         {message.interruption ? (
           <div className={styles.interruption}>
@@ -82,7 +75,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
           </div>
         ) : null}
         {message.role === "assistant" && message.isComplete && message.citations.length > 0 ? (
-          <MessageFooter className={styles.sources}>
+          <div className={styles.sources} data-slot="message-footer">
             {/* 回答落定后来源逐条阶梯入场；减少动态时直接静态呈现。 */}
             <ol aria-label="回答来源" className={styles.citations}>
               {message.citations.map((source, sourceIndex) => (
@@ -103,10 +96,10 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
                 </motion.li>
               ))}
             </ol>
-          </MessageFooter>
+          </div>
         ) : null}
-      </MessageContent>
-    </Message>
+      </div>
+    </div>
   );
 });
 
@@ -120,6 +113,7 @@ export function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefe
     <MotionMessageScrollerItem
       animate={{ opacity: 1, y: "0rem" }}
       className={styles.messageItem}
+      data-slot="message-scroller-item"
       initial={prefersReducedMotion
         ? false
         : { opacity: 0, y: "0.4rem" }}

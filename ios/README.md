@@ -7,7 +7,7 @@
 
 - **Swift 6**（严格并发 + Approachable Concurrency + MainActor 默认隔离）
 - **SwiftUI + `@Observable`**（iOS 26+，底栏使用 Liquid Glass `glassEffect`）
-- **零第三方依赖**：网络用 `URLSession`（SSE 用 `AsyncBytes` 手工按帧切行），图片用 `AsyncImage`（列表缩略位为 ImageIO 降采样），视频用 `AVPlayer`，Markdown 为自研轻量解析器（解析在 `UI/Ask/MarkdownParser.swift`、渲染在 `UI/Ask/MarkdownRendering.swift`，语法范围与安卓端 commonmark 渲染对齐）
+- **零第三方依赖**：网络用 `URLSession`（SSE 用 `AsyncBytes` 手工按帧切行），图片用 `AsyncImage`（列表缩略位为 ImageIO 降采样），视频用 `AVPlayer`，Markdown 为自研轻量解析器（块级解析在 `UI/Ask/MarkdownParser.swift`、行内解析在 `UI/Ask/MarkdownInlineParser.swift`、渲染在 `UI/Ask/MarkdownRendering.swift`，语法范围与安卓端 commonmark 渲染对齐）
 
 ## 目录结构
 
@@ -19,10 +19,12 @@ ios/
 │   ├── Data/                     # Models / SiteAPI / PagedFeed / AskClient / AskController
 │   ├── UI/
 │   │   ├── Theme.swift           # 色彩/字号/间距令牌 + 全站通用修饰（siteBodyStyle 等）
-│   │   ├── Components.swift      # 共享部件（缩略图/返回钮/图标钮/重试块/视频播放状态/时间文案）
+│   │   ├── Components.swift      # 共享按钮、错误态与时间文案
+│   │   ├── Thumbnail.swift       # 列表图片降采样与缓存
+│   │   ├── VideoPlayerModel.swift # 视频播放与音频会话状态
 │   │   ├── RootView.swift        # 四项玻璃底栏 + 路由 + 滚动隐藏
 │   │   ├── OpeningView.swift     # 开场动画
-│   │   └── Home|Detail|Ask|About # 各页面
+│   │   └── Home|Detail|Ask|About # 首页行、详情、Ask 与关于页按独立视图拆分
 │   ├── Assets.xcassets           # App 图标 + 头像
 │   └── opening_character.gif     # 开场人物序列（与 Web/安卓同素材）
 ├── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、视频播放状态机、时间文案）
@@ -92,7 +94,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 
 ## 原生作品集
 
-`UI/PortfolioView.swift` 实现作品索引、布局图鉴与灵感集合、原生阅读/图片缩放/视频、工具目录和个人网站介绍。集合返回时保留搜索、分类、已加载条目和阅读位置；详情可在当前已加载结果内切换上一件／下一件，更多结果由集合滚动追加。
+`UI/PortfolioView.swift` 实现作品索引、视频、工具目录和个人网站介绍；`UI/PortfolioCollectionView.swift` 负责布局图鉴与灵感集合，`UI/PortfolioItemReader.swift` 负责原生阅读和图片缩放。集合返回时保留搜索、分类、已加载条目和阅读位置；详情可在当前已加载结果内切换上一件／下一件，更多结果由集合滚动追加。
 
 `Data/PortfolioAPI.swift` 只读 personal-design 的 `/api/portfolio`，不打包内容快照、不解析 HTML、无 WebView。仅原作、工具官网和“打开网站”保留明确外链。图鉴手机端采用分类/主题筛选与图片列表，未搬用桌面双页书籍动画。元数据在线加载，离线显示可重试错误。
 

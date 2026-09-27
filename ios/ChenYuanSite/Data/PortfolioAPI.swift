@@ -4,7 +4,6 @@ nonisolated struct PortfolioProduct: Decodable, Identifiable, Sendable {
     let id: String
     let name: String
     let summary: String
-    let description: String
     let date: String
     let dateLabel: String
     let cover: String

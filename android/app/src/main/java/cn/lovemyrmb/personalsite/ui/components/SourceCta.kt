@@ -60,3 +60,7 @@ fun SourceCta(label: String, host: String, onClick: () -> Unit) {
         )
     }
 }
+
+fun hostOf(url: String): String = runCatching {
+    java.net.URI(url).host?.removePrefix("www.") ?: url
+}.getOrDefault(url.take(40))

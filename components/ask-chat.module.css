@@ -4,9 +4,6 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-}
-
-.root {
   flex: 1;
   overflow: hidden;
   padding: 0;
@@ -14,19 +11,27 @@
 
 .welcomeHeader { display:flex; flex-direction:column; align-items:center; gap:10px; max-width:100%; }
 .welcomeHeader p { margin:0; color:#707070; font:400 14px/20px ui-rounded, "SF Pro Rounded", system-ui, sans-serif; text-align:center; }
-.welcomeWalker { max-width:100%; height:32px; overflow:hidden; color:#0a0a0a; }
+.welcomeWalker { width:100%; max-width:100%; height:32px; overflow:hidden; color:#0a0a0a; }
 .welcomeRise { width:100%; animation:assistant-rise 300ms 300ms cubic-bezier(.34,1.56,.64,1) both; }
 @keyframes assistant-rise { from { transform: translateY(33px); } to { transform: translateY(0); } }
 
 .scroller {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .viewport {
+  width: 100%;
+  height: 100%;
   min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 1.625rem 0.75rem 1rem 0;
   scrollbar-color: rgb(28 28 30 / 28%) transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -52,6 +57,9 @@
 }
 
 .messages {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
   gap: 1.625rem;
 }
 
@@ -63,35 +71,33 @@
 }
 
 .empty {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
   flex: 1 0 auto !important;
-  align-items: flex-start;
-  justify-content: flex-start;
   border: 0;
   border-radius: 0;
   color: #6f6f72;
-  gap: 1.625rem;
-  padding: 2rem 0;
-  text-align: left;
+  text-wrap: balance;
+}
+
+.emptyContent {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: 0.875rem;
+  text-wrap: balance;
 }
 
 .suggestions {
   width: 100%;
   max-width: none !important;
-  align-items: stretch !important;
-  gap: 0 !important;
 }
 
 .suggestions :global([data-slot="button"]) {
-  width: 100%;
   height: auto;
   justify-content: space-between;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  color: #6f6f72;
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 0.75rem 0;
   text-align: left;
 }
 
@@ -105,27 +111,26 @@
   width: 100%;
 }
 
-.message :global([data-slot="message-content"]) {
-  gap: 0.5rem;
-}
+.message { position:relative; display:flex; width:100%; min-width:0; gap:.5rem; font-size:.875rem; }
+.message[data-align="end"] { flex-direction:row-reverse; }
+.messageContent { display:flex; width:100%; min-width:0; flex-direction:column; gap:.5rem; overflow-wrap:break-word; }
+.message[data-align="end"] .messageContent > [data-slot] { align-self:flex-end; }
 
 .messageItem {
+  min-width: 0;
+  flex-shrink: 0;
   contain-intrinsic-size: auto;
   content-visibility: visible;
 }
 
-.bubble {
-  overflow-wrap: anywhere;
-}
+.bubbleFrame { position:relative; display:flex; width:fit-content; max-width:80%; min-width:0; flex-direction:column; gap:4px; }
+.bubbleFrame[data-align="end"] { align-self:flex-end; }
+.bubbleFrame[data-variant="ghost"] { max-width:100%; border:0; }
+.bubbleContent { width:fit-content; max-width:100%; min-width:0; overflow:hidden; border:1px solid transparent; border-radius:12px; padding:8px 12px; font-size:14px; line-height:1.625; overflow-wrap:anywhere; }
+.bubbleFrame[data-align="end"] .bubbleContent { align-self:flex-end; }
+.bubbleFrame[data-variant="ghost"] .bubbleContent { border-radius:0; background:transparent; padding:0; }
 
 .userBubble {
-  max-width: min(31rem, 88vw);
-  border-radius: 0.5rem 0.5rem 0.5rem 0.125rem;
-  background: var(--ink);
-  color: #fff;
-  font-size: 0.78rem;
-  line-height: 1.52;
-  padding: 0.5rem 0.75rem;
   white-space: pre-wrap;
 }
 
@@ -134,18 +139,42 @@
 }
 
 .status {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 1rem;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--muted);
   font-size: 0.7rem;
   padding: 0;
+  text-align: left;
 }
 
+.statusIcon { width: 1rem; height: 1rem; flex-shrink: 0; }
+.statusIcon svg { width: 1rem; height: 1rem; }
+.statusContent { min-width: 0; overflow-wrap: break-word; }
+
 .scrollToLatest {
-  bottom: 1rem !important;
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: opacity 200ms ease;
+}
+
+.scrollToLatest[data-active="false"] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sources {
   display: block !important;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
   padding: 0.5rem 0 0 !important;
 }
 
@@ -193,13 +222,6 @@
   height: 0.75rem;
   flex: 0 0 auto;
   stroke-width: 1.5;
-}
-
-.form {
-  background: var(--surface);
-  padding-top: 0.75rem;
-  padding-right: 0.75rem;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .sessionRecovery {
@@ -298,38 +320,14 @@
   }
 }
 
-@media (min-width: 901px) {
-
-  .viewport,
-  .form {
-    padding-right: 0;
-  }
-}
-
 @media (max-width: 900px) {
-
-  .scroller {
-    min-height: 0;
-  }
-
   .scrollToLatest {
     width: 2.75rem !important;
     height: 2.75rem !important;
   }
 
-  .viewport {
-    padding: 1rem 0 0.5rem;
-  }
-  .form {
-    padding-right: 0;
-  }
-
   .sessionRecovery {
     align-items: flex-start;
-  }
-
-  .sessionRetry {
-    min-height: 2.75rem;
   }
 
   .interruption :global([data-slot="button"]) {
@@ -337,21 +335,13 @@
   }
 
   .suggestions :global([data-slot="button"]) {
-    min-height: 2.75rem;
     align-items: center;
-    font-size: 0.82rem;
   }
 
   .citation {
     min-height: 2.75rem;
     align-items: center;
     font-size: 0.74rem;
-  }
-}
-
-@media (max-width: 560px) {
-  .userBubble {
-    max-width: 94%;
   }
 }
 

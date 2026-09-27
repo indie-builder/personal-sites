@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isUsefulVectorChunk, mergeRankings, publicAskVectorSource, splitText } from "../scripts/local-vectors.mjs";
+import { isUsefulVectorChunk, mergeRankings, publicAskVectorSource, splitText } from "../modules/local-vectors/algorithms.mjs";
 
 test("splitText keeps chunks within the configured ceiling", () => {
   const chunks = splitText(`${"甲".repeat(15)}\n\n${"乙".repeat(30)}`, 20, 5);

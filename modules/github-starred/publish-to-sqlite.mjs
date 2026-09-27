@@ -20,7 +20,7 @@ export function toPublicOpenSourceItem(record, analysis, entry, displayRank, now
       personalNote: entry.personalNote,
       repository: entry.repository,
       repositoryDefaultBranch: record.repository.defaultBranch,
-      repositoryUrl: entry.repositoryUrl,
+      repositoryUrl: record.repository.repositoryUrl,
       readingSource: record.readingMarkdown ? "official-zh-readme" : "model-translation",
       readingSourcePath: record.readingSourcePath,
       scenarios: entry.scenarios,

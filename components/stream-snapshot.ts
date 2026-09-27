@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
-import type { AiNewsListItem } from "@/lib/ai-news-types";
 import { curationItemSchema } from "@/lib/curation-types";
-import type { CurationListItem } from "@/lib/curation-types";
 
 /*
  * 流式列表的会话快照：从详情页返回列表时，恢复已加载的分页与滚动位置。
@@ -26,7 +24,7 @@ const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
  * 同一套快照约定的工厂：写入前截断条数；读取时校验结构，且只在快照首条与当前
  * SSR 首条 id 一致（数据集没变）且未过期时返回，其余情况一律返回 null。
  */
-export function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
+function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
   schema: z.ZodType<Snapshot>;
   storageKey: string;
 }) {
@@ -78,15 +76,7 @@ const aiNewsStreamSnapshotSchema = z.object({
   scrollTop: z.number().min(0),
 });
 
-export type AiNewsStreamSnapshot = {
-  activeCategory: string | null;
-  hasMore: boolean;
-  items: AiNewsListItem[];
-  savedAt: number;
-  scrollTop: number;
-};
-
-export const aiNewsStreamSnapshot = createStreamSnapshot<AiNewsStreamSnapshot>({
+export const aiNewsStreamSnapshot = createStreamSnapshot({
   schema: aiNewsStreamSnapshotSchema,
   storageKey: "ai-news-stream-v1",
 });
@@ -104,14 +94,7 @@ const curationStreamSnapshotSchema = z.object({
   scrollTop: z.number().min(0),
 });
 
-export type CurationStreamSnapshot = {
-  hasMore: boolean;
-  items: CurationListItem[];
-  savedAt: number;
-  scrollTop: number;
-};
-
-export const curationStreamSnapshot = createStreamSnapshot<CurationStreamSnapshot>({
+export const curationStreamSnapshot = createStreamSnapshot({
   schema: curationStreamSnapshotSchema,
   storageKey: "curation-stream-v1",
 });
