@@ -10,9 +10,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import styles from "@/components/open-source.module.css";
 
 /** 列表页流式骨架：与列表加载更多的骨架共用同一套样式。 */
-export function FeedSkeleton() {
+export function FeedSkeleton({ label }: { label?: string }) {
   return (
-    <div aria-busy="true" aria-live="polite" className="curation-home__stream-skeleton">
+    <div aria-atomic={label ? "true" : undefined} aria-busy="true" aria-live="polite" className="curation-home__stream-skeleton" role={label ? "status" : undefined}>
+      {label ? <p className="curation-home__stream-loading">正在读取{label}…</p> : null}
       <span />
       <span className="is-medium" />
       <span className="is-short" />

@@ -9,7 +9,7 @@ test("home streams news through one stable profile shell", async ({ request }) =
   const html = await response.text();
   expect(html.match(profileMarkup) ?? []).toHaveLength(1);
   expect(html.match(dotFieldMarkup) ?? []).toHaveLength(1);
-  expect(html).toContain("正在读取每日动态");
+  expect(html.replaceAll("<!-- -->", "")).toContain("正在读取每日动态");
 });
 
 test("mobile home and section pages keep their distinct layout semantics", async ({ page }) => {

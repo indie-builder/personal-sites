@@ -1,5 +1,6 @@
 import { AiNewsStream } from "@/components/ai-news-stream";
 import { FeedErrorBoundary, FeedRecoveryTarget } from "@/components/focus-stream-error-boundary";
+import { FeedSkeleton } from "@/components/page-shell";
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import { ContentSectionNavigation } from "@/components/site-section-navigation";
 import { SiteProfile } from "@/components/site-profile";
@@ -30,14 +31,7 @@ export default function HomePage() {
       <section aria-label="每日动态" className="curation-home__feed site-section-motion" data-feed-recovery-root tabIndex={-1}>
         <ContentSectionNavigation current="ai-news" />
         <FeedErrorBoundary label="每日动态">
-          <Suspense fallback={
-            <div aria-atomic="true" aria-busy="true" className="curation-home__stream-skeleton" role="status">
-              <p className="curation-home__stream-loading">正在读取每日动态…</p>
-              <span aria-hidden="true" />
-              <span aria-hidden="true" className="is-medium" />
-              <span aria-hidden="true" className="is-short" />
-            </div>
-          }>
+          <Suspense fallback={<FeedSkeleton label="每日动态" />}>
             <FeedRecoveryTarget><HomeNews /></FeedRecoveryTarget>
           </Suspense>
         </FeedErrorBoundary>
