@@ -65,7 +65,7 @@ export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
           const animateEntry = hasFiltered && !reduceMotion && index < FILTER_REVEAL_COUNT;
           return (
             <motion.li
-              animate={{ opacity: 1, y: 0 }}
+              animate={animateEntry ? { opacity: 1, y: 0 } : undefined}
               initial={animateEntry ? { opacity: 0, y: "0.5rem" } : false}
               key={entry.slug}
               transition={{
