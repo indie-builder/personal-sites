@@ -18,7 +18,8 @@ import {
 import { awaitModelResponse } from "../modules/analysis/model-runner.mjs";
 import { createCodexCliReader, runCodexCli } from "../modules/analysis/readers.mjs";
 import { publishStarredRecords, toPublicOpenSourceItem } from "../modules/github-starred/publish-to-sqlite.mjs";
-import { buildRepositoryStructureMarkdown, isChineseMarkdown, readLocalSourceRecords, syncRepositorySource, syncStarredRepositories } from "../modules/github-starred/source.mjs";
+import { buildRepositoryStructureMarkdown, isChineseMarkdown } from "../modules/github-starred/github-api.mjs";
+import { readLocalSourceRecords, syncRepositorySource, syncStarredRepositories } from "../modules/github-starred/source.mjs";
 
 test("中文阅读版校验代码、链接和 Agent 术语保持原样", () => {
   const source = "# Agent Skill\n\nUse `pnpm run build` with [GitHub](https://github.com/example/repo).\n\n```ts\nconst api = '/v1';\n```\n";

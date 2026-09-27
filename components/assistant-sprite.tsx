@@ -45,7 +45,7 @@ export function SpriteWalker({ children, paused = false }: { children?: ReactNod
     let disposed = false;
     const random = (min: number, max: number) => min + Math.random() * (max - min);
     const transform = (x: number, y: number) => `translate(${x}px, ${y}px)`;
-    const canMove = () => !disposed && !paused && !hovered && !reduced.matches && !document.hidden;
+    const canMove = () => !disposed && !paused && !hovered && !reduced.matches && !document.hidden && typeof element.animate === "function";
     function lanes() {
       const origin = rail!.getBoundingClientRect();
       const rows = interactive

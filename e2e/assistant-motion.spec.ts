@@ -39,10 +39,19 @@ test("first downward jump survives greeting changes and lands before text recoil
   const walker = page.locator('[aria-label="和像素助手聊聊"]').locator("..");
   await expect.poll(() => walker.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
   await walker.evaluate((element) => element.getAnimations().forEach((animation) => animation.finish()));
-  await expect(walker).toHaveAttribute("data-motion", "jump");
   const result = await walker.evaluate(async (element) => {
-    const jump = element.getAnimations()[0];
-    jump.pause();
+    const jump = await new Promise<Animation>((resolve, reject) => {
+      const deadline = performance.now() + 3000;
+      const check = () => {
+        const animation = element.getAnimations()[0];
+        if (element.getAttribute("data-motion") === "jump" && animation) {
+          animation.pause();
+          resolve(animation);
+        } else if (performance.now() > deadline) reject(new Error("首次跳跃未开始"));
+        else requestAnimationFrame(check);
+      };
+      check();
+    });
     jump.currentTime = 300;
     const before = element.getBoundingClientRect().top;
     document.getElementById("profile-introduction")!.textContent = "こんにちは、";
