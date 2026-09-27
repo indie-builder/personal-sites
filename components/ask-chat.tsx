@@ -3,14 +3,12 @@
 import { Button } from "@/components/ui/button";
 import { MessageScroller } from "@shadcn/react/message-scroller";
 import { SpriteWalker } from "@/components/assistant-sprite";
-import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { AskMessageItem, EMPTY_ENTER_DURATION, MESSAGE_ENTER_EASE, MotionMessageScrollerItem } from "@/components/ask-message";
-import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
+import { useAskConversation } from "@/components/use-ask-conversation";
 import { useMediaQuery } from "@/components/use-media-query";
-import { useVisitorSession } from "@/components/use-visitor-session";
 import { ArrowDown, ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useRef, type ComponentProps } from "react";
 
 import styles from "./ask-chat.module.css";
 
@@ -35,44 +33,15 @@ function AssistantWelcome() {
 }
 
 export function AskChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [question, setQuestion] = useState("");
-  const [restored, setRestored] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const requestController = useRef<AbortController | null>(null);
-  // isStreaming 要等会话预热（异步）之后才置位：用同步标记挡住这个窗口里的
-  // 重入（双击重试、重试与回车并发），避免重复请求与停止按钮失灵。
-  const submitInFlight = useRef(false);
   const shouldFollowLatest = useRef(true);
   const isProgrammaticScroll = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const snapshotRead = useRef(false);
-  const { ensureVisitorSession, isRetryingSession, retryVisitorSession, visitorId } = useVisitorSession(textareaRef);
-
-  useLayoutEffect(() => {
-    // Lazy Markdown can suspend and reconnect layout effects. Restore only once
-    // per chat instance, never over a live response with its saved partial snapshot.
-    if (snapshotRead.current) return;
-    snapshotRead.current = true;
-    const snapshot = readAskChatSnapshot();
-    if (snapshot) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后、绘制前恢复浏览器会话，避免 SSR 不一致和草稿闪烁。
-      setMessages(snapshot.messages);
-      setQuestion(snapshot.question);
-    }
-    setRestored(true);
-  }, []);
-
-  useEffect(() => {
-    if (restored) writeAskChatSnapshot({ messages, question });
-  }, [messages, question, restored]);
-
-  useEffect(() => () => {
-    // 卸载（离开路由）时中止进行中的流式请求，避免对已卸载组件空跑完整回答。
-    requestController.current?.abort();
-  }, []);
+  const {
+    ensureVisitorSession, isRetryingSession, isStreaming, messages, question, retryVisitorSession,
+    setQuestion, stop, submit, visitorId,
+  } = useAskConversation(textareaRef, () => { shouldFollowLatest.current = true; });
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -118,77 +87,6 @@ export function AskChat() {
     const frame = window.requestAnimationFrame(scrollToLatest);
     return () => window.cancelAnimationFrame(frame);
   }, [messages, scrollToLatest]);
-
-  const updateAssistant = (id: string, update: (message: ChatMessage) => ChatMessage) => {
-    setMessages((current) => current.map((message) => message.id === id ? update(message) : message));
-  };
-
-  const submit = async (suggestion?: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
-    const trimmedQuestion = (suggestion ?? question).trim();
-    if (!trimmedQuestion || isStreaming || visitorId === "unavailable" || submitInFlight.current) return;
-    submitInFlight.current = true;
-
-    const session = await ensureVisitorSession();
-    if (session.visitorId === "unavailable") {
-      submitInFlight.current = false;
-      return;
-    }
-
-    const userId = crypto.randomUUID();
-    const assistantId = crypto.randomUUID();
-    shouldFollowLatest.current = true;
-    // 失败重试的问题来自历史消息而非输入框：保留输入框里正在编辑的草稿。
-    if (!preserveDraft) setQuestion("");
-    setIsStreaming(true);
-    const controller = new AbortController();
-    requestController.current = controller;
-    setMessages((current) => [...current,
-      { citations: [], content: trimmedQuestion, id: userId, isComplete: true, role: "user" },
-      { citations: [], content: "", id: assistantId, isComplete: false, role: "assistant" },
-    ]);
-
-    try {
-      const response = await fetch("/api/ask", {
-        body: JSON.stringify({ conversationId: session.conversationId, question: trimmedQuestion, scope: "all", visitorId: session.visitorId }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        signal: controller.signal,
-      });
-      if (!response.ok || !response.body) {
-        const payload = await response.json().catch(() => null) as { error?: unknown } | null;
-        throw new Error(typeof payload?.error === "string" ? payload.error : "回答暂时不可用，请稍后重试。");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-        const parsed = parseEvents(buffer);
-        buffer = parsed.remainder;
-        for (const item of parsed.events) {
-          updateAssistant(assistantId, (message) => applyStreamEvent(message, item));
-        }
-        if (done) break;
-      }
-      updateAssistant(assistantId, (message) => ({ ...message, isComplete: true }));
-    } catch (error) {
-      const stopped = controller.signal.aborted;
-      const message = stopped
-        ? "已停止生成。"
-        : error instanceof Error ? error.message : "回答暂时不可用，请稍后重试。";
-      updateAssistant(assistantId, (current) => ({
-        ...current,
-        interruption: { kind: stopped ? "stopped" : "error", message },
-        isComplete: true,
-      }));
-    } finally {
-      submitInFlight.current = false;
-      requestController.current = null;
-      setIsStreaming(false);
-    }
-  };
 
   const canSubmit = Boolean(question.trim() && visitorId !== "unavailable" && !isStreaming);
 
@@ -352,7 +250,7 @@ export function AskChat() {
           <div className={styles.drawerActions}>
             <button aria-label={isStreaming ? "停止生成" : "发送问题"} className={styles.drawerSend}
               disabled={!isStreaming && !canSubmit}
-              onClick={isStreaming ? () => requestController.current?.abort() : undefined}
+              onClick={isStreaming ? stop : undefined}
               type={isStreaming ? "button" : "submit"}>
               {isStreaming ? <Square aria-hidden="true" size={13} fill="currentColor" /> : <ArrowUp aria-hidden="true" size={15} strokeWidth={3} />}
             </button>
