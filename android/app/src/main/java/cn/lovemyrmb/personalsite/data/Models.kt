@@ -11,23 +11,20 @@ data class FeedPage<T>(
 
 @Serializable
 data class AiNewsListItem(
-    val category: String = "",
     val id: String,
     val publishedAt: String? = null,
-    val selected: Boolean = false,
     val sourceName: String = "",
     val summary: String = "",
     val title: String = "",
 )
 
-/** /api/ai-news/[id] 返回的完整条目（含 reason/score/url）。 */
+/** /api/ai-news/[id] 返回的详情条目（含 reason/url）。 */
 @Serializable
 data class AiNewsItem(
     val category: String = "",
     val id: String = "",
     val publishedAt: String? = null,
     val reason: String = "",
-    val score: Int? = null,
     val selected: Boolean = false,
     val sourceName: String = "",
     val summary: String = "",
@@ -48,7 +45,6 @@ data class CurationAuthor(
 
 @Serializable
 data class CurationMedia(
-    val durationMs: Long? = null,
     val height: Int? = null,
     val previewUrl: String? = null,
     val type: String = "photo",
@@ -88,7 +84,6 @@ data class CurationItem(
 
 @Serializable
 data class OpenSourceListEntry(
-    val category: String = "",
     val checkedAt: String = "",
     val dimensions: List<String> = emptyList(),
     val repository: String = "",
