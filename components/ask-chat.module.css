@@ -58,10 +58,23 @@
 }
 
 .empty {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
   flex: 1 0 auto !important;
   border: 0;
   border-radius: 0;
   color: #6f6f72;
+  text-wrap: balance;
+}
+
+.emptyContent {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: 0.875rem;
+  text-wrap: balance;
 }
 
 .suggestions {
@@ -85,9 +98,10 @@
   width: 100%;
 }
 
-.message :global([data-slot="message-content"]) {
-  gap: 0.5rem;
-}
+.message { position:relative; display:flex; width:100%; min-width:0; gap:.5rem; font-size:.875rem; }
+.message[data-align="end"] { flex-direction:row-reverse; }
+.messageContent { display:flex; width:100%; min-width:0; flex-direction:column; gap:.5rem; overflow-wrap:break-word; }
+.message[data-align="end"] .messageContent > [data-slot] { align-self:flex-end; }
 
 .messageItem {
   contain-intrinsic-size: auto;
@@ -107,10 +121,21 @@
 }
 
 .status {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 1rem;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--muted);
   font-size: 0.7rem;
   padding: 0;
+  text-align: left;
 }
+
+.statusIcon { width: 1rem; height: 1rem; flex-shrink: 0; }
+.statusIcon svg { width: 1rem; height: 1rem; }
+.statusContent { min-width: 0; overflow-wrap: break-word; }
 
 .scrollToLatest {
   bottom: 1rem !important;
@@ -119,6 +144,10 @@
 .sources {
   display: block !important;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
   padding: 0.5rem 0 0 !important;
 }
 

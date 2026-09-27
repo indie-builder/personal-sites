@@ -1,9 +1,10 @@
 import { AiNewsStream } from "@/components/ai-news-stream";
 import { CurationStream } from "@/components/curation-stream";
-import type { FocusView } from "@/components/focus-stream";
-import { HomeMain } from "@/components/home-main";
+import { FocusStream, type FocusView } from "@/components/focus-stream";
 import { OpenSourceStream } from "@/components/open-source-stream";
+import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import type { SiteSection } from "@/components/site-section-navigation";
+import { SiteProfile } from "@/components/site-profile";
 import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
 import { getCurationPage } from "@/lib/curation";
 import { withCanonical } from "@/lib/metadata";
@@ -53,8 +54,12 @@ async function HomeData({ initialView }: { initialView: FocusView }) {
 export default async function HomePage({ searchParams }: { searchParams: Promise<HomeSearchParams> }) {
   const { initialView, mobileSection } = resolveHomeView((await searchParams).view);
   return (
-    <HomeMain initialView={initialView} mobileSection={mobileSection}>
-      <HomeData initialView={initialView} />
-    </HomeMain>
+    <main className={`curation-home${mobileSection === "home" ? " curation-home--mobile-home" : ""}`} id="site-main" tabIndex={-1}>
+      <SiteProfile animateOnFirstHomeVisit mobileSection={mobileSection} />
+      <SectionMotionLifecycle section={mobileSection} />
+      <FocusStream initialView={initialView}>
+        <HomeData initialView={initialView} />
+      </FocusStream>
+    </main>
   );
 }

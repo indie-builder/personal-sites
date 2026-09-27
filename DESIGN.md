@@ -214,7 +214,7 @@ components:
 
 | 原语 | 实现入口 | 复用边界 |
 |---|---|---|
-| 页面壳与身份轨 | `components/home-main.tsx`、`components/site-profile.tsx` | 列表复用壳；详情复用身份组件，遵循既有手机详情收敛规则 |
+| 页面壳与身份轨 | `app/page.tsx`、`components/site-profile.tsx` | 列表复用壳；详情复用身份组件，遵循既有手机详情收敛规则 |
 | 栏目刊头与手机导航 | `components/site-section-navigation.tsx`、同名 `.module.css` | 路由链接与当前栏目状态，不作筛选 Tab |
 | 日期与内容流 | `components/use-stream-date.ts`、`components/ai-news-stream.tsx`、`components/curation-stream.tsx` | 复用日期跟随与行密度；设计视频控件不嵌套进链接 |
 | 开源关注 | `components/open-source-stream.tsx` | 仓库判读与主题索引 |

@@ -7,13 +7,6 @@ import { memo } from "react";
 
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
-import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
-import {
-  Message,
-  MessageContent,
-  MessageFooter,
-  MessageHeader,
-} from "@/components/ui/message";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
 
@@ -41,12 +34,12 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
   prefersReducedMotion: boolean;
 }) {
   return (
-    <Message align={message.role === "user" ? "end" : "start"} className={styles.message}>
-      <MessageContent>
+    <div className={`group/message ${styles.message}`} data-align={message.role === "user" ? "end" : "start"} data-slot="message">
+      <div className={styles.messageContent} data-slot="message-content">
         {/* 对齐方向已表达说话人；铭牌只保留给读屏，不占垂直节奏。 */}
-        <MessageHeader className="sr-only">
+        <div className="sr-only" data-slot="message-header">
           {message.role === "user" ? "你" : "归档助手"}
-        </MessageHeader>
+        </div>
         {message.content ? (
           <Bubble align={message.role === "user" ? "end" : "start"} variant={message.role === "user" ? "default" : "ghost"}>
             <BubbleContent aria-live={message.role === "assistant" ? "polite" : undefined} className={`${styles.bubble} ${message.role === "user" ? styles.userBubble : styles.assistantBubble}`}>
@@ -58,8 +51,8 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
             </BubbleContent>
           </Bubble>
         ) : isStreamingPlaceholder ? (
-          <Marker className={styles.status} role="status">
-            <MarkerIcon>
+          <div className={styles.status} data-slot="marker" role="status">
+            <span aria-hidden="true" className={styles.statusIcon} data-slot="marker-icon">
               <MotionSearch
                 animate={prefersReducedMotion ? { opacity: 1 } : { opacity: [1, 0.3, 1] }}
                 initial={false}
@@ -67,11 +60,11 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
                   ? { duration: 0 }
                   : { duration: 1.15, ease: "easeInOut", repeat: Infinity }}
               />
-            </MarkerIcon>
-            <MarkerContent>
+            </span>
+            <span className={styles.statusContent} data-slot="marker-content">
               正在查找资料并整理回答…
-            </MarkerContent>
-          </Marker>
+            </span>
+          </div>
         ) : null}
         {message.interruption ? (
           <div className={styles.interruption}>
@@ -82,7 +75,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
           </div>
         ) : null}
         {message.role === "assistant" && message.isComplete && message.citations.length > 0 ? (
-          <MessageFooter className={styles.sources}>
+          <div className={styles.sources} data-slot="message-footer">
             {/* 回答落定后来源逐条阶梯入场；减少动态时直接静态呈现。 */}
             <ol aria-label="回答来源" className={styles.citations}>
               {message.citations.map((source, sourceIndex) => (
@@ -103,10 +96,10 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
                 </motion.li>
               ))}
             </ol>
-          </MessageFooter>
+          </div>
         ) : null}
-      </MessageContent>
-    </Message>
+      </div>
+    </div>
   );
 });
 

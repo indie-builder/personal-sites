@@ -41,7 +41,7 @@ RootLayout
 | 区域 | 主文件 | 责任 | 不应承担的责任 |
 |---|---|---|---|
 | 全局壳 | `app/layout.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
-| 首页 | `app/page.tsx` | 动态首页编排；服务端解析遗留 `?view=`，稳定输出 `HomeMain` 身份轨与刊头，仅流式补入当前数据列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
+| 首页 | `app/page.tsx` | 动态首页编排；服务端解析遗留 `?view=`，稳定输出身份轨与刊头，仅流式补入当前数据列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
 | 版块页 | `app/ai-news/page.tsx`、`app/curation/page.tsx`、`app/design/page.tsx`、`app/douyin/page.tsx`、`app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
 | 详情页 | `app/curation/[id]/page.tsx`、`app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |

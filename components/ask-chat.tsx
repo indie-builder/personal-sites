@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyContent } from "@/components/ui/empty";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -291,9 +290,9 @@ export function AskChat() {
                   messageId="ask-empty-state"
                   transition={{ duration: EMPTY_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
                 >
-                  <Empty className={styles.empty}>
+                  <div className={styles.empty} data-slot="empty">
                     <AssistantWelcome />
-                    <EmptyContent className={styles.suggestions}>
+                    <div className={`${styles.emptyContent} ${styles.suggestions}`} data-slot="empty-content">
                       {suggestedQuestions.slice(0, 3).map((suggestion, suggestionIndex) => (
                         <motion.span
                           animate={{ y: 0 }}
@@ -311,8 +310,8 @@ export function AskChat() {
                           </Button>
                         </motion.span>
                       ))}
-                    </EmptyContent>
-                  </Empty>
+                    </div>
+                  </div>
                 </MotionMessageScrollerItem>
               ) : null}
 
