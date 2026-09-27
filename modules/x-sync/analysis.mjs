@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 
-export const ANALYSIS_PIPELINE_VERSION = 1;
-export const EDITORIAL_STAGE_VERSION = 2;
-export const FACTS_STAGE_VERSION = 1;
-export const VISUAL_STAGE_VERSION = 1;
-export const DESIGN_STAGE_VERSION = 2;
+const ANALYSIS_PIPELINE_VERSION = 1;
+const EDITORIAL_STAGE_VERSION = 2;
+const FACTS_STAGE_VERSION = 1;
+const VISUAL_STAGE_VERSION = 1;
+const DESIGN_STAGE_VERSION = 2;
 
 const TOOL_DOMAINS = {
   "anthropic.com": "Anthropic",
@@ -76,7 +76,7 @@ export function extractCurationFacts(item) {
   };
 }
 
-export function curationInputHash(item) {
+function curationInputHash(item) {
   return stableHash({
     author: item.author,
     createdAt: item.createdAt,
@@ -89,7 +89,7 @@ export function curationInputHash(item) {
   });
 }
 
-export function curationVisualHash(item) {
+function curationVisualHash(item) {
   return stableHash((item.media ?? []).map((media) => ({
     previewUrl: media.previewUrl ?? null,
     type: media.type ?? "photo",

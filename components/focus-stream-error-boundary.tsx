@@ -29,7 +29,7 @@ type FeedRetryContextValue = Pick<FeedErrorFallbackProps, "onRetrySettled" | "re
 
 const FeedRetryContext = createContext<FeedRetryContextValue | null>(null);
 
-export function FeedErrorFallback(
+function FeedErrorFallback(
   props: FeedErrorFallbackProps,
   { error, retry }: Pick<ErrorInfo, "error" | "retry">,
 ) {

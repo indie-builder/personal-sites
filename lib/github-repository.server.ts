@@ -22,7 +22,7 @@ const repositoryTreeSchema = z.object({
   truncated: z.boolean().optional(),
 });
 
-export class GitHubRepositoryBrowserError extends Error {
+class GitHubRepositoryBrowserError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);
   }

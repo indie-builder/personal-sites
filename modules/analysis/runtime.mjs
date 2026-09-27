@@ -1,4 +1,4 @@
-export const ANALYSIS_ENGINES = ["zcode", "codex-cli", "pi"];
+const ANALYSIS_ENGINES = ["zcode", "codex-cli", "pi"];
 export const DEFAULT_ANALYSIS_ENGINE = "pi";
 
 export function resolveAnalysisEngine(value = DEFAULT_ANALYSIS_ENGINE) {

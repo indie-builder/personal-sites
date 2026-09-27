@@ -10,7 +10,7 @@ import { resolvePiModelConfig } from "../../lib/pi-runtime.mjs";
 import { configureBigModelRuntime } from "../../lib/bigmodel.mjs";
 import { resolveAnalysisEngine } from "./runtime.mjs";
 
-export async function createBigModelReader({ config = {}, env = process.env, repoRoot, timeoutMilliseconds = config.analysis?.request_timeout_ms ?? 240000 }) {
+async function createBigModelReader({ config = {}, env = process.env, repoRoot, timeoutMilliseconds = config.analysis?.request_timeout_ms ?? 240000 }) {
   const modelConfig = resolvePiModelConfig({ config, env });
   if (!env.BIGMODEL_API_KEY) throw new Error("缺少 BIGMODEL_API_KEY，无法调用智谱 GLM。");
   const runtime = await ModelRuntime.create({ allowModelNetwork: false });
@@ -95,7 +95,7 @@ function resolveZcodeCliCommand(env = process.env) {
  * ZCode CLI reader。经由用户配置了 ZCode/智谱模型端点的 Claude Code CLI
  * （`claude -p`）无头执行提示词并取回 stdout 应答文本。
  */
-export function createZcodeCliReader({ config = {}, env = process.env, repoRoot, run = runCodexCli, timeoutMilliseconds } = {}) {
+function createZcodeCliReader({ config = {}, env = process.env, repoRoot, run = runCodexCli, timeoutMilliseconds } = {}) {
   const requestTimeoutMilliseconds = timeoutMilliseconds ?? config.analysis?.request_timeout_ms ?? 240000;
   const command = resolveZcodeCliCommand(env);
   return {

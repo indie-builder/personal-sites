@@ -28,7 +28,7 @@ function getTransition(current: SiteSection, destination: SiteSection) {
   return "swap" as const;
 }
 
-export function SiteSectionNavigation({ current, includeHome = false }: SiteSectionNavigationProps) {
+function SiteSectionNavigation({ current, includeHome = false }: SiteSectionNavigationProps) {
   const sections = includeHome ? [homeSection, ...siblingSections] : siblingSections;
   return (
     <nav aria-label="内容导航" className={styles.navigation}>

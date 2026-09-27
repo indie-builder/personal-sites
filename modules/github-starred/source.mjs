@@ -8,7 +8,7 @@ import { fetchReadme, fetchOfficialChineseReadme, fetchRepositoryStructure, isCh
 const README_FILE = "README.md";
 const REPOSITORY_FILE = "repository-structure.md";
 const SNAPSHOT_FILE = "source.json";
-export function sha256(value) {
+function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
@@ -85,7 +85,7 @@ export async function syncRepositorySource(repository, { exec, maxBytes = 1024 *
   return record;
 }
 
-export function repositoryNeedsSourceRefresh(repository, existingRecord) {
+function repositoryNeedsSourceRefresh(repository, existingRecord) {
   if (!existingRecord) return true;
   const existing = existingRecord.repository;
   return existing.updatedAt !== repository.updatedAt

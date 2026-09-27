@@ -20,7 +20,7 @@ const AskAnswerMarkdown = dynamic(() => import("@/components/ask-answer-markdown
 
 export { MotionMessageScrollerItem };
 
-export const MESSAGE_ENTER_DURATION = 0.24;
+const MESSAGE_ENTER_DURATION = 0.24;
 export const EMPTY_ENTER_DURATION = 0.32;
 export const MESSAGE_ENTER_EASE = STREAM_EASE;
 

@@ -61,7 +61,7 @@ const shanghaiWeekday = new Intl.DateTimeFormat("zh-CN", {
 });
 
 /** 北京时间日期分组的 key（YYYY-MM-DD）；无发布时间返回空串。 */
-export function getAiNewsDayKey(publishedAt: string | null) {
+function getAiNewsDayKey(publishedAt: string | null) {
   if (!publishedAt) return "";
   const parts = shanghaiDay.formatToParts(new Date(publishedAt));
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";

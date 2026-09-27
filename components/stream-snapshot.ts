@@ -24,7 +24,7 @@ const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
  * 同一套快照约定的工厂：写入前截断条数；读取时校验结构，且只在快照首条与当前
  * SSR 首条 id 一致（数据集没变）且未过期时返回，其余情况一律返回 null。
  */
-export function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
+function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
   schema: z.ZodType<Snapshot>;
   storageKey: string;
 }) {
