@@ -1,14 +1,10 @@
 package cn.lovemyrmb.personalsite.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,13 +12,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,26 +33,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.data.AiNewsListItem
 import cn.lovemyrmb.personalsite.data.CurationItem
 import cn.lovemyrmb.personalsite.data.DetailEntry
-import cn.lovemyrmb.personalsite.data.FeedState
 import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
 import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
-import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
-import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.FeedFooter
-import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
@@ -222,145 +209,3 @@ private fun <T> FeedPageUi(
 }
 
 /** 页脚三态见 components/FeedFooter。 */
-
-/** 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。 */
-@Composable
-private fun AiNewsRow(item: AiNewsListItem, onOpen: () -> Unit) {
-    val summary = item.summary.trim().removePrefix(item.title.trim()).trimStart(' ', '，', '。', '：', ':', '—', '-', '\n')
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SiteTheme.colors.background)
-            .clickable(onClick = onOpen)
-            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.item),
-    ) {
-        Text(
-            text = item.title,
-            style = SiteText.title,
-            color = SiteTheme.colors.ink,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (summary.isNotBlank()) {
-            Spacer(Modifier.height(SiteSpace.compact))
-            Text(
-                text = summary,
-                style = SiteText.summary,
-                color = SiteTheme.colors.muted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Spacer(Modifier.height(SiteSpace.related))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = listOfNotNull(
-                    feedTimeLabel(item.publishedAt),
-                    item.sourceName.takeIf { it.isNotBlank() },
-                ).joinToString(" · "),
-                style = SiteText.meta,
-                color = SiteTheme.colors.quiet,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-/** 策展三栏（每日关注 / 设计收藏 / 抖音收藏）共用行：文字 + 右侧缩略图。 */
-@Composable
-private fun CurationRow(item: CurationItem, onOpen: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SiteTheme.colors.background)
-            .clickable(onClick = onOpen)
-            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph),
-        horizontalArrangement = Arrangement.spacedBy(SiteSpace.paragraph),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.headline(),
-                style = SiteText.listTitle,
-                color = SiteTheme.colors.ink,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(SiteSpace.compact))
-            Text(
-                text = curationMeta(item),
-                style = SiteText.meta,
-                color = SiteTheme.colors.quiet,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        item.media.firstOrNull()?.let { media ->
-            SiteAsyncImage(
-                model = media.posterUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .width(104.dp)
-                    .aspectRatio(4f / 3f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SiteTheme.colors.line),
-            )
-        }
-    }
-}
-
-@Composable
-private fun OpenSourceRow(entry: OpenSourceListEntry, onOpen: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SiteTheme.colors.background)
-            .clickable(onClick = onOpen)
-            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph),
-    ) {
-        Text(
-            text = entry.repository,
-            style = SiteText.listTitle,
-            color = SiteTheme.colors.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(SiteSpace.compact))
-        Text(
-            text = entry.sourceSummary,
-            style = SiteText.summary,
-            color = SiteTheme.colors.muted,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(SiteSpace.compact))
-        Text(
-            text = listOfNotNull(
-                entry.status.takeIf { it.isNotBlank() },
-                entry.dimensions.firstOrNull()?.let { dimensionLabels[it] ?: it },
-                feedTimeLabel(entry.checkedAt),
-            ).joinToString(" · "),
-            style = SiteText.meta,
-            color = SiteTheme.colors.quiet,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** 行标题：优先 title，回退正文首行（策展条目常无独立标题）。 */
-private fun CurationItem.headline(): String = title?.takeIf { it.isNotBlank() }
-    ?: text?.lineSequence()?.firstOrNull { it.isNotBlank() }
-    ?: summary?.takeIf { it.isNotBlank() }
-    ?: "（无文字内容）"
-
-private fun curationMeta(item: CurationItem): String = listOfNotNull(
-    feedTimeLabel(item.displayTime),
-    item.attachments.take(2).joinToString("·").takeIf { it.isNotEmpty() },
-    when (item.source.platform) {
-        "x" -> "@${item.author.handle}".takeIf { item.author.handle.isNotBlank() }
-        "douyin" -> item.author.name.takeIf { it.isNotBlank() }
-        else -> null
-    },
-).joinToString(" · ")

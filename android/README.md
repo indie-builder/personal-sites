@@ -44,7 +44,7 @@ app/src/main/java/cn/lovemyrmb/personalsite/
 ├── data/                      # 模型、Retrofit 接口、分页 PagedFeed、AskClient(SSE)、PortfolioApi
 └── ui/
     ├── theme/                 # 站点黑白灰单色体系（DESIGN.md 令牌）
-    ├── home/                  # 五栏目 Tab + Pager + 三类信息流行
+    ├── home/                  # HomeScreen 管 Tab/Pager，HomeRows 管三类信息流行
     ├── detail/                # 三种详情页
     ├── portfolio/             # 作品集落地页、集合状态、网格与阅读器，按屏幕拆分
     ├── about/                 # 履历小票 Sheet
