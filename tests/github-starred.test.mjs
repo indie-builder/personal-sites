@@ -7,17 +7,16 @@ import path from "node:path";
 
 import {
   analyzeStarredRecord,
-  awaitModelResponse,
   buildOneLineSummaryPrompt,
   buildTranslationPrompt,
-  createCodexCliReader,
   getPreservedLiterals,
   missingPreservedLiterals,
   normaliseOneLineSummary,
-  runCodexCli,
   splitMarkdown,
   translateReadme,
 } from "../modules/github-starred/analysis.mjs";
+import { awaitModelResponse } from "../modules/analysis/model-runner.mjs";
+import { createCodexCliReader, runCodexCli } from "../modules/analysis/readers.mjs";
 import { publishStarredRecords, toPublicOpenSourceItem } from "../modules/github-starred/publish-to-sqlite.mjs";
 import { buildRepositoryStructureMarkdown, isChineseMarkdown, readLocalSourceRecords, syncRepositorySource, syncStarredRepositories } from "../modules/github-starred/source.mjs";
 
@@ -228,6 +227,9 @@ test("官方中文 README 直接写入中文阅读版，仅调用 智谱 GLM 生
     assert.match(analysis.parserVersion, /official-zh-readme/u);
     assert.equal(analysis.oneLineSummary, "面向 Agent 的官方中文 README 示例仓库。");
     assert.equal(prompts.length, 1);
+    const reused = await analyzeStarredRecord(record, { derivedRoot });
+    assert.equal(reused.reused, true);
+    assert.equal(reused.oneLineSummary, analysis.oneLineSummary);
   } finally {
     await rm(derivedRoot, { force: true, recursive: true });
   }

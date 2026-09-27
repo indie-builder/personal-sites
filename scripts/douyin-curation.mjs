@@ -6,7 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createCodexCliReader, createBigModelReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
+import { createCodexCliReader, createBigModelReader, createZcodeCliReader } from "../modules/analysis/readers.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import {
   buildCurationPrompt,

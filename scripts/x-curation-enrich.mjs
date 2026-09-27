@@ -30,7 +30,7 @@ import { fileURLToPath } from "node:url";
 
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-import { createCodexCliReader, createZcodeCliReader } from "../modules/github-starred/analysis.mjs";
+import { createCodexCliReader, createZcodeCliReader } from "../modules/analysis/readers.mjs";
 import {
   applyCurationAnalysis,
   applyDesignAnalysis,
