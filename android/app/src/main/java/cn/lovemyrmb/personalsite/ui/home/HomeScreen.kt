@@ -104,34 +104,14 @@ fun HomeScreen(
                     AiNewsRow(item) { onOpenDetail(DetailEntry.AiNews(item.id)) }
                 }
 
-                Section.CURATION -> FeedPageUi(
-                    feed = viewModel.curation,
+                Section.CURATION, Section.DESIGN, Section.DOUYIN -> FeedPageUi(
+                    feed = viewModel.curationFeed(section),
                     section = section,
                     viewModel = viewModel,
                     contentPadding = contentPadding,
                     keyOf = CurationItem::id,
                 ) { item ->
-                    CurationRow(item, section) { onOpenDetail(DetailEntry.Curation(section, item)) }
-                }
-
-                Section.DESIGN -> FeedPageUi(
-                    feed = viewModel.design,
-                    section = section,
-                    viewModel = viewModel,
-                    contentPadding = contentPadding,
-                    keyOf = CurationItem::id,
-                ) { item ->
-                    CurationRow(item, section) { onOpenDetail(DetailEntry.Curation(section, item)) }
-                }
-
-                Section.DOUYIN -> FeedPageUi(
-                    feed = viewModel.douyin,
-                    section = section,
-                    viewModel = viewModel,
-                    contentPadding = contentPadding,
-                    keyOf = CurationItem::id,
-                ) { item ->
-                    CurationRow(item, section) { onOpenDetail(DetailEntry.Curation(section, item)) }
+                    CurationRow(item) { onOpenDetail(DetailEntry.Curation(section, item)) }
                 }
 
                 Section.OPEN_SOURCE -> FeedPageUi(
@@ -290,7 +270,7 @@ private fun AiNewsRow(item: AiNewsListItem, onOpen: () -> Unit) {
 
 /** 策展三栏（每日关注 / 设计收藏 / 抖音收藏）共用行：文字 + 右侧缩略图。 */
 @Composable
-private fun CurationRow(item: CurationItem, section: Section, onOpen: () -> Unit) {
+private fun CurationRow(item: CurationItem, onOpen: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

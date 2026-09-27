@@ -128,6 +128,9 @@ class HomeViewModel(private val api: SiteApi) : ViewModel() {
     val openSource = PagedFeed(viewModelScope, idOf = OpenSourceListEntry::slug) { offset ->
         api.openSource(offset, Section.OPEN_SOURCE.pageSize)
     }
+    private val curationFeeds = mapOf(Section.CURATION to curation, Section.DESIGN to design, Section.DOUYIN to douyin)
+
+    fun curationFeed(section: Section): PagedFeed<CurationItem> = curationFeeds.getValue(section)
 
     fun loadInitial(section: Section) {
         feed(section).loadInitial()
@@ -147,9 +150,7 @@ class HomeViewModel(private val api: SiteApi) : ViewModel() {
 
     private fun feed(section: Section) = when (section) {
         Section.AI_NEWS -> aiNews
-        Section.CURATION -> curation
-        Section.DESIGN -> design
-        Section.DOUYIN -> douyin
         Section.OPEN_SOURCE -> openSource
+        Section.CURATION, Section.DESIGN, Section.DOUYIN -> curationFeed(section)
     }
 }
