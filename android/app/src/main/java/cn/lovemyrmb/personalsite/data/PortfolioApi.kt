@@ -133,7 +133,7 @@ class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
             val current = _products.value
             result.fold(
                 onSuccess = { items ->
-                    _products.value = PortfolioProductsState(items = items, refreshing = false)
+                    _products.value = PortfolioProductsState(items = items)
                 },
                 onFailure = { e ->
                     android.util.Log.w("Portfolio", "products load failed", e)

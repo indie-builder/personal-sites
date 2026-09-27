@@ -88,9 +88,6 @@ class PagedFeed<T>(
                         items = deduped,
                         hasMore = page.hasMore,
                         initial = false,
-                        loadingMore = false,
-                        refreshing = false,
-                        error = null,
                     )
                 },
                 onFailure = { e ->
