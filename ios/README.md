@@ -92,7 +92,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 
 ## 原生作品集
 
-`UI/PortfolioView.swift` 实现作品索引、布局图鉴与灵感集合、原生阅读/图片缩放/视频、工具目录和个人网站介绍。集合返回时保留搜索、分类、已加载条目和阅读位置；详情可在当前已加载结果内切换上一件／下一件，更多结果由集合滚动追加。
+`UI/PortfolioView.swift` 实现作品索引、视频、工具目录和个人网站介绍；`UI/PortfolioCollectionView.swift` 负责布局图鉴与灵感集合，`UI/PortfolioItemReader.swift` 负责原生阅读和图片缩放。集合返回时保留搜索、分类、已加载条目和阅读位置；详情可在当前已加载结果内切换上一件／下一件，更多结果由集合滚动追加。
 
 `Data/PortfolioAPI.swift` 只读 personal-design 的 `/api/portfolio`，不打包内容快照、不解析 HTML、无 WebView。仅原作、工具官网和“打开网站”保留明确外链。图鉴手机端采用分类/主题筛选与图片列表，未搬用桌面双页书籍动画。元数据在线加载，离线显示可重试错误。
 

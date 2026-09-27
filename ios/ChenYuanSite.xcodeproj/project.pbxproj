@@ -39,6 +39,8 @@
 		A20000000000000000000032 = {isa = PBXBuildFile; fileRef = A10000000000000000000032; };
 		A20000000000000000000033 = {isa = PBXBuildFile; fileRef = A10000000000000000000033; };
 		A20000000000000000000034 = {isa = PBXBuildFile; fileRef = A10000000000000000000034; };
+		A20000000000000000000035 = {isa = PBXBuildFile; fileRef = A10000000000000000000035; };
+		A20000000000000000000036 = {isa = PBXBuildFile; fileRef = A10000000000000000000036; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,6 +109,8 @@
 		A10000000000000000000032 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioAPI.swift; sourceTree = "<group>"; };
 		A10000000000000000000033 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
 		A10000000000000000000034 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerModelTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000035 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioCollectionView.swift; sourceTree = "<group>"; };
+		A10000000000000000000036 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioItemReader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -145,6 +149,8 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000033,
+				A10000000000000000000035,
+				A10000000000000000000036,
 				A10000000000000000000009,
 				A10000000000000000000010,
 				A10000000000000000000011,
@@ -297,6 +303,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A20000000000000000000033,
+				A20000000000000000000035,
+				A20000000000000000000036,
 				A20000000000000000000032,
 				A20000000000000000000001,
 				A20000000000000000000002,
