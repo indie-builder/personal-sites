@@ -103,7 +103,7 @@ components:
 
 方法参考 Vercel 的 [How our agents build on-brand pages with design.md](https://vercel.com/blog/how-our-agents-build-on-brand-pages-with-design-md)：把设计判断写成可观察规则，把重复样式交给已有 CSS 与组件，把常见失败纳入固定场景验证。本项目采用其方法，不采用 Vercel 的品牌、字体或页面模板。此版是基于项目代码与既有规范的文档整理，尚未进行有／无设计上下文的生成对照实验。
 
-使用顺序：先读 [PRODUCT.md](PRODUCT.md) 确认产品与公开内容边界，再读本文件选择布局与组件，最后用 [前端架构](docs/frontend-architecture.md) 定位实现。历史方案不能覆盖当前设计约束。frontmatter 是设计 token 清单，实际运行样式由 `app/globals.css` 与组件 CSS Modules 实现；发现二者不一致时记录具体差异，不把偶然实现提升为新设计规则。
+使用顺序：先读 [PRODUCT.md](PRODUCT.md) 确认产品与公开内容边界，再读本文件选择布局与组件，最后用 [前端架构](docs/frontend-architecture.md) 定位实现。历史方案不能覆盖当前设计约束。frontmatter 是设计 token 清单，`app/globals.css` 按顺序导入 `app/styles/` 的实际规则，组件样式使用 CSS Modules；发现二者不一致时记录具体差异，不把偶然实现提升为新设计规则。
 
 ### 读者任务
 
@@ -218,9 +218,9 @@ components:
 | 栏目刊头与手机导航 | `components/site-section-navigation.tsx`、同名 `.module.css` | 路由链接与当前栏目状态，不作筛选 Tab |
 | 日期与内容流 | `components/use-stream-date.ts`、`components/ai-news-stream.tsx`、`components/curation-stream.tsx` | 复用日期跟随与行密度；设计视频控件不嵌套进链接 |
 | 开源关注 | `components/open-source-stream.tsx` | 仓库判读与主题索引 |
-| 详情阅读 | `components/article-markdown.tsx`、`app/globals.css` | `.curation-detail__article`、`.curation-detail__section`、`.article-markdown`；对页使用 `--spread` 修饰边界 |
+| 详情阅读 | `components/article-markdown.tsx`、`app/styles/foundation.css`、`app/styles/reading.css` | `.curation-detail__article`、`.curation-detail__section`、`.article-markdown`；对页使用 `--spread` 修饰边界 |
 | 问答与输入 | `components/ask-chat.tsx`、`components/ask-chat.module.css` | 仅供角色抽屉使用，保留消息滚动与原生输入组合器 |
-| 每日动态分类菜单 | `components/ai-news-stream.tsx`、`app/globals.css` | 直接复用 Radix 单选菜单原语，保留站点自己的菜单样式 |
+| 每日动态分类菜单 | `components/ai-news-stream.tsx`、`app/styles/streams.css`、`app/styles/profile.css` | 直接复用 Radix 单选菜单原语，保留站点自己的菜单样式 |
 | 主题与首访 | `components/theme-toggle.tsx`、`components/opening-loader.tsx` | 复用主题状态和会话揭幕，不新增页面级 Loading 仪式 |
 
 ### 像素助手（指定参考的局部例外）
