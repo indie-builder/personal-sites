@@ -24,6 +24,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
@@ -227,7 +228,7 @@ private fun <T> FeedPageUi(
             ) {
                 itemsIndexed(state.items, key = { _, item -> keyOf(item) }) { _, item ->
                     Box { row(item) }
-                    HorizontalRule()
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = SiteSpace.page), thickness = Dp.Hairline, color = SiteTheme.colors.line)
                 }
                 item(key = "footer") {
                     LaunchedEffect(state.items.size, state.hasMore) {
@@ -240,18 +241,7 @@ private fun <T> FeedPageUi(
     }
 }
 
-@Composable
-private fun HorizontalRule() {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = SiteSpace.page)
-            .height(Dp.Hairline)
-            .background(SiteTheme.colors.line),
-    )
-}
-
-/** 条目之间的细分隔线已由 HorizontalRule 提供；页脚三态见 components/FeedFooter。 */
+/** 页脚三态见 components/FeedFooter。 */
 
 /** 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。 */
 @Composable

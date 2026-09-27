@@ -46,7 +46,7 @@ app/src/main/java/cn/lovemyrmb/personalsite/
     ├── theme/                 # 站点黑白灰单色体系（DESIGN.md 令牌）
     ├── home/                  # 五栏目 Tab + Pager + 三类信息流行
     ├── detail/                # 三种详情页
-    ├── portfolio/             # 作品集落地页 / 图鉴集合 / 阅读器
+    ├── portfolio/             # 作品集落地页、集合状态、网格与阅读器，按屏幕拆分
     ├── about/                 # 履历小票 Sheet
     ├── ask/                   # 全屏原生问答页面
     └── components/            # 视频卡、图片自动重试、媒体区、页脚三态、来源 CTA、时间工具、Custom Tabs
