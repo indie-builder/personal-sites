@@ -2,7 +2,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export async function writeTextAtomically(filePath, text, { mode = 0o600 } = {}) {
-  await mkdir(path.dirname(filePath), { recursive: true });
+  await mkdir(path.dirname(filePath), { mode: 0o700, recursive: true });
   const temporaryPath = `${filePath}.${process.pid}.tmp`;
   try {
     await writeFile(temporaryPath, text, { mode });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -17,6 +17,7 @@ import {
   toDouyinVideo,
   toQueueItem,
 } from "../modules/douyin-sync/import.mjs";
+import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
 import { readJsonOr } from "./lib/json-file.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
@@ -63,11 +64,6 @@ export function parseArgs(args) {
   }
   options.engine = resolveAnalysisEngine(options.engine);
   return options;
-}
-
-async function writePrivateJson(filePath, value) {
-  await mkdir(path.dirname(filePath), { mode: 0o700, recursive: true });
-  await writeFile(filePath, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
 }
 
 async function readFavoriteOrders() {
@@ -196,10 +192,7 @@ async function sync(options) {
     queue.items = [...byId.values()];
     queue.updatedAt = new Date().toISOString();
     // stringify 放进串行链，紧凑 JSON：并发完成时同一时刻最多一次全量序列化。
-    saveQueue = saveQueue.then(async () => {
-      await mkdir(path.dirname(queuePath), { mode: 0o700, recursive: true });
-      await writeFile(queuePath, `${JSON.stringify(queue)}\n`, { mode: 0o600 });
-    });
+    saveQueue = saveQueue.then(() => writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`));
     return saveQueue;
   }
   await persistQueue();
@@ -224,7 +217,7 @@ async function sync(options) {
     const id = `douyin:${video.awemeId}`;
     const evidence = await withAnalyzerSlot(() => analyzeVideo(video, options.force || failuresById.has(id)));
     const rawEvidencePath = path.join(rawRoot, video.awemeId, "analysis.json");
-    await writePrivateJson(rawEvidencePath, { evidence, source: video });
+    await writeJsonAtomically(rawEvidencePath, { evidence, source: video });
     const parsed = await promptCurationResponse(reader, buildCurationPrompt(video, evidence, config.taxonomy), config.taxonomy);
     const grounded = groundEvidenceExcerpt(parsed.ai.excerpt, evidence);
     parsed.ai.excerpt = grounded.text;
@@ -246,7 +239,7 @@ async function sync(options) {
       id: `douyin:${target.awemeId}`,
     });
   }
-  await writePrivateJson(failuresPath, { items: [...failuresById.values()], updatedAt: new Date().toISOString(), version: 1 });
+  await writeJsonAtomically(failuresPath, { items: [...failuresById.values()], updatedAt: new Date().toISOString(), version: 1 });
   console.log(`抖音关注同步完成：成功 ${completed} 条，失败 ${failures.length} 条；队列条目将随下一次 pnpm curation:publish 发布。`);
   const grouped = new Map();
   for (const { error } of failures) {

@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 import { isReadyForPublication, toPublicCurationItem } from "../modules/x-sync/curation-projection.mjs";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 import { buildCurationInsights, renderCurationInsightsMarkdown } from "../modules/x-sync/insights.mjs";
-import { writeJsonAtomically, writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
+import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(

@@ -18,7 +18,7 @@ import { designClassificationStatus } from "../modules/x-sync/design-classificat
 import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs";
 import { expandUrl, classifyUrl, fetchGithubRepo, fetchArticleText } from "../modules/x-sync/link-content.mjs";
 import { buildPrompt, buildDesignPrompt, parseJsonResponse, parseDesignResponse } from "../modules/x-sync/prompts.mjs";
-import { writeTextAtomically } from "../modules/x-sync/queue-file.mjs";
+import { writeTextAtomically } from "./lib/atomic-file.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";

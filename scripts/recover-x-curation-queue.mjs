@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
-import { writeJsonAtomically } from "../modules/x-sync/queue-file.mjs";
+import { writeJsonAtomically } from "./lib/atomic-file.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const root = path.join(repoRoot, "data/sensitive/x-curation");
