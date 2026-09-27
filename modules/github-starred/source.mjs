@@ -93,13 +93,6 @@ export function repositoryNeedsSourceRefresh(repository, existingRecord) {
     || existing.repositoryUrl !== repository.repositoryUrl;
 }
 
-function withCurrentRepositoryMetadata(existingRecord, repository) {
-  return {
-    ...existingRecord,
-    repository,
-  };
-}
-
 export async function syncStarredRepositories({ concurrency = 15, exec, existingRecords = [], incremental = false, limit = Infinity, maxBytes, onRecord, only, rawRoot, repositories: suppliedRepositories } = {}) {
   if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error("concurrency 必须是大于 0 的整数。");
   if (!rawRoot) throw new Error("rawRoot 是同步 Star 原始资料的必填目录。");
@@ -116,7 +109,7 @@ export async function syncStarredRepositories({ concurrency = 15, exec, existing
     const changed = !incremental || repositoryNeedsSourceRefresh(repository, existing);
     const record = changed
       ? await syncRepositorySource(repository, { exec, maxBytes, rawRoot })
-      : withCurrentRepositoryMetadata(existing, repository);
+      : { ...existing, repository };
     if (!changed) await writeSnapshot(rawRoot, record);
     records.push(record);
     if (changed) changedRecords.push(record);
