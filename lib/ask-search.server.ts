@@ -5,17 +5,7 @@ import { getAskSearchFallbackTerms } from "@/lib/ask-search-terms";
 import { searchLocalAskDocuments } from "@/lib/curation-search.server";
 import type { AskScope, AskSource } from "@/lib/ask-types";
 
-type SearchDocument = {
-  content: string;
-  id: string;
-  publishedAt: string | null;
-  score: number;
-  scope: Exclude<AskScope, "all">;
-  section: string | null;
-  sourceId: string;
-  sourceUrl: string;
-  title: string;
-};
+type SearchDocument = AskSource & { score: number };
 
 type RankedBatch = { documents: SearchDocument[]; weight?: number };
 
