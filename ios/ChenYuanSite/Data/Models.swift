@@ -73,10 +73,6 @@ nonisolated struct AiNewsItem: Decodable, Identifiable, Sendable {
 /// /api/ai-news/{id} 的应答包装。
 nonisolated struct AiNewsDetailResponse: Decodable, Sendable {
     let item: AiNewsItem
-
-    init(from decoder: Decoder) throws {
-        item = try decoder.container(keyedBy: JSONKey.self).decode(AiNewsItem.self, forKey: JSONKey("item"))
-    }
 }
 
 nonisolated struct CurationAuthor: Decodable, Sendable {
