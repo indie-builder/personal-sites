@@ -24,7 +24,7 @@ ios/
 │   │   ├── VideoPlayerModel.swift # 视频播放与音频会话状态
 │   │   ├── RootView.swift        # 四项玻璃底栏 + 路由 + 滚动隐藏
 │   │   ├── OpeningView.swift     # 开场动画
-│   │   └── Home|Detail|Ask|About # Detail、Ask 与关于页按独立视图拆分
+│   │   └── Home|Detail|Ask|About # 首页行、详情、Ask 与关于页按独立视图拆分
 │   ├── Assets.xcassets           # App 图标 + 头像
 │   └── opening_character.gif     # 开场人物序列（与 Web/安卓同素材）
 ├── ChenYuanSiteTests/            # Swift Testing 单元测试（分页/去重/失败恢复、SSE 帧、问答状态机、Markdown、视频播放状态机、时间文案）

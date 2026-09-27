@@ -47,6 +47,7 @@
 		A20000000000000000000040 = {isa = PBXBuildFile; fileRef = A10000000000000000000040; };
 		A20000000000000000000041 = {isa = PBXBuildFile; fileRef = A10000000000000000000041; };
 		A20000000000000000000042 = {isa = PBXBuildFile; fileRef = A10000000000000000000042; };
+		A20000000000000000000043 = {isa = PBXBuildFile; fileRef = A10000000000000000000043; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +124,7 @@
 		A10000000000000000000040 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerModel.swift; sourceTree = "<group>"; };
 		A10000000000000000000041 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutAnimations.swift; sourceTree = "<group>"; };
 		A10000000000000000000042 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskParts.swift; sourceTree = "<group>"; };
+		A10000000000000000000043 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRows.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -179,7 +181,7 @@
 		};
 		A30000000000000000000005 = {
 			isa = PBXGroup;
-			children = (A10000000000000000000013);
+			children = (A10000000000000000000013, A10000000000000000000043);
 			path = Home;
 			sourceTree = "<group>";
 		};
@@ -334,6 +336,7 @@
 				A20000000000000000000039,
 				A20000000000000000000040,
 				A20000000000000000000013,
+				A20000000000000000000043,
 				A20000000000000000000014,
 				A20000000000000000000037,
 				A20000000000000000000038,
