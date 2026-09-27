@@ -29,25 +29,12 @@ const suggestedQuestions = [
 const suggestionIcons = [UserRound, Lightbulb, Code2];
 
 function AssistantWelcome() {
-  const greeting = useRef<HTMLParagraphElement>(null);
-  const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    const element = greeting.current;
-    if (!element) return;
-    const measure = () => {
-      setWidth(element.getBoundingClientRect().width);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
   return (
     <div className={styles.welcomeHeader}>
-      <div className={styles.welcomeWalker} style={{ width }}>
-        {width > 0 && <div className={styles.welcomeRise}><SpriteWalker /></div>}
+      <div className={styles.welcomeWalker}>
+        <div className={styles.welcomeRise}><SpriteWalker /></div>
       </div>
-      <p ref={greeting}>我是陈远的 AI 助手，想了解什么？</p>
+      <p>我是陈远的 AI 助手，想了解什么？</p>
     </div>
   );
 }
@@ -55,7 +42,6 @@ function AssistantWelcome() {
 export function AskChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
-  const [usedSuggestions, setUsedSuggestions] = useState<string[]>([]);
   const [restored, setRestored] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -80,7 +66,6 @@ export function AskChat() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后、绘制前恢复浏览器会话，避免 SSR 不一致和草稿闪烁。
       setMessages(snapshot.messages);
       setQuestion(snapshot.question);
-      setUsedSuggestions(snapshot.messages.filter((message) => message.role === "user").map((message) => message.content));
     }
     setRestored(true);
   }, []);
@@ -164,9 +149,6 @@ export function AskChat() {
 
     const userId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
-    if (suggestedQuestions.includes(trimmedQuestion)) {
-      setUsedSuggestions((current) => [...current, trimmedQuestion]);
-    }
     shouldFollowLatest.current = true;
     // 失败重试的问题来自历史消息而非输入框：保留输入框里正在编辑的草稿。
     if (!preserveDraft) setQuestion("");
@@ -226,7 +208,7 @@ export function AskChat() {
   // 追问引导：回答完成后给出还没用过的建议问题，沿用空态的细线行语言；
   // 点击只填入组合器并聚焦，是否发送仍由访客决定。
   const lastMessage = messages[messages.length - 1];
-  const followUpQuestions = suggestedQuestions.filter((item) => !usedSuggestions.includes(item));
+  const followUpQuestions = suggestedQuestions.filter((item) => !messages.some((message) => message.role === "user" && message.content === item));
   const showFollowUps = !isStreaming
     && lastMessage?.role === "assistant"
     && lastMessage.isComplete
