@@ -18,6 +18,7 @@ import {
   toQueueItem,
 } from "../modules/douyin-sync/import.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
+import { readJsonOr } from "./lib/json-file.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -64,25 +65,13 @@ export function parseArgs(args) {
   return options;
 }
 
-async function readQueue() {
-  try {
-    return JSON.parse(await readFile(queuePath, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return { items: [], version: 1 };
-    throw error;
-  }
-}
-
 async function writePrivateJson(filePath, value) {
   await mkdir(path.dirname(filePath), { mode: 0o700, recursive: true });
   await writeFile(filePath, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
 }
 
 async function readFavoriteOrders() {
-  const index = await readFile(favoriteIndexPath, "utf8").then(JSON.parse, (error) => {
-    if (error.code === "ENOENT") return { items: [] };
-    throw error;
-  });
+  const index = await readJsonOr(favoriteIndexPath, { items: [] });
   return new Map(index.items.map((item, order) => [`douyin:${item.id}`, order]));
 }
 
@@ -159,15 +148,12 @@ async function sync(options) {
     // 收藏顺序小的更新（收藏页最新在前），--limit 只截最新收藏。
     .sort((left, right) => (left.collectedOrder ?? Number.MAX_SAFE_INTEGER) - (right.collectedOrder ?? Number.MAX_SAFE_INTEGER))
     .slice(0, options.limit);
-  const queue = await readQueue();
+  const queue = await readJsonOr(queuePath, { items: [], version: 1 });
   const byId = new Map(queue.items.map((item) => [item.id, item]));
   for (const item of byId.values()) {
     item.collectedOrder = favoriteOrders.get(item.id) ?? item.collectedOrder ?? null;
   }
-  const previousFailures = await readFile(failuresPath, "utf8").then(JSON.parse, (error) => {
-    if (error.code === "ENOENT") return { items: [] };
-    throw error;
-  });
+  const previousFailures = await readJsonOr(failuresPath, { items: [] });
   const failuresById = new Map(previousFailures.items.map((item) => [item.id, item]));
 
   if (options.dryRun) {
