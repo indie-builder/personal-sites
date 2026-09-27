@@ -308,6 +308,25 @@ test("assistant drawer sends without delaying the request", async ({ page }) => 
   })).toBeLessThan(300);
 });
 
+test("Ask can return to the latest message after reading earlier messages", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => sessionStorage.setItem("personal-site:ask-chat", JSON.stringify({
+    messages: Array.from({ length: 12 }, (_, index) => ({
+      citations: [], content: `第 ${index + 1} 条问题。${"内容 ".repeat(80)}`,
+      id: `message-${index}`, isComplete: true, role: "user",
+    })),
+    question: "",
+  })));
+  const dialog = await openAssistant(page);
+  const viewport = dialog.getByRole("region", { name: "问答记录" });
+  const button = dialog.getByRole("button", { name: "回到最新消息" });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await viewport.evaluate((element) => { element.scrollTop = 0; });
+  await expect(button).toHaveAttribute("data-active", "true");
+  await button.click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
+});
+
 test("technical signal motion pauses while offscreen", async ({ page }) => {
   await page.setViewportSize({ height: 250, width: 390 });
   await page.goto("/");

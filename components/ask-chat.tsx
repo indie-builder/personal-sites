@@ -1,19 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  MessageScroller,
-  MessageScrollerButton,
-  MessageScrollerContent,
-  MessageScrollerProvider,
-  MessageScrollerViewport,
-} from "@/components/ui/message-scroller";
+import { MessageScroller } from "@shadcn/react/message-scroller";
 import { SpriteWalker } from "@/components/assistant-sprite";
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { AskMessageItem, EMPTY_ENTER_DURATION, MESSAGE_ENTER_EASE, MotionMessageScrollerItem } from "@/components/ask-message";
 import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
 import { useVisitorSession } from "@/components/use-visitor-session";
-import { ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
+import { ArrowDown, ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 
@@ -237,11 +231,12 @@ export function AskChat() {
   return (
     <section aria-label="问一问" className={styles.root}>
 
-      <MessageScrollerProvider autoScroll={false} defaultScrollPosition="end">
-        <MessageScroller className={styles.scroller}>
-          <MessageScrollerViewport
+      <MessageScroller.Provider autoScroll={false} defaultScrollPosition="end">
+        <MessageScroller.Root className={styles.scroller}>
+          <MessageScroller.Viewport
             aria-label="问答记录"
             className={styles.viewport}
+            data-slot="message-scroller-viewport"
             onKeyDown={(event) => {
               if (["ArrowUp", "Home", "PageUp", " "].includes(event.key)) {
                 shouldFollowLatest.current = false;
@@ -260,7 +255,7 @@ export function AskChat() {
             }}
             ref={viewportRef}
           >
-            <MessageScrollerContent
+            <MessageScroller.Content
               aria-busy={isStreaming}
               className={styles.messages}
             >
@@ -335,19 +330,22 @@ export function AskChat() {
                   </div>
                 </motion.div>
               ) : null}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton
+            </MessageScroller.Content>
+          </MessageScroller.Viewport>
+          <MessageScroller.Button
             aria-label="回到最新消息"
             behavior={prefersReducedMotion ? "auto" : "smooth"}
             className={styles.scrollToLatest}
+            data-slot="message-scroller-button"
+            direction="end"
             onClick={() => {
               shouldFollowLatest.current = true;
               window.requestAnimationFrame(scrollToLatest);
             }}
-          />
-        </MessageScroller>
-      </MessageScrollerProvider>
+            render={<Button size="icon-sm" variant="secondary" />}
+          ><ArrowDown aria-hidden="true" /></MessageScroller.Button>
+        </MessageScroller.Root>
+      </MessageScroller.Provider>
 
       <form
         className={styles.form}

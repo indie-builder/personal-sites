@@ -6,13 +6,13 @@ import dynamic from "next/dynamic";
 import { memo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { MessageScrollerItem } from "@/components/ui/message-scroller";
+import { MessageScroller } from "@shadcn/react/message-scroller";
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
 
 import { STREAM_EASE } from "./motion-tokens";
 import styles from "./ask-chat.module.css";
 
-const MotionMessageScrollerItem = motion.create(MessageScrollerItem);
+const MotionMessageScrollerItem = motion.create(MessageScroller.Item);
 const MotionSearch = motion.create(Search);
 
 // react-markdown 生态只在收到第一条回答时才需要，按需加载。
@@ -113,6 +113,7 @@ export function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefe
     <MotionMessageScrollerItem
       animate={{ opacity: 1, y: "0rem" }}
       className={styles.messageItem}
+      data-slot="message-scroller-item"
       initial={prefersReducedMotion
         ? false
         : { opacity: 0, y: "0.4rem" }}
