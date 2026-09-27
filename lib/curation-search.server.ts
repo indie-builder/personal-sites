@@ -4,7 +4,18 @@ import { statSync } from "node:fs";
 import { z } from "zod";
 
 import { getPublicDatabase, PUBLIC_DATABASE_PATH } from "@/lib/public-database";
-import { byScoreThenRecency, occurrences } from "@/lib/search-score";
+
+/** 统计已归一为小写的文本中，needle 不重叠的出现次数。 */
+function occurrences(text: string, needle: string) {
+  let count = 0;
+  let start = 0;
+  while (true) {
+    const index = text.indexOf(needle, start);
+    if (index < 0) return count;
+    count += 1;
+    start = index + needle.length;
+  }
+}
 
 const localSearchRowSchema = z.object({
   content: z.string().min(1),
@@ -136,6 +147,6 @@ export function searchLocalAskDocuments(
         + occurrences(entry.lowercaseSearchText, needle) * 2
         + occurrences(entry.lowercaseContent, needle)))
     .filter((row) => row.score > 0)
-    .sort(byScoreThenRecency)
+    .sort((left, right) => right.score - left.score || (right.publishedAt ?? "").localeCompare(left.publishedAt ?? ""))
     .slice(0, limit);
 }
