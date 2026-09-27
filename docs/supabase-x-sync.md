@@ -1,6 +1,6 @@
 # X 同步与本地 SQLite
 
-`modules/x-sync/` 是 X 数据同步的独立模块，包含抓取/导入后的编排和公开 SQLite 投影生成。它不替代本地备份：本机仍保留原始抓取文件、策展队列和生成后的 JSON，全部位于被 Git 忽略的 `data/sensitive/x-curation/`。
+`modules/x-sync/` 包含 X 抓取/导入后的编排、链接取证、模型提示和公开 SQLite 投影；`scripts/x-curation-enrich.mjs` 只负责本地队列、模型调用与落盘。本机仍保留原始抓取文件、策展队列和生成后的 JSON，全部位于被 Git 忽略的 `data/sensitive/x-curation/`。
 
 同步后的职责如下：
 

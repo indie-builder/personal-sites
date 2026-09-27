@@ -10,6 +10,8 @@ import {
   recordCurationAnalysisFailure,
 } from "../modules/x-sync/analysis.mjs";
 import { buildCurationInsights, renderCurationInsightsMarkdown } from "../modules/x-sync/insights.mjs";
+import { classifyUrl } from "../modules/x-sync/link-content.mjs";
+import { buildDesignPrompt, buildPrompt } from "../modules/x-sync/prompts.mjs";
 
 const rawItem = {
   ai: { analysis: "", enrichedAt: null, summary: "", tags: [], title: "" },
@@ -26,6 +28,14 @@ const rawItem = {
   text: "A useful #Agent workflow with @github",
   tweetUrl: "https://x.com/author/status/1",
 };
+
+test("X 策展提示与链接分类保留来源和设计证据", () => {
+  assert.equal(classifyUrl("https://github.com/openai/codex"), "github");
+  assert.equal(classifyUrl("https://x.com/i/article/123"), "x-article");
+  assert.equal(classifyUrl("https://example.com/story"), "article");
+  assert.match(buildPrompt(rawItem, [], 0, null, ["Agent 工程"]), /Agent 工程/u);
+  assert.match(buildDesignPrompt(rawItem, 0, null), /【已有策展信息】/u);
+});
 
 test("analysis preparation extracts deterministic facts and creates resumable stages", () => {
   const prepared = prepareCurationItem(rawItem, { now: "2026-08-21T00:00:00.000Z" });
