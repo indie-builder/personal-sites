@@ -5,7 +5,6 @@ import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
@@ -33,23 +32,24 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
   onRetry?: () => void;
   prefersReducedMotion: boolean;
 }) {
+  const isUser = message.role === "user";
   return (
-    <div className={`group/message ${styles.message}`} data-align={message.role === "user" ? "end" : "start"} data-slot="message">
+    <div className={`group/message ${styles.message}`} data-align={isUser ? "end" : "start"} data-slot="message">
       <div className={styles.messageContent} data-slot="message-content">
         {/* 对齐方向已表达说话人；铭牌只保留给读屏，不占垂直节奏。 */}
         <div className="sr-only" data-slot="message-header">
-          {message.role === "user" ? "你" : "归档助手"}
+          {isUser ? "你" : "归档助手"}
         </div>
         {message.content ? (
-          <Bubble align={message.role === "user" ? "end" : "start"} variant={message.role === "user" ? "default" : "ghost"}>
-            <BubbleContent aria-live={message.role === "assistant" ? "polite" : undefined} className={`${styles.bubble} ${message.role === "user" ? styles.userBubble : styles.assistantBubble}`}>
+          <div className={styles.bubbleFrame} data-align={isUser ? "end" : "start"} data-slot="bubble" data-variant={isUser ? "default" : "ghost"}>
+            <div aria-live={isUser ? undefined : "polite"} className={`${styles.bubbleContent} ${isUser ? styles.userBubble : styles.assistantBubble}`} data-slot="bubble-content">
               {/* 流式期间渲染纯文本：Markdown 组件对每个 delta 全量重解析是 O(n²)，
                   落定（isComplete）后才挂 ReactMarkdown；bubble 的 pre-wrap 保证换行不丢。 */}
-              {message.role === "assistant" && message.isComplete
+              {!isUser && message.isComplete
                 ? <AskAnswerMarkdown source={message.content} />
                 : message.content}
-            </BubbleContent>
-          </Bubble>
+            </div>
+          </div>
         ) : isStreamingPlaceholder ? (
           <div className={styles.status} data-slot="marker" role="status">
             <span aria-hidden="true" className={styles.statusIcon} data-slot="marker-icon">

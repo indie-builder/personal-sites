@@ -108,9 +108,12 @@
   content-visibility: visible;
 }
 
-.bubble {
-  overflow-wrap: anywhere;
-}
+.bubbleFrame { position:relative; display:flex; width:fit-content; max-width:80%; min-width:0; flex-direction:column; gap:4px; }
+.bubbleFrame[data-align="end"] { align-self:flex-end; }
+.bubbleFrame[data-variant="ghost"] { max-width:100%; border:0; }
+.bubbleContent { width:fit-content; max-width:100%; min-width:0; overflow:hidden; border:1px solid transparent; border-radius:12px; padding:8px 12px; font-size:14px; line-height:1.625; overflow-wrap:anywhere; }
+.bubbleFrame[data-align="end"] .bubbleContent { align-self:flex-end; }
+.bubbleFrame[data-variant="ghost"] .bubbleContent { border-radius:0; background:transparent; padding:0; }
 
 .userBubble {
   white-space: pre-wrap;
