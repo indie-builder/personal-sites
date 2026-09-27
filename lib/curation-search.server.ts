@@ -4,6 +4,7 @@ import { statSync } from "node:fs";
 import { z } from "zod";
 
 import { getPublicDatabase, PUBLIC_DATABASE_PATH } from "@/lib/public-database";
+import type { AskDocumentScope, AskSource } from "@/lib/ask-types";
 
 /** 统计已归一为小写的文本中，needle 不重叠的出现次数。 */
 function occurrences(text: string, needle: string) {
@@ -30,32 +31,17 @@ const localSearchRowSchema = z.object({
 });
 const localSearchFtsRowSchema = z.object({ id: z.string().min(1), rank: z.number() });
 
-export type LocalAskDocument = {
-  content: string;
-  id: string;
-  publishedAt: string | null;
+export type LocalAskDocument = Omit<AskSource, "scope"> & {
   score: number;
-  scope: "daily" | "open-source" | "profile";
-  section: string | null;
-  sourceId: string;
-  sourceUrl: string;
-  title: string;
+  scope: Exclude<AskDocumentScope, "ai-news">;
 };
 
 /** The daily corpus is small and ships with the deployment, so an in-process scorer avoids a second remote X index. */
 
-type DailySearchCorpusEntry = {
-  content: string;
-  id: string;
+type DailySearchCorpusEntry = Omit<LocalAskDocument, "score"> & {
   lowercaseContent: string;
   lowercaseSearchText: string;
   lowercaseTitle: string;
-  publishedAt: string | null;
-  scope: "daily" | "open-source" | "profile";
-  section: string | null;
-  sourceId: string;
-  sourceUrl: string;
-  title: string;
 };
 
 // 语料随部署冻结（curation.sqlite 打包进产物）：按 DB 文件 mtime 做模块级缓存，
