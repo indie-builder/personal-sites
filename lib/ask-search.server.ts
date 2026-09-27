@@ -2,7 +2,7 @@ import "server-only";
 
 import { searchAiNewsDocuments } from "@/lib/ai-news";
 import { getAskSearchFallbackTerms } from "@/lib/ask-search-terms";
-import { searchLocalAskDocuments } from "@/lib/curation";
+import { searchLocalAskDocuments } from "@/lib/curation-search.server";
 import type { AskScope, AskSource } from "@/lib/ask-types";
 
 type SearchDocument = {

@@ -29,6 +29,7 @@ test-results/
 .venv/
 # Local scratch logs/snapshots and the 1.5G video-promo workspace; never commit.
 /.tmp/
+/.scratch/
 /video-promo/
 # Third-party video-shotcraft skill install (50M of demo/gallery assets) and its
 # symlinked entry points; other skills under .agents/skills stay tracked.

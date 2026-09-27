@@ -48,7 +48,8 @@ RootLayout
 | 个人简介 | `components/profile-introduction.tsx` | 双语逐字输入/删除、最终中文正文与多语言标题轮换；每次进入首页都播放 | 静态履历数据源 |
 | 内容导航 | `components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
 | 技术信号场 | `components/interactive-dot-field.tsx` | AI 术语与技术栈词库、稀疏视觉表达 | 标签过滤或导航 |
-| 策展数据 | `lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局 |
+| 策展数据 | `lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局、问答检索 |
+| 本地问答检索 | `lib/curation-search.server.ts` | 公开 SQLite 语料缓存、全文匹配与排序 | 策展页面查询 |
 | 公开发现 | `lib/discovery.server.ts` | 汇总公开 SQLite 与 Supabase，生成 Sitemap/RSS 数据 | 私有原始资料或运行时写入 |
 | 数据健康 | `lib/data-health.server.ts` + `modules/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
 
