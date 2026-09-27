@@ -168,23 +168,13 @@ export async function syncAiNews({
         fetchedAt,
       );
 
-      if (privateRows.length > 0) {
-        const { error } = await client
-          .from("ai_news_items")
-          .upsert(privateRows, { onConflict: "id" });
-        if (error)
-          throw new Error(
-            `写入 Supabase 每日动态原始数据失败：${error.message}`,
-          );
-      }
-      if (publicRows.length > 0) {
-        const { error } = await client
-          .from("ai_news_public_items")
-          .upsert(publicRows, { onConflict: "id" });
-        if (error)
-          throw new Error(
-            `写入 Supabase 每日动态公开投影失败：${error.message}`,
-          );
+      for (const [table, rows, label] of [
+        ["ai_news_items", privateRows, "原始数据"],
+        ["ai_news_public_items", publicRows, "公开投影"],
+      ]) {
+        if (rows.length === 0) continue;
+        const { error } = await client.from(table).upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`写入 Supabase 每日动态${label}失败：${error.message}`);
       }
       if (mode === "selected")
         selectedIds = new Set(publicRows.map((row) => row.id));
@@ -222,18 +212,13 @@ export async function syncAiNews({
     // 按内容时间清理 8 天前的行；没有发布时间的行退回按同步时间判断。
     const cutoff = new Date(now.getTime() - RETENTION_MS).toISOString();
     const stale = `published_at.lt.${cutoff},and(published_at.is.null,synced_at.lt.${cutoff})`;
-    const { error: pruneError } = await client
-      .from("ai_news_public_items")
-      .delete()
-      .or(stale);
-    if (pruneError)
-      throw new Error(`清理每日动态公开投影失败：${pruneError.message}`);
-    const { error: privatePruneError } = await client
-      .from("ai_news_items")
-      .delete()
-      .or(stale);
-    if (privatePruneError)
-      throw new Error(`清理每日动态原始数据失败：${privatePruneError.message}`);
+    for (const [table, label] of [
+      ["ai_news_public_items", "公开投影"],
+      ["ai_news_items", "原始数据"],
+    ]) {
+      const { error } = await client.from(table).delete().or(stale);
+      if (error) throw new Error(`清理每日动态${label}失败：${error.message}`);
+    }
 
     await stateStore.succeed({
       etags: backfill ? lease.etags : state.etags,
