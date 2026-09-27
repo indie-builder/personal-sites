@@ -53,6 +53,7 @@ import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
+import cn.lovemyrmb.personalsite.ui.components.hostOf
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
@@ -252,7 +253,3 @@ private fun PortfolioMedia.toCurationMedia() = CurationMedia(
     width = width.takeIf { it > 0 },
     height = height.takeIf { it > 0 },
 )
-
-private fun hostOf(url: String): String = runCatching {
-    java.net.URI(url).host?.removePrefix("www.") ?: url
-}.getOrDefault(url.take(40))

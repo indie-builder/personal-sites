@@ -30,6 +30,7 @@ import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
+import cn.lovemyrmb.personalsite.ui.components.hostOf
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
 import cn.lovemyrmb.personalsite.ui.components.openExternally
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
@@ -207,7 +208,3 @@ internal fun DetailSection(eyebrow: String, body: String) {
     Spacer(Modifier.height(SiteSpace.compact))
     Text(text = body, style = SiteText.body, color = SiteTheme.colors.ink)
 }
-
-internal fun hostOf(url: String): String = runCatching {
-    java.net.URI(url).host?.removePrefix("www.") ?: url
-}.getOrDefault(url.take(40))
