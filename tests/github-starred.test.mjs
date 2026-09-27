@@ -277,7 +277,6 @@ test("公开投影只携带选中的单仓库资料及双版本 Markdown", () =>
     nextStep: "下一步",
     personalNote: "备注",
     repository: "example/repo",
-    repositoryUrl: "https://github.com/example/repo",
     scenarios: [],
     slug: "example-repo",
     sourceSummary: "摘要",
@@ -291,6 +290,7 @@ test("公开投影只携带选中的单仓库资料及双版本 Markdown", () =>
   assert.equal(item.content.sourceMarkdown, "# Original README\n");
   assert.equal(item.content.parsedMarkdown, "# 中文阅读版\n");
   assert.equal(item.content.sourceSummary, "模型生成的一句话简介。");
+  assert.equal(item.content.repositoryUrl, record.repository.repositoryUrl);
   assert.equal(item.content.readingSource, "model-translation");
   assert.equal(item.content.repositoryDefaultBranch, "main");
 });
@@ -310,7 +310,7 @@ test("发布器把公开投影和问答分块写入本地 SQLite", async () => {
   const entry = {
     category: "skills", caveats: [], dimensions: ["agent-skills"],
     evidence: { checkedAt: "2026-08-09", kind: "readme", label: "README.md", note: "来源", url: "https://github.com/example/repo/blob/main/README.md" },
-    judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/repo", repositoryUrl: "https://github.com/example/repo",
+    judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/repo",
     scenarios: [], slug: "example-repo", sourceSummary: "摘要", status: "持续跟踪", type: "Skill", workflow: [],
   };
   const analysis = { contentMarkdown: "# 中文阅读版\n", generatedAt: "2026-08-09T00:00:00.000Z", model: { provider: "bigmodel-coding", model: "glm-5.3-flash" }, oneLineSummary: "智谱 GLM 生成的一句话简介。", parserVersion: "test", repoNodeId: "node-1", repository: "example/repo", sourceKind: "readme", sourceSha256: "sha", summaryModel: { provider: "bigmodel-coding", model: "glm-5.3-flash" }, summaryVersion: "test-summary" };
@@ -346,7 +346,7 @@ test("撤回公开仓库时删除本地投影和问答分块", async () => {
   const entry = {
     category: "skills", caveats: [], dimensions: ["agent-skills"],
     evidence: { checkedAt: "2026-08-09", kind: "readme", label: "README.md", note: "来源", url: "https://github.com/example/withdrawn/blob/main/README.md" },
-    judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/withdrawn", repositoryUrl: "https://github.com/example/withdrawn",
+    judgement: "判断", nextStep: "下一步", personalNote: "备注", repository: "example/withdrawn",
     scenarios: [], slug: "example-withdrawn", sourceSummary: "摘要", status: "持续跟踪", type: "Skill", workflow: [],
   };
   const analysis = { contentMarkdown: "# 中文阅读版\n", oneLineSummary: "简介", repoNodeId: "node-withdrawn" };
