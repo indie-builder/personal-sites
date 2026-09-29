@@ -48,3 +48,7 @@ test-results/
 # content stays duplicated on disk, canonical skills live in .agents/skills.
 /agent/
 /data/skills/
+
+# Generated Web deployment copies; canonical public snapshots stay in /data.
+/apps/web/data/
+/apps/web/var/

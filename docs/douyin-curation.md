@@ -60,7 +60,7 @@ pnpm douyin:curation -- sync \
 
 ## 全量发现与增量检查点
 
-本机 sidecar 安装完成后，由 `scripts/douyin-favorites-discover.py` 通过已登录收藏页滚动建立私有索引。它不会输出标题、Cookie 或收藏正文，只输出数量统计，并生成：
+本机 sidecar 安装完成后，由 `tools/content/scripts/douyin-favorites-discover.py` 通过已登录收藏页滚动建立私有索引。它不会输出标题、Cookie 或收藏正文，只输出数量统计，并生成：
 
 - `favorite-index.json`：当前完整收藏索引与首次/最近发现时间；
 - `pending-video-urls.json`：尚未出现在下载 manifest 中的视频；

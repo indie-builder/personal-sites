@@ -1,6 +1,6 @@
 # 每日动态同步与 Supabase
 
-`modules/ai-news/` 是上游 AI 资讯聚合接口的同步模块。上游接口匿名只读、无需密钥；同步任务先写入 Supabase；昨日及以前的公开投影每日增量归档到 SQLite，随网站部署。网站不直接请求上游。
+`packages/public-data/src/ai-news/` 是上游 AI 资讯聚合接口的同步模块。上游接口匿名只读、无需密钥；同步任务先写入 Supabase；昨日及以前的公开投影每日增量归档到 SQLite，随网站部署。网站不直接请求上游。
 
 | 数据 | 本地 | Supabase | 网站读取 |
 | --- | --- | --- | --- |
@@ -44,7 +44,7 @@
 - 两个 feed：`mode=all`（全部动态）与 `mode=selected`（精选），按 all → selected 顺序处理，同 id 条目的 `selected` 标记以精选为准；selected feed 条件请求命中 304 时，同步会先读出当前精选 id 并在 upsert 后还原，避免被 all feed 的覆盖语义清掉。
 - 增量同步带 `If-None-Match` 条件请求（ETag 存于私有状态表），无变化时跳过重写；回填不改写增量 ETag。
 - 原始备份仍按内容时间保留 8 天。公开投影不再按年龄直接删除；只有已上线 SQLite 包含完全相同的公开内容，且记录超过 3 天，才可清理。
-- 网站服务端通过 `lib/ai-news.ts` 合并 SQLite 与 Supabase 增量：列表分页、详情、Ask 检索及 Sitemap 使用同一归档。Supabase 同 id 的新版本覆盖归档版本；详情确认无更新后使用 SQLite。
+- 网站服务端通过 `apps/web/lib/ai-news.ts` 合并 SQLite 与 Supabase 增量：列表分页、详情、Ask 检索及 Sitemap 使用同一归档。Supabase 同 id 的新版本覆盖归档版本；详情确认无更新后使用 SQLite。
 
 ## 历史归档与发布
 

@@ -1,0 +1,48 @@
+{
+  "name": "@site/content",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "oxlint --deny-warnings scripts modules lib tests",
+    "test": "node --test tests/*.test.mjs",
+    "curation:prepare": "node scripts/x-curation-prepare.mjs",
+    "curation:recover": "node scripts/recover-x-curation-queue.mjs",
+    "curation:import": "node scripts/x-curation-import-bird.mjs",
+    "curation:fetch": "node scripts/x-curation-sync.mjs --fetch-only",
+    "curation:history": "node scripts/x-curation-sync.mjs --history",
+    "curation:sync": "node scripts/x-curation-sync.mjs",
+    "curation:sync:glm": "node scripts/x-curation-sync.mjs --engine pi",
+    "curation:sync:luna": "node scripts/x-curation-sync.mjs --engine codex-cli --model gpt-5.6-luna --reasoning-effort max",
+    "curation:enrich": "node scripts/x-curation-enrich.mjs",
+    "curation:classify-design": "node scripts/x-curation-enrich.mjs --design-only --engine pi --concurrency 15",
+    "curation:build": "node scripts/build-curation-content.mjs",
+    "curation:publish": "node scripts/build-curation-sqlite.mjs",
+    "douyin:curation": "node scripts/douyin-curation.mjs",
+    "douyin:sync": "node scripts/douyin-full-sync.mjs",
+    "github:starred:sync": "node scripts/github-starred.mjs sync",
+    "github:starred:init": "node scripts/github-starred.mjs init",
+    "github:starred:daily": "node scripts/github-starred.mjs daily",
+    "github:starred:analyze": "node scripts/github-starred.mjs analyze",
+    "github:starred:analyze:pi": "node scripts/github-starred.mjs analyze --engine pi",
+    "github:starred:publish": "node scripts/github-starred.mjs publish",
+    "ai-news:archive": "node scripts/ai-news-archive.mjs",
+    "ai-news:prune": "node scripts/ai-news-archive.mjs --prune",
+    "ai-news:sync": "node scripts/ai-news-sync.mjs",
+    "ai-news:backfill": "node scripts/ai-news-sync.mjs --backfill",
+    "focus:status": "node scripts/focus-status.mjs",
+    "vectors:index": "node scripts/local-vectors.mjs index",
+    "vectors:search": "node scripts/local-vectors.mjs search",
+    "github:starred:run": "node scripts/github-starred.mjs run"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.85.1",
+    "@huggingface/transformers": "4.3.0",
+    "@supabase/supabase-js": "2.116.0",
+    "better-sqlite3": "^13.0.3",
+    "sqlite-vec": "0.1.9",
+    "@site/public-data": "workspace:*"
+  },
+  "devDependencies": {
+    "@steipete/bird": "^0.8.0"
+  }
+}

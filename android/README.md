@@ -14,7 +14,7 @@
 
 ## 数据源
 
-只读站点公共 GET API（`https://default-coder.lovemyrmb.cn`），无需鉴钥；不直连 Supabase、不读敏感本地数据。接口契约见仓库根 `docs/` 与 `lib/paginated-route.ts`。
+只读站点公共 GET API（`https://default-coder.lovemyrmb.cn`），无需鉴钥；不直连 Supabase、不读敏感本地数据。接口契约见仓库根 `docs/` 与 `apps/web/lib/paginated-route.ts`。
 
 ## 构建与运行
 

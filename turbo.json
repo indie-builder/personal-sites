@@ -1,0 +1,55 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": [
+    "config/**",
+    "scripts/tsc7.mjs",
+    ".oxlintrc.json",
+    "scripts/lib/load-local-env.mjs"
+  ],
+  "tasks": {
+    "lint": {
+      "dependsOn": [
+        "^lint"
+      ]
+    },
+    "//#lint:repo": {},
+    "typecheck": {
+      "dependsOn": [
+        "^typecheck"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^test"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/data/curation.sqlite",
+        "$TURBO_ROOT$/data/ai-news.sqlite"
+      ]
+    },
+    "//#test:repo": {
+      "cache": false
+    },
+    "build": {
+      "cache": false,
+      "passThroughEnv": [
+        "SUPABASE_*",
+        "NEXT_PUBLIC_*",
+        "VERCEL_*",
+        "BIGMODEL_*",
+        "ASK_*",
+        "GITHUB_TOKEN"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/data/curation.sqlite",
+        "$TURBO_ROOT$/data/ai-news.sqlite"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

@@ -1,3 +1,3 @@
-import type { OpenSourceEntry } from "../lib/open-source-types";
+import type { OpenSourceEntry } from "../apps/web/lib/open-source-types";
 
 export const openSourceEntries: OpenSourceEntry[];

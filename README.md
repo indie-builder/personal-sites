@@ -33,10 +33,10 @@ X / 抖音 / GitHub Star 的抓取与模型结果留在本机忽略目录；只�
 
 | 要追踪的功能 | 写入或入口 | 读取与界面 |
 | --- | --- | --- |
-| 每日动态 | `modules/ai-news/sync.mjs` → Supabase 公开投影 | `lib/ai-news.ts` → `app/ai-news/`、`app/api/ai-news/` 与首页 |
-| X / 抖音 / GitHub Star | `scripts/` 调度 `modules/x-sync/`、`modules/douyin-sync/`、`modules/github-starred/` → `data/curation.sqlite` | `lib/curation.ts`、`lib/open-source.ts` → 栏目与公开 GET API |
-| 问一问 | `app/api/ask/route.ts` → `lib/ask-search.server.ts`、`lib/ask-session.server.ts` | `components/use-ask-conversation.ts` 管会话与 SSE，`components/ask-chat.tsx` 渲染抽屉；原生客户端复用公开 API |
-| 本地向量检索 | `scripts/local-vectors.mjs` → `modules/local-vectors/indexer.mjs`、`modules/local-vectors/search.mjs` | 私有文件与公开 Ask 投影只进入本机忽略索引；Web 不读取该索引 |
+| 每日动态 | `packages/public-data/src/ai-news/sync.mjs` → Supabase 公开投影 | `apps/web/lib/ai-news.ts` → `apps/web/app/ai-news/`、`apps/web/app/api/ai-news/` 与首页 |
+| X / 抖音 / GitHub Star | `scripts/` 调度 `modules/x-sync/`、`modules/douyin-sync/`、`modules/github-starred/` → `data/curation.sqlite` | `apps/web/lib/curation.ts`、`apps/web/lib/open-source.ts` → 栏目与公开 GET API |
+| 问一问 | `apps/web/app/api/ask/route.ts` → `apps/web/lib/ask-search.server.ts`、`apps/web/lib/ask-session.server.ts` | `apps/web/components/use-ask-conversation.ts` 管会话与 SSE，`apps/web/components/ask-chat.tsx` 渲染抽屉；原生客户端复用公开 API |
+| 本地向量检索 | `tools/content/scripts/local-vectors.mjs` → `tools/content/modules/local-vectors/indexer.mjs`、`tools/content/modules/local-vectors/search.mjs` | 私有文件与公开 Ask 投影只进入本机忽略索引；Web 不读取该索引 |
 | 原生客户端 | [Android data](android/app/src/main/java/cn/lovemyrmb/personalsite/data/) 与 [iOS Data](ios/ChenYuanSite/Data/) | 各自原生界面消费公开 GET API 与 `POST /api/ask`；构建命令见各端 README |
 
 页面布局和移动端行为继续以 [前端架构](docs/frontend-architecture.md) 与 [DESIGN.md](DESIGN.md) 为准；私有输入和公开投影的界限见 [敏感数据说明](docs/sensitive-data.md)。
@@ -84,3 +84,9 @@ Supabase Cron 每 5 分钟触发每日动态增量同步，GitHub Actions 每天
 - [DESIGN.md](DESIGN.md) — 视觉与交互规则
 - [前端架构](docs/frontend-architecture.md) — 页面和数据读取职责
 - [AGENTS.md](AGENTS.md) — 协作与工程约定
+
+## 工作区
+
+使用 pnpm workspace + Turborepo：`apps/web` 是 Next.js 网站，`tools/content` 是离线同步/分析工具，`packages/public-data` 是共用公开数据代码。根目录 `pnpm dev`、`pnpm build`、`pnpm lint`、`pnpm typecheck`、`pnpm test` 与数据操作命令继续作为统一入口。
+
+路径、缓存规则和 Vercel 配置见 [工作区说明](docs/monorepo.md)。Android、iOS 保留原构建工具及目录。
