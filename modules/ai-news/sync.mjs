@@ -110,7 +110,7 @@ export async function fetchFeed(
 
 /**
  * 由 Supabase Cron（或 GitHub 手动/每日回填）驱动：增量（默认，24h 窗口）或回填（7d 窗口）。
- * upsert 到 Supabase 后按发布时间清理 8 天前的行。增量带 If-None-Match，feed 无变化时跳过重写；
+ * upsert 到 Supabase 后仅清理 8 天前的原始备份。增量带 If-None-Match，feed 无变化时跳过重写；
  * 回填始终是完整抓取。租约与 ETag 统一保存在 Supabase，所有执行入口共享同一状态。
  */
 export async function syncAiNews({
@@ -183,10 +183,10 @@ export async function syncAiNews({
     }
 
     // 精选标记先清后设：掉出精选 feed 的旧条目必须复位为 false，
-    // 否则它们会一直挂着 selected=true，直到 8 天清理才被摘掉。
+    // 否则它们会一直挂着 selected=true，直到下一次归档仍保留旧标记。
     let clearSelectedQuery = client
       .from("ai_news_public_items")
-      .update({ selected: false })
+      .update({ selected: false, synced_at: fetchedAt })
       .eq("selected", true);
     if (selectedIds.size > 0) {
       clearSelectedQuery = clearSelectedQuery.not(
@@ -204,21 +204,16 @@ export async function syncAiNews({
     if (selectedIds.size > 0) {
       const { error } = await client
         .from("ai_news_public_items")
-        .update({ selected: true })
+        .update({ selected: true, synced_at: fetchedAt })
         .in("id", [...selectedIds]);
       if (error) throw new Error(`还原每日动态精选标记失败：${error.message}`);
     }
 
-    // 按内容时间清理 8 天前的行；没有发布时间的行退回按同步时间判断。
+    // 公开数据只能在已部署归档验证后清理；原始备份维持原有 8 天保留期。
     const cutoff = new Date(now.getTime() - RETENTION_MS).toISOString();
     const stale = `published_at.lt.${cutoff},and(published_at.is.null,synced_at.lt.${cutoff})`;
-    for (const [table, label] of [
-      ["ai_news_public_items", "公开投影"],
-      ["ai_news_items", "原始数据"],
-    ]) {
-      const { error } = await client.from(table).delete().or(stale);
-      if (error) throw new Error(`清理每日动态${label}失败：${error.message}`);
-    }
+    const { error: cleanupError } = await client.from("ai_news_items").delete().or(stale);
+    if (cleanupError) throw new Error(`清理每日动态原始数据失败：${cleanupError.message}`);
 
     await stateStore.succeed({
       etags: backfill ? lease.etags : state.etags,

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: withCanonical("/"),
 };
 
-// 动态渲染、每请求直读 Supabase 公开投影：每日动态 5 分钟一变，不用 ISR
+// 动态渲染、每请求合并 SQLite 历史与 Supabase 增量：每日动态 5 分钟一变，不用 ISR
 // 时间缓存——否则缓存过期后的首次访问仍先拿到旧页面。
 export const dynamic = "force-dynamic";
 

@@ -45,6 +45,13 @@ describe("createPaginatedFeedRoute", () => {
     expect(readPage).toHaveBeenCalledTimes(callsBefore + 1);
   });
 
+  it("allows deep history when the feed explicitly lifts the offset cap", async () => {
+    const history = createPaginatedFeedRoute({ label: "每日动态", maxLimit: 100, maxOffset: Number.MAX_SAFE_INTEGER, pageStep: 50, readPage });
+    expect((await history(request("?offset=12537"))).status).toBe(200);
+    expect(readPage).toHaveBeenLastCalledWith(12500, 50);
+    expect((await history(request("?offset=9007199254740992"))).status).toBe(400);
+  });
+
   it("reports read failures with the section label in a JSON 500", async () => {
     const failing = createPaginatedFeedRoute({
       label: "测试版块",

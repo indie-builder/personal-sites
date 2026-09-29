@@ -44,9 +44,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Data, Privacy, and Caching
 
 - Read `docs/sensitive-data.md` before touching curation inputs or credentials. Never stage, publish, render, screenshot, or expose `data/sensitive/`, `knowledge/sensitive/`, local credentials, or `tools/smaug/.state/`.
-- Public content comes from approved projections: X/Douyin/GitHub content and the local Ask index use the bundled, runtime-read-only `data/curation.sqlite`; AI news uses Supabase `ai_news_public_items`. Never fall back to sensitive local data. Service-role keys never belong in `NEXT_PUBLIC_*` variables.
+- Public content comes from approved projections: X/Douyin/GitHub content and the local Ask index use the bundled, runtime-read-only `data/curation.sqlite`; AI news merges bundled `data/ai-news.sqlite` history with Supabase `ai_news_public_items` updates. Never fall back to sensitive local data. Service-role keys never belong in `NEXT_PUBLIC_*` variables.
 - Keep public curation detail reads cacheable with ISR (`revalidate = 300`) and loading states. SQLite content changes require rebuilding the public projection and redeploying; ISR does not refresh the bundled data. For cache changes, verify production route classification and `x-nextjs-cache` MISS then HIT behavior.
-- Treat `curation:*`, `douyin:*`, `github:starred:*`, `ai-news:sync`, `ai-news:backfill`, and `supabase:push` as data operations, not validation commands. Follow `docs/supabase-x-sync.md`, `docs/douyin-curation.md`, `docs/github-starred-sync.md`, and `docs/ai-news-sync.md`; run `pnpm supabase:push -- --dry-run` before a database write.
+- Treat `curation:*`, `douyin:*`, `github:starred:*`, `ai-news:sync`, `ai-news:backfill`, `ai-news:archive`, `ai-news:prune`, and `supabase:push` as data operations, not validation commands. Follow `docs/supabase-x-sync.md`, `docs/douyin-curation.md`, `docs/github-starred-sync.md`, and `docs/ai-news-sync.md`; run `pnpm supabase:push -- --dry-run` before a database write.
 - Run daily Star syncs one at a time and report partial results until the process exits. For AI news, Supabase Cron calls `/api/cron/ai-news` every 5 minutes; GitHub Actions handles daily backfill/manual recovery. Verify actual run results before reporting success.
 
 ## Git and Commits

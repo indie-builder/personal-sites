@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    "/*": ["data/curation.sqlite"],
+    "/*": ["data/curation.sqlite", "data/ai-news.sqlite"],
   },
   experimental: {
     // 每日动态/首页改为动态渲染后，SPA 导航默认每次都重新打服务端（含返回列表），
