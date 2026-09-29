@@ -1,0 +1,21 @@
+{
+  "name": "@site/public-data",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "lint": "oxlint --deny-warnings src tests",
+    "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.116.0",
+    "better-sqlite3": "^13.0.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
+  }
+}

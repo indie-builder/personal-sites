@@ -1,0 +1,203 @@
+#!/usr/bin/env node
+/**
+ * x-curation-import-bird.mjs
+ *
+ * 把 bird CLI 全量拉取的原始数据（书签 + 点赞）批量导入策展队列。
+ * 用于初始化同步；日常增量仍走 smaug → x-curation-prepare.mjs。
+ *
+ * bird 原始格式比 smaug 精简：链接不展开（保留 t.co 原文，解析阶段再展开），
+ * 但带互动数据（likeCount/retweetCount/replyCount）可用于策展优先级排序。
+ *
+ * 用法：
+ *   node tools/content/scripts/x-curation-import-bird.mjs
+ */
+
+import { mkdir, readFile, readdir, stat } from "node:fs/promises";
+
+import { readJsonOr } from "./lib/json-file.mjs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { mergeXMedia, normalizeXMedia } from "../modules/x-sync/media.mjs";
+import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
+import { writeJsonAtomically } from "./lib/atomic-file.mjs";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const config = JSON.parse(
+  await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"),
+);
+
+const rawDir = path.join(repoRoot, config.rawDir);
+const queuePath = path.join(repoRoot, config.queueFile);
+
+const SOURCES = [
+  { file: path.join(rawDir, "bookmarks-all.json"), fetchSource: "bookmark" },
+  { file: path.join(rawDir, "likes-all.json"), fetchSource: "like" },
+  { dir: path.join(rawDir, "likes-chunks"), fetchSource: "like" },
+];
+
+function extractShortLinks(text) {
+  const urls = text.match(/https?:\/\/t\.co\/\w+/gu) ?? [];
+  return [...new Set(urls)].map((url) => ({
+    original: url,
+    expanded: null,
+    type: "unexpanded",
+  }));
+}
+
+function toInt(value) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function normalizeTweet(tweet, fetchSource) {
+  const handle = tweet.author?.username ?? "";
+  return prepareCurationItem({
+    id: String(tweet.id),
+    fetchSource,
+    author: {
+      handle,
+      name: tweet.author?.name ?? "",
+    },
+    text: tweet.text ?? "",
+    tweetUrl: handle ? `https://x.com/${handle}/status/${tweet.id}` : "",
+    createdAt: tweet.createdAt ?? "",
+    links: extractShortLinks(tweet.text ?? ""),
+    media: Array.isArray(tweet.media) ? tweet.media.map(normalizeXMedia) : [],
+    isQuote: Boolean(tweet.quotedTweet),
+    quoteContext: tweet.quotedTweet
+      ? {
+          id: String(tweet.quotedTweet.id ?? ""),
+          author: tweet.quotedTweet.author?.username ?? "",
+          authorName: tweet.quotedTweet.author?.name ?? "",
+          text: tweet.quotedTweet.text ?? "",
+        }
+      : null,
+    isReply: Boolean(tweet.inReplyToStatusId),
+    replyContext: null,
+    engagement: {
+      likes: toInt(tweet.likeCount),
+      retweets: toInt(tweet.retweetCount),
+      replies: toInt(tweet.replyCount),
+    },
+    ai: {
+      title: "",
+      summary: "",
+      tags: [],
+      analysis: "",
+      enrichedAt: null,
+    },
+  });
+}
+
+function earlierFirstSeen(current, candidate) {
+  if (!current) return candidate;
+  if (candidate.firstSeenAt < current.firstSeenAt) return candidate;
+  if (candidate.firstSeenAt > current.firstSeenAt) return current;
+  return candidate.firstSeenOrder < current.firstSeenOrder ? candidate : current;
+}
+
+// 读取全部来源
+const tweets = [];
+const firstSeenById = new Map();
+async function addTweetsFromFile(filePath, fetchSource) {
+  let fileStat;
+  try {
+    fileStat = await stat(filePath);
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw error;
+  }
+  const data = await readJsonOr(filePath, { tweets: [] });
+  const firstSeenAt = fileStat.mtime.toISOString();
+  for (const [firstSeenOrder, tweet] of (data.tweets ?? []).entries()) {
+    const id = String(tweet.id);
+    const firstSeen = { firstSeenAt, firstSeenOrder };
+    firstSeenById.set(id, earlierFirstSeen(firstSeenById.get(id), firstSeen));
+    tweets.push({ tweet, fetchSource, ...firstSeen });
+  }
+}
+
+for (const source of SOURCES) {
+  if (source.file) {
+    await addTweetsFromFile(source.file, source.fetchSource);
+  } else {
+    let files = [];
+    try {
+      files = (await readdir(source.dir)).filter((name) => name.endsWith(".json")).sort();
+    } catch { /* 目录不存在则跳过 */ }
+    for (const file of files) {
+      await addTweetsFromFile(path.join(source.dir, file), source.fetchSource);
+    }
+  }
+}
+
+const rawFiles = (await readdir(rawDir)).filter((name) => /^[a-f0-9]{64}\.json$/u.test(name));
+for (const file of rawFiles) {
+  const filePath = path.join(rawDir, file);
+  const [snapshot, fileStat] = await Promise.all([readJsonOr(filePath, null), stat(filePath)]);
+  const firstSeenAt = snapshot?.generatedAt ?? fileStat.mtime.toISOString();
+  for (const [firstSeenOrder, bookmark] of (snapshot?.bookmarks ?? []).entries()) {
+    const id = String(bookmark.id);
+    firstSeenById.set(id, earlierFirstSeen(firstSeenById.get(id), { firstSeenAt, firstSeenOrder }));
+  }
+}
+
+const queue = await readJsonOr(queuePath, { version: 2, items: [] });
+queue.version = Math.max(Number(queue.version ?? 0), 3);
+const itemById = new Map(queue.items.map((item) => [item.id, item]));
+const seen = new Set(itemById.keys());
+
+let added = 0;
+let backfilled = 0;
+let duplicated = 0;
+let bothSources = 0;
+const newEntries = [];
+for (const { tweet, fetchSource, firstSeenAt, firstSeenOrder } of tweets) {
+  const id = String(tweet.id);
+  const item = itemById.get(id);
+  if (seen.has(id)) {
+    duplicated += 1;
+    // 同一条同时出现在书签和点赞：补充来源标记
+    if (item && item.fetchSource !== fetchSource && !item.fetchSource.includes(fetchSource)) {
+      item.fetchSource = `${item.fetchSource}+${fetchSource}`;
+      bothSources += 1;
+    }
+    if (item) item.media = mergeXMedia(item.media, tweet.media ?? []);
+    const firstSeen = firstSeenById.get(id);
+    if (item && !item.firstSeenAt && firstSeen) {
+      item.firstSeenAt = firstSeen.firstSeenAt;
+      item.firstSeenOrder = firstSeen.firstSeenOrder;
+      backfilled += 1;
+    }
+    continue;
+  }
+  const entry = normalizeTweet(tweet, fetchSource);
+  entry.firstSeenAt = firstSeenAt;
+  entry.firstSeenOrder = firstSeenOrder;
+  newEntries.push(entry);
+  itemById.set(id, entry);
+  seen.add(id);
+  added += 1;
+}
+// 等价于逐条 unshift（后处理的排在最前），但把每次 O(N) 的移位摊成一次拼接。
+queue.items = [...newEntries.reverse(), ...queue.items];
+
+for (const item of queue.items) {
+  const firstSeen = firstSeenById.get(item.id);
+  if (!item.firstSeenAt && firstSeen) {
+    item.firstSeenAt = firstSeen.firstSeenAt;
+    item.firstSeenOrder = firstSeen.firstSeenOrder;
+    backfilled += 1;
+  }
+}
+
+queue.updatedAt = new Date().toISOString();
+await mkdir(path.dirname(queuePath), { recursive: true });
+await writeJsonAtomically(queuePath, queue);
+
+console.log(`来源总量: ${tweets.length} 条（书签 + 点赞）`);
+console.log(`新增策展条目: ${added} 条`);
+console.log(`首次收录时间回填: ${backfilled} 条`);
+console.log(`去重跳过: ${duplicated} 条（其中 ${bothSources} 条同时存在于书签和点赞，已合并标记）`);
+console.log(`队列总量: ${queue.items.length} 条`);

@@ -7,7 +7,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>__NODE_BIN__/node</string>
-    <string>__REPO_ROOT__/scripts/ai-news-sync.mjs</string>
+    <string>__REPO_ROOT__/tools/content/scripts/ai-news-sync.mjs</string>
     <string>--backfill</string>
   </array>
   <key>WorkingDirectory</key>

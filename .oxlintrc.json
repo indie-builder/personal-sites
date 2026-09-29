@@ -35,7 +35,7 @@
     "node_modules/**",
     "out/**",
     "public/**",
-    "tools/**",
+    "tools/smaug/**",
     "var/**"
   ]
 }

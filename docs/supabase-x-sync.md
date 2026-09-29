@@ -1,6 +1,6 @@
 # X 同步与本地 SQLite
 
-`modules/x-sync/` 包含 X 抓取/导入后的编排、链接取证、模型提示和公开 SQLite 投影；`scripts/x-curation-enrich.mjs` 只负责本地队列、模型调用与落盘。本机仍保留原始抓取文件、策展队列和生成后的 JSON，全部位于被 Git 忽略的 `data/sensitive/x-curation/`。
+`tools/content/modules/x-sync/` 包含 X 抓取/导入后的编排、链接取证、模型提示和公开 SQLite 投影；`tools/content/scripts/x-curation-enrich.mjs` 只负责本地队列、模型调用与落盘。本机仍保留原始抓取文件、策展队列和生成后的 JSON，全部位于被 Git 忽略的 `data/sensitive/x-curation/`。
 
 同步后的职责如下：
 
@@ -18,7 +18,7 @@ X 数据解析默认经 Pi 运行时直连智谱，需在被 Git 忽略的 `.env
 BIGMODEL_API_KEY=<bigmodel-key>
 ```
 
-`data/curation.sqlite` 只能由本机 `scripts/build-curation-sqlite.mjs` 通过 `better-sqlite3` 从 X 策展队列与已批准的抖音待审队列生成。它是只读公开投影，不包含抓取快照、视频、转写、游标或凭据；Vercel 在部署中随 Git 文件读取，运行时不写入它。
+`data/curation.sqlite` 只能由本机 `tools/content/scripts/build-curation-sqlite.mjs` 通过 `better-sqlite3` 从 X 策展队列与已批准的抖音待审队列生成。它是只读公开投影，不包含抓取快照、视频、转写、游标或凭据；Vercel 在部署中随 Git 文件读取，运行时不写入它。
 
 抓取后的分析采用可版本化阶段：确定性事实提取、视觉理解、策展解析与设计分类分别记录状态、输入 hash、模型和版本。事实层不调用模型；视觉 OCR/场景、隐藏检索信号与编辑结果写回私有队列，公开投影只携带可公开的派生字段。相同媒体输入在条目内重跑时会复用已持久化的视觉事实。
 
@@ -52,7 +52,7 @@ pnpm curation:enrich -- --refresh --limit 20
 
 每次生成策展内容时还会在私有目录写入 `data/sensitive/x-curation/generated/insights.json` 与便于人工阅读的 `insights.md`，包含数据健康度、来源分布、高频概念、工具、近期上升主题与 taxonomy 建议。按内容摘要去重的历史快照保存在 `generated/insight-snapshots/`；这些文件都不会进入 Git 或网站运行时。
 
-前端只在 Node.js 服务端从 SQLite 读取，绝不向浏览器暴露数据库文件。`next.config.ts` 的输出文件追踪会将它随每个函数部署；Edge Runtime 不支持这一读取路径。
+前端只在 Node.js 服务端从 SQLite 读取，绝不向浏览器暴露数据库文件。`apps/web/next.config.ts` 的输出文件追踪会将它随每个函数部署；Edge Runtime 不支持这一读取路径。
 
 `ask_documents` 同时维护 SQLite FTS5 索引；搜索文本包含标题、正文、引用、确定性事实、工具、语义检索信号和视觉 OCR。运行时优先使用 FTS5 排序，异常或短查询继续使用进程内子字符串评分。
 

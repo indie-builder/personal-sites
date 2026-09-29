@@ -14,21 +14,28 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - This personal project does not require backward compatibility unless requested, including for published APIs and installed clients. Replace old APIs and structures directly and update current callers; preserve data integrity without compatibility layers or dual-version support.
 - Web is the primary product, including desktop and mobile browsers. Native 「陈远小站」 clients in `android/` and `ios/` consume public content GET APIs and `POST /api/ask`; follow each client's README for platform requirements, build commands, and tests.
 
+## Workspace
+
+- `apps/web` owns Next.js, UI and HTTP APIs; `tools/content` owns offline pipelines; `packages/public-data` owns shared public schemas, SQLite helpers and news synchronization.
+- Next.js guides resolve from `apps/web/node_modules/next/dist/docs/`. Keep shared packages independent of apps and offline tool dependencies.
+- Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/`. Do not copy sensitive directories.
+- Data operations bypass Turbo caching; Web build caching stays disabled while prerendering reads Supabase. See `docs/monorepo.md`.
+
 ## Package Manager and Checks
 
 - Use `pnpm` with Node.js `>=22.19.0`; the package manager is pinned in `package.json`.
-- Default dev startup is domain-based via portless: `pnpm dev:domain` serves `https://personal-site.localhost` (fixed app port 3000). Plain `pnpm dev` stays available for raw-port use.
+- Default dev startup is domain-based via portless: `pnpm dev:domain` dispatches to `apps/web` and serves `https://personal-site.localhost` (fixed app port 3000). Plain `pnpm dev` stays available for raw-port use.
 - For app code or configuration changes, run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. For documentation-only changes, verify referenced commands/paths and run `git diff --check`; no app build is required.
-- `pnpm test` runs Vitest and Node tests; Playwright is separate (`pnpm test:e2e`). Run relevant browser regressions for changed UI flows in addition to live verification below.
+- `pnpm test` runs package tests through Turborepo (Vitest and Node); Playwright is separate (`pnpm test:e2e`). Run relevant browser regressions for changed UI flows in addition to live verification below.
 - Keep the intentional TS7 setup in `scripts/tsc7.mjs` and the peer exceptions in `pnpm-workspace.yaml`; lint uses oxlint/oxc-parser. Do not downgrade TypeScript to satisfy the unused typescript-eslint fallback's peer cap.
-- For a second dev server, use `pnpm exec next dev --turbopack --hostname 127.0.0.1 --port 7100`; do not use `pnpm dev -- --port 7100`.
+- For a second dev server, use `pnpm --filter @site/web dev --port 7100`; do not use `pnpm dev -- --port 7100`.
 
 ## File-Scoped Commands
 
 | Task | Command |
 | --- | --- |
-| Lint one file | `pnpm exec oxlint path/to/file.tsx` |
-| Run one Vitest file | `pnpm exec vitest run path/to/file.test.ts` |
+| Lint one file | `pnpm exec oxlint apps/web/path/to/file.tsx` |
+| Run one Vitest file | `pnpm --filter @site/web exec vitest run tests/file.test.ts` |
 
 ## Frontend
 
@@ -39,7 +46,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Verify UI changes in the running Next app with ego lite: inspect compiler issues, routes, browser errors, and the rendered interaction in a real page.
 - Use ego lite for all agent-driven browser work — opening URLs, verifying UI, clicking through flows. Run everything through `ego-browser nodejs <<'EOF' ... EOF` heredocs; follow the ego-browser skill for task spaces, snapshots, and helpers.
 - Debug through ego lite CDP: `cdp(...)` for protocol-level needs (console messages, network, dialogs), `js(...)` for in-page state and DOM inspection. Collect browser errors this way instead of guessing from screenshots.
-- Keep Playwright specs in `e2e/` for automated regression; ego lite is for agent-driven inspection and does not replace them.
+- Keep Playwright specs in `apps/web/e2e/` for automated regression; ego lite is for agent-driven inspection and does not replace them.
 
 ## Data, Privacy, and Caching
 

@@ -38,13 +38,13 @@ jobs:
           node-version: 24
           cache: pnpm
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter @site/content...
       - name: Backfill (7d window)
         if: github.event.schedule == '17 20 * * *' || inputs.backfill == true
-        run: node scripts/ai-news-sync.mjs --backfill
+        run: node tools/content/scripts/ai-news-sync.mjs --backfill
       - name: Incremental sync (24h window)
         if: github.event.schedule != '17 20 * * *' && inputs.backfill != true
-        run: node scripts/ai-news-sync.mjs
+        run: node tools/content/scripts/ai-news-sync.mjs
 
       # A failed/older deployment must never authorize deletion. Export still runs so recovery can proceed.
       - name: Prune only the archive confirmed on production
