@@ -232,7 +232,14 @@ describe("ai news sync", () => {
       }),
       delete: () => ({ or: async () => ({ error: null }) }),
     };
-    const clientFactory = () => ({ from: () => fakeTable });
+    const cleanupTables = [];
+    const clientFactory = () => ({ from: (table) => ({
+      ...fakeTable,
+      delete: () => {
+        cleanupTables.push(table);
+        return { or: async () => ({ error: null }) };
+      },
+    }) });
 
     await syncAiNews({
       backfill: true,
@@ -252,6 +259,7 @@ describe("ai news sync", () => {
     );
     assert.equal(store.get("keep-x").selected, true);
     assert.equal(store.get("fresh-z").selected, true);
+    assert.deepEqual(cleanupTables, ["ai_news_items"], "同步不得按年龄直接删除公开历史");
   });
 
   it("skips before fetching when another sync holds the shared lease", async () => {

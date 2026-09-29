@@ -40,6 +40,8 @@
     "github:starred:analyze": "node scripts/github-starred.mjs analyze",
     "github:starred:analyze:pi": "node scripts/github-starred.mjs analyze --engine pi",
     "github:starred:publish": "node scripts/github-starred.mjs publish",
+    "ai-news:archive": "node scripts/ai-news-archive.mjs",
+    "ai-news:prune": "node scripts/ai-news-archive.mjs --prune",
     "ai-news:sync": "node scripts/ai-news-sync.mjs",
     "ai-news:backfill": "node scripts/ai-news-sync.mjs --backfill",
     "focus:status": "node scripts/focus-status.mjs",
