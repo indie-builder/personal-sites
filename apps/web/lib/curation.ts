@@ -67,14 +67,15 @@ async function getCurationPageByPlatform(
   offset: number,
   limit: number,
   designOnly = false,
+  tag: string | null = null,
 ): Promise<CurationPage> {
   const where = designOnly
     ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_DESIGN_INCLUDE}`
     : `${CURATION_PLATFORM} = ?`;
   const order = platform === "douyin" ? DOUYIN_CURATION_ORDER : CURATION_ORDER;
   const items = selectCurationRows(
-    `${where} ORDER BY ${order}`,
-    designOnly ? [] : [platform],
+    `${where}${tag ? " AND EXISTS (SELECT 1 FROM json_each(content_json, '$.tags') WHERE value = ?)" : ""} ORDER BY ${order}`,
+    [...(designOnly ? [] : [platform]), ...(tag ? [tag] : [])],
     offset,
     limit,
   );
@@ -82,8 +83,26 @@ async function getCurationPageByPlatform(
 }
 
 /** 每日关注：来源拆分后只呈现 X 条目；抖音条目由 /douyin 板块承载。 */
-export async function getCurationPage(offset = 0, limit = 20): Promise<CurationPage> {
-  return getCurationPageByPlatform("x", offset, limit);
+export async function getCurationPage(offset = 0, limit = 20, tag: string | null = null): Promise<CurationPage> {
+  return getCurationPageByPlatform("x", offset, limit, false, tag);
+}
+
+/** 全库主题计数及首条 ID，不受已加载分页限制；首条用于校验返回列表的会话快照。 */
+export function getCurationTags() {
+  const rows = getPublicDatabase().prepare(`SELECT id, json_extract(content_json, '$.tags') AS tags
+    FROM curation_items WHERE ${CURATION_PLATFORM} = 'x' ORDER BY ${CURATION_ORDER}`).all();
+  const tags = new Map<string, { tag: string; count: number; headId: string }>();
+  const rowSchema = z.object({ id: z.string(), tags: z.string() });
+  for (const row of rows) {
+    const parsed = rowSchema.parse(row);
+    for (const tag of new Set(z.array(z.string()).parse(JSON.parse(parsed.tags)))) {
+      const entry = tags.get(tag) ?? { tag, count: 0, headId: parsed.id };
+      entry.count += 1;
+      tags.set(tag, entry);
+    }
+  }
+  const priority = (tag: string) => tag === "提示词" ? 2 : tag === "技能" ? 1 : 0;
+  return [...tags.values()].sort((a, b) => priority(b.tag) - priority(a.tag) || b.count - a.count);
 }
 
 /** 抖音收藏板块：只呈现公开投影中已发布的抖音来源条目。 */

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import { CurationStream } from "@/components/curation-stream";
+import { TaggedCurationStream } from "@/components/curation-stream";
 import { FeedPage } from "@/components/page-shell";
-import { getCurationPage } from "@/lib/curation";
+import { getCurationPage, getCurationTags } from "@/lib/curation";
 import { withCanonical } from "@/lib/metadata";
 
 // 策展投影随部署打包进 data/curation.sqlite（next.config 的 outputFileTracingIncludes），
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 async function CurationFeed() {
   const curationPage = await getCurationPage();
-  return <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />;
+  return <TaggedCurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} tags={getCurationTags()} />;
 }
 
 export default function CurationPage() {
