@@ -9,6 +9,8 @@
     "model": "glm-5.3-flash"
   },
   "taxonomy": [
+    "提示词",
+    "技能",
     "Agent 工程",
     "AI 应用",
     "前端工程",

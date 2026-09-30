@@ -61,6 +61,8 @@ type StreamFeedOptions<Item, Extra> = {
   loadErrorMessage: string;
   initialHasMore: boolean;
   initialItems: Item[];
+  /** 筛选流首次由 API 加载时，用服务端已知的首条 ID 校验快照。 */
+  snapshotHeadId?: string;
   snapshot: StreamSnapshotAdapter<Item, Extra>;
   /** 快照里除 items/hasMore 外还要保存的字段（如每日动态的筛选状态），每次写快照时取最新值。 */
   snapshotExtra?: () => Extra;
@@ -80,6 +82,7 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
   loadErrorMessage,
   initialHasMore,
   initialItems,
+  snapshotHeadId,
   snapshot,
   snapshotExtra,
   onSnapshotRestore,
@@ -108,7 +111,7 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
     const enableWrites = window.setTimeout(() => {
       writesEnabledRef.current = true;
     }, 0);
-    const feedSnapshot = snapshot.read(initialItems[0]?.id, storageKey);
+    const feedSnapshot = snapshot.read(snapshotHeadId ?? initialItems[0]?.id, storageKey);
     if (feedSnapshot) {
       restoreScrollTopRef.current = feedSnapshot.scrollTop;
       scrollTopRef.current = feedSnapshot.scrollTop;
@@ -181,7 +184,7 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
     setAppendStart(items.length);
     try {
       const page = await requestStreamPage<Item>(
-        `${apiPath}?offset=${items.length}&limit=${pageSize}`,
+        `${apiPath}${apiPath.includes("?") ? "&" : "?"}offset=${items.length}&limit=${pageSize}`,
         loadErrorMessage,
       );
       if (typeof page === "string") {
