@@ -48,6 +48,7 @@
 .ai-news__category-select[data-state="open"] svg { transform:rotate(180deg); }
 .ai-news__category-select:hover,.ai-news__category-select[data-state="open"] { color:var(--ink); }
 .ai-news__category-menu { z-index:50; width:10rem; max-height:var(--radix-dropdown-menu-content-available-height); overflow:auto; padding:.25rem; border:1px solid #dedede; border-radius:.5rem; background:#fff; color:#1c1c1e; box-shadow:none; }
+.curation-category-menu { width:12rem; }
 .ai-news__category-menu[data-state="open"] { animation:ai-news-menu-open 100ms ease-out; }
 .ai-news__category-menu[data-state="closed"] { animation:ai-news-menu-close 100ms ease-in; }
 @keyframes ai-news-menu-open { from { opacity:0; transform:translateY(-.5rem) scale(.95); } }

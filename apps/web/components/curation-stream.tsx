@@ -64,7 +64,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
       </button>
     </DropdownMenu.Trigger>
     <DropdownMenu.Portal>
-      <DropdownMenu.Content align="end" sideOffset={4} collisionPadding={16} className="ai-news__category-menu">
+      <DropdownMenu.Content align="end" sideOffset={4} collisionPadding={16} className="ai-news__category-menu curation-category-menu">
         <DropdownMenu.RadioGroup value={activeTag ?? "all"} onValueChange={selectTag}>
           {[{ tag: "all", label: "全部主题" }, ...tags.map(({ tag, count }) => ({ tag, label: `${tag} · ${count}` }))].map(({ tag, label }) =>
             <DropdownMenu.RadioItem data-slot="dropdown-menu-radio-item" key={tag} value={tag}>

@@ -24,6 +24,17 @@ for (const width of [1440, 390, 320, 844]) {
     await page.getByRole("link", { name: "返回每日关注" }).click();
     await expect(promptButton).toBeVisible();
     await expect(entries.first()).toHaveAttribute("data-content-id", payload.items[0].id);
+    for (const tag of ["视频提示词", "软件工程提示词", "图像提示词", "写作提示词", "学习提示词", "研究提示词", "助手提示词"]) {
+      await page.getByRole("button", { name: /^筛选每日关注：/u }).click();
+      await page.getByRole("menuitemradio", { name: new RegExp(`^${tag} · `, "u") }).click();
+      await expect(page.getByRole("button", { name: `筛选每日关注：${tag}` })).toBeVisible();
+      const filtered = await (await request.get(`/api/curation?tag=${encodeURIComponent(tag)}`)).json();
+      await expect(entries.first()).toHaveAttribute("data-content-id", filtered.items[0].id);
+      expect((await page.locator(".curation-home__stream-tags").allTextContents()).every((text) => text.includes(tag))).toBe(true);
+    }
+    await page.getByRole("button", { name: /^筛选每日关注：/u }).click();
+    await page.getByRole("menuitemradio", { name: /^提示词 · /u }).click();
+    await expect(promptButton).toBeVisible();
     await promptButton.click();
     await page.getByRole("menuitemradio", { name: /^技能 · /u }).click();
     const skillButton = page.getByRole("button", { name: "筛选每日关注：技能" });

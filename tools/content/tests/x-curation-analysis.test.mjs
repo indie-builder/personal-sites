@@ -6,6 +6,7 @@ import {
   extractCurationFacts,
   hasReusableVisualFacts,
   needsCurationAnalysis,
+  normalizeCurationTags,
   prepareCurationItem,
   recordCurationAnalysisFailure,
 } from "../modules/x-sync/analysis.mjs";
@@ -53,6 +54,21 @@ test("analysis preparation extracts deterministic facts and creates resumable st
   });
   assert.equal(prepared.pipeline.stages.facts.status, "complete");
   assert.equal(needsCurationAnalysis(prepared), true);
+});
+
+test("prompt subtypes retain their parent and skill tags through model analysis", () => {
+  const tags = normalizeCurationTags(["AI 应用", "视频提示词", "软件工程提示词", "技能", "视频提示词"]);
+  assert.deepEqual(tags, ["提示词", "视频提示词", "软件工程提示词", "技能"]);
+  const analyzed = applyCurationAnalysis(rawItem, {
+    analysis: "解析", summary: "摘要", title: "标题",
+    tags: ["软件工程提示词", "技能", "Agent 工程"],
+  }, { model: "test" });
+  assert.deepEqual(analyzed.ai.tags, ["提示词", "软件工程提示词", "技能", "Agent 工程"]);
+  assert.deepEqual(normalizeCurationTags(["AI 应用", "视频提示词", "技能"]), ["提示词", "视频提示词", "技能", "AI 应用"]);
+  for (const subtype of ["图像提示词", "写作提示词", "学习提示词", "研究提示词", "助手提示词"]) {
+    assert.deepEqual(normalizeCurationTags([subtype]), ["提示词", subtype]);
+  }
+  assert.deepEqual(normalizeCurationTags(null), []);
 });
 
 test("editorial analysis persists bounded search and visual facts for reuse", () => {

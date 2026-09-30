@@ -101,8 +101,11 @@ export function getCurationTags() {
       tags.set(tag, entry);
     }
   }
-  const priority = (tag: string) => tag === "提示词" ? 2 : tag === "技能" ? 1 : 0;
-  return [...tags.values()].sort((a, b) => priority(b.tag) - priority(a.tag) || b.count - a.count);
+  const priority: Record<string, number> = {
+    "提示词": 9, "视频提示词": 8, "软件工程提示词": 7, "图像提示词": 6,
+    "写作提示词": 5, "学习提示词": 4, "研究提示词": 3, "助手提示词": 2, "技能": 1,
+  };
+  return [...tags.values()].sort((a, b) => (priority[b.tag] ?? 0) - (priority[a.tag] ?? 0) || b.count - a.count);
 }
 
 /** 抖音收藏板块：只呈现公开投影中已发布的抖音来源条目。 */
