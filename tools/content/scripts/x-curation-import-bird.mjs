@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { Effect } from "effect";
+import { io } from "@site/effect";
 /**
  * x-curation-import-bird.mjs
  *
@@ -23,9 +25,7 @@ import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 import { writeJsonAtomically } from "./lib/atomic-file.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const config = JSON.parse(
-  await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"),
-);
+const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));
 
 const rawDir = path.join(repoRoot, config.rawDir);
 const queuePath = path.join(repoRoot, config.queueFile);
@@ -108,7 +108,7 @@ async function addTweetsFromFile(filePath, fetchSource) {
     if (error.code === "ENOENT") return;
     throw error;
   }
-  const data = await readJsonOr(filePath, { tweets: [] });
+  const data = await Effect.runPromise(readJsonOr(filePath, { tweets: [] }));
   const firstSeenAt = fileStat.mtime.toISOString();
   for (const [firstSeenOrder, tweet] of (data.tweets ?? []).entries()) {
     const id = String(tweet.id);
@@ -125,7 +125,9 @@ for (const source of SOURCES) {
     let files = [];
     try {
       files = (await readdir(source.dir)).filter((name) => name.endsWith(".json")).sort();
-    } catch { /* 目录不存在则跳过 */ }
+    } catch {
+      /* 目录不存在则跳过 */
+    }
     for (const file of files) {
       await addTweetsFromFile(path.join(source.dir, file), source.fetchSource);
     }
@@ -135,7 +137,9 @@ for (const source of SOURCES) {
 const rawFiles = (await readdir(rawDir)).filter((name) => /^[a-f0-9]{64}\.json$/u.test(name));
 for (const file of rawFiles) {
   const filePath = path.join(rawDir, file);
-  const [snapshot, fileStat] = await Promise.all([readJsonOr(filePath, null), stat(filePath)]);
+  const [snapshot, fileStat] = await Effect.runPromise(
+    Effect.all([readJsonOr(filePath, null), io("source.metadata", () => stat(filePath))], { concurrency: 2 }),
+  );
   const firstSeenAt = snapshot?.generatedAt ?? fileStat.mtime.toISOString();
   for (const [firstSeenOrder, bookmark] of (snapshot?.bookmarks ?? []).entries()) {
     const id = String(bookmark.id);
@@ -143,7 +147,7 @@ for (const file of rawFiles) {
   }
 }
 
-const queue = await readJsonOr(queuePath, { version: 2, items: [] });
+const queue = await Effect.runPromise(readJsonOr(queuePath, { version: 2, items: [] }));
 queue.version = Math.max(Number(queue.version ?? 0), 3);
 const itemById = new Map(queue.items.map((item) => [item.id, item]));
 const seen = new Set(itemById.keys());
@@ -194,7 +198,7 @@ for (const item of queue.items) {
 
 queue.updatedAt = new Date().toISOString();
 await mkdir(path.dirname(queuePath), { recursive: true });
-await writeJsonAtomically(queuePath, queue);
+await Effect.runPromise(writeJsonAtomically(queuePath, queue));
 
 console.log(`来源总量: ${tweets.length} 条（书签 + 点赞）`);
 console.log(`新增策展条目: ${added} 条`);

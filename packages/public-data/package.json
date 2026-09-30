@@ -11,9 +11,10 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
+    "@site/effect": "workspace:*",
     "@supabase/supabase-js": "2.116.0",
     "better-sqlite3": "^13.0.3",
-    "zod": "4.6.5"
+    "effect": "3.22.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0"

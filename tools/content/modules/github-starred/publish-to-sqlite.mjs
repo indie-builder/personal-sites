@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import { attempt } from "@site/effect";
 import Database from "better-sqlite3";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,28 +42,36 @@ export function toPublicOpenSourceItem(record, analysis, entry, displayRank, now
 }
 
 /** Publish the selected public projection locally; raw sources and analyses already live in data/sensitive. */
-export async function publishStarredRecords({
+export function publishStarredRecords({
   analyses = [],
   databasePath = path.join(repoRoot, PUBLIC_DATABASE_PATH),
   now = new Date().toISOString(),
   records,
   seedEntries = [],
 }) {
-  const analysisByNodeId = new Map(analyses.map((analysis) => [analysis.repoNodeId, analysis]));
-  const seedByRepository = new Map(seedEntries.map((entry, index) => [entry.repository, { entry, index }]));
-  const publicRows = records.flatMap((record) => {
-    const selected = seedByRepository.get(record.repository.fullName);
-    const analysis = analysisByNodeId.get(record.repository.nodeId);
-    return selected && analysis
-      ? [toPublicOpenSourceItem(record, analysis, selected.entry, selected.index, now)]
-      : [];
-  });
-  const documents = toOpenSourceSearchDocuments(publicRows);
-  const database = initializePublicDatabase(new Database(databasePath));
-  try {
-    const deleteItem = database.prepare("DELETE FROM open_source_items WHERE repo_node_id = ?");
-    const deleteDocuments = database.prepare("DELETE FROM ask_documents WHERE source_scope = 'open-source' AND source_id = ?");
-    const insertItem = database.prepare(`
+  return Effect.scoped(
+    Effect.gen(function* () {
+      const analysisByNodeId = new Map(analyses.map((analysis) => [analysis.repoNodeId, analysis]));
+      const seedByRepository = new Map(seedEntries.map((entry, index) => [entry.repository, { entry, index }]));
+      const publicRows = records.flatMap((record) => {
+        const selected = seedByRepository.get(record.repository.fullName);
+        const analysis = analysisByNodeId.get(record.repository.nodeId);
+        return selected && analysis
+          ? [toPublicOpenSourceItem(record, analysis, selected.entry, selected.index, now)]
+          : [];
+      });
+      const documents = toOpenSourceSearchDocuments(publicRows);
+      const database = yield* Effect.acquireRelease(
+        attempt("github.database", () => new Database(databasePath)),
+        (database) => Effect.sync(() => database.close()),
+      );
+      return yield* attempt("github.publish", () => {
+        initializePublicDatabase(database);
+        const deleteItem = database.prepare("DELETE FROM open_source_items WHERE repo_node_id = ?");
+        const deleteDocuments = database.prepare(
+          "DELETE FROM ask_documents WHERE source_scope = 'open-source' AND source_id = ?",
+        );
+        const insertItem = database.prepare(`
       INSERT INTO open_source_items (repo_node_id, slug, display_rank, published_at, content_json)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(repo_node_id) DO UPDATE SET
@@ -70,42 +80,42 @@ export async function publishStarredRecords({
         published_at = excluded.published_at,
         content_json = excluded.content_json
     `);
-    const insertDocument = database.prepare(`
+        const insertDocument = database.prepare(`
       INSERT INTO ask_documents
         (id, source_scope, source_id, title, section, source_url, published_at, content, search_text)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    database.transaction(() => {
-      for (const record of records) {
-        deleteItem.run(record.repository.nodeId);
-        deleteDocuments.run(record.repository.nodeId);
-      }
-      for (const row of publicRows) {
-        insertItem.run(row.repo_node_id, row.slug, row.display_rank, row.published_at, JSON.stringify(row.content));
-      }
-      for (const document of documents) {
-        insertDocument.run(
-          document.id,
-          document.source_scope,
-          document.source_id,
-          document.title,
-          document.section,
-          document.source_url,
-          document.published_at,
-          document.content,
-          document.search_text,
-        );
-      }
-    })();
-    compactPublicDatabase(database);
-  } finally {
-    database.close();
-  }
+        database.transaction(() => {
+          for (const record of records) {
+            deleteItem.run(record.repository.nodeId);
+            deleteDocuments.run(record.repository.nodeId);
+          }
+          for (const row of publicRows) {
+            insertItem.run(row.repo_node_id, row.slug, row.display_rank, row.published_at, JSON.stringify(row.content));
+          }
+          for (const document of documents) {
+            insertDocument.run(
+              document.id,
+              document.source_scope,
+              document.source_id,
+              document.title,
+              document.section,
+              document.source_url,
+              document.published_at,
+              document.content,
+              document.search_text,
+            );
+          }
+        })();
+        compactPublicDatabase(database);
 
-  return {
-    indexedCount: documents.length,
-    privateAnalysisCount: analyses.length,
-    privateSourceCount: records.length,
-    publicCount: publicRows.length,
-  };
+        return {
+          indexedCount: documents.length,
+          privateAnalysisCount: analyses.length,
+          privateSourceCount: records.length,
+          publicCount: publicRows.length,
+        };
+      });
+    }),
+  );
 }

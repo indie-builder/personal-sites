@@ -1,3 +1,5 @@
+import { attempt } from "@site/effect";
+import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -15,16 +17,18 @@ import { buildAnalyzerArgs, parseArgs, settleConcurrently } from "../scripts/dou
 import { parseFullSyncArgs } from "../scripts/douyin-full-sync.mjs";
 
 test("Douyin manifest and analyzer output form an auditable queue item", () => {
-  const [record] = parseDownloadManifest(`${JSON.stringify({
-    author_name: "作者",
-    author_sec_uid: "sec-id",
-    aweme_id: "123",
-    desc: "介绍一个项目",
-    file_paths: ["作者/collect/demo.mp4"],
-    media_type: "video",
-    publish_timestamp: 1_700_000_000,
-    recorded_at: "2026-08-23T10:00:00.000Z",
-  })}\n`);
+  const [record] = parseDownloadManifest(
+    `${JSON.stringify({
+      author_name: "作者",
+      author_sec_uid: "sec-id",
+      aweme_id: "123",
+      desc: "介绍一个项目",
+      file_paths: ["作者/collect/demo.mp4"],
+      media_type: "video",
+      publish_timestamp: 1_700_000_000,
+      recorded_at: "2026-08-23T10:00:00.000Z",
+    })}\n`,
+  );
   const video = { ...toDouyinVideo(record, "/downloads"), collectedOrder: 2 };
   const evidence = parseAnalyzerOutput({
     metadata: { title: "demo" },
@@ -33,19 +37,23 @@ test("Douyin manifest and analyzer output form an auditable queue item", () => {
     transcript: [{ text: "今天介绍它", time: "0:03" }],
     warnings: [],
   });
-  const parsed = parseCurationResponse(JSON.stringify({
-    analysis: "**是什么**\n\n解析内容",
-    excerpt: "今天介绍它",
-    mentionedProjects: [{
-      description: "视频中的项目",
-      evidence: [{ channel: "ocr", text: "Example Project", time: "0:03" }],
-      kind: "tool",
-      name: "Example Project",
-    }],
-    summary: "摘要",
-    tags: ["AI 应用"],
-    title: "值得留意的示例项目",
-  }));
+  const parsed = parseCurationResponse(
+    JSON.stringify({
+      analysis: "**是什么**\n\n解析内容",
+      excerpt: "今天介绍它",
+      mentionedProjects: [
+        {
+          description: "视频中的项目",
+          evidence: [{ channel: "ocr", text: "Example Project", time: "0:03" }],
+          kind: "tool",
+          name: "Example Project",
+        },
+      ],
+      summary: "摘要",
+      tags: ["AI 应用"],
+      title: "值得留意的示例项目",
+    }),
+  );
   parsed.ai.excerpt = groundEvidenceExcerpt("Example Project", evidence).text;
   const item = toQueueItem(video, parsed, "data/sensitive/douyin-curation/raw/123/analysis.json");
 
@@ -79,7 +87,10 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
     refreshOnly: false,
     stage: "sync",
   });
-  assert.equal(parseArgs(["sync", "--manifest", "downloads/download_manifest.jsonl", "--refresh-only"]).refreshOnly, true);
+  assert.equal(
+    parseArgs(["sync", "--manifest", "downloads/download_manifest.jsonl", "--refresh-only"]).refreshOnly,
+    true,
+  );
   assert.equal(parseArgs(["sync", "--dry-run"]).manifest, null);
   assert.deepEqual(parseFullSyncArgs(["--skip-download", "--analyze-limit", "20"]), {
     analyze: true,
@@ -115,13 +126,19 @@ test("Curated tags are normalized against the configured taxonomy whitelist", ()
   assert.deepEqual(parsed.ai.tags, ["前端工程"]);
 
   assert.throws(
-    () => parseCurationResponse(JSON.stringify({ analysis: "分析", excerpt: "摘录", summary: "摘要", tags: ["乱编"], title: "标题" }), {
-      allowedTags: ["AI 应用"],
-    }),
+    () =>
+      parseCurationResponse(
+        JSON.stringify({ analysis: "分析", excerpt: "摘录", summary: "摘要", tags: ["乱编"], title: "标题" }),
+        {
+          allowedTags: ["AI 应用"],
+        },
+      ),
     /白名单/u,
   );
-  assert.doesNotThrow(
-    () => parseCurationResponse(JSON.stringify({ analysis: "分析", excerpt: "摘录", summary: "摘要", tags: ["随便写的标签"], title: "标题" })),
+  assert.doesNotThrow(() =>
+    parseCurationResponse(
+      JSON.stringify({ analysis: "分析", excerpt: "摘录", summary: "摘要", tags: ["随便写的标签"], title: "标题" }),
+    ),
   );
 });
 
@@ -143,10 +160,14 @@ test("Evidence truncation declares how much of the video the model can see", () 
 
 test("Douyin worker pool records one failure without stopping later work", async () => {
   const completed = [];
-  const failures = await settleConcurrently([1, 2, 3], 2, async (value) => {
-    if (value === 2) throw new Error("broken");
-    completed.push(value);
-  });
+  const failures = await Effect.runPromise(
+    settleConcurrently([1, 2, 3], 2, (value) =>
+      attempt("fixture", () => {
+        if (value === 2) throw new Error("broken");
+        completed.push(value);
+      }),
+    ),
+  );
 
   assert.deepEqual(completed.sort(), [1, 3]);
   assert.equal(failures.length, 1);

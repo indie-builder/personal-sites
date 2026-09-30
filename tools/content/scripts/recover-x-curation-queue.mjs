@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { Effect } from "effect";
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -59,11 +60,15 @@ for (const name of rawNames) {
       isQuote: Boolean(tweet.quotedTweet) || existing.isQuote,
       isReply: Boolean(tweet.inReplyToStatusId) || existing.isReply,
       links: mergeLinks(existing.links ?? [], shortLinks(tweet.text)),
-      quoteContext: existing.quoteContext ?? (tweet.quotedTweet ? {
-        author: tweet.quotedTweet.author?.username ?? "",
-        authorName: tweet.quotedTweet.author?.name ?? "",
-        text: tweet.quotedTweet.text ?? "",
-      } : null),
+      quoteContext:
+        existing.quoteContext ??
+        (tweet.quotedTweet
+          ? {
+              author: tweet.quotedTweet.author?.username ?? "",
+              authorName: tweet.quotedTweet.author?.name ?? "",
+              text: tweet.quotedTweet.text ?? "",
+            }
+          : null),
       replyContext: existing.replyContext ?? null,
     });
   }
@@ -74,43 +79,48 @@ const items = generated.items.map((item) => {
   const raw = rawById.get(String(item.id)) ?? {};
   const sourceKinds = item.facts?.sourceKinds ?? [];
   const fetchSource = sourceKinds.length > 0 ? sourceKinds.join("+") : "bookmark";
-  return prepareCurationItem({
-    ai: {
-      analysis: item.analysis,
-      design: item.design,
-      enrichedAt: generated.generatedAt,
-      searchSignals: item.searchSignals,
-      summary: item.summary,
-      tags: item.tags,
-      title: item.title,
-      visualFacts: item.visualFacts,
+  return prepareCurationItem(
+    {
+      ai: {
+        analysis: item.analysis,
+        design: item.design,
+        enrichedAt: generated.generatedAt,
+        searchSignals: item.searchSignals,
+        summary: item.summary,
+        tags: item.tags,
+        title: item.title,
+        visualFacts: item.visualFacts,
+      },
+      author: item.author,
+      createdAt: item.publishedAt ?? "",
+      fetchSource,
+      firstSeenAt: item.collectedAt ?? undefined,
+      firstSeenOrder: item.collectedOrder ?? undefined,
+      id: String(item.id),
+      isQuote: Boolean(raw.isQuote ?? item.quoteContext),
+      isReply: Boolean(raw.isReply ?? item.facts?.contentType === "reply"),
+      links: mergeLinks(item.links ?? [], raw.links ?? [], shortLinks(item.text)),
+      media: item.media ?? [],
+      quoteContext: raw.quoteContext ?? item.quoteContext ?? null,
+      replyContext: raw.replyContext ?? null,
+      text: item.text,
+      tweetUrl: item.source.url,
     },
-    author: item.author,
-    createdAt: item.publishedAt ?? "",
-    fetchSource,
-    firstSeenAt: item.collectedAt ?? undefined,
-    firstSeenOrder: item.collectedOrder ?? undefined,
-    id: String(item.id),
-    isQuote: Boolean(raw.isQuote ?? item.quoteContext),
-    isReply: Boolean(raw.isReply ?? item.facts?.contentType === "reply"),
-    links: mergeLinks(item.links ?? [], raw.links ?? [], shortLinks(item.text)),
-    media: item.media ?? [],
-    quoteContext: raw.quoteContext ?? item.quoteContext ?? null,
-    replyContext: raw.replyContext ?? null,
-    text: item.text,
-    tweetUrl: item.source.url,
-  }, { now: generated.generatedAt });
+    { now: generated.generatedAt },
+  );
 });
 
 if (items.length !== generated.items.length || items.length === 0) {
   throw new Error("恢复条目数量不完整，拒绝写入策展队列。");
 }
 
-await writeJsonAtomically(queuePath, {
-  items,
-  recoveredAt: new Date().toISOString(),
-  recoverySource: "generated-public-projection+raw-evidence",
-  updatedAt: new Date().toISOString(),
-  version: 3,
-});
+await Effect.runPromise(
+  writeJsonAtomically(queuePath, {
+    items,
+    recoveredAt: new Date().toISOString(),
+    recoverySource: "generated-public-projection+raw-evidence",
+    updatedAt: new Date().toISOString(),
+    version: 3,
+  }),
+);
 console.log(`策展队列已恢复：${items.length} 条。`);

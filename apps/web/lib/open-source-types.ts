@@ -1,4 +1,3 @@
-import type { z } from "zod";
 import type { openSourceEntrySchema } from "@/lib/open-source-schema";
 
 export const openSourceCategories = [
@@ -25,7 +24,7 @@ export const openSourceDimensions = [
 
 export type OpenSourceCategory = (typeof openSourceCategories)[number]["id"];
 export type OpenSourceDimension = (typeof openSourceDimensions)[number]["id"];
-export type OpenSourceEntry = z.infer<typeof openSourceEntrySchema>;
+export type OpenSourceEntry = typeof openSourceEntrySchema.Type;
 
 /**
  * The stream only needs this small public projection. Keeping the long

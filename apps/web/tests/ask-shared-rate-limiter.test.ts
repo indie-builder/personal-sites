@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { checkAskRateLimit } from "@/lib/ask-limiter.server";
@@ -12,7 +13,7 @@ describe("shared Ask rate limiter", () => {
       data: [{ allowed: true, retry_after_seconds: 0 }],
       error: null,
     });
-    const result = await checkAskRateLimit("203.0.113.1", 1_000_000, { rpc } as never);
+    const result = await Effect.runPromise(checkAskRateLimit("203.0.113.1", 1_000_000, { rpc } as never));
 
     expect(result).toEqual({ allowed: true, retryAfterSeconds: 0 });
     expect(rpc).toHaveBeenCalledWith("check_ask_rate_limit", {
@@ -28,7 +29,7 @@ describe("shared Ask rate limiter", () => {
       error: null,
     });
 
-    await expect(checkAskRateLimit("203.0.113.1", Date.now(), { rpc } as never)).resolves.toEqual({
+    await expect(Effect.runPromise(checkAskRateLimit("203.0.113.1", Date.now(), { rpc } as never))).resolves.toEqual({
       allowed: false,
       retryAfterSeconds: 321,
     });

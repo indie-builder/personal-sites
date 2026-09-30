@@ -37,10 +37,12 @@
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^0.85.1",
     "@huggingface/transformers": "4.3.0",
+    "@site/effect": "workspace:*",
+    "@site/public-data": "workspace:*",
     "@supabase/supabase-js": "2.116.0",
     "better-sqlite3": "^13.0.3",
-    "sqlite-vec": "0.1.9",
-    "@site/public-data": "workspace:*"
+    "effect": "3.22.2",
+    "sqlite-vec": "0.1.9"
   },
   "devDependencies": {
     "@steipete/bird": "^0.8.0"

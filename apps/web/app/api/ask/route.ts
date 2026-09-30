@@ -1,26 +1,30 @@
-import { z } from "zod";
+import { Effect } from "effect";
+import { Either, Schema } from "effect";
 
 import { checkAskRateLimit } from "@/lib/ask-limiter.server";
 import { searchAskDocuments } from "@/lib/ask-search.server";
 import { streamAskAnswer } from "@/lib/ask-session.server";
 import { askScopes } from "@/lib/ask-types";
 
-const sessionSchema = z.object({
-  conversationId: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/, "会话标识无效。"),
-  visitorId: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/, "浏览器会话标识无效。"),
+const sessionSchema = Schema.Struct({
+  conversationId: Schema.String.pipe(Schema.pattern(/^[A-Za-z0-9_-]{16,128}$/)),
+  visitorId: Schema.String.pipe(Schema.pattern(/^[A-Za-z0-9_-]{16,128}$/)),
 });
 
-const requestSchema = sessionSchema.extend({
-  question: z.string().trim().min(2).max(1_000),
-  scope: z.enum(askScopes),
+const requestSchema = Schema.Struct({
+  ...sessionSchema.fields,
+  ...{
+    question: Schema.Trim.pipe(Schema.minLength(2)).pipe(Schema.maxLength(1_000)),
+    scope: Schema.Literal(...askScopes),
+  },
 });
 
 // x-real-ip 由平台边缘按真实连接对端写入，客户端无法伪造；
 // x-forwarded-for 的链首是请求方可以自行注入的部分，只取链尾（边缘追加的真实 IP）。
 function getClientIp(request: Request) {
-  return request.headers.get("x-real-ip")
-    || request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
-    || "local";
+  return (
+    request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() || "local"
+  );
 }
 
 function sseEvent(event: string, data: unknown) {
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
   // 限流只依赖 IP，提到请求体解析之前，被限的请求不必先读完整 body。
   let limit;
   try {
-    limit = await checkAskRateLimit(getClientIp(request));
+    limit = await Effect.runPromise(checkAskRateLimit(getClientIp(request)));
   } catch (error) {
     console.error("Public ask shared rate limit failed", error);
     return Response.json({ error: "问答服务暂时不可用，请稍后再试。" }, { status: 503 });
@@ -43,15 +47,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsed = requestSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return Response.json({ error: "问题、范围或浏览器会话标识无效。" }, { status: 400 });
+  const parsed = Schema.decodeUnknownEither(requestSchema)(await request.json().catch(() => null));
+  if (Either.isLeft(parsed)) return Response.json({ error: "问题、范围或浏览器会话标识无效。" }, { status: 400 });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const write = (event: string, data: unknown) => controller.enqueue(encoder.encode(sseEvent(event, data)));
       try {
-        const sources = await searchAskDocuments(parsed.data.question, parsed.data.scope);
+        const sources = await Effect.runPromise(searchAskDocuments(parsed.right.question, parsed.right.scope), {
+          signal: request.signal,
+        });
         if (sources.length === 0) {
           const message = "现有公开资料不足以确认这个问题。你可以换一个更具体的关键词，或切换检索范围后再试。";
           write("text", { delta: message });
@@ -60,15 +66,18 @@ export async function POST(request: Request) {
           return;
         }
 
-        await streamAskAnswer({
-          conversationId: parsed.data.conversationId,
-          onText: (delta) => write("text", { delta }),
-          question: parsed.data.question,
-          // 客户端断连即中止生成，不再为已离开的访客烧 token。
-          signal: request.signal,
-          sources,
-          visitorId: parsed.data.visitorId,
-        });
+        await Effect.runPromise(
+          streamAskAnswer({
+            conversationId: parsed.right.conversationId,
+            onText: (delta) => write("text", { delta }),
+            question: parsed.right.question,
+            // 客户端断连即中止生成，不再为已离开的访客烧 token。
+            signal: request.signal,
+            sources,
+            visitorId: parsed.right.visitorId,
+          }),
+          { signal: request.signal },
+        );
         write("sources", { sources });
         write("done", {});
       } catch (error) {

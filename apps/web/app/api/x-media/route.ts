@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import { io } from "@site/effect";
 const MEDIA_HOST = "video.twimg.com";
 const VIDEO_PATH = /^\/(?:amplify_video|ext_tw_video)\/.*\.mp4$/u;
 const FORWARDED_HEADERS = [
@@ -17,14 +19,10 @@ function jsonError(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
 
-async function fetchUpstreamOnce(url: URL, headers: Headers, method: "GET" | "HEAD") {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-  try {
-    return await fetch(url, { headers, method, redirect: "manual", signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+function fetchUpstreamOnce(url: URL, headers: Headers, method: "GET" | "HEAD") {
+  return io("x-media.headers", (signal) => fetch(url, { headers, method, redirect: "manual", signal })).pipe(
+    Effect.timeoutFail({ duration: UPSTREAM_TIMEOUT_MS, onTimeout: () => new Error("视频源响应头超时。") }),
+  );
 }
 
 function getMediaUrl(request: Request): URL | null {
@@ -33,9 +31,7 @@ function getMediaUrl(request: Request): URL | null {
 
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === MEDIA_HOST && VIDEO_PATH.test(url.pathname)
-      ? url
-      : null;
+    return url.protocol === "https:" && url.hostname === MEDIA_HOST && VIDEO_PATH.test(url.pathname) ? url : null;
   } catch {
     return null;
   }
@@ -54,15 +50,17 @@ function getRedirectUrl(location: string | null, base: URL): URL | null {
   }
 }
 
-async function fetchUpstream(mediaUrl: URL, headers: Headers, method: "GET" | "HEAD") {
-  const first = await fetchUpstreamOnce(mediaUrl, headers, method);
-  if (first.status < 300 || first.status >= 400) return first;
+function fetchUpstream(mediaUrl: URL, headers: Headers, method: "GET" | "HEAD") {
+  return Effect.gen(function* () {
+    const first = yield* fetchUpstreamOnce(mediaUrl, headers, method);
+    if (first.status < 300 || first.status >= 400) return first;
 
-  const target = getRedirectUrl(first.headers.get("location"), mediaUrl);
-  if (!target) return null;
-  const second = await fetchUpstreamOnce(target, headers, method);
-  // 第二跳仍是重定向则不再跟随，避免被多跳链带出 CDN 域。
-  return second.status >= 300 && second.status < 400 ? null : second;
+    const target = getRedirectUrl(first.headers.get("location"), mediaUrl);
+    if (!target) return null;
+    const second = yield* fetchUpstreamOnce(target, headers, method);
+    // 第二跳仍是重定向则不再跟随，避免被多跳链带出 CDN 域。
+    return second.status >= 300 && second.status < 400 ? null : second;
+  });
 }
 
 async function proxyMedia(request: Request, method: "GET" | "HEAD") {
@@ -75,7 +73,7 @@ async function proxyMedia(request: Request, method: "GET" | "HEAD") {
 
   let upstream: Response | null;
   try {
-    upstream = await fetchUpstream(mediaUrl, headers, method);
+    upstream = await Effect.runPromise(fetchUpstream(mediaUrl, headers, method), { signal: request.signal });
   } catch {
     // twimg DNS/连接抖动或响应头超时：与站内其他端点一致返回 JSON，不落 HTML 500。
     return jsonError("视频源暂时无法连接。", 502);
@@ -88,10 +86,7 @@ async function proxyMedia(request: Request, method: "GET" | "HEAD") {
   }
   // 让 CDN 缓存视频分段（含 Range 206），浏览器侧保持轻缓存；上游错误不缓存。
   if (upstream.status >= 200 && upstream.status < 300) {
-    responseHeaders.set(
-      "cache-control",
-      "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800",
-    );
+    responseHeaders.set("cache-control", "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800");
   }
   responseHeaders.set("x-content-type-options", "nosniff");
 

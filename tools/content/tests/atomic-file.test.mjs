@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
@@ -10,8 +11,8 @@ test("queue JSON is replaced atomically without leaving temporary files", async 
   const directory = await mkdtemp(path.join(tmpdir(), "x-curation-queue-"));
   const queuePath = path.join(directory, "queue.json");
   try {
-    await writeJsonAtomically(queuePath, { items: [{ id: "1" }], version: 3 });
-    await writeJsonAtomically(queuePath, { items: [{ id: "2" }], version: 3 });
+    await Effect.runPromise(writeJsonAtomically(queuePath, { items: [{ id: "1" }], version: 3 }));
+    await Effect.runPromise(writeJsonAtomically(queuePath, { items: [{ id: "2" }], version: 3 }));
 
     assert.deepEqual(JSON.parse(await readFile(queuePath, "utf8")), {
       items: [{ id: "2" }],
@@ -19,7 +20,7 @@ test("queue JSON is replaced atomically without leaving temporary files", async 
     });
     assert.deepEqual(await readdir(directory), ["queue.json"]);
     const privatePath = path.join(directory, "private", "queue.json");
-    await writeTextAtomically(privatePath, '{"items":[]}\n');
+    await Effect.runPromise(writeTextAtomically(privatePath, '{"items":[]}\n'));
     assert.equal(await readFile(privatePath, "utf8"), '{"items":[]}\n');
     assert.equal((await stat(path.dirname(privatePath))).mode & 0o777, 0o700);
     assert.equal((await stat(privatePath)).mode & 0o777, 0o600);

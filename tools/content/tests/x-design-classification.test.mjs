@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { existsSync } from "node:fs";
@@ -5,7 +6,10 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { normalizeDesignClassification, summarizeDesignClassifications } from "../modules/x-sync/design-classification.mjs";
+import {
+  normalizeDesignClassification,
+  summarizeDesignClassifications,
+} from "../modules/x-sync/design-classification.mjs";
 import { collectDesignEvidenceImages } from "../modules/x-sync/design-media.mjs";
 
 test("design classification maps relevance directly to inclusion", () => {
@@ -16,9 +20,18 @@ test("design classification maps relevance directly to inclusion", () => {
     relevant: true,
   };
   const included = normalizeDesignClassification({ ...base, confidence: 0.75 }, "2026-08-25T00:00:00.000Z");
-  const lowConfidenceInclusion = normalizeDesignClassification({ ...base, confidence: 0.6 }, "2026-08-25T00:00:00.000Z");
-  const excluded = normalizeDesignClassification({ ...base, confidence: 0.9, relevant: false }, "2026-08-25T00:00:00.000Z");
-  const lowConfidenceExclusion = normalizeDesignClassification({ ...base, confidence: 0.6, relevant: false }, "2026-08-25T00:00:00.000Z");
+  const lowConfidenceInclusion = normalizeDesignClassification(
+    { ...base, confidence: 0.6 },
+    "2026-08-25T00:00:00.000Z",
+  );
+  const excluded = normalizeDesignClassification(
+    { ...base, confidence: 0.9, relevant: false },
+    "2026-08-25T00:00:00.000Z",
+  );
+  const lowConfidenceExclusion = normalizeDesignClassification(
+    { ...base, confidence: 0.6, relevant: false },
+    "2026-08-25T00:00:00.000Z",
+  );
 
   assert.equal(included.status, "include");
   assert.equal(lowConfidenceInclusion.status, "include");
@@ -34,26 +47,44 @@ test("video evidence samples representative frames and removes temporary files",
   const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "x-design-test-"));
   const calls = [];
   try {
-    const evidence = await collectDesignEvidenceImages([{
-      durationMs: 10_000,
-      type: "video",
-      videoUrl: "https://video.twimg.com/ext_tw_video/example.mp4",
-    }], {
-      execute: async (command, args) => {
-        calls.push({ args, command });
-        await writeFile(args.at(-1), "frame", "utf8");
-      },
-      temporaryDirectory,
-    });
-
-    assert.equal(evidence.images.length, 3);
-    assert.deepEqual(calls.map((call) => call.command), ["ffmpeg", "ffmpeg", "ffmpeg"]);
-    assert.deepEqual(calls.map((call) => call.args[3]), ["1.500", "5.000", "8.500"]);
-    const [firstImage] = evidence.images;
-    assert.equal(firstImage.data, Buffer.from("frame").toString("base64"));
-    assert.equal(existsSync(firstImage.path), true);
-
-    await evidence.cleanup();
+    let firstImage;
+    await Effect.runPromise(
+      Effect.scoped(
+        collectDesignEvidenceImages(
+          [
+            {
+              durationMs: 10_000,
+              type: "video",
+              videoUrl: "https://video.twimg.com/ext_tw_video/example.mp4",
+            },
+          ],
+          {
+            execute: async (command, args) => {
+              calls.push({ args, command });
+              await writeFile(args.at(-1), "frame", "utf8");
+            },
+            temporaryDirectory,
+          },
+        ).pipe(
+          Effect.tap((evidence) =>
+            Effect.sync(() => {
+              assert.equal(evidence.images.length, 3);
+              assert.deepEqual(
+                calls.map((call) => call.command),
+                ["ffmpeg", "ffmpeg", "ffmpeg"],
+              );
+              assert.deepEqual(
+                calls.map((call) => call.args[3]),
+                ["1.500", "5.000", "8.500"],
+              );
+              [firstImage] = evidence.images;
+              assert.equal(firstImage.data, Buffer.from("frame").toString("base64"));
+              assert.equal(existsSync(firstImage.path), true);
+            }),
+          ),
+        ),
+      ),
+    );
     assert.equal(existsSync(firstImage.path), false);
   } finally {
     await rm(temporaryDirectory, { force: true, recursive: true });
@@ -65,15 +96,18 @@ test("design publication summary reports decisions and directly playable videos"
     design: status ? { status } : null,
     media: videoUrl ? [{ videoUrl }] : [],
   });
-  assert.deepEqual(summarizeDesignClassifications([
-    item("include", "https://video.twimg.com/a.mp4"),
-    item("include"),
-    item("exclude"),
-    item(null),
-  ]), {
-    exclude: 1,
-    include: 2,
-    playableVideos: 1,
-    unclassified: 1,
-  });
+  assert.deepEqual(
+    summarizeDesignClassifications([
+      item("include", "https://video.twimg.com/a.mp4"),
+      item("include"),
+      item("exclude"),
+      item(null),
+    ]),
+    {
+      exclude: 1,
+      include: 2,
+      playableVideos: 1,
+      unclassified: 1,
+    },
+  );
 });

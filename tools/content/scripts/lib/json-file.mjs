@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises";
+import { Effect } from "effect";
+import { attempt, io } from "@site/effect";
 
-/** 读 JSON 文件；文件不存在（ENOENT）时返回 fallback，其余错误照常抛出。 */
-export async function readJsonOr(filePath, fallback) {
-  try {
-    return JSON.parse(await readFile(filePath, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") return fallback;
-    throw error;
-  }
+/** Missing files use the fallback; permission errors and invalid JSON still fail. */
+export function readJsonOr(filePath, fallback) {
+  return io("file.read", () => readFile(filePath, "utf8")).pipe(
+    Effect.flatMap((text) => attempt("file.json", () => JSON.parse(text))),
+    Effect.catchAll((error) => (error.cause?.code === "ENOENT" ? Effect.succeed(fallback) : Effect.fail(error))),
+  );
 }

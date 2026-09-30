@@ -1,3 +1,4 @@
+import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -27,12 +28,12 @@ const sampleItem: AiNewsItem = {
 
 describe("ai news", () => {
   it("validates the public projection stored in Supabase", () => {
-    const content = aiNewsItemContentSchema.parse(sampleItem);
+    const content = Schema.decodeUnknownSync(aiNewsItemContentSchema)(sampleItem);
     expect(content).toMatchObject({ id: sampleItem.id, title: sampleItem.title, url: sampleItem.url });
     // selected 是公开表的列而不是 content 投影的字段
     expect(content).not.toHaveProperty("selected");
-    expect(() => aiNewsItemContentSchema.parse({ ...sampleItem, url: "not-a-url" })).toThrow();
-    expect(() => aiNewsItemContentSchema.parse({ ...sampleItem, id: "" })).toThrow();
+    expect(() => Schema.decodeUnknownSync(aiNewsItemContentSchema)({ ...sampleItem, url: "not-a-url" })).toThrow();
+    expect(() => Schema.decodeUnknownSync(aiNewsItemContentSchema)({ ...sampleItem, id: "" })).toThrow();
   });
 
   it("maps known categories to Chinese labels and falls back to the raw slug", () => {

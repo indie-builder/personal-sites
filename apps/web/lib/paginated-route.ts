@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { Effect, Either, Schema } from "effect";
 
 const PUBLIC_FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
@@ -9,7 +9,7 @@ type PaginatedFeedConfig = {
   maxLimit: number;
   maxOffset?: number;
   /** 读取一页数据的实现，签名 (offset, limit)。 */
-  readPage: (offset: number, limit: number) => Promise<unknown>;
+  readPage: (offset: number, limit: number) => Effect.Effect<unknown, Error>;
   /** 日志与 500 文案使用的板块名。 */
   label: string;
 };
@@ -19,19 +19,35 @@ type PaginatedFeedConfig = {
  * 把 CDN 缓存键（s-maxage 响应头）收敛到有限档位，避免随机分页参数绕过
  * CDN 打穿数据源；错误响应统一为站内 { error } JSON。
  */
-export function createPaginatedFeedRoute({ pageStep, maxLimit, maxOffset = 10_000, readPage, label }: PaginatedFeedConfig) {
-  const querySchema = z.object({
-    limit: z.coerce.number().int().min(1).max(maxLimit).default(pageStep),
-    offset: z.coerce.number().int().min(0).max(maxOffset).default(0),
+export function createPaginatedFeedRoute({
+  pageStep,
+  maxLimit,
+  maxOffset = 10_000,
+  readPage,
+  label,
+}: PaginatedFeedConfig) {
+  const querySchema = Schema.Struct({
+    limit: Schema.optionalWith(
+      Schema.NumberFromString.pipe(Schema.int())
+        .pipe(Schema.greaterThanOrEqualTo(1))
+        .pipe(Schema.lessThanOrEqualTo(maxLimit)),
+      { default: () => pageStep },
+    ),
+    offset: Schema.optionalWith(
+      Schema.NumberFromString.pipe(Schema.int())
+        .pipe(Schema.greaterThanOrEqualTo(0))
+        .pipe(Schema.lessThanOrEqualTo(maxOffset)),
+      { default: () => 0 },
+    ),
   });
 
   return async function GET(request: Request) {
-    const query = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
-    if (!query.success) return Response.json({ error: "分页参数无效。" }, { status: 400 });
+    const query = Schema.decodeUnknownEither(querySchema)(Object.fromEntries(new URL(request.url).searchParams));
+    if (Either.isLeft(query)) return Response.json({ error: "分页参数无效。" }, { status: 400 });
 
-    const offset = Math.floor(query.data.offset / pageStep) * pageStep;
+    const offset = Math.floor(query.right.offset / pageStep) * pageStep;
     try {
-      return Response.json(await readPage(offset, pageStep), {
+      return Response.json(await Effect.runPromise(readPage(offset, pageStep), { signal: request.signal }), {
         headers: { "Cache-Control": PUBLIC_FEED_CACHE_CONTROL },
       });
     } catch (error) {

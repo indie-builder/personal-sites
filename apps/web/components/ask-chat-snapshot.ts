@@ -1,44 +1,41 @@
-import { z } from "zod";
+import { Schema } from "effect";
 
 import type { AskSource } from "@/lib/ask-types";
 
-const sourceSchema: z.ZodType<AskSource> = z.object({
-  content: z.string(),
-  id: z.string(),
-  publishedAt: z.string().nullable(),
-  scope: z.enum(["profile", "ai-news", "daily", "open-source"]),
-  section: z.string().nullable(),
-  sourceId: z.string(),
-  sourceUrl: z.string(),
-  title: z.string(),
+const sourceSchema: Schema.Schema<AskSource> = Schema.Struct({
+  content: Schema.String,
+  id: Schema.String,
+  publishedAt: Schema.NullOr(Schema.String),
+  scope: Schema.Literal("profile", "ai-news", "daily", "open-source"),
+  section: Schema.NullOr(Schema.String),
+  sourceId: Schema.String,
+  sourceUrl: Schema.String,
+  title: Schema.String,
 });
 
-const messageSchema = z.object({
-  citations: z.array(sourceSchema),
-  content: z.string(),
-  id: z.string(),
-  isComplete: z.boolean(),
-  role: z.enum(["assistant", "user"]),
-  interruption: z.object({
-    kind: z.enum(["stopped", "error"]),
-    message: z.string(),
-  }).optional(),
+const messageSchema = Schema.Struct({
+  citations: Schema.Array(sourceSchema).pipe(Schema.mutable),
+  content: Schema.String,
+  id: Schema.String,
+  isComplete: Schema.Boolean,
+  role: Schema.Literal("assistant", "user"),
+  interruption: Schema.optional(Schema.Struct({ kind: Schema.Literal("stopped", "error"), message: Schema.String })),
 });
 
-export type ChatMessage = z.infer<typeof messageSchema>;
+export type ChatMessage = typeof messageSchema.Type;
 
-const snapshotSchema = z.object({
-  messages: z.array(messageSchema),
-  question: z.string(),
+const snapshotSchema = Schema.Struct({
+  messages: Schema.Array(messageSchema).pipe(Schema.mutable),
+  question: Schema.String,
 });
 
-export type AskChatSnapshot = z.infer<typeof snapshotSchema>;
+export type AskChatSnapshot = typeof snapshotSchema.Type;
 export const ASK_CHAT_STORAGE_KEY = "personal-site:ask-chat";
 
 export function readAskChatSnapshot(): AskChatSnapshot | null {
   try {
     const raw = window.sessionStorage.getItem(ASK_CHAT_STORAGE_KEY);
-    return raw ? snapshotSchema.parse(JSON.parse(raw)) : null;
+    return raw ? Schema.decodeUnknownSync(snapshotSchema)(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -50,15 +47,22 @@ export function writeAskChatSnapshot(snapshot: AskChatSnapshot) {
       window.sessionStorage.removeItem(ASK_CHAT_STORAGE_KEY);
       return;
     }
-    window.sessionStorage.setItem(ASK_CHAT_STORAGE_KEY, JSON.stringify({
-      ...snapshot,
-      // 快照不是后台生成任务；离开页面后回来，已有部分正文可读且不再显示转圈。
-      messages: snapshot.messages.map((message) => message.isComplete ? message : {
-        ...message,
-        isComplete: true,
-        interruption: { kind: "stopped", message: "已停止生成。" },
+    window.sessionStorage.setItem(
+      ASK_CHAT_STORAGE_KEY,
+      JSON.stringify({
+        ...snapshot,
+        // 快照不是后台生成任务；离开页面后回来，已有部分正文可读且不再显示转圈。
+        messages: snapshot.messages.map((message) =>
+          message.isComplete
+            ? message
+            : {
+                ...message,
+                isComplete: true,
+                interruption: { kind: "stopped", message: "已停止生成。" },
+              },
+        ),
       }),
-    }));
+    );
   } catch {
     // 存储被禁用或配额已满时，当前页面仍可继续提问。
   }

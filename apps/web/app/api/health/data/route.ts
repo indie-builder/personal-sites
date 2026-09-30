@@ -1,10 +1,11 @@
+import { Effect } from "effect";
 import { readDataHealth } from "@/lib/data-health.server";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const health = await readDataHealth();
+    const health = await Effect.runPromise(readDataHealth());
     return Response.json(health, {
       headers: { "Cache-Control": "no-store" },
       status: health.healthy ? 200 : 503,

@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 import Database from "better-sqlite3";
@@ -31,15 +32,17 @@ const item = {
   id: "1",
   isQuote: false,
   links: [{ expanded: "https://example.com", original: "https://t.co/x", type: "article" }],
-  media: [{
-    durationMs: 12_000,
-    height: 720,
-    previewUrl: "https://pbs.twimg.com/media/preview.jpg",
-    type: "video",
-    url: "https://pbs.twimg.com/media/cover.jpg",
-    videoUrl: "https://video.twimg.com/video.mp4",
-    width: 1280,
-  }],
+  media: [
+    {
+      durationMs: 12_000,
+      height: 720,
+      previewUrl: "https://pbs.twimg.com/media/preview.jpg",
+      type: "video",
+      url: "https://pbs.twimg.com/media/cover.jpg",
+      videoUrl: "https://video.twimg.com/video.mp4",
+      width: 1280,
+    },
+  ],
   text: "公开原文",
   tweetUrl: "https://x.com/author/status/1",
 };
@@ -66,15 +69,17 @@ test("only completed analysis results become a public curation record", () => {
     },
     id: "1",
     links: [{ shortUrl: "https://t.co/x", type: "article", url: "https://example.com" }],
-    media: [{
-      durationMs: 12_000,
-      height: 720,
-      previewUrl: "https://pbs.twimg.com/media/preview.jpg",
-      type: "video",
-      url: "https://pbs.twimg.com/media/cover.jpg",
-      videoUrl: "https://video.twimg.com/video.mp4",
-      width: 1280,
-    }],
+    media: [
+      {
+        durationMs: 12_000,
+        height: 720,
+        previewUrl: "https://pbs.twimg.com/media/preview.jpg",
+        type: "video",
+        url: "https://pbs.twimg.com/media/cover.jpg",
+        videoUrl: "https://video.twimg.com/video.mp4",
+        width: 1280,
+      },
+    ],
     publishedAt: "2026-08-09T00:00:00.000Z",
     quoteContext: null,
     searchSignals: null,
@@ -99,23 +104,34 @@ test("the public projection retains first-seen time and X list position for feed
 });
 
 test("only items present in the X snapshot receive its collection time and list position", () => {
-  const sourceOrder = parseSourceOrderSnapshot({
-    capturedAt: "2026-08-10T07:24:00.000Z",
-    ids: Array.from({ length: 20 }, (_, index) => `x-${index}`),
-    source: "bookmarks",
-  }, "bookmarks");
-
-  assert.deepEqual(
-    firstSeenMetadata({ itemId: "x-19", sourceOrder }),
-    { firstSeenAt: "2026-08-10T07:24:00.000Z", firstSeenOrder: 19 },
+  const sourceOrder = parseSourceOrderSnapshot(
+    {
+      capturedAt: "2026-08-10T07:24:00.000Z",
+      ids: Array.from({ length: 20 }, (_, index) => `x-${index}`),
+      source: "bookmarks",
+    },
+    "bookmarks",
   );
+
+  assert.deepEqual(firstSeenMetadata({ itemId: "x-19", sourceOrder }), {
+    firstSeenAt: "2026-08-10T07:24:00.000Z",
+    firstSeenOrder: 19,
+  });
   assert.deepEqual(
     ["backlog-1", "backlog-2", "backlog-3", "backlog-4", "backlog-5", "x-0"].map((itemId) =>
-      firstSeenMetadata({ itemId, sourceOrder })),
-    [null, null, null, null, null, {
-      firstSeenAt: "2026-08-10T07:24:00.000Z",
-      firstSeenOrder: 0,
-    }],
+      firstSeenMetadata({ itemId, sourceOrder }),
+    ),
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        firstSeenAt: "2026-08-10T07:24:00.000Z",
+        firstSeenOrder: 0,
+      },
+    ],
   );
   assert.throws(
     () => parseSourceOrderSnapshot({ capturedAt: "2026-08-10T07:24:00.000Z", ids: [], source: "likes" }, "bookmarks"),
@@ -135,10 +151,12 @@ test("public SQLite merges approved focus sources and builds the matching local 
       source: { label: "抖音视频", platform: "douyin", url: "https://www.douyin.com/video/2" },
       title: "抖音条目",
     };
-    const result = await buildPublicCurationDatabase({
-      outputPath: databasePath,
-      items: [xItem, douyinItem],
-    });
+    const result = await Effect.runPromise(
+      buildPublicCurationDatabase({
+        outputPath: databasePath,
+        items: [xItem, douyinItem],
+      }),
+    );
     assert.deepEqual(result, { documentCount: 2, itemCount: 2 });
 
     const database = new Database(databasePath, { fileMustExist: true, readonly: true });
@@ -146,12 +164,19 @@ test("public SQLite merges approved focus sources and builds the matching local 
       { id: "1", title: "标题" },
       { id: "douyin-2", title: "抖音条目" },
     ]);
-    assert.deepEqual(database.prepare("SELECT id, source_url FROM ask_documents WHERE source_scope = 'daily' ORDER BY id").all(), [
-      { id: "daily:1", source_url: "/curation/1" },
-      { id: "daily:douyin-2", source_url: "/curation/douyin-2" },
-    ]);
     assert.deepEqual(
-      database.prepare("SELECT documents.id FROM ask_documents_fts JOIN ask_documents AS documents ON documents.rowid = ask_documents_fts.rowid WHERE ask_documents_fts MATCH '公开原文'").all(),
+      database.prepare("SELECT id, source_url FROM ask_documents WHERE source_scope = 'daily' ORDER BY id").all(),
+      [
+        { id: "daily:1", source_url: "/curation/1" },
+        { id: "daily:douyin-2", source_url: "/curation/douyin-2" },
+      ],
+    );
+    assert.deepEqual(
+      database
+        .prepare(
+          "SELECT documents.id FROM ask_documents_fts JOIN ask_documents AS documents ON documents.rowid = ask_documents_fts.rowid WHERE ask_documents_fts MATCH '公开原文'",
+        )
+        .all(),
       [{ id: "daily:douyin-2" }, { id: "daily:1" }],
     );
     database.close();

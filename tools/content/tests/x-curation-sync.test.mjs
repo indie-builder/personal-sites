@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -7,11 +8,13 @@ import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 test("sync pipeline fetches X data, prepares the sensitive queue, then enriches it", async () => {
   const calls = [];
 
-  await runSyncPipeline({
-    repoRoot: "/repo",
-    options: parseSyncArgs(["--source", "likes", "--limit", "3", "--media"]),
-    execute: async (command, args, options) => calls.push({ command, args, options }),
-  });
+  await Effect.runPromise(
+    runSyncPipeline({
+      repoRoot: "/repo",
+      options: parseSyncArgs(["--source", "likes", "--limit", "3", "--media"]),
+      execute: (command, args, options) => Effect.sync(() => calls.push({ command, args, options })),
+    }),
+  );
 
   assert.deepEqual(calls, [
     {
@@ -29,11 +32,7 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
     },
     {
       command: process.execPath,
-      args: [
-        "/repo/tools/content/scripts/x-curation-enrich.mjs",
-        "--engine", "pi",
-        "--limit", "3",
-      ],
+      args: ["/repo/tools/content/scripts/x-curation-enrich.mjs", "--engine", "pi", "--limit", "3"],
       options: { cwd: "/repo" },
     },
     {
@@ -41,9 +40,12 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
       args: [
         "/repo/tools/content/scripts/x-curation-enrich.mjs",
         "--design-only",
-        "--engine", "pi",
-        "--concurrency", "15",
-        "--limit", "3",
+        "--engine",
+        "pi",
+        "--concurrency",
+        "15",
+        "--limit",
+        "3",
       ],
       options: { cwd: "/repo" },
     },
@@ -63,38 +65,48 @@ test("sync pipeline fetches X data, prepares the sensitive queue, then enriches 
 test("both sources retain their own origin before enrichment", async () => {
   const calls = [];
 
-  await runSyncPipeline({
-    repoRoot: "/repo",
-    options: parseSyncArgs(["--fetch-only"]),
-    execute: async (command, args, options) => calls.push({ command, args, options }),
-  });
+  await Effect.runPromise(
+    runSyncPipeline({
+      repoRoot: "/repo",
+      options: parseSyncArgs(["--fetch-only"]),
+      execute: (command, args, options) => Effect.sync(() => calls.push({ command, args, options })),
+    }),
+  );
 
-  assert.deepEqual(calls.map((call) => call.args), [
-    ["src/cli.js", "fetch", "--source", "bookmarks", "--media"],
-    ["/repo/tools/content/scripts/x-curation-prepare.mjs", "--source=bookmarks"],
-    ["src/cli.js", "fetch", "--source", "likes", "--media"],
-    ["/repo/tools/content/scripts/x-curation-prepare.mjs", "--source=likes"],
-  ]);
+  assert.deepEqual(
+    calls.map((call) => call.args),
+    [
+      ["src/cli.js", "fetch", "--source", "bookmarks", "--media"],
+      ["/repo/tools/content/scripts/x-curation-prepare.mjs", "--source=bookmarks"],
+      ["src/cli.js", "fetch", "--source", "likes", "--media"],
+      ["/repo/tools/content/scripts/x-curation-prepare.mjs", "--source=likes"],
+    ],
+  );
 });
 
 test("sync pipeline passes the captured X list order to the queue preparation step", async () => {
   const calls = [];
 
-  await runSyncPipeline({
-    repoRoot: "/repo",
-    options: parseSyncArgs(["--source", "bookmarks", "--fetch-only"]),
-    captureSourceOrder: async (source) => `/private/${source}-order.json`,
-    execute: async (command, args, options) => calls.push({ command, args, options }),
-  });
+  await Effect.runPromise(
+    runSyncPipeline({
+      repoRoot: "/repo",
+      options: parseSyncArgs(["--source", "bookmarks", "--fetch-only"]),
+      captureSourceOrder: (source) => Effect.succeed(`/private/${source}-order.json`),
+      execute: (command, args, options) => Effect.sync(() => calls.push({ command, args, options })),
+    }),
+  );
 
-  assert.deepEqual(calls.map((call) => call.args), [
-    ["src/cli.js", "fetch", "--source", "bookmarks", "--media"],
+  assert.deepEqual(
+    calls.map((call) => call.args),
     [
-      "/repo/tools/content/scripts/x-curation-prepare.mjs",
-      "--source=bookmarks",
-      "--source-order-file=/private/bookmarks-order.json",
+      ["src/cli.js", "fetch", "--source", "bookmarks", "--media"],
+      [
+        "/repo/tools/content/scripts/x-curation-prepare.mjs",
+        "--source=bookmarks",
+        "--source-order-file=/private/bookmarks-order.json",
+      ],
     ],
-  ]);
+  );
 });
 
 test("sync arguments accept pnpm's -- separator", () => {
@@ -113,21 +125,22 @@ test("sync arguments accept pnpm's -- separator", () => {
 
 test("BigModel Pi is the default and backfills design classification at concurrency 15", async () => {
   const calls = [];
-  await runSyncPipeline({
-    repoRoot: "/repo",
-    options: parseSyncArgs(["--source", "bookmarks", "--model", "gpt-5.6-luna", "--reasoning-effort", "max"]),
-    execute: async (command, args, options) => calls.push({ command, args, options }),
-  });
+  await Effect.runPromise(
+    runSyncPipeline({
+      repoRoot: "/repo",
+      options: parseSyncArgs(["--source", "bookmarks", "--model", "gpt-5.6-luna", "--reasoning-effort", "max"]),
+      execute: (command, args, options) => Effect.sync(() => calls.push({ command, args, options })),
+    }),
+  );
 
-  assert.deepEqual(calls[2].args, [
-    "/repo/tools/content/scripts/x-curation-enrich.mjs",
-    "--engine", "pi",
-  ]);
+  assert.deepEqual(calls[2].args, ["/repo/tools/content/scripts/x-curation-enrich.mjs", "--engine", "pi"]);
   assert.deepEqual(calls[3].args, [
     "/repo/tools/content/scripts/x-curation-enrich.mjs",
     "--design-only",
-    "--engine", "pi",
-    "--concurrency", "15",
+    "--engine",
+    "pi",
+    "--concurrency",
+    "15",
   ]);
 });
 
@@ -140,12 +153,14 @@ test("design backfill concurrency can be overridden without changing full enrich
 test("history pipeline uses bird pagination directly and imports both raw sources", async () => {
   const calls = [];
 
-  await runHistoryPipeline({
-    repoRoot: "/repo",
-    birdPath: "/repo/tools/content/node_modules/.bin/bird",
-    credentials: { authToken: "token", ct0: "csrf" },
-    execute: async (command, args, options) => calls.push({ command, args, options }),
-  });
+  await Effect.runPromise(
+    runHistoryPipeline({
+      repoRoot: "/repo",
+      birdPath: "/repo/tools/content/node_modules/.bin/bird",
+      credentials: { authToken: "token", ct0: "csrf" },
+      execute: (command, args, options) => Effect.sync(() => calls.push({ command, args, options })),
+    }),
+  );
 
   assert.deepEqual(calls, [
     {

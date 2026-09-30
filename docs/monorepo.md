@@ -4,11 +4,12 @@
 | --- | --- | --- |
 | `apps/web` | `@site/web` | Next.js 页面、API、组件、Web 单测与 Playwright |
 | `tools/content` | `@site/content` | 抓取、离线分析、同步、归档、向量索引与 Node 测试 |
+| `packages/effect` | `@site/effect` | Effect I/O 错误边界与公共 Schema 基础约束 |
 | `packages/public-data` | `@site/public-data` | 公开数据 schema、SQLite 工具、每日动态同步/归档、健康检查 |
 | `scripts`、`config`、`tests` | 根工作区 | 仓库保护、TS7 入口、共享公开配置、Git/打包边界测试 |
 | `android`、`ios` | 原生工程 | 保持 Gradle / Xcode 构建与各自 CI |
 
-Web 和内容管道通过 `workspace:*` 依赖 `@site/public-data`，使用显式子路径导入。公共包不得反向引用 Web 或离线分析工具；Pi、Transformers、sqlite-vec、bird 仅由内容管道持有。共同的智谱端点/模型默认值仍由根 `config/bigmodel.mjs` 提供，Pi 适配器归内容管道。
+Web 和内容管道通过 `workspace:*` 依赖 `@site/public-data`，使用显式子路径导入。公共包不得反向引用 Web 或离线分析工具；`@site/effect` 只依赖 Effect，业务执行约定见 [Effect 开发规则](effect-architecture.md)；Pi、Transformers、sqlite-vec、bird 仅由内容管道持有。共同的智谱端点/模型默认值仍由根 `config/bigmodel.mjs` 提供，Pi 适配器归内容管道。
 
 ## 命令
 

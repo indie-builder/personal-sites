@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import { runCli } from "@site/effect/cli";
+import { Effect } from "effect";
 
-import { spawn } from "node:child_process";
+import { runCommand } from "../modules/x-sync/pipeline.mjs";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,18 +17,13 @@ const sidecar = path.join(dataRoot, "sidecar");
 const manifest = path.join(dataRoot, "downloads/download_manifest.jsonl");
 
 function run(command, args, { cwd = repoRoot, env = {} } = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, stdio: "inherit" });
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${path.basename(command)} 退出异常（code=${code ?? "null"}, signal=${signal ?? "none"}）。`));
-    });
-  });
+  return runCommand(command, args, { cwd, env });
 }
 
-async function pendingVideoCount() {
-  return (await readJsonOr(path.join(dataRoot, "pending-video-urls.json"), [])).length;
+function pendingVideoCount() {
+  return Effect.gen(function* () {
+    return (yield* readJsonOr(path.join(dataRoot, "pending-video-urls.json"), [])).length;
+  });
 }
 
 export function parseFullSyncArgs(args) {
@@ -63,56 +60,60 @@ export function parseFullSyncArgs(args) {
   return options;
 }
 
-async function main() {
-  const options = parseFullSyncArgs(process.argv.slice(2));
+function main() {
+  return Effect.gen(function* () {
+    const options = parseFullSyncArgs(process.argv.slice(2));
 
-  if (options.dryRun) {
-    const pending = await pendingVideoCount();
-    console.log(`[dry-run] 收藏索引待下载 ${pending} 条；分析阶段计划如下，不重新发现收藏页、不下载、不调用模型。`);
-    const args = ["douyin:curation", "--", "sync", "--dry-run"];
-    if (existsSync(manifest)) args.push("--manifest", manifest);
-    await run("pnpm", args);
-    return;
-  }
+    if (options.dryRun) {
+      const pending = yield* pendingVideoCount();
+      console.log(`[dry-run] 收藏索引待下载 ${pending} 条；分析阶段计划如下，不重新发现收藏页、不下载、不调用模型。`);
+      const args = ["douyin:curation", "--", "sync", "--dry-run"];
+      if (existsSync(manifest)) args.push("--manifest", manifest);
+      yield* run("pnpm", args);
+      return;
+    }
 
-  await run("uv", [
-    "run",
-    "python",
-    path.join(repoRoot, "tools/content/scripts/douyin-favorites-discover.py"),
-    "--sidecar",
-    sidecar,
-    "--data-root",
-    dataRoot,
-  ], { cwd: sidecar });
+    yield* run(
+      "uv",
+      [
+        "run",
+        "python",
+        path.join(repoRoot, "tools/content/scripts/douyin-favorites-discover.py"),
+        "--sidecar",
+        sidecar,
+        "--data-root",
+        dataRoot,
+      ],
+      { cwd: sidecar },
+    );
 
-  const pending = await pendingVideoCount();
-  if (options.download && pending > 0) {
-    console.log(`开始下载 ${pending} 条新增收藏视频。`);
-    await run("uv", ["run", "douyin-dl", "-c", "config-incremental.yml", "--show-warnings"], { cwd: sidecar });
-  }
+    const pending = yield* pendingVideoCount();
+    if (options.download && pending > 0) {
+      console.log(`开始下载 ${pending} 条新增收藏视频。`);
+      yield* run("uv", ["run", "douyin-dl", "-c", "config-incremental.yml", "--show-warnings"], { cwd: sidecar });
+    }
 
-  if (options.analyze) {
-    const args = [
-      "douyin:curation", "--", "sync", "--manifest", manifest,
-      "--engine", options.engine,
-    ];
-    if (options.concurrency !== null) args.push("--concurrency", String(options.concurrency));
-    if (options.analyzerConcurrency !== null) args.push("--analyzer-concurrency", String(options.analyzerConcurrency));
-    if (options.analyzeLimit !== null) args.push("--limit", String(options.analyzeLimit));
-    await run("pnpm", args, {
-      env: {
-        WHISPER_BIN: path.join(sidecar, ".venv/bin/whisper-ctranslate2"),
-        WHISPER_COMPUTE: "int8",
-        WHISPER_DEVICE: "cpu",
-        WHISPER_MODEL: "small",
-        OMP_NUM_THREADS: "2",
-      },
-    });
-  }
+    if (options.analyze) {
+      const args = ["douyin:curation", "--", "sync", "--manifest", manifest, "--engine", options.engine];
+      if (options.concurrency !== null) args.push("--concurrency", String(options.concurrency));
+      if (options.analyzerConcurrency !== null)
+        args.push("--analyzer-concurrency", String(options.analyzerConcurrency));
+      if (options.analyzeLimit !== null) args.push("--limit", String(options.analyzeLimit));
+      yield* run("pnpm", args, {
+        env: {
+          WHISPER_BIN: path.join(sidecar, ".venv/bin/whisper-ctranslate2"),
+          WHISPER_COMPUTE: "int8",
+          WHISPER_DEVICE: "cpu",
+          WHISPER_MODEL: "small",
+          OMP_NUM_THREADS: "2",
+        },
+      });
+    }
+  });
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  main().catch((error) => {
+  runCli(main()).catch((error) => {
     console.error(`抖音全量/增量同步失败：${error.message}`);
     process.exitCode = 1;
   });

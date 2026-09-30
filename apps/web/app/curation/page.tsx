@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 
 import { CurationStream } from "@/components/curation-stream";
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 async function CurationFeed() {
-  const curationPage = await getCurationPage();
+  const curationPage = await Effect.runPromise(getCurationPage());
   return <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />;
 }
 

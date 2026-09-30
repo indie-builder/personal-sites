@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import { attempt } from "@site/effect";
 import "server-only";
 
 import { getAdminSupabaseClient } from "@/lib/supabase.server";
@@ -9,21 +11,27 @@ function createAdminClient() {
   return getAdminSupabaseClient("每日动态同步只能在服务端运行。");
 }
 
-export async function authorizeAiNewsCron(secret: string | null) {
-  return createSupabaseAiNewsStateStore(createAdminClient()).isAuthorized(
-    secret,
-  );
-}
-
-export async function runAiNewsCron(backfill = false) {
-  const client = createAdminClient();
-  return syncAiNews({
-    backfill,
-    clientFactory: () => client,
-    stateStore: createSupabaseAiNewsStateStore(client),
+export function authorizeAiNewsCron(secret: string | null) {
+  return Effect.gen(function* () {
+    const client = yield* attempt("ai-news.admin", createAdminClient);
+    return yield* createSupabaseAiNewsStateStore(client).isAuthorized(secret);
   });
 }
 
-export async function readAiNewsCronHealth() {
-  return toPublicAiNewsHealth(await createSupabaseAiNewsStateStore(createAdminClient()).health());
+export function runAiNewsCron(backfill = false) {
+  return Effect.gen(function* () {
+    const client = yield* attempt("ai-news.admin", createAdminClient);
+    return yield* syncAiNews({
+      backfill,
+      clientFactory: () => client,
+      stateStore: createSupabaseAiNewsStateStore(client),
+    });
+  });
+}
+
+export function readAiNewsCronHealth() {
+  return Effect.gen(function* () {
+    const client = yield* attempt("ai-news.admin", createAdminClient);
+    return toPublicAiNewsHealth(yield* createSupabaseAiNewsStateStore(client).health());
+  });
 }

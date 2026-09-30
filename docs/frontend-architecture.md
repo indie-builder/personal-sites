@@ -48,7 +48,7 @@ RootLayout
 | 个人简介 | `apps/web/components/profile-introduction.tsx`、`apps/web/components/profile-typewriter.ts`、`apps/web/components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
 | 内容导航 | `apps/web/components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
 | 技术信号场 | `apps/web/components/interactive-dot-field.tsx` | AI 术语与技术栈词库、稀疏视觉表达 | 标签过滤或导航 |
-| 策展数据 | `apps/web/lib/curation.ts` | Zod 校验、查询、日期格式化 | 页面布局、问答检索 |
+| 策展数据 | `apps/web/lib/curation.ts` | Effect Schema 校验、Effect 查询、日期格式化 | 页面布局、问答检索 |
 | 本地问答检索 | `apps/web/lib/curation-search.server.ts` | 公开 SQLite 语料缓存、全文匹配与排序 | 策展页面查询 |
 | 公开发现 | `apps/web/lib/discovery.server.ts` | 汇总公开 SQLite 与 Supabase，生成 Sitemap/RSS 数据 | 私有原始资料或运行时写入 |
 | 数据健康 | `apps/web/lib/data-health.server.ts` + `packages/public-data/src/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
@@ -92,6 +92,8 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 | 简介 | 英文输入、删除、空光标两次、中文输入；完成后标题轮换多语言问候语 | `prefers-reduced-motion` 下保留最终中文状态，不进入轮换 |
 | 流式内容 | 三列策展行，hover 只做文字/箭头轻变化 | 禁止 hover 变卡片或填充色块 |
 | 深色模式 | 替换黑白灰令牌 | 不新建独立暗色品牌风格 |
+
+异步业务逻辑与 I/O 默认使用 Effect，开发约定与平台边界见 [Effect 开发规则](effect-architecture.md)。
 
 ## 变更准则
 

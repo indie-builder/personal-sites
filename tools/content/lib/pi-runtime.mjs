@@ -1,4 +1,11 @@
-import { BIGMODEL_BASE_URL, BIGMODEL_PROVIDER, resolveBigModel, requireBigModelApiKey } from "../../../config/bigmodel.mjs";
+import { Effect } from "effect";
+import { attempt, io } from "@site/effect";
+import {
+  BIGMODEL_BASE_URL,
+  BIGMODEL_PROVIDER,
+  resolveBigModel,
+  requireBigModelApiKey,
+} from "../../../config/bigmodel.mjs";
 
 /**
  * Pi is the transport runtime; all analysis uses the shared BigModel provider.
@@ -13,17 +20,32 @@ export function resolvePiModelConfig({ config = {}, env = process.env } = {}) {
 
 /** 去掉模型回复外围的 markdown 代码围栏（json/text/markdown 均可），返回正文。 */
 export function stripJsonFence(text) {
-  return text.trim().replace(/^```(?:json|text|markdown)?\s*/iu, "").replace(/\s*```$/u, "");
+  return text
+    .trim()
+    .replace(/^```(?:json|text|markdown)?\s*/iu, "")
+    .replace(/\s*```$/u, "");
 }
 
-export async function configureBigModelRuntime(runtime, model, env = process.env) {
-  const id = resolveBigModel(model);
-  const key = requireBigModelApiKey(env);
-  runtime.registerProvider(BIGMODEL_PROVIDER, {
-    baseUrl: BIGMODEL_BASE_URL, api: "anthropic-messages", authHeader: true,
-    models: [{ id, name: id, reasoning: false, input: ["text", "image"],
-      contextWindow: 200_000, maxTokens: 8_192,
-      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
+export function configureBigModelRuntime(runtime, model, env = process.env) {
+  return Effect.gen(function* () {
+    const id = yield* attempt("pi.model", () => resolveBigModel(model));
+    const key = yield* attempt("pi.credentials", () => requireBigModelApiKey(env));
+    runtime.registerProvider(BIGMODEL_PROVIDER, {
+      baseUrl: BIGMODEL_BASE_URL,
+      api: "anthropic-messages",
+      authHeader: true,
+      models: [
+        {
+          id,
+          name: id,
+          reasoning: false,
+          input: ["text", "image"],
+          contextWindow: 200_000,
+          maxTokens: 8_192,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        },
+      ],
+    });
+    yield* io("pi.credentials", () => runtime.setRuntimeApiKey(BIGMODEL_PROVIDER, key));
   });
-  await runtime.setRuntimeApiKey(BIGMODEL_PROVIDER, key);
 }

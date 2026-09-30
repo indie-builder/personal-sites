@@ -1,5 +1,8 @@
 "use client";
 
+import { Effect } from "effect";
+import { io } from "@site/effect";
+
 import { ChevronDown, ChevronRight, ExternalLink, FileCode2, Folder, FolderOpen, LoaderCircle } from "lucide-react";
 import { useHasMounted } from "@/components/use-mounted";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -85,13 +88,19 @@ function RepositoryTreeRows({
               aria-current={!isDirectory && selectedPath === node.path ? "true" : undefined}
               aria-expanded={isDirectory ? isExpanded : undefined}
               className={styles.repositoryTreeItem}
-              onClick={() => isDirectory ? onToggleDirectory(node.path) : onOpenFile(node)}
-              style={{ paddingLeft: `${.7 + depth * .8}rem` }}
+              onClick={() => (isDirectory ? onToggleDirectory(node.path) : onOpenFile(node))}
+              style={{ paddingLeft: `${0.7 + depth * 0.8}rem` }}
               type="button"
             >
-              {isDirectory
-                ? isExpanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />
-                : <FileCode2 aria-hidden="true" />}
+              {isDirectory ? (
+                isExpanded ? (
+                  <ChevronDown aria-hidden="true" />
+                ) : (
+                  <ChevronRight aria-hidden="true" />
+                )
+              ) : (
+                <FileCode2 aria-hidden="true" />
+              )}
               {isDirectory ? isExpanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" /> : null}
               <span>{node.name}</span>
               {!isDirectory && node.size !== undefined ? <small>{formatFileSize(node.size)}</small> : null}
@@ -139,12 +148,16 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/open-source/${encodeURIComponent(slug)}/repository/tree`, { signal: controller.signal })
-      .then(async (response) => {
-        const result = await response.json() as RepositoryTreeResponse & { error?: string };
+    void Effect.runPromise(
+      io("repository.tree", async (signal) => {
+        const response = await fetch(`/api/open-source/${encodeURIComponent(slug)}/repository/tree`, { signal });
+        const result = (await response.json()) as RepositoryTreeResponse & { error?: string };
         if (!response.ok) throw new Error(result.error ?? "暂时无法读取原始仓库结构。");
-        setTree(result);
-      })
+        return result;
+      }),
+      { signal: controller.signal },
+    )
+      .then(setTree)
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setTreeError(error instanceof Error ? error.message : "暂时无法读取原始仓库结构。");
@@ -169,9 +182,17 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
     setFileError(null);
     setLoadingFile(true);
     try {
-      const response = await fetch(`/api/open-source/${encodeURIComponent(slug)}/repository/file?path=${encodeURIComponent(node.path)}`);
-      const result = await response.json() as RepositoryFileResponse & { error?: string };
-      if (!response.ok) throw new Error(result.error ?? "暂时无法读取原始文件。");
+      const result = await Effect.runPromise(
+        io("repository.file", async (signal) => {
+          const response = await fetch(
+            `/api/open-source/${encodeURIComponent(slug)}/repository/file?path=${encodeURIComponent(node.path)}`,
+            { signal },
+          );
+          const result = (await response.json()) as RepositoryFileResponse & { error?: string };
+          if (!response.ok) throw new Error(result.error ?? "暂时无法读取原始文件。");
+          return result;
+        }),
+      );
       if (requestVersion.current === currentVersion) setFile(result);
     } catch (error) {
       if (requestVersion.current === currentVersion) {
@@ -196,9 +217,17 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
           <ExternalLink aria-hidden="true" />
         </a>
       </div>
-      {tree?.truncated ? <p className={styles.repositoryBrowserNotice}>仓库文件较多，当前仅展示前 6,000 项；可在 GitHub 查看完整结构。</p> : null}
+      {tree?.truncated ? (
+        <p className={styles.repositoryBrowserNotice}>
+          仓库文件较多，当前仅展示前 6,000 项；可在 GitHub 查看完整结构。
+        </p>
+      ) : null}
       {treeError ? <p className={styles.repositoryBrowserError}>{treeError}</p> : null}
-      {!tree && !treeError ? <p className={styles.repositoryBrowserLoading}><RepositoryLoadingIcon /> 正在读取原始仓库结构…</p> : null}
+      {!tree && !treeError ? (
+        <p className={styles.repositoryBrowserLoading}>
+          <RepositoryLoadingIcon /> 正在读取原始仓库结构…
+        </p>
+      ) : null}
       {tree ? (
         <div className={styles.repositoryBrowserContent}>
           <aside aria-label="原始仓库文件树" className={styles.repositoryTreePane}>
@@ -211,19 +240,29 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
             />
           </aside>
           <section aria-label="原始文件内容" className={styles.repositoryFilePane}>
-            {loadingFile ? <p className={styles.repositoryBrowserLoading}><RepositoryLoadingIcon /> 正在读取 {selectedPath}…</p> : null}
+            {loadingFile ? (
+              <p className={styles.repositoryBrowserLoading}>
+                <RepositoryLoadingIcon /> 正在读取 {selectedPath}…
+              </p>
+            ) : null}
             {!loadingFile && fileError ? <p className={styles.repositoryBrowserError}>{fileError}</p> : null}
-            {!loadingFile && !fileError && !file ? <p className={styles.repositoryFileEmpty}>从左侧文件树选择一个文本文件查看原始内容。</p> : null}
+            {!loadingFile && !fileError && !file ? (
+              <p className={styles.repositoryFileEmpty}>从左侧文件树选择一个文本文件查看原始内容。</p>
+            ) : null}
             {!loadingFile && file ? (
               <>
                 <div className={styles.repositoryFileHeader}>
                   <code>{file.path}</code>
-                  <a href={file.fileUrl} rel="noreferrer" target="_blank">在 GitHub 查看</a>
+                  <a href={file.fileUrl} rel="noreferrer" target="_blank">
+                    在 GitHub 查看
+                  </a>
                 </div>
                 {file.binary ? (
                   <p className={styles.repositoryFileEmpty}>这是二进制文件，不能直接预览；可前往 GitHub 查看。</p>
                 ) : (
-                  <pre className={styles.repositoryFileContent}><code>{file.content}</code></pre>
+                  <pre className={styles.repositoryFileContent}>
+                    <code>{file.content}</code>
+                  </pre>
                 )}
               </>
             ) : null}

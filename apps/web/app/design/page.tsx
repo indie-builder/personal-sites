@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 
 import { CurationStream } from "@/components/curation-stream";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 async function DesignFeed() {
-  const designPage = await getDesignCurationPage(0, 20);
+  const designPage = await Effect.runPromise(getDesignCurationPage(0, 20));
   return (
     <CurationStream
       apiPath="/api/design"

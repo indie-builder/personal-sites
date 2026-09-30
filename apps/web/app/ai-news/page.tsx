@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 
 import { AiNewsStream } from "@/components/ai-news-stream";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 async function AiNewsFeed() {
-  const aiNewsPage = await getAiNewsPage(0, AI_NEWS_LIST_LIMIT);
+  const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_LIST_LIMIT));
   return <AiNewsStream initialHasMore={aiNewsPage.hasMore} initialItems={aiNewsPage.items} />;
 }
 
