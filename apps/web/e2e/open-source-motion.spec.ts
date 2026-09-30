@@ -21,21 +21,18 @@ test("open-source filters cap Motion stagger and honor reduced motion", async ({
   await expect(page.locator(".opening-loader")).toHaveCount(0);
   await expect.poll(() => page.locator('[aria-label="已判读的开源项目"] ol > li').evaluateAll(rows => rows.every(row => row.getAnimations().length === 0))).toBe(true);
   await instrumentListMotion();
-  const skillsFilter = page.getByRole("button", { name: /^Skills 与工作流/u });
-  await skillsFilter.click();
-  await expect(skillsFilter).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "筛选开源关注：全部主题" }).click();
+  await page.getByRole("menuitemradio", { name: /^Skills 与工作流 · /u }).click();
+  await expect(page.getByRole("button", { name: "筛选开源关注：Skills 与工作流" })).toBeVisible();
   const filteredRows = await page.locator('[aria-label="已判读的开源项目"] ol > li').count();
   await expect.poll(readDurations).toEqual(Array(Math.min(filteredRows, 8)).fill(280));
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
   await instrumentListMotion();
-  const reducedSkillsFilter = page.getByRole("button", { name: /^Skills 与工作流/u });
-  await expect.poll(async () => {
-    if (await reducedSkillsFilter.getAttribute("aria-pressed") === "true") return true;
-    await reducedSkillsFilter.click();
-    return await reducedSkillsFilter.getAttribute("aria-pressed") === "true";
-  }).toBe(true);
+  await page.getByRole("button", { name: "筛选开源关注：全部主题" }).click();
+  await page.getByRole("menuitemradio", { name: /^Skills 与工作流 · /u }).click();
+  await expect(page.getByRole("button", { name: "筛选开源关注：Skills 与工作流" })).toBeVisible();
   expect(await readDurations()).toEqual([]);
   expect(await page.locator('[aria-label="已判读的开源项目"] ol > li').evaluateAll((rows) => (
     rows.every((row) => getComputedStyle(row).opacity === "1")
