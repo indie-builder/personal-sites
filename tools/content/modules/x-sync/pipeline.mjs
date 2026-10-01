@@ -14,7 +14,7 @@ export function runCommand(command, args, options) {
             if (descriptor !== null) closeSync(descriptor);
           }),
       );
-      yield* Effect.async((resume) => {
+      yield* Effect.callback((resume) => {
         const child = spawn(command, args, {
           cwd: options.cwd,
           env: { ...process.env, ...options.env },

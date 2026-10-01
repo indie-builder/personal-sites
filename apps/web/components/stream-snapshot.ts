@@ -1,4 +1,4 @@
-import { Either, Schema } from "effect";
+import { Result, Schema, Struct } from "effect";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
 import { curationItemSchema } from "@/lib/curation-types";
@@ -25,7 +25,7 @@ const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
  * SSR 首条 id 一致（数据集没变）且未过期时返回，其余情况一律返回 null。
  */
 function createStreamSnapshot<Snapshot extends StreamSnapshot, Encoded>(config: {
-  schema: Schema.Schema<Snapshot, Encoded>;
+  schema: Schema.Codec<Snapshot, Encoded>;
   storageKey: string;
 }) {
   return {
@@ -35,9 +35,9 @@ function createStreamSnapshot<Snapshot extends StreamSnapshot, Encoded>(config: 
     from(raw: string | null, headId: string | undefined, now = Date.now()): Snapshot | null {
       if (!raw || !headId) return null;
       try {
-        const parsed = Schema.decodeUnknownEither(config.schema)(JSON.parse(raw));
-        if (Either.isLeft(parsed)) return null;
-        const snapshot = parsed.right;
+        const parsed = Schema.decodeUnknownResult(config.schema)(JSON.parse(raw));
+        if (Result.isFailure(parsed)) return null;
+        const snapshot = parsed.success;
         if (snapshot.items[0].id !== headId) return null;
         if (now - snapshot.savedAt > SNAPSHOT_TTL_MS) return null;
         return snapshot;
@@ -68,12 +68,15 @@ const aiNewsStreamSnapshotSchema = Schema.Struct({
   activeCategory: Schema.NullOr(Schema.String),
   hasMore: Schema.Boolean,
   items: Schema.Array(
-    Schema.Struct({ ...aiNewsItemContentSchema.omit("reason", "score", "url").fields, selected: Schema.Boolean }),
+    Schema.Struct({
+      ...aiNewsItemContentSchema.mapFields(Struct.omit(["reason", "score", "url"])).fields,
+      selected: Schema.Boolean,
+    }),
   )
     .pipe(Schema.mutable)
-    .pipe(Schema.minItems(1)),
-  savedAt: Schema.Number.pipe(Schema.finite()),
-  scrollTop: Schema.Number.pipe(Schema.finite()).pipe(Schema.greaterThanOrEqualTo(0)),
+    .check(Schema.isMinLength(1)),
+  savedAt: Schema.Number.check(Schema.isFinite()),
+  scrollTop: Schema.Number.check(Schema.isFinite()).pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
 });
 
 export const aiNewsStreamSnapshot = createStreamSnapshot({
@@ -84,27 +87,29 @@ export const aiNewsStreamSnapshot = createStreamSnapshot({
 // —— 剪报簿（每日关注 / 设计收藏 / 抖音收藏共用条目结构，仅存储 key 不同）——
 
 const curationListItemSchema = Schema.Struct({
-  ...curationItemSchema.pick(
-    "author",
-    "collectedAt",
-    "design",
-    "id",
-    "media",
-    "publishedAt",
-    "source",
-    "summary",
-    "tags",
-    "text",
-    "title",
+  ...curationItemSchema.mapFields(
+    Struct.pick([
+      "author",
+      "collectedAt",
+      "design",
+      "id",
+      "media",
+      "publishedAt",
+      "source",
+      "summary",
+      "tags",
+      "text",
+      "title",
+    ]),
   ).fields,
   attachments: Schema.Array(Schema.String).pipe(Schema.mutable),
 });
 
 const curationStreamSnapshotSchema = Schema.Struct({
   hasMore: Schema.Boolean,
-  items: Schema.Array(curationListItemSchema).pipe(Schema.mutable).pipe(Schema.minItems(1)),
-  savedAt: Schema.Number.pipe(Schema.finite()),
-  scrollTop: Schema.Number.pipe(Schema.finite()).pipe(Schema.greaterThanOrEqualTo(0)),
+  items: Schema.Array(curationListItemSchema).pipe(Schema.mutable).check(Schema.isMinLength(1)),
+  savedAt: Schema.Number.check(Schema.isFinite()),
+  scrollTop: Schema.Number.check(Schema.isFinite()).pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
 });
 
 export const curationStreamSnapshot = createStreamSnapshot({

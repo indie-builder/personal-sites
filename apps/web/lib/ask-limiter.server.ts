@@ -11,7 +11,7 @@ import { getAdminSupabaseClient, requiredEnv } from "@/lib/supabase.server";
 
 const rateLimitResultSchema = Schema.Struct({
   allowed: Schema.Boolean,
-  retry_after_seconds: Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.nonNegative()),
+  retry_after_seconds: Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)),
 });
 
 function getRateLimitClient() {
@@ -31,7 +31,7 @@ export function checkAskRateLimit(ip: string, now = Date.now(), client?: Supabas
       }),
     );
     if (error) return yield* Effect.fail(new Error(`执行公开问答共享限流失败：${error.message}`));
-    const result = yield* Schema.decodeUnknown(rateLimitResultSchema)(data?.[0]);
+    const result = yield* Schema.decodeUnknownEffect(rateLimitResultSchema)(data?.[0]);
     return { allowed: result.allowed, retryAfterSeconds: result.retry_after_seconds };
   });
 }

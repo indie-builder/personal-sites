@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Either, Schema } from "effect";
+import { Result, Schema } from "effect";
 
 import { checkAskRateLimit } from "@/lib/ask-limiter.server";
 import { searchAskDocuments } from "@/lib/ask-search.server";
@@ -7,15 +7,15 @@ import { streamAskAnswer } from "@/lib/ask-session.server";
 import { askScopes } from "@/lib/ask-types";
 
 const sessionSchema = Schema.Struct({
-  conversationId: Schema.String.pipe(Schema.pattern(/^[A-Za-z0-9_-]{16,128}$/)),
-  visitorId: Schema.String.pipe(Schema.pattern(/^[A-Za-z0-9_-]{16,128}$/)),
+  conversationId: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{16,128}$/)),
+  visitorId: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{16,128}$/)),
 });
 
 const requestSchema = Schema.Struct({
   ...sessionSchema.fields,
   ...{
-    question: Schema.Trim.pipe(Schema.minLength(2)).pipe(Schema.maxLength(1_000)),
-    scope: Schema.Literal(...askScopes),
+    question: Schema.Trim.check(Schema.isMinLength(2)).check(Schema.isMaxLength(1_000)),
+    scope: Schema.Literals(askScopes),
   },
 });
 
@@ -47,15 +47,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsed = Schema.decodeUnknownEither(requestSchema)(await request.json().catch(() => null));
-  if (Either.isLeft(parsed)) return Response.json({ error: "问题、范围或浏览器会话标识无效。" }, { status: 400 });
+  const parsed = Schema.decodeUnknownResult(requestSchema)(await request.json().catch(() => null));
+  if (Result.isFailure(parsed)) return Response.json({ error: "问题、范围或浏览器会话标识无效。" }, { status: 400 });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const write = (event: string, data: unknown) => controller.enqueue(encoder.encode(sseEvent(event, data)));
       try {
-        const sources = await Effect.runPromise(searchAskDocuments(parsed.right.question, parsed.right.scope), {
+        const sources = await Effect.runPromise(searchAskDocuments(parsed.success.question, parsed.success.scope), {
           signal: request.signal,
         });
         if (sources.length === 0) {
@@ -68,13 +68,13 @@ export async function POST(request: Request) {
 
         await Effect.runPromise(
           streamAskAnswer({
-            conversationId: parsed.right.conversationId,
+            conversationId: parsed.success.conversationId,
             onText: (delta) => write("text", { delta }),
-            question: parsed.right.question,
+            question: parsed.success.question,
             // 客户端断连即中止生成，不再为已离开的访客烧 token。
             signal: request.signal,
             sources,
-            visitorId: parsed.right.visitorId,
+            visitorId: parsed.success.visitorId,
           }),
           { signal: request.signal },
         );

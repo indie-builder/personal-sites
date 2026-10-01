@@ -31,7 +31,7 @@ export function collectDesignEvidenceImages(media, { execute = execFileAsync, te
           }),
         ),
         // Unavailable photos or frames reduce evidence; the text remains usable.
-        Effect.catchAll(() => Effect.void),
+        Effect.catch(() => Effect.void),
       );
     for (const [mediaIndex, item] of (media ?? []).entries()) {
       if (imagePaths.length >= MAX_EVIDENCE_IMAGES) break;

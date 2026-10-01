@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@site/effect": "workspace:*",
-    "@supabase/supabase-js": "2.116.0",
+    "@supabase/supabase-js": "2.117.2",
     "better-sqlite3": "^13.0.3",
-    "effect": "3.22.2"
+    "effect": "4.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0"

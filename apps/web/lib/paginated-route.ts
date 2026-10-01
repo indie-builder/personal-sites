@@ -1,4 +1,4 @@
-import { Effect, Either, Schema } from "effect";
+import { Effect, Result, Schema } from "effect";
 
 const PUBLIC_FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
@@ -27,25 +27,23 @@ export function createPaginatedFeedRoute({
   label,
 }: PaginatedFeedConfig) {
   const querySchema = Schema.Struct({
-    limit: Schema.optionalWith(
-      Schema.NumberFromString.pipe(Schema.int())
-        .pipe(Schema.greaterThanOrEqualTo(1))
-        .pipe(Schema.lessThanOrEqualTo(maxLimit)),
-      { default: () => pageStep },
-    ),
-    offset: Schema.optionalWith(
-      Schema.NumberFromString.pipe(Schema.int())
-        .pipe(Schema.greaterThanOrEqualTo(0))
-        .pipe(Schema.lessThanOrEqualTo(maxOffset)),
-      { default: () => 0 },
-    ),
+    limit: Schema.NumberFromString.check(Schema.isInt())
+      .check(Schema.isGreaterThanOrEqualTo(1))
+      .check(Schema.isLessThanOrEqualTo(maxLimit))
+      .pipe(Schema.withDecodingDefaultType(Effect.sync(() => pageStep))),
+    offset: Schema.NumberFromString.check(Schema.isInt())
+      .check(Schema.isGreaterThanOrEqualTo(0))
+      .check(Schema.isLessThanOrEqualTo(maxOffset))
+      .pipe(Schema.withDecodingDefaultType(Effect.sync(() => 0))),
   });
 
   return async function GET(request: Request) {
-    const query = Schema.decodeUnknownEither(querySchema)(Object.fromEntries(new URL(request.url).searchParams));
-    if (Either.isLeft(query)) return Response.json({ error: "分页参数无效。" }, { status: 400 });
+    const query = Schema.decodeUnknownResult(querySchema)(
+      Object.fromEntries(new URL(request.url).searchParams),
+    );
+    if (Result.isFailure(query)) return Response.json({ error: "分页参数无效。" }, { status: 400 });
 
-    const offset = Math.floor(query.right.offset / pageStep) * pageStep;
+    const offset = Math.floor(query.success.offset / pageStep) * pageStep;
     try {
       return Response.json(await Effect.runPromise(readPage(offset, pageStep), { signal: request.signal }), {
         headers: { "Cache-Control": PUBLIC_FEED_CACHE_CONTROL },

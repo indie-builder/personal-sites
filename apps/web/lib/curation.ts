@@ -9,10 +9,10 @@ import { curationItemSchema } from "@/lib/curation-types";
 import type { CurationItem, CurationListItem } from "@/lib/curation-types";
 import { getPublicDatabase } from "@/lib/public-database";
 
-const curationContentRowSchema = Schema.Struct({ content_json: Schema.String.pipe(Schema.minLength(1)) });
+const curationContentRowSchema = Schema.Struct({ content_json: Schema.String.check(Schema.isMinLength(1)) });
 const curationNeighborRowSchema = Schema.Struct({
-  id: Schema.String.pipe(Schema.minLength(1)),
-  title: Schema.String.pipe(Schema.minLength(1)),
+  id: Schema.String.check(Schema.isMinLength(1)),
+  title: Schema.String.check(Schema.isMinLength(1)),
 });
 const ATTACHMENT_LABELS = {
   animated_gif: "GIF",
@@ -144,7 +144,7 @@ export type CurationNeighbors = {
   older: { id: string; title: string } | null;
 };
 
-const curationPlatformRowSchema = Schema.Struct({ platform: Schema.Literal("douyin", "x") });
+const curationPlatformRowSchema = Schema.Struct({ platform: Schema.Literals(["douyin", "x"]) });
 
 // 剪报簿总量有限（逐条人工策展的点赞），一次取全量 id+title 即可按列表同一排序定位相邻条目。
 // 来源拆分后相邻导航不跨来源：抖音条目只在抖音条目间翻页，X 条目只在 X 条目间翻页。

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { runCli } from "@site/effect/cli";
-import { Effect } from "effect";
+import { Effect, Semaphore } from "effect";
 import { attempt, io } from "@site/effect";
 
 import { execFile } from "node:child_process";
@@ -85,7 +85,7 @@ export function settleConcurrently(targets, concurrency, processTarget) {
       targets,
       (target) =>
         Effect.suspend(() => processTarget(target)).pipe(
-          Effect.catchAll((error) =>
+          Effect.catch((error) =>
             Effect.sync(() => {
               failures.push({ error, target });
             }),
@@ -144,7 +144,7 @@ function promptCurationResponse(reader, prompt, taxonomy) {
     .pipe(
       Effect.flatMap((raw) =>
         parse(raw).pipe(
-          Effect.catchAll((error) =>
+          Effect.catch((error) =>
             error.cause instanceof SyntaxError
               ? reader
                   .prompt(
@@ -233,8 +233,8 @@ function sync(options) {
     }
 
     let completed = 0;
-    const saveLock = Effect.unsafeMakeSemaphore(1);
-    const analyzerLock = Effect.unsafeMakeSemaphore(analyzerConcurrency);
+    const saveLock = Semaphore.makeUnsafe(1);
+    const analyzerLock = Semaphore.makeUnsafe(analyzerConcurrency);
     function persistQueue() {
       return saveLock.withPermits(1)(
         Effect.suspend(() => {

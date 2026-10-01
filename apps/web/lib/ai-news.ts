@@ -3,7 +3,7 @@ import { attempt, io } from "@site/effect";
 import "server-only";
 
 import { cache } from "react";
-import { Schema } from "effect";
+import { Schema, Struct } from "effect";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
 import type { AiNewsListItem } from "@/lib/ai-news-types";
@@ -29,7 +29,7 @@ function getPublicAiNewsClient() {
 
 const aiNewsRowSchema = Schema.Struct({ content: aiNewsItemContentSchema, selected: Schema.Boolean });
 const aiNewsListRowSchema = Schema.Struct({
-  ...aiNewsItemContentSchema.omit("reason", "score", "url").fields,
+  ...aiNewsItemContentSchema.mapFields(Struct.omit(["reason", "score", "url"])).fields,
   selected: Schema.Boolean,
 });
 const listSelect =
@@ -44,7 +44,7 @@ const readLiveList = cache(() =>
         const client = yield* attempt("ai-news.client", getPublicAiNewsClient);
         const metadata = yield* attempt("ai-news.archive", () => archiveMetadata(getAiNewsArchive()));
         const rows = yield* readPublicRows(client, { select: listSelect, changedSince: metadata });
-        return yield* Schema.decodeUnknown(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(rows);
+        return yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(rows);
       }),
     ),
   ),
@@ -69,7 +69,7 @@ export function getAiNewsPage(offset = 0, limit = AI_NEWS_LIST_LIMIT) {
     const items = [...live, ...archived].sort(compareNews).slice(start, start + limit + 1);
     return {
       hasMore: items.length > limit,
-      items: yield* Schema.decodeUnknown(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(items.slice(0, limit)),
+      items: yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(items.slice(0, limit)),
     };
   });
 }
@@ -93,7 +93,7 @@ export const getAiNewsItem = cache((id: string) =>
         const { data, error } = yield* io("ai-news.detail", () => query.maybeSingle());
         if (error) return yield* Effect.fail(new Error(`读取 Supabase 每日动态详情失败：${error.message}`));
         if (!data) return archived;
-        const row = yield* Schema.decodeUnknown(aiNewsRowSchema)(data);
+        const row = yield* Schema.decodeUnknownEffect(aiNewsRowSchema)(data);
         return { ...row.content, selected: row.selected };
       }),
     ),
@@ -106,7 +106,7 @@ const aiNewsSearchRowSchema = Schema.Struct({
   summary: Schema.String,
   reason: Schema.String,
   published_at: Schema.NullOr(Schema.String),
-  score: Schema.Number.pipe(Schema.finite()),
+  score: Schema.Number.check(Schema.isFinite()),
 });
 
 export function searchAiNewsDocuments(query: string, limit = 6) {
@@ -122,13 +122,13 @@ export function searchAiNewsDocuments(query: string, limit = 6) {
       { concurrency: 2 },
     );
     if (error) return yield* Effect.fail(new Error(`检索 Supabase 每日动态失败：${error.message}`));
-    const changedIds = (yield* Schema.decodeUnknown(
+    const changedIds = (yield* Schema.decodeUnknownEffect(
       Schema.Array(Schema.Struct({ id: Schema.String })).pipe(Schema.mutable),
     )(changedRows)).map((row) => row.id);
     const archived = yield* attempt("ai-news.searchArchive", () =>
       searchArchivedItems(archive, query, limit, changedIds),
     );
-    const live = (yield* Schema.decodeUnknown(Schema.Array(aiNewsSearchRowSchema).pipe(Schema.mutable))(data)).map(
+    const live = (yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsSearchRowSchema).pipe(Schema.mutable))(data)).map(
       (row) => ({ ...row, publishedAt: row.published_at }),
     );
     // Both sources use the same literal occurrence score. Remote versions supersede matching archive ids.

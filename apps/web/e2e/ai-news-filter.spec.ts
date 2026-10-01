@@ -11,6 +11,7 @@ test("daily news category menu filters on a narrow screen", async ({ page }) => 
   expect(label).not.toBe("全部动态");
   expect(await menu.evaluate((element) => element.getBoundingClientRect().right)).toBeLessThanOrEqual(320);
   await category.click();
+  await expect(menu).toBeHidden();
   await expect(page.getByRole("button", { name: `筛选每日动态：${label}` })).toBeVisible();
   await page.getByRole("button", { name: `筛选每日动态：${label}` }).click();
   await expect(menu.getByRole("menuitemradio", { name: label })).toHaveAttribute("data-state", "checked");

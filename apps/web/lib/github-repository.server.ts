@@ -2,7 +2,7 @@ import { Cause, Data, Effect } from "effect";
 import { io } from "@site/effect";
 import "server-only";
 
-import { Either, Schema } from "effect";
+import { Result, Schema } from "effect";
 
 import {
   githubRepositoryFileUrl,
@@ -13,14 +13,14 @@ import { getOpenSourceEntry } from "@/lib/open-source";
 
 const MAX_FILE_BYTES = 512 * 1024;
 const MAX_TREE_ENTRIES = 6_000;
-const repositorySchema = Schema.String.pipe(Schema.pattern(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u));
-const repositoryMetadataSchema = Schema.Struct({ default_branch: Schema.String.pipe(Schema.minLength(1)) });
+const repositorySchema = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u));
+const repositoryMetadataSchema = Schema.Struct({ default_branch: Schema.String.check(Schema.isMinLength(1)) });
 const repositoryTreeSchema = Schema.Struct({
   tree: Schema.Array(
     Schema.Struct({
       path: Schema.String,
-      size: Schema.optional(Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.nonNegative())),
-      type: Schema.Literal("blob", "tree", "commit"),
+      size: Schema.optional(Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0))),
+      type: Schema.Literals(["blob", "tree", "commit"]),
     }),
   ).pipe(Schema.mutable),
   truncated: Schema.optional(Schema.Boolean),
@@ -45,7 +45,7 @@ export function repositoryResponse(
       Effect.map((data) =>
         Response.json(data, { headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600" } }),
       ),
-      Effect.catchAllCause((cause) =>
+      Effect.catchCause((cause) =>
         Effect.sync(() => {
           const error = Cause.squash(cause);
           if (error instanceof GitHubRepositoryBrowserError)
@@ -93,15 +93,15 @@ function resolvePublicRepository(slug: string) {
   return Effect.gen(function* () {
     const entry = yield* getOpenSourceEntry(slug);
     if (!entry) return yield* Effect.fail(new GitHubRepositoryBrowserError("未找到已公开的开源仓库。", 404));
-    const repository = Schema.decodeUnknownEither(repositorySchema)(entry.repository);
-    if (Either.isLeft(repository))
+    const repository = Schema.decodeUnknownResult(repositorySchema)(entry.repository);
+    if (Result.isFailure(repository))
       return yield* Effect.fail(new GitHubRepositoryBrowserError("公开仓库地址无效。", 500));
     return {
       // repositoryDefaultBranch 由 github-starred 同步管线写入公开投影（见
       // modules/github-starred/publish-to-sqlite.mjs）；存量投影行在回填前仍为
       // null，此时读取侧保留回源 GitHub 的兜底（getDefaultBranch）。
       defaultBranch: entry.repositoryDefaultBranch ?? null,
-      repository: repository.right,
+      repository: repository.success,
       repositoryUrl: entry.repositoryUrl,
     };
   });
@@ -110,7 +110,7 @@ function resolvePublicRepository(slug: string) {
 function getDefaultBranch(repository: string) {
   return Effect.gen(function* () {
     const response = yield* githubFetch(`/repos/${repository}`);
-    const metadata = yield* Schema.decodeUnknown(repositoryMetadataSchema)(
+    const metadata = yield* Schema.decodeUnknownEffect(repositoryMetadataSchema)(
       yield* io("github.branch.json", () => response.json()),
     );
     return metadata.default_branch;
@@ -122,7 +122,7 @@ export function getGitHubRepositoryTree(slug: string) {
     const { defaultBranch, repository, repositoryUrl } = yield* resolvePublicRepository(slug);
     const branch = defaultBranch ?? (yield* getDefaultBranch(repository));
     const response = yield* githubFetch(`/repos/${repository}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
-    const result = yield* Schema.decodeUnknown(repositoryTreeSchema)(
+    const result = yield* Schema.decodeUnknownEffect(repositoryTreeSchema)(
       yield* io("github.tree.json", () => response.json()),
     );
     const entries: GitHubRepositoryTreeEntry[] = result.tree

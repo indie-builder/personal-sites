@@ -150,7 +150,7 @@ function createOneLineSummary(record, { prompt }) {
   return Effect.suspend(() => prompt(buildOneLineSummaryPrompt(record))).pipe(
     Effect.flatMap((value) => attempt("github.summary", () => normaliseOneLineSummary(value))),
     Effect.map((summary) => ({ fallback: false, summary })),
-    Effect.catchAll(() =>
+    Effect.catch(() =>
       attempt("github.summaryFallback", () => ({ fallback: true, summary: fallbackOneLineSummary(record) })),
     ),
   );
@@ -300,7 +300,7 @@ export function analyzeStarredRecords(
             );
           }),
         ),
-        Effect.catchAll((error) =>
+        Effect.catch((error) =>
           Effect.gen(function* () {
             const failure = {
               repository: record.repository.fullName,

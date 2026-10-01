@@ -6,6 +6,6 @@ import { attempt, io } from "@site/effect";
 export function readJsonOr(filePath, fallback) {
   return io("file.read", () => readFile(filePath, "utf8")).pipe(
     Effect.flatMap((text) => attempt("file.json", () => JSON.parse(text))),
-    Effect.catchAll((error) => (error.cause?.code === "ENOENT" ? Effect.succeed(fallback) : Effect.fail(error))),
+    Effect.catch((error) => (error.cause?.code === "ENOENT" ? Effect.succeed(fallback) : Effect.fail(error))),
   );
 }

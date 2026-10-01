@@ -10,7 +10,7 @@ import { toOpenSourceListEntry } from "@/lib/open-source-types";
 import type { OpenSourceEntry } from "@/lib/open-source-types";
 import { getPublicDatabase } from "@/lib/public-database";
 
-const contentRowSchema = Schema.Struct({ content_json: Schema.String.pipe(Schema.minLength(1)) });
+const contentRowSchema = Schema.Struct({ content_json: Schema.String.check(Schema.isMinLength(1)) });
 
 function parseEntry(contentJson: string): OpenSourceEntry {
   return Schema.decodeUnknownSync(openSourceEntrySchema)(JSON.parse(contentJson));

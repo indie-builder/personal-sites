@@ -133,7 +133,7 @@ function captureSourceOrder({ birdPath, credentials, source }) {
     await writeFile(outputPath, JSON.stringify(snapshot, null, 2) + "\n", { mode: 0o600 });
     return outputPath;
   }).pipe(
-    Effect.catchAll((error) =>
+    Effect.catch((error) =>
       Effect.sync(() => {
         console.warn(`无法读取 X ${source} 列表顺序；新条目将暂不写入收录时间和顺序：${error.message}`);
         return null;

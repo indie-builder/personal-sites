@@ -1,12 +1,12 @@
 import { Effect } from "effect";
-import { Either, Schema } from "effect";
+import { Result, Schema } from "effect";
 
 import { authorizeAiNewsCron, runAiNewsCron } from "@/lib/ai-news-sync.server";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
 
-const bodySchema = Schema.Struct({ backfill: Schema.optionalWith(Schema.Boolean, { default: () => false }) });
+const bodySchema = Schema.Struct({ backfill: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))) });
 
 export async function POST(request: Request) {
   const authorization = request.headers.get("authorization");
@@ -15,9 +15,9 @@ export async function POST(request: Request) {
     if (!(await Effect.runPromise(authorizeAiNewsCron(secret)))) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const body = Schema.decodeUnknownEither(bodySchema)(await request.json().catch(() => ({})));
-    if (Either.isLeft(body)) return Response.json({ error: "请求参数无效。" }, { status: 400 });
-    return Response.json(await Effect.runPromise(runAiNewsCron(body.right.backfill)), {
+    const body = Schema.decodeUnknownResult(bodySchema)(await request.json().catch(() => ({})));
+    if (Result.isFailure(body)) return Response.json({ error: "请求参数无效。" }, { status: 400 });
+    return Response.json(await Effect.runPromise(runAiNewsCron(body.success.backfill)), {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

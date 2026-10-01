@@ -21,7 +21,7 @@ function jsonError(message: string, status: number) {
 
 function fetchUpstreamOnce(url: URL, headers: Headers, method: "GET" | "HEAD") {
   return io("x-media.headers", (signal) => fetch(url, { headers, method, redirect: "manual", signal })).pipe(
-    Effect.timeoutFail({ duration: UPSTREAM_TIMEOUT_MS, onTimeout: () => new Error("视频源响应头超时。") }),
+    Effect.timeoutOrElse({ duration: UPSTREAM_TIMEOUT_MS, orElse: () => Effect.fail(new Error("视频源响应头超时。")) }),
   );
 }
 
