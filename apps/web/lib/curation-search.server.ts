@@ -20,19 +20,19 @@ function occurrences(text: string, needle: string) {
 }
 
 const localSearchRowSchema = Schema.Struct({
-  content: Schema.String.pipe(Schema.minLength(1)),
-  id: Schema.String.pipe(Schema.minLength(1)),
+  content: Schema.String.check(Schema.isMinLength(1)),
+  id: Schema.String.check(Schema.isMinLength(1)),
   published_at: Schema.NullOr(DateTimeString),
-  search_text: Schema.String.pipe(Schema.minLength(1)),
+  search_text: Schema.String.check(Schema.isMinLength(1)),
   section: Schema.NullOr(Schema.String),
-  source_id: Schema.String.pipe(Schema.minLength(1)),
-  source_scope: Schema.Literal("daily", "open-source", "profile"),
-  source_url: Schema.String.pipe(Schema.minLength(1)),
-  title: Schema.String.pipe(Schema.minLength(1)),
+  source_id: Schema.String.check(Schema.isMinLength(1)),
+  source_scope: Schema.Literals(["daily", "open-source", "profile"]),
+  source_url: Schema.String.check(Schema.isMinLength(1)),
+  title: Schema.String.check(Schema.isMinLength(1)),
 });
 const localSearchFtsRowSchema = Schema.Struct({
-  id: Schema.String.pipe(Schema.minLength(1)),
-  rank: Schema.Number.pipe(Schema.finite()),
+  id: Schema.String.check(Schema.isMinLength(1)),
+  rank: Schema.Number.check(Schema.isFinite()),
 });
 
 export type LocalAskDocument = Omit<AskSource, "scope"> & {

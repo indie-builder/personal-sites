@@ -73,10 +73,10 @@ import cn.lovemyrmb.personalsite.ui.portfolio.PortfolioScreen
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.blur.materials.HazeMaterials
 
 private const val BAR_HEIGHT = 72
 
@@ -90,7 +90,6 @@ private val glassBarActions = listOf(
     GlassBarAction("关于我", NavigationIcons.About, "about"),
 )
 
-@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
     val navController = rememberNavController()
@@ -222,7 +221,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     .fillMaxWidth()
                     .height(BAR_HEIGHT.dp)
                     .clip(CircleShape)
-                    .hazeEffect(hazeState, style = HazeMaterials.thin(containerColor = SiteTheme.colors.background))
+                    .hazeBlur(input = HazeInput.Sources(hazeState), style = HazeMaterials.thin(containerColor = SiteTheme.colors.background))
                     .border(1.dp, Brush.verticalGradient(listOf(
                         Color.White.copy(alpha = 0.65f),
                         SiteTheme.colors.ink.copy(alpha = 0.12f),

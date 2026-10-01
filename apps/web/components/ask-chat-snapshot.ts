@@ -2,11 +2,11 @@ import { Schema } from "effect";
 
 import type { AskSource } from "@/lib/ask-types";
 
-const sourceSchema: Schema.Schema<AskSource> = Schema.Struct({
+const sourceSchema: Schema.Codec<AskSource> = Schema.Struct({
   content: Schema.String,
   id: Schema.String,
   publishedAt: Schema.NullOr(Schema.String),
-  scope: Schema.Literal("profile", "ai-news", "daily", "open-source"),
+  scope: Schema.Literals(["profile", "ai-news", "daily", "open-source"]),
   section: Schema.NullOr(Schema.String),
   sourceId: Schema.String,
   sourceUrl: Schema.String,
@@ -18,8 +18,8 @@ const messageSchema = Schema.Struct({
   content: Schema.String,
   id: Schema.String,
   isComplete: Schema.Boolean,
-  role: Schema.Literal("assistant", "user"),
-  interruption: Schema.optional(Schema.Struct({ kind: Schema.Literal("stopped", "error"), message: Schema.String })),
+  role: Schema.Literals(["assistant", "user"]),
+  interruption: Schema.optional(Schema.Struct({ kind: Schema.Literals(["stopped", "error"]), message: Schema.String })),
 });
 
 export type ChatMessage = typeof messageSchema.Type;

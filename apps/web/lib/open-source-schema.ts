@@ -2,10 +2,10 @@ import { UrlString } from "@site/effect/schema";
 import { Schema } from "effect";
 
 export const openSourceEntrySchema = Schema.Struct({
-  category: Schema.Literal("skills", "agents", "context", "tools"),
+  category: Schema.Literals(["skills", "agents", "context", "tools"]),
   caveats: Schema.Array(Schema.String).pipe(Schema.mutable),
   dimensions: Schema.Array(
-    Schema.Literal(
+    Schema.Literals([
       "agent-skills",
       "coding-agent",
       "agent-runtime",
@@ -17,11 +17,11 @@ export const openSourceEntrySchema = Schema.Struct({
       "local-retrieval",
       "model-gateway",
       "ai-ingestion",
-    ),
+    ]),
   ).pipe(Schema.mutable),
   evidence: Schema.Struct({
     checkedAt: Schema.String,
-    kind: Schema.Literal("readme", "repository"),
+    kind: Schema.Literals(["readme", "repository"]),
     label: Schema.String,
     note: Schema.String,
     url: UrlString,
@@ -30,7 +30,7 @@ export const openSourceEntrySchema = Schema.Struct({
   nextStep: Schema.String,
   parsedMarkdown: Schema.optional(Schema.NullOr(Schema.String)),
   personalNote: Schema.String,
-  readingSource: Schema.optional(Schema.Literal("official-zh-readme", "model-translation")),
+  readingSource: Schema.optional(Schema.Literals(["official-zh-readme", "model-translation"])),
   readingSourcePath: Schema.optional(Schema.NullOr(Schema.String)),
   repository: Schema.String,
   repositoryDefaultBranch: Schema.optional(Schema.NullOr(Schema.String)),
@@ -40,7 +40,9 @@ export const openSourceEntrySchema = Schema.Struct({
   sourceMarkdown: Schema.optional(Schema.NullOr(Schema.String)),
   sourceSummary: Schema.String,
   sourceTitle: Schema.optional(Schema.String),
-  status: Schema.Literal("持续跟踪", "计划试用", "已提炼"),
+  status: Schema.Literals(["持续跟踪", "计划试用", "已提炼"]),
   type: Schema.String,
-  workflow: Schema.Array(Schema.Struct({ description: Schema.String, label: Schema.String })).pipe(Schema.mutable),
+  workflow: Schema.Array(Schema.Struct({ description: Schema.String, label: Schema.String })).pipe(
+    Schema.mutable,
+  ),
 });

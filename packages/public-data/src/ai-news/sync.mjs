@@ -213,7 +213,7 @@ export function syncAiNews({
       Effect.onError((cause) =>
         stateStore
           .fail(Cause.squash(cause))
-          .pipe(Effect.catchAll((error) => Effect.sync(() => console.error("记录每日动态失败状态时出错", error)))),
+          .pipe(Effect.catch((error) => Effect.sync(() => console.error("记录每日动态失败状态时出错", error)))),
       ),
     );
   });

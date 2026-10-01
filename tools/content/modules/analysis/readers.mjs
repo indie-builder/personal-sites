@@ -56,7 +56,7 @@ export function createAnalysisReader({ engine, config = {}, repoRoot, env = proc
 
 /** Native process events enter Effect once; interruption kills the child. */
 export function runCodexCli(command, args, { cwd, input, maxBuffer = 8 * 1024 * 1024, timeoutMilliseconds } = {}) {
-  const request = Effect.async((resume) => {
+  const request = Effect.callback((resume) => {
     const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
     const output = { value: "" };
     const errors = { value: "" };
@@ -87,9 +87,9 @@ export function runCodexCli(command, args, { cwd, input, maxBuffer = 8 * 1024 * 
   });
   return Number.isInteger(timeoutMilliseconds)
     ? request.pipe(
-        Effect.timeoutFail({
+        Effect.timeoutOrElse({
           duration: timeoutMilliseconds,
-          onTimeout: () => new Error(`Codex CLI 请求超时（${Math.round(timeoutMilliseconds / 1000)} 秒）。`),
+          orElse: () => Effect.fail(new Error(`Codex CLI 请求超时（${Math.round(timeoutMilliseconds / 1000)} 秒）。`)),
         }),
       )
     : request;

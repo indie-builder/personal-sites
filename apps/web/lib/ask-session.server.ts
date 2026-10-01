@@ -5,7 +5,7 @@ import { generateText, streamText, type ModelMessage } from "ai";
 import { createHmac, randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { Effect, Schema, Stream } from "effect";
+import { Effect, Schema, Stream, Semaphore } from "effect";
 import { io, OperationError } from "@site/effect";
 
 import { requireAskApiKey, resolveAskModelConfig } from "@/lib/ask-model.mjs";
@@ -23,7 +23,7 @@ function compactionLimit() {
 const SESSION_BUCKET = "ask-sessions";
 const SESSION_DIRECTORY = path.resolve(process.cwd(), "../../var/ask-sessions");
 // ponytail: process-local lock; use transactional session rows if concurrent cross-instance turns become common.
-const sessionLocks = new Map<string, { semaphore: Effect.Semaphore; users: number }>();
+const sessionLocks = new Map<string, { semaphore: Semaphore.Semaphore; users: number }>();
 let lastCleanupAt = 0;
 
 const turnSchema = Schema.Struct({ question: Schema.String, answer: Schema.String });
@@ -127,7 +127,7 @@ function cleanExpiredSessions() {
 function withSessionLock<A, E>(key: string, operation: Effect.Effect<A, E>) {
   return Effect.acquireUseRelease(
     Effect.sync(() => {
-      const lock = sessionLocks.get(key) ?? { semaphore: Effect.unsafeMakeSemaphore(1), users: 0 };
+      const lock = sessionLocks.get(key) ?? { semaphore: Semaphore.makeUnsafe(1), users: 0 };
       lock.users += 1;
       sessionLocks.set(key, lock);
       return lock;
@@ -251,7 +251,7 @@ export function streamAskAnswer({
         if (signal?.aborted) return;
         // 已送达的回答仍有效；持久化失败不覆盖流式结果。
         yield* writeSession(key, { summary: session.summary, turns: [...session.turns, { question, answer }] }).pipe(
-          Effect.catchAll((error) => Effect.sync(() => console.error("Public ask session persistence failed", error))),
+          Effect.catch((error) => Effect.sync(() => console.error("Public ask session persistence failed", error))),
         );
       }),
     );

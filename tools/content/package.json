@@ -35,13 +35,13 @@
     "github:starred:run": "node scripts/github-starred.mjs run"
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "^0.85.1",
+    "@earendil-works/pi-coding-agent": "^0.99.2",
     "@huggingface/transformers": "4.3.0",
     "@site/effect": "workspace:*",
     "@site/public-data": "workspace:*",
-    "@supabase/supabase-js": "2.116.0",
+    "@supabase/supabase-js": "2.117.2",
     "better-sqlite3": "^13.0.3",
-    "effect": "3.22.2",
+    "effect": "4.0.0",
     "sqlite-vec": "0.1.9"
   },
   "devDependencies": {

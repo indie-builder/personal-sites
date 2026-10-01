@@ -15,9 +15,9 @@ export function withModelTimeout(request, timeoutMilliseconds, { label } = {}) {
   }
   const requestLabel = label ? `${label} 请求` : "模型请求";
   return request.pipe(
-    Effect.timeoutFail({
+    Effect.timeoutOrElse({
       duration: timeoutMilliseconds,
-      onTimeout: () => new Error(`${requestLabel}超时（${Math.round(timeoutMilliseconds / 1000)} 秒）。`),
+      orElse: () => Effect.fail(new Error(`${requestLabel}超时（${Math.round(timeoutMilliseconds / 1000)} 秒）。`)),
     }),
   );
 }

@@ -14,16 +14,42 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - lucide-react@1.25.0
   - shadcn@4.13.1
-  - '@earendil-works/pi-agent-core@0.84.4'
-  - '@earendil-works/pi-ai@0.84.4'
-  - '@earendil-works/pi-client@0.84.4'
-  - '@earendil-works/pi-coding-agent@0.84.4'
-  - '@earendil-works/pi-protocol@0.84.4'
-  - '@earendil-works/pi-telemetry@0.84.4'
-  - '@earendil-works/pi-tui@0.84.4'
-  - '@ai-sdk/anthropic@4.0.63'
-  - '@ai-sdk/gateway@4.0.92'
-  - ai@7.0.114
+  - '@earendil-works/pi-agent-core@0.99.2'
+  - '@earendil-works/pi-ai@0.99.2'
+  - '@earendil-works/pi-client@0.99.2'
+  - '@earendil-works/pi-coding-agent@0.99.2'
+  - '@earendil-works/pi-protocol@0.99.2'
+  - '@earendil-works/pi-telemetry@0.99.2'
+  - '@earendil-works/pi-tui@0.99.2'
+  - '@ai-sdk/anthropic@4.0.71'
+  - '@ai-sdk/gateway@4.0.102'
+  - ai@7.0.126
+  - '@ai-sdk/provider-utils@5.0.53'
+  - '@ai-sdk/provider@4.0.21'
+  - '@earendil-works/chord@0.99.2'
+  - '@earendil-works/pi-codemode@0.99.2'
+  - '@earendil-works/pi-mcp@0.99.2'
+  - '@next/env@16.3.8'
+  - '@next/swc-darwin-arm64@16.3.8'
+  - '@next/swc-darwin-x64@16.3.8'
+  - '@next/swc-linux-arm64-gnu@16.3.8'
+  - '@next/swc-linux-arm64-musl@16.3.8'
+  - '@next/swc-linux-x64-gnu@16.3.8'
+  - '@next/swc-linux-x64-musl@16.3.8'
+  - '@next/swc-win32-arm64-msvc@16.3.8'
+  - '@next/swc-win32-x64-msvc@16.3.8'
+  - '@turbo/darwin-64@2.11.6'
+  - '@turbo/darwin-arm64@2.11.6'
+  - '@turbo/linux-64@2.11.6'
+  - '@turbo/linux-arm64@2.11.6'
+  - '@turbo/windows-64@2.11.6'
+  - '@turbo/windows-arm64@2.11.6'
+  - '@vitest/mocker@5.0.3'
+  - '@vitest/spy@5.0.3'
+  - effect@4.0.0
+  - next@16.3.8
+  - turbo@2.11.6
+  - vitest@5.0.3
 overrides:
   '@types/react': 19.3.0
   '@types/react-dom': 19.3.0

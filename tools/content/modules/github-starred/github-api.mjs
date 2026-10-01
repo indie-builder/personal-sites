@@ -110,7 +110,7 @@ export function listStarredRepositories({ limit = Infinity, exec } = {}) {
 
 export function fetchReadme(repository, { exec } = {}) {
   return gh(["api", `repos/${repository.fullName}/readme`, "-H", "Accept: application/vnd.github.raw"], { exec }).pipe(
-    Effect.catchAll((error) =>
+    Effect.catch((error) =>
       isNotFound(error.cause ?? error)
         ? Effect.succeed(null)
         : Effect.fail(new Error(`读取 ${repository.fullName} README 失败：${error.message}`)),
@@ -149,7 +149,7 @@ function fetchRawFile(repository, filePath, { exec } = {}) {
   return gh(["api", `repos/${repository.fullName}/contents/${filePath}`, "-H", "Accept: application/vnd.github.raw"], {
     exec,
   }).pipe(
-    Effect.catchAll((error) =>
+    Effect.catch((error) =>
       isNotFound(error.cause ?? error)
         ? Effect.succeed(null)
         : Effect.fail(new Error(`读取 ${repository.fullName}/${filePath} 失败：${error.message}`)),

@@ -1,6 +1,6 @@
 # Effect 开发规则
 
-本项目的 TypeScript/JavaScript 业务 I/O 和异步流程默认使用 Effect。当前统一固定 `effect@3.22.2`（稳定版），升级时一起更新所有工作区与 lockfile。
+本项目的 TypeScript/JavaScript 业务 I/O 和异步流程默认使用 Effect。当前统一固定 `effect@4.0.0`（稳定版），升级时一起更新所有工作区与 lockfile。
 
 ## 边界
 
@@ -35,16 +35,16 @@ const result = await Effect.runPromise(readRemote(url), { signal });
 ```
 
 - 在 `Effect.gen` 中使用 `yield*` 组合业务 Effects；同步平台调用使用 `attempt`，原生 Promise/thenable 使用 `io`。
-- 预期业务失败用 `Effect.fail` 或 `Data.TaggedError`；按业务含义使用 `catchTag` / `catchAll`。不要把中断恢复为正常成功，也不要全局吞掉缺陷。
-- 输入、公开投影、上游响应、会话快照使用 Effect Schema；输出类型从 Schema 推导。同步读取边界可以用 `decodeUnknownSync`，业务流程使用 `decodeUnknown`。
+- 预期业务失败用 `Effect.fail` 或 `Data.TaggedError`；按业务含义使用 `catchTag` / `catch`。不要把中断恢复为正常成功，也不要全局吞掉缺陷。
+- 输入、公开投影、上游响应、会话快照使用 Effect Schema；输出类型从 Schema 推导。同步读取边界可以用 `decodeUnknownSync`，业务流程使用 `decodeUnknownEffect`。
 - HTTP 状态、JSON、SSE、脱敏日志由入口负责；内部错误 cause、密钥、会话与原始资料不能进入公开响应。
 
 ## 生命周期
 
 - 并发使用 `Effect.all` / `Effect.forEach` 的明确并发上限；逐条失败收集在单个任务内处理，其他失败中断兄弟任务。
-- 锁使用 Effect Semaphore。等待锁的任务被取消时，也必须释放等待计数和作用域资源。
+- 锁使用 `Semaphore` 模块。等待锁的任务被取消时，也必须释放等待计数和作用域资源。
 - 数据库、临时目录、模型会话、子进程用 `acquireRelease` / `acquireUseRelease` 和 `Effect.scoped`；错误、中断与成功都执行清理。
-- 超时使用 `timeoutFail`；等待使用 `Effect.sleep`。超时需要通过 AbortSignal 或 finalizer 停止真实底层操作。
+- 超时使用 `timeoutOrElse`；等待使用 `Effect.sleep`。超时需要通过 AbortSignal 或 finalizer 停止真实底层操作。
 - 重试使用明确的 Effect Schedule 和可重试错误条件。数据库写入、收费模型调用、已开始发送的 SSE 流不能默认自动重试；幂等性仍由业务设计保证。
 - 原子文件替换与必要的数据提交可以使用小范围 `uninterruptible`；不能让整个网络同步任务不可取消。
 - React 请求内复用使用 `cache(() => Effect.runSync(Effect.cached(program)))`；这里 `runSync` 只分配懒执行缓存，不执行 I/O。保持 ISR / `revalidate` 与 Next fetch 缓存策略。

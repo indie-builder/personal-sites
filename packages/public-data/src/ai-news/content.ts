@@ -10,12 +10,12 @@ export type AiNewsListItem = Omit<AiNewsItem, "reason" | "score" | "url">;
 
 export const aiNewsItemContentSchema = Schema.Struct({
   category: Schema.String,
-  id: Schema.String.pipe(Schema.minLength(1)),
+  id: Schema.String.check(Schema.isMinLength(1)),
   publishedAt: Schema.NullOr(Schema.String),
   reason: Schema.String,
-  score: Schema.NullOr(Schema.Number.pipe(Schema.finite())),
+  score: Schema.NullOr(Schema.Number.check(Schema.isFinite())),
   sourceName: Schema.String,
   summary: Schema.String,
-  title: Schema.String.pipe(Schema.minLength(1)),
+  title: Schema.String.check(Schema.isMinLength(1)),
   url: UrlString,
 });

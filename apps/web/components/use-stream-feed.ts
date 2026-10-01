@@ -47,8 +47,8 @@ export function requestStreamPage<Item>(url: string, fallbackError: string) {
     if (payload === null || !Array.isArray(payload.items) || typeof payload.hasMore !== "boolean") return fallbackError;
     return payload;
   }).pipe(
-    Effect.timeoutFail({ duration: STREAM_FETCH_TIMEOUT_MS, onTimeout: () => new Error(fallbackError) }),
-    Effect.catchAll(() => Effect.succeed(fallbackError)),
+    Effect.timeoutOrElse({ duration: STREAM_FETCH_TIMEOUT_MS, orElse: () => Effect.fail(new Error(fallbackError)) }),
+    Effect.catch(() => Effect.succeed(fallbackError)),
   );
 }
 

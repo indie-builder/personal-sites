@@ -44,7 +44,7 @@ X / 抖音 / GitHub Star 的抓取与模型结果留在本机忽略目录；只�
 ## 本地开发
 
 ```bash
-pnpm install          # Node.js >= 22.19.0；pnpm@12.4.2
+pnpm install          # Node.js >= 24.21.0；pnpm@12.8.1
 pnpm dev:domain       # https://personal-site.localhost（Turbopack）
 pnpm dev              # 不使用域名时的本地端口入口
 pnpm typecheck        # TypeScript 7（scripts/tsc7.mjs）

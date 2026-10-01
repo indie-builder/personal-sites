@@ -99,7 +99,7 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
               Effect.sync(() => response.body!.getReader()),
               (reader) =>
                 io("ask.cancel", () => reader.cancel()).pipe(
-                  Effect.catchAll(() => Effect.void),
+                  Effect.catch(() => Effect.void),
                   Effect.ensuring(Effect.sync(() => reader.releaseLock())),
                 ),
             );

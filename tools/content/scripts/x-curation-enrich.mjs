@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { runCli } from "@site/effect/cli";
-import { Effect, Schedule } from "effect";
+import { Effect, Schedule, Semaphore } from "effect";
 import { attempt, io } from "@site/effect";
 /** 本地 X 策展队列解析；原始队列仅留在 data/sensitive。 */
 
@@ -117,7 +117,7 @@ const program = Effect.gen(function* () {
 
   let done = 0;
   let failed = 0;
-  const saveLock = Effect.unsafeMakeSemaphore(1);
+  const saveLock = Semaphore.makeUnsafe(1);
   function persistQueue() {
     // Serialize only after acquiring the permit so concurrent completions cannot save stale snapshots.
     return saveLock.withPermits(1)(Effect.suspend(() => writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`)));
@@ -175,7 +175,7 @@ const program = Effect.gen(function* () {
           Effect.tapError((error) =>
             Effect.sync(() => console.warn(`  调用失败（${error.message.slice(0, 80)}），最多重试一次`)),
           ),
-          Effect.retry(Schedule.spaced("5 seconds").pipe(Schedule.intersect(Schedule.recurs(1)))),
+          Effect.retry(Schedule.spaced("5 seconds").pipe(Schedule.both(Schedule.recurs(1)))),
         );
 
         if (DESIGN_ONLY) {
@@ -195,7 +195,7 @@ const program = Effect.gen(function* () {
         yield* persistQueue(); // 每条落盘，按完成顺序串行写入
         yield* Effect.sleep(1000); // 限速
       }).pipe(
-        Effect.catchAll((error) =>
+        Effect.catch((error) =>
           Effect.gen(function* () {
             failed += 1;
             if (!DESIGN_ONLY) Object.assign(item, recordCurationAnalysisFailure(item, error, { model: MODEL_LABEL }));

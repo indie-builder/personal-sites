@@ -14,7 +14,7 @@ export function expandUrl(shortUrl) {
     }),
   ).pipe(
     Effect.map(({ stdout }) => stdout.trim() || null),
-    Effect.catchAll(() => Effect.succeed(null)),
+    Effect.catch(() => Effect.succeed(null)),
   );
 }
 
@@ -51,7 +51,7 @@ export function fetchGithubRepo(url) {
       readme: readme.stdout.slice(0, README_CAP),
       readmeTruncated: readme.stdout.length > README_CAP,
     };
-  }).pipe(Effect.catchAll(() => Effect.succeed(null)));
+  }).pipe(Effect.catch(() => Effect.succeed(null)));
 }
 
 export function fetchArticleText(url) {
@@ -82,6 +82,6 @@ export function fetchArticleText(url) {
         .trim()
         .slice(0, ARTICLE_CAP),
     ),
-    Effect.catchAll(() => Effect.succeed(null)),
+    Effect.catch(() => Effect.succeed(null)),
   );
 }
