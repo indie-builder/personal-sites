@@ -190,7 +190,7 @@ components:
 | 首页身份展示 | 桌面身份轨 + 每日动态；手机完整身份首页 | 手机先读介绍，再看技术词条，不强塞桌面右栏 |
 | 每日动态 | 日期工具栏 + 连续跟踪流 | 事件题名 > 摘要 > 元信息 |
 | 每日关注／设计收藏／抖音收藏 | 日期工具栏 + 双列登记簿，手机单列 | 判断题名与解析 > 来源摘录 > 标签 |
-| 开源关注 | 主题文字索引 + 仓库登记行 | 仓库名与中文判读 > 类型与状态 |
+| 开源关注 | 项目计数与主题单选菜单 + 仓库登记行 | 仓库名与中文判读 > 类型与状态 |
 | 策展详情 | 通栏标题 + 原文／解析对页，手机按顺序堆叠 | 原始证据与个人解析可区分，末尾能继续阅读 |
 | 角色问答 | 角色入口 + 右侧聊天抽屉 | 输入与回答为主，引用为辅助；无独立问答路由 |
 
@@ -217,7 +217,7 @@ components:
 | 页面壳与身份轨 | `app/page.tsx`、`components/site-profile.tsx` | 列表复用壳；详情复用身份组件，遵循既有手机详情收敛规则 |
 | 栏目刊头与手机导航 | `components/site-section-navigation.tsx`、同名 `.module.css` | 路由链接与当前栏目状态，不作筛选 Tab |
 | 日期与内容流 | `components/use-stream-date.ts`、`components/ai-news-stream.tsx`、`components/curation-stream.tsx` | 复用日期跟随与行密度；设计视频控件不嵌套进链接 |
-| 开源关注 | `components/open-source-stream.tsx` | 仓库判读与主题索引 |
+| 开源关注 | `components/open-source-stream.tsx` | 仓库判读与主题筛选菜单 |
 | 详情阅读 | `components/article-markdown.tsx`、`app/styles/foundation.css`、`app/styles/reading.css` | `.curation-detail__article`、`.curation-detail__section`、`.article-markdown`；对页使用 `--spread` 修饰边界 |
 | 问答与输入 | `components/ask-chat.tsx`、`components/ask-chat.module.css` | 仅供角色抽屉使用，保留消息滚动与原生输入组合器 |
 | 每日动态分类菜单 | `components/ai-news-stream.tsx`、`app/styles/streams.css`、`app/styles/profile.css` | 直接复用 Radix 单选菜单原语，保留站点自己的菜单样式 |
@@ -239,7 +239,7 @@ components:
 
 - 桌面内容区头部是刊头而非 tab：当前版块为 Title 档刊名（0.95rem/620/`-0.035em`）居左，兄弟版块为 quiet（`#767676`）`0.78rem` 同行链接居右，hover 与过渡中转墨色；整个头部共享唯一一条 `1px` 细线并保持 sticky。桌面无独立「首页」：`/` 的右侧即每日动态，刊头不再提供「首页」链接。
 - 刊头只承载阅读入口（每日动态/每日关注/设计收藏/抖音收藏/开源关注）。问答只通过个人简介中的像素角色展开，不列入桌面或手机导航。
-- 不叠加两排分类 Tab。每日动态分类放在日期行右侧的单选菜单；开源关注保留带计数的轻量主题文字索引，当前项用短下划线，小屏允许换行。
+- 不叠加两排分类 Tab。每日动态、每日关注与开源关注共用右侧单选筛选菜单；开源关注工具栏左侧显示当前结果的项目数，菜单显示每个主题的全库计数，当前项用勾选与触发器文字表达。工具栏随栏目导航停靠，小屏菜单保持在视口内。
 - 窄屏（≤900px）沿用身份区下方的横排移动导航（含首页链接），允许横滑并保持当前项可见。手机导航 0.78rem，当前项加重；触达区域至少 44px。
 - 阅读版块各有独立路径（`/ai-news`、`/curation`、`/design`、`/douyin`、`/open-source`），刊头兄弟链接与移动导航都指向完整路径；首页固定展示个人介绍与每日动态。
 

@@ -1,9 +1,9 @@
 import { Effect } from "effect";
 import type { Metadata } from "next";
 
-import { CurationStream } from "@/components/curation-stream";
+import { TaggedCurationStream } from "@/components/curation-stream";
 import { FeedPage } from "@/components/page-shell";
-import { getCurationPage } from "@/lib/curation";
+import { getCurationPage, getCurationTags } from "@/lib/curation";
 import { withCanonical } from "@/lib/metadata";
 
 // 策展投影随部署打包进 data/curation.sqlite（next.config 的 outputFileTracingIncludes），
@@ -17,8 +17,8 @@ export const metadata: Metadata = {
 };
 
 async function CurationFeed() {
-  const curationPage = await Effect.runPromise(getCurationPage());
-  return <CurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} />;
+  const { page, tags } = await Effect.runPromise(Effect.all({ page: getCurationPage(), tags: getCurationTags() }));
+  return <TaggedCurationStream initialHasMore={page.hasMore} initialItems={page.items} tags={tags} />;
 }
 
 export default function CurationPage() {

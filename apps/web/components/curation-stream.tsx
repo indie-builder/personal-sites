@@ -13,7 +13,9 @@
 import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useRef } from "react";
+import { CheckIcon, ChevronDown } from "lucide-react";
+import { DropdownMenu } from "radix-ui";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
 import type { CurationListItem } from "@/lib/curation-types";
@@ -23,12 +25,78 @@ import { useStreamDate } from "@/components/use-stream-date";
 import { STREAM_EASE } from "./motion-tokens";
 import { curationStreamSnapshot } from "./stream-snapshot";
 import { useStreamFeed } from "./use-stream-feed";
+import { getCurationScrollTarget } from "./curation-scroll";
+
+const TAG_STORAGE_KEY = "curation-active-tag";
+
+export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
+  initialHasMore: boolean;
+  initialItems: CurationListItem[];
+  tags: { tag: string; count: number; headId: string }[];
+}) {
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(TAG_STORAGE_KEY);
+      if (tags.some(({ tag }) => tag === saved)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后恢复筛选，保持 SSR 首屏一致
+        setActiveTag(saved);
+      }
+    } catch { /* 隐私模式下仍可正常筛选。 */ }
+  }, [tags]);
+
+  const selectTag = (value: string) => {
+    const next = value === "all" ? null : value;
+    if (next === activeTag) return;
+    setActiveTag(next);
+    try {
+      if (next) window.sessionStorage.setItem(TAG_STORAGE_KEY, next);
+      else window.sessionStorage.removeItem(TAG_STORAGE_KEY);
+    } catch { /* 会话存储只用于返回时恢复选择。 */ }
+    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: "auto", top: 0 });
+  };
+  const selected = tags.find(({ tag }) => tag === activeTag);
+  const filter = <DropdownMenu.Root modal={false}>
+    <DropdownMenu.Trigger asChild>
+      <button aria-label={`筛选每日关注：${activeTag ?? "全部主题"}`} className="ai-news__category-select" type="button">
+        <span>{activeTag ?? "全部主题"}</span><ChevronDown aria-hidden="true" />
+      </button>
+    </DropdownMenu.Trigger>
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content align="end" sideOffset={4} collisionPadding={16} className="ai-news__category-menu curation-category-menu">
+        <DropdownMenu.RadioGroup value={activeTag ?? "all"} onValueChange={selectTag}>
+          {[{ tag: "all", label: "全部主题" }, ...tags.map(({ tag, count }) => ({ tag, label: `${tag} · ${count}` }))].map(({ tag, label }) =>
+            <DropdownMenu.RadioItem data-slot="dropdown-menu-radio-item" key={tag} value={tag}>
+              {label}
+              <span data-slot="dropdown-menu-radio-item-indicator"><DropdownMenu.ItemIndicator><CheckIcon aria-hidden="true" /></DropdownMenu.ItemIndicator></span>
+            </DropdownMenu.RadioItem>)}
+        </DropdownMenu.RadioGroup>
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  </DropdownMenu.Root>;
+
+  return <div ref={wrapperRef}>
+    <CurationStream
+      apiPath={activeTag ? `/api/curation?tag=${encodeURIComponent(activeTag)}` : "/api/curation"}
+      emptyLabel="这个主题暂无已发布内容。"
+      filter={filter}
+      initialHasMore={activeTag ? true : initialHasMore}
+      initialItems={activeTag ? [] : initialItems}
+      key={activeTag ?? "all"}
+      snapshotHeadId={selected?.headId}
+      snapshotKey={activeTag ? `curation-stream-tag-${activeTag}-v1` : undefined}
+    />
+  </div>;
+}
 
 export function CurationStream({
   apiPath = "/api/curation",
   emptyLabel = "暂无已发布的策展条目。",
   initialHasMore,
   initialItems,
+  filter,
+  snapshotHeadId,
   snapshotKey,
   /** 加载失败且拿不到服务端文案时的兜底提示；design/douyin 板块传各自板块名。 */
   loadErrorMessage = "暂时无法加载更多策展内容。",
@@ -41,6 +109,8 @@ export function CurationStream({
   emptyLabel?: string;
   initialHasMore: boolean;
   initialItems: CurationListItem[];
+  filter?: ReactNode;
+  snapshotHeadId?: string;
   /** 会话快照的 sessionStorage key；两个板块各自独立，互不覆盖。 */
   snapshotKey?: string;
   loadErrorMessage?: string;
@@ -59,6 +129,7 @@ export function CurationStream({
     loadErrorMessage,
     initialHasMore,
     initialItems,
+    snapshotHeadId,
     snapshot: curationStreamSnapshot,
     storageKey: snapshotKey,
   });
@@ -67,8 +138,9 @@ export function CurationStream({
 
   return (
     <div ref={wrapperRef}>
-      {currentDate ? <div className="stream-date-toolbar">
-        <span className="curation-stream__date">{currentDate}</span>
+      {currentDate || filter ? <div className="stream-date-toolbar">
+        <span className="curation-stream__date">{currentDate ?? "每日关注"}</span>
+        {filter}
       </div> : null}
     <ol className="curation-home__stream" ref={streamRef}>
       {items.map((item, index) => {

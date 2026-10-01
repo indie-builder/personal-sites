@@ -2,58 +2,8 @@
   padding-top: 0;
 }
 
-.filters {
-  display: flex;
-  width: 100%;
-  align-items: baseline;
-  flex-wrap: wrap;
-  padding: .9rem 0 0;
-}
-
-.filter {
-  display: inline-flex;
-  min-height: 1.9rem;
-  flex: 0 0 auto;
-  align-items: center;
-  border: 0;
-  background: transparent;
-  color: var(--quiet);
-  cursor: pointer;
-  font-size: .74rem;
-  gap: .28rem;
-  padding: .25rem 0;
-  transition: color 180ms ease;
-}
-
-.filter + .filter::before {
-  margin: 0 .55rem;
-  color: #a9a9a9;
-  content: "·";
-}
-
-.filterCount {
-  color: #767676;
-  font-size: .63rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.filter[aria-pressed="true"] {
-  color: var(--ink);
-  font-weight: 620;
-}
-
-.filter[aria-pressed="true"] .filterCount {
-  color: #6f6f72;
-}
-
-.filter:hover {
-  color: var(--ink);
-}
-
-.filter:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 3px;
+.categoryMenu {
+  width: 12rem;
 }
 
 .stream {
@@ -64,6 +14,10 @@
 
 .stream li {
   border-top: 1px solid var(--line);
+}
+
+.stream li:first-child {
+  border-top: 0;
 }
 
 .stream li:last-child {
@@ -294,26 +248,8 @@
 .repositoryFileContent code { background: transparent; color: inherit; font-size: inherit; padding: 0; }
 .repositoryFileEmpty { display: grid; min-height: 14rem; place-items: center; text-align: center; }
 
-:global(html[data-curation-theme="dark"]) .filter {
-  color: #999;
-}
-
-:global(html[data-curation-theme="dark"]) .filter + .filter::before {
-  color: #545454;
-}
-
-:global(html[data-curation-theme="dark"]) .filter[aria-pressed="true"],
-:global(html[data-curation-theme="dark"]) .filter:hover,
-:global(html[data-curation-theme="dark"]) .filter:focus-visible {
-  color: #f4f4f4;
-}
-
 :global(html[data-curation-theme="dark"]) .stream a:hover h2,
 :global(html[data-curation-theme="dark"]) .stream a:focus-visible h2 {
-  color: #b8b8bb;
-}
-
-:global(html[data-curation-theme="dark"]) .filter[aria-pressed="true"] .filterCount {
   color: #b8b8bb;
 }
 
@@ -376,11 +312,6 @@
 }
 
 @media (max-width: 900px) {
-  .filter {
-    min-height: 2.75rem;
-    min-width: 2.75rem;
-  }
-
   .stream a {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -423,4 +354,3 @@
   outline: 2px solid currentColor;
   outline-offset: -3px;
 }
-.filter { min-height: 2.75rem; font-variant-numeric: tabular-nums; }

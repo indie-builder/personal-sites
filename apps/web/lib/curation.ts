@@ -66,19 +66,62 @@ function selectCurationRows(where: string, parameters: unknown[], offset: number
     .map((row) => toCurationListItem(parseCurationItem(row.content_json)));
 }
 
-function getCurationPageByPlatform(platform: CurationPlatform, offset: number, limit: number, designOnly = false) {
-  return attempt("getCurationPageByPlatform", () => {
+function getCurationPageByPlatform(
+  platform: CurationPlatform,
+  offset: number,
+  limit: number,
+  designOnly = false,
+  tag: string | null = null,
+) {
+  return attempt("curation.page", () => {
     const where = designOnly ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_DESIGN_INCLUDE}` : `${CURATION_PLATFORM} = ?`;
     const order = platform === "douyin" ? DOUYIN_CURATION_ORDER : CURATION_ORDER;
-    const items = selectCurationRows(`${where} ORDER BY ${order}`, designOnly ? [] : [platform], offset, limit);
+    const items = selectCurationRows(
+      `${where}${tag ? " AND EXISTS (SELECT 1 FROM json_each(content_json, '$.tags') WHERE value = ?)" : ""} ORDER BY ${order}`,
+      [...(designOnly ? [] : [platform]), ...(tag ? [tag] : [])],
+      offset,
+      limit,
+    );
     return { hasMore: items.length > limit, items: items.slice(0, limit) };
   });
 }
 
 /** 每日关注：来源拆分后只呈现 X 条目；抖音条目由 /douyin 板块承载。 */
-export function getCurationPage(offset = 0, limit = 20) {
-  return Effect.gen(function* () {
-    return yield* getCurationPageByPlatform("x", offset, limit);
+export function getCurationPage(offset = 0, limit = 20, tag: string | null = null) {
+  return getCurationPageByPlatform("x", offset, limit, false, tag);
+}
+
+/** 全库主题计数及首条 ID，不受已加载分页限制；首条用于校验返回列表的会话快照。 */
+export function getCurationTags() {
+  return attempt("curation.tags", () => {
+    const rows = getPublicDatabase()
+      .prepare(
+        `SELECT id, json_extract(content_json, '$.tags') AS tags
+      FROM curation_items WHERE ${CURATION_PLATFORM} = 'x' ORDER BY ${CURATION_ORDER}`,
+      )
+      .all();
+    const tags = new Map<string, { tag: string; count: number; headId: string }>();
+    const rowSchema = Schema.Struct({ id: Schema.String, tags: Schema.String });
+    for (const row of rows) {
+      const parsed = Schema.decodeUnknownSync(rowSchema)(row);
+      for (const tag of new Set(Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(parsed.tags)))) {
+        const entry = tags.get(tag) ?? { tag, count: 0, headId: parsed.id };
+        entry.count += 1;
+        tags.set(tag, entry);
+      }
+    }
+    const priority: Record<string, number> = {
+      提示词: 9,
+      视频提示词: 8,
+      软件工程提示词: 7,
+      图像提示词: 6,
+      写作提示词: 5,
+      学习提示词: 4,
+      研究提示词: 3,
+      助手提示词: 2,
+      技能: 1,
+    };
+    return [...tags.values()].sort((a, b) => (priority[b.tag] ?? 0) - (priority[a.tag] ?? 0) || b.count - a.count);
   });
 }
 
