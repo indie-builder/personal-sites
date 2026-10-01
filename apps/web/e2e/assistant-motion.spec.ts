@@ -97,7 +97,8 @@ test("the sprite actually descends on its first jump without inserting text line
 });
 
 test("assistant enters only after the English-to-Chinese introduction finishes", async ({ page }) => {
-  await page.goto("/");
+  // The profile starts with the streamed shell; waiting for news to finish can miss the English phase.
+  await page.goto("/", { waitUntil: "commit" });
   const introduction = page.locator(".curation-home__bio");
   const assistant = page.getByRole("button", { name: "和像素助手聊聊" });
   for (const phase of ["english", "erasing", "chinese"]) {

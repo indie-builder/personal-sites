@@ -21,6 +21,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/`. Do not copy sensitive directories.
 - Data operations bypass Turbo caching; Web build caching stays disabled while prerendering reads Supabase. See `docs/monorepo.md`.
 
+## Effect
+
+- Effect is the default for TypeScript/JavaScript business I/O and asynchronous orchestration across Web, shared packages, and content pipelines; follow `docs/effect-architecture.md`. Pure transformations and React/platform lifecycles stay native.
+- Return Effects from business functions; execute them only at Next.js, React callbacks/cache allocation, CLI, or test boundaries. Use Effect Schema, bounded concurrency, scopes, and explicit retry policies; keep SDK/Node Promise adapters small.
+- Use the pinned stable Effect version and `@site/effect` I/O adapters. Do not add parallel Promise business APIs, manual worker pools, timeout races, or Promise lock chains.
+
 ## Package Manager and Checks
 
 - Use `pnpm` with Node.js `>=22.19.0`; the package manager is pinned in `package.json`.

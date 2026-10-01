@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 
 import { OpenSourceStream } from "@/components/open-source-stream";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 async function OpenSourceFeed() {
-  const openSourceEntries = await getOpenSourceListEntries();
+  const openSourceEntries = await Effect.runPromise(getOpenSourceListEntries());
   return <OpenSourceStream entries={openSourceEntries} />;
 }
 

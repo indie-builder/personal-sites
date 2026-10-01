@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "../app/api/ai-news/[id]/route";
@@ -29,7 +30,7 @@ describe("GET /api/ai-news/[id]", () => {
   });
 
   it("serves the full item payload with the public cache header", async () => {
-    getAiNewsItemMock.mockResolvedValue(sampleItem);
+    getAiNewsItemMock.mockReturnValue(Effect.succeed(sampleItem));
 
     const response = await GET(new Request("http://localhost/api/ai-news/x"), {
       params: Promise.resolve({ id: sampleItem.id }),
@@ -42,7 +43,7 @@ describe("GET /api/ai-news/[id]", () => {
   });
 
   it("returns a JSON 404 when the id is unknown", async () => {
-    getAiNewsItemMock.mockResolvedValue(null);
+    getAiNewsItemMock.mockReturnValue(Effect.succeed(null));
 
     const response = await GET(new Request("http://localhost/api/ai-news/missing"), {
       params: Promise.resolve({ id: "missing" }),
@@ -53,7 +54,7 @@ describe("GET /api/ai-news/[id]", () => {
   });
 
   it("reports read failures as a JSON 500", async () => {
-    getAiNewsItemMock.mockRejectedValue(new Error("supabase down"));
+    getAiNewsItemMock.mockReturnValue(Effect.fail(new Error("supabase down")));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const response = await GET(new Request("http://localhost/api/ai-news/x"), {

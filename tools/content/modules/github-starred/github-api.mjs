@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import { attempt, io } from "@site/effect";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -64,13 +66,18 @@ function compactRepository(node, starredAt) {
   };
 }
 
-async function gh(args, { exec = execFileAsync } = {}) {
-  const { stdout } = await exec("gh", args, { maxBuffer: 8 * 1024 * 1024 });
-  return stdout;
+function gh(args, { exec = execFileAsync } = {}) {
+  return Effect.gen(function* () {
+    const { stdout } = yield* io("gh", (signal) => exec("gh", args, { maxBuffer: 8 * 1024 * 1024, signal }));
+    return stdout;
+  });
 }
 
-async function ghJson(args, options) {
-  return JSON.parse(await gh(args, options));
+function ghJson(args, options) {
+  return Effect.gen(function* () {
+    const text = yield* gh(args, options);
+    return yield* attempt("github.json", () => JSON.parse(text));
+  });
 }
 
 function isNotFound(error) {
@@ -78,45 +85,37 @@ function isNotFound(error) {
   return /(?:HTTP 404|Not Found|status 404)/iu.test(body);
 }
 
-export async function listStarredRepositories({ limit = Infinity, exec } = {}) {
-  const repositories = [];
-  let after = null;
+export function listStarredRepositories({ limit = Infinity, exec } = {}) {
+  return Effect.gen(function* () {
+    const repositories = [];
+    let after = null;
 
-  while (repositories.length < limit) {
-    const stdout = await gh(
-      [
-        "api",
-        "graphql",
-        "-f",
-        `query=${STARRED_REPOSITORIES_QUERY}`,
-        "-f",
-        `after=${after ?? ""}`,
-      ],
-      { exec },
-    );
-    const page = JSON.parse(stdout).data.viewer.starredRepositories;
-    for (const edge of page.edges) {
-      repositories.push(compactRepository(edge.node, edge.starredAt));
-      if (repositories.length >= limit) break;
+    while (repositories.length < limit) {
+      const stdout = yield* gh(
+        ["api", "graphql", "-f", `query=${STARRED_REPOSITORIES_QUERY}`, "-f", `after=${after ?? ""}`],
+        { exec },
+      );
+      const page = JSON.parse(stdout).data.viewer.starredRepositories;
+      for (const edge of page.edges) {
+        repositories.push(compactRepository(edge.node, edge.starredAt));
+        if (repositories.length >= limit) break;
+      }
+      if (!page.pageInfo.hasNextPage || repositories.length >= limit) break;
+      after = page.pageInfo.endCursor;
     }
-    if (!page.pageInfo.hasNextPage || repositories.length >= limit) break;
-    after = page.pageInfo.endCursor;
-  }
 
-  return repositories;
+    return repositories;
+  });
 }
 
-export async function fetchReadme(repository, { exec } = {}) {
-  try {
-    const markdown = await gh(
-      ["api", `repos/${repository.fullName}/readme`, "-H", "Accept: application/vnd.github.raw"],
-      { exec },
-    );
-    return markdown;
-  } catch (error) {
-    if (isNotFound(error)) return null;
-    throw new Error(`读取 ${repository.fullName} README 失败：${error.message}`);
-  }
+export function fetchReadme(repository, { exec } = {}) {
+  return gh(["api", `repos/${repository.fullName}/readme`, "-H", "Accept: application/vnd.github.raw"], { exec }).pipe(
+    Effect.catchAll((error) =>
+      isNotFound(error.cause ?? error)
+        ? Effect.succeed(null)
+        : Effect.fail(new Error(`读取 ${repository.fullName} README 失败：${error.message}`)),
+    ),
+  );
 }
 
 function normaliseContents(items) {
@@ -146,27 +145,31 @@ function chineseReadmeCandidates(entries) {
     });
 }
 
-async function fetchRawFile(repository, filePath, { exec } = {}) {
-  try {
-    return await gh(
-      ["api", `repos/${repository.fullName}/contents/${filePath}`, "-H", "Accept: application/vnd.github.raw"],
-      { exec },
-    );
-  } catch (error) {
-    if (isNotFound(error)) return null;
-    throw new Error(`读取 ${repository.fullName}/${filePath} 失败：${error.message}`);
-  }
+function fetchRawFile(repository, filePath, { exec } = {}) {
+  return gh(["api", `repos/${repository.fullName}/contents/${filePath}`, "-H", "Accept: application/vnd.github.raw"], {
+    exec,
+  }).pipe(
+    Effect.catchAll((error) =>
+      isNotFound(error.cause ?? error)
+        ? Effect.succeed(null)
+        : Effect.fail(new Error(`读取 ${repository.fullName}/${filePath} 失败：${error.message}`)),
+    ),
+  );
 }
 
-export async function fetchOfficialChineseReadme(repository, { exec, maxBytes } = {}) {
-  const refQuery = repository.defaultBranch ? `?ref=${encodeURIComponent(repository.defaultBranch)}` : "";
-  const root = normaliseContents(await ghJson(["api", `repos/${repository.fullName}/contents${refQuery}`], { exec }));
-  for (const candidate of chineseReadmeCandidates(root)) {
-    const raw = await fetchRawFile(repository, candidate.path, { exec });
-    if (raw === null || !isChineseMarkdown(raw)) continue;
-    return { markdown: truncateUtf8(raw, maxBytes), path: candidate.path };
-  }
-  return null;
+export function fetchOfficialChineseReadme(repository, { exec, maxBytes } = {}) {
+  return Effect.gen(function* () {
+    const refQuery = repository.defaultBranch ? `?ref=${encodeURIComponent(repository.defaultBranch)}` : "";
+    const root = normaliseContents(
+      yield* ghJson(["api", `repos/${repository.fullName}/contents${refQuery}`], { exec }),
+    );
+    for (const candidate of chineseReadmeCandidates(root)) {
+      const raw = yield* fetchRawFile(repository, candidate.path, { exec });
+      if (raw === null || !isChineseMarkdown(raw)) continue;
+      return { markdown: truncateUtf8(raw, maxBytes), path: candidate.path };
+    }
+    return null;
+  });
 }
 
 export function buildRepositoryStructureMarkdown(repository, rootEntries, manifests) {
@@ -189,21 +192,25 @@ export function buildRepositoryStructureMarkdown(repository, rootEntries, manife
   return lines.join("\n") + "\n";
 }
 
-export async function fetchRepositoryStructure(repository, { exec, maxBytes } = {}) {
-  const refQuery = repository.defaultBranch ? `?ref=${encodeURIComponent(repository.defaultBranch)}` : "";
-  const root = normaliseContents(await ghJson(["api", `repos/${repository.fullName}/contents${refQuery}`], { exec }));
-  const names = new Set(root.filter((item) => item.type === "file").map((item) => item.name));
-  const manifests = {};
+export function fetchRepositoryStructure(repository, { exec, maxBytes } = {}) {
+  return Effect.gen(function* () {
+    const refQuery = repository.defaultBranch ? `?ref=${encodeURIComponent(repository.defaultBranch)}` : "";
+    const root = normaliseContents(
+      yield* ghJson(["api", `repos/${repository.fullName}/contents${refQuery}`], { exec }),
+    );
+    const names = new Set(root.filter((item) => item.type === "file").map((item) => item.name));
+    const manifests = {};
 
-  for (const fileName of MANIFEST_FILES) {
-    if (!names.has(fileName)) continue;
-    const raw = await fetchRawFile(repository, fileName, { exec });
-    if (raw !== null) manifests[fileName] = raw.slice(0, maxBytes);
-  }
+    for (const fileName of MANIFEST_FILES) {
+      if (!names.has(fileName)) continue;
+      const raw = yield* fetchRawFile(repository, fileName, { exec });
+      if (raw !== null) manifests[fileName] = raw.slice(0, maxBytes);
+    }
 
-  return {
-    manifests,
-    markdown: buildRepositoryStructureMarkdown(repository, root, manifests),
-    root,
-  };
+    return {
+      manifests,
+      markdown: buildRepositoryStructureMarkdown(repository, root, manifests),
+      root,
+    };
+  });
 }

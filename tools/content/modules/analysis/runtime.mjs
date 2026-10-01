@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 const ANALYSIS_ENGINES = ["zcode", "codex-cli", "pi"];
 export const DEFAULT_ANALYSIS_ENGINE = "pi";
 
@@ -13,18 +14,14 @@ export function resolveAnalysisConcurrency({ codex = 1, engine, override = null,
   return concurrency;
 }
 
-/**
- * 固定并发的工作池：按索引把 count 个任务分发给至多 concurrency 个 worker。
- * worker 内部自行决定是否吞错；不吞错时首个错误会让整个池子 reject。
- */
-export async function runWorkerPool(count, concurrency, worker) {
-  let cursor = 0;
-  const runners = Array.from({ length: Math.min(concurrency, count) }, async () => {
-    while (cursor < count) {
-      const index = cursor;
-      cursor += 1;
-      await worker(index);
-    }
-  });
-  await Promise.all(runners);
+/** Effect owns bounded concurrency and interrupts sibling work on failure. */
+export function runWorkerPool(count, concurrency, worker) {
+  if (!Number.isInteger(count) || count < 0 || !Number.isInteger(concurrency) || concurrency < 1) {
+    return Effect.fail(new Error("任务数必须是非负整数，并发数必须是正整数。"));
+  }
+  return Effect.forEach(
+    Array.from({ length: count }, (_, index) => index),
+    worker,
+    { concurrency, discard: true },
+  );
 }

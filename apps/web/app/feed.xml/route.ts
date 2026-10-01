@@ -1,15 +1,17 @@
+import { Effect } from "effect";
 import { getFeedItems } from "@/lib/discovery.server";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const escapeXml = (value: string) => value
-  .replaceAll("&", "&amp;")
-  .replaceAll("<", "&lt;")
-  .replaceAll(">", "&gt;")
-  .replaceAll('"', "&quot;")
-  .replaceAll("'", "&apos;");
+const escapeXml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
 
 export async function GET() {
-  const items = await getFeedItems();
+  const items = await Effect.runPromise(getFeedItems());
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -18,13 +20,17 @@ export async function GET() {
     <description>陈远持续更新的 Agent 工程动态、策展与开源关注。</description>
     <language>zh-CN</language>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml" />
-${items.map((item) => `    <item>
+${items
+  .map(
+    (item) => `    <item>
       <title>${escapeXml(item.title)}</title>
       <link>${item.url}</link>
       <guid isPermaLink="true">${item.url}</guid>
       <description>${escapeXml(item.description)}</description>
       ${item.publishedAt ? `<pubDate>${new Date(item.publishedAt).toUTCString()}</pubDate>` : ""}
-    </item>`).join("\n")}
+    </item>`,
+  )
+  .join("\n")}
   </channel>
 </rss>`;
   return new Response(xml, {

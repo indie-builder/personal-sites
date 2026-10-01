@@ -21,13 +21,15 @@ for (const width of [1440, 390, 320, 844]) {
     const skills = menu.getByRole("menuitemradio", { name: /^Skills 与工作流 · /u });
     const count = Number((await skills.innerText()).split(" · ").at(-1));
     await skills.click();
+    await expect(menu).toBeHidden();
     const selected = page.getByRole("button", { name: "筛选开源关注：Skills 与工作流" });
     await expect(selected).toBeVisible();
     await expect(rows).toHaveCount(count);
     await expect(section.locator(".stream-date-toolbar")).toContainText(`${count} 个项目`);
     expect(await rows.locator("a > div:first-child > span:first-child").allTextContents()).toEqual(Array(count).fill("Skills 与工作流"));
-    await selected.focus();
+    await expect(selected).toBeFocused();
     await page.keyboard.press("Enter");
+    await expect(menu).toHaveAttribute("data-state", "open");
     await expect(skills).toHaveAttribute("data-state", "checked");
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();

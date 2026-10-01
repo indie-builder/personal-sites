@@ -1,115 +1,129 @@
-import { z } from "zod";
+import { UtcDateTimeString, UrlString } from "@site/effect/schema";
+import { Schema } from "effect";
 
 /**
  * 公开策展投影（curation.sqlite `content_json`）的唯一结构定义：
- * zod schema 同时承担运行时校验与静态类型推导，避免手写类型与校验规则漂移。
+ * Effect Schema 同时承担运行时校验与静态类型推导，避免手写类型与校验规则漂移。
  */
-export const curationItemSchema = z.object({
-  analysis: z.string().min(1),
-  author: z.object({
-    handle: z.string(),
-    name: z.string(),
-  }),
-  collectedAt: z.string().datetime().nullable().default(null),
-  collectedOrder: z.number().int().nonnegative().nullable().default(null),
-  design: z
-    .object({
-      categories: z.array(z.string().min(1)).max(3),
-      classifiedAt: z.string().datetime(),
-      confidence: z.number().min(0).max(1),
-      evidence: z.array(z.string().min(1)).max(4),
-      reason: z.string().min(1),
-      relevant: z.boolean(),
-      status: z.enum(["include", "exclude"]),
-    })
-    .nullable()
-    .default(null),
-  facts: z
-    .object({
-      version: z.number().int().positive(),
-      contentType: z.enum(["original", "quote", "reply"]),
-      domains: z.array(z.string()),
-      hashtags: z.array(z.string()),
-      linkTypes: z.array(z.string()),
-      mediaTypes: z.array(z.string()),
-      mentions: z.array(z.string()),
-      sourceKinds: z.array(z.string()),
-      tools: z.array(z.string()),
-    })
-    .default({
-      version: 1,
-      contentType: "original",
-      domains: [],
-      hashtags: [],
-      linkTypes: [],
-      mediaTypes: [],
-      mentions: [],
-      sourceKinds: [],
-      tools: [],
-    }),
-  // 抖音条目的证据摘录在原视频中出现的时间（mm:ss）；X 来源与旧数据为 null。
-  excerptTime: z.string().nullable().default(null),
-  id: z.string().min(1),
-  links: z.array(
-    z.object({
-      shortUrl: z.string().url().nullable(),
-      type: z.string().min(1),
-      url: z.string().url(),
-    }),
+export const curationItemSchema = Schema.Struct({
+  analysis: Schema.String.pipe(Schema.minLength(1)),
+  author: Schema.Struct({ handle: Schema.String, name: Schema.String }),
+  collectedAt: Schema.optionalWith(Schema.NullOr(UtcDateTimeString), { default: () => null }),
+  collectedOrder: Schema.optionalWith(
+    Schema.NullOr(Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.nonNegative())),
+    { default: () => null },
   ),
-  media: z.array(
-    z.object({
-      durationMs: z.number().int().nonnegative().nullable().default(null),
-      height: z.number().int().positive().nullable(),
-      previewUrl: z.string().url().nullable(),
-      type: z.enum(["photo", "video", "animated_gif"]),
-      url: z.string().url(),
-      videoUrl: z.string().url().nullable().default(null),
-      width: z.number().int().positive().nullable(),
-    }),
+  design: Schema.optionalWith(
+    Schema.NullOr(
+      Schema.Struct({
+        categories: Schema.Array(Schema.String.pipe(Schema.minLength(1)))
+          .pipe(Schema.mutable)
+          .pipe(Schema.maxItems(3)),
+        classifiedAt: UtcDateTimeString,
+        confidence: Schema.Number.pipe(Schema.finite())
+          .pipe(Schema.greaterThanOrEqualTo(0))
+          .pipe(Schema.lessThanOrEqualTo(1)),
+        evidence: Schema.Array(Schema.String.pipe(Schema.minLength(1)))
+          .pipe(Schema.mutable)
+          .pipe(Schema.maxItems(4)),
+        reason: Schema.String.pipe(Schema.minLength(1)),
+        relevant: Schema.Boolean,
+        status: Schema.Literal("include", "exclude"),
+      }),
+    ),
+    { default: () => null },
   ),
-  publishedAt: z.string().datetime().nullable(),
-  quoteContext: z
-    .object({
-      author: z.string(),
-      authorName: z.string(),
-      text: z.string(),
-    })
-    .nullable(),
-  source: z.object({
-    label: z.string().min(1),
-    platform: z.enum(["douyin", "x"]),
-    url: z.string().url(),
+  facts: Schema.optionalWith(
+    Schema.Struct({
+      version: Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.positive()),
+      contentType: Schema.Literal("original", "quote", "reply"),
+      domains: Schema.Array(Schema.String).pipe(Schema.mutable),
+      hashtags: Schema.Array(Schema.String).pipe(Schema.mutable),
+      linkTypes: Schema.Array(Schema.String).pipe(Schema.mutable),
+      mediaTypes: Schema.Array(Schema.String).pipe(Schema.mutable),
+      mentions: Schema.Array(Schema.String).pipe(Schema.mutable),
+      sourceKinds: Schema.Array(Schema.String).pipe(Schema.mutable),
+      tools: Schema.Array(Schema.String).pipe(Schema.mutable),
+    }),
+    {
+      default: () => ({
+        version: 1,
+        contentType: "original",
+        domains: [],
+        hashtags: [],
+        linkTypes: [],
+        mediaTypes: [],
+        mentions: [],
+        sourceKinds: [],
+        tools: [],
+      }),
+    },
+  ),
+  excerptTime: Schema.optionalWith(Schema.NullOr(Schema.String), { default: () => null }),
+  id: Schema.String.pipe(Schema.minLength(1)),
+  links: Schema.Array(
+    Schema.Struct({
+      shortUrl: Schema.NullOr(UrlString),
+      type: Schema.String.pipe(Schema.minLength(1)),
+      url: UrlString,
+    }),
+  ).pipe(Schema.mutable),
+  media: Schema.Array(
+    Schema.Struct({
+      durationMs: Schema.optionalWith(
+        Schema.NullOr(Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.nonNegative())),
+        { default: () => null },
+      ),
+      height: Schema.NullOr(Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.positive())),
+      previewUrl: Schema.NullOr(UrlString),
+      type: Schema.Literal("photo", "video", "animated_gif"),
+      url: UrlString,
+      videoUrl: Schema.optionalWith(Schema.NullOr(UrlString), { default: () => null }),
+      width: Schema.NullOr(Schema.Number.pipe(Schema.finite()).pipe(Schema.int()).pipe(Schema.positive())),
+    }),
+  ).pipe(Schema.mutable),
+  publishedAt: Schema.NullOr(UtcDateTimeString),
+  quoteContext: Schema.NullOr(Schema.Struct({ author: Schema.String, authorName: Schema.String, text: Schema.String })),
+  source: Schema.Struct({
+    label: Schema.String.pipe(Schema.minLength(1)),
+    platform: Schema.Literal("douyin", "x"),
+    url: UrlString,
   }),
-  searchSignals: z
-    .object({
-      concepts: z.array(z.string()),
-      entities: z.array(z.string()),
-      problems: z.array(z.string()),
-      sentiment: z.enum(["positive", "negative", "neutral", "humorous", "controversial"]),
-      tools: z.array(z.string()),
-      useCases: z.array(z.string()),
-    })
-    .nullable()
-    .default(null),
-  summary: z.string().min(1),
-  tags: z.array(z.string().min(1)).min(1),
-  text: z.string().min(1),
-  title: z.string().min(1),
-  visualFacts: z
-    .object({
-      interactionSignals: z.array(z.string()),
-      objects: z.array(z.string()),
-      ocr: z.array(z.string()),
-      scenes: z.array(z.string()),
-      styles: z.array(z.string()),
-      tools: z.array(z.string()),
-    })
-    .nullable()
-    .default(null),
+  searchSignals: Schema.optionalWith(
+    Schema.NullOr(
+      Schema.Struct({
+        concepts: Schema.Array(Schema.String).pipe(Schema.mutable),
+        entities: Schema.Array(Schema.String).pipe(Schema.mutable),
+        problems: Schema.Array(Schema.String).pipe(Schema.mutable),
+        sentiment: Schema.Literal("positive", "negative", "neutral", "humorous", "controversial"),
+        tools: Schema.Array(Schema.String).pipe(Schema.mutable),
+        useCases: Schema.Array(Schema.String).pipe(Schema.mutable),
+      }),
+    ),
+    { default: () => null },
+  ),
+  summary: Schema.String.pipe(Schema.minLength(1)),
+  tags: Schema.Array(Schema.String.pipe(Schema.minLength(1)))
+    .pipe(Schema.mutable)
+    .pipe(Schema.minItems(1)),
+  text: Schema.String.pipe(Schema.minLength(1)),
+  title: Schema.String.pipe(Schema.minLength(1)),
+  visualFacts: Schema.optionalWith(
+    Schema.NullOr(
+      Schema.Struct({
+        interactionSignals: Schema.Array(Schema.String).pipe(Schema.mutable),
+        objects: Schema.Array(Schema.String).pipe(Schema.mutable),
+        ocr: Schema.Array(Schema.String).pipe(Schema.mutable),
+        scenes: Schema.Array(Schema.String).pipe(Schema.mutable),
+        styles: Schema.Array(Schema.String).pipe(Schema.mutable),
+        tools: Schema.Array(Schema.String).pipe(Schema.mutable),
+      }),
+    ),
+    { default: () => null },
+  ),
 });
 
-export type CurationItem = z.infer<typeof curationItemSchema>;
+export type CurationItem = typeof curationItemSchema.Type;
 
 /**
  * Fields needed by the feed; the full analysis remains detail-only.
@@ -118,7 +132,17 @@ export type CurationItem = z.infer<typeof curationItemSchema>;
  */
 export type CurationListItem = Pick<
   CurationItem,
-  "author" | "collectedAt" | "design" | "id" | "media" | "publishedAt" | "source" | "summary" | "tags" | "text" | "title"
+  | "author"
+  | "collectedAt"
+  | "design"
+  | "id"
+  | "media"
+  | "publishedAt"
+  | "source"
+  | "summary"
+  | "tags"
+  | "text"
+  | "title"
 > & {
   attachments: string[];
 };

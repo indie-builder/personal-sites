@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { runCli } from "@site/effect/cli";
+import { Effect } from "effect";
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,19 +18,22 @@ function printHelp() {
 本地数据库：${path.relative(repoRoot, databasePath)}`);
 }
 
-async function main() {
-  const [command, ...args] = process.argv.slice(2);
-  if (command === "index") {
-    const useDefaults = args.length === 0;
-    return useDefaults ? rebuildDefaultIndex() : buildIndex(args);
-  }
-  if (command === "search") return search(args.join(" "));
-  printHelp();
-  if (command && command !== "help" && command !== "--help") process.exitCode = 1;
+function main() {
+  return Effect.suspend(() => {
+    const [command, ...args] = process.argv.slice(2);
+    if (command === "index") {
+      const useDefaults = args.length === 0;
+      return useDefaults ? rebuildDefaultIndex() : buildIndex(args);
+    }
+    if (command === "search") return search(args.join(" "));
+    printHelp();
+    if (command && command !== "help" && command !== "--help") process.exitCode = 1;
+    return Effect.void;
+  });
 }
 
 if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
+  runCli(main()).catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   });

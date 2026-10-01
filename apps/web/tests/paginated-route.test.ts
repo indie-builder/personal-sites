@@ -1,8 +1,9 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
 import { createPaginatedFeedRoute } from "../lib/paginated-route";
 
-const readPage = vi.fn(async (offset: number, _limit: number) => ({ hasMore: offset < 100, items: [] }));
+const readPage = vi.fn((offset: number, _limit: number) => Effect.succeed({ hasMore: offset < 100, items: [] }));
 const GET = createPaginatedFeedRoute({ label: "测试版块", maxLimit: 50, pageStep: 20, readPage });
 
 function request(query: string) {
@@ -46,7 +47,13 @@ describe("createPaginatedFeedRoute", () => {
   });
 
   it("allows deep history when the feed explicitly lifts the offset cap", async () => {
-    const history = createPaginatedFeedRoute({ label: "每日动态", maxLimit: 100, maxOffset: Number.MAX_SAFE_INTEGER, pageStep: 50, readPage });
+    const history = createPaginatedFeedRoute({
+      label: "每日动态",
+      maxLimit: 100,
+      maxOffset: Number.MAX_SAFE_INTEGER,
+      pageStep: 50,
+      readPage,
+    });
     expect((await history(request("?offset=12537"))).status).toBe(200);
     expect(readPage).toHaveBeenLastCalledWith(12500, 50);
     expect((await history(request("?offset=9007199254740992"))).status).toBe(400);
@@ -57,9 +64,7 @@ describe("createPaginatedFeedRoute", () => {
       label: "测试版块",
       maxLimit: 50,
       pageStep: 20,
-      readPage: async () => {
-        throw new Error("db down");
-      },
+      readPage: () => Effect.fail(new Error("db down")),
     });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 

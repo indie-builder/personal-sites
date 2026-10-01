@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { MetadataRoute } from "next";
 
 import { getSitemapRecords } from "@/lib/discovery.server";
@@ -8,10 +9,10 @@ const staticPaths = ["", "/ai-news", "/curation", "/design", "/douyin", "/open-s
 export const revalidate = 300;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const dynamic = await getSitemapRecords();
+  const dynamic = await Effect.runPromise(getSitemapRecords());
   return [
     ...staticPaths.map((path, index) => ({
-      changeFrequency: path === "" ? "daily" as const : "hourly" as const,
+      changeFrequency: path === "" ? ("daily" as const) : ("hourly" as const),
       priority: path === "" ? 1 : index <= 2 ? 0.9 : 0.7,
       url: `${SITE_URL}${path}`,
     })),

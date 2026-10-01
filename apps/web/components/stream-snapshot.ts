@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { Either, Schema } from "effect";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
 import { curationItemSchema } from "@/lib/curation-types";
@@ -24,8 +24,8 @@ const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
  * 同一套快照约定的工厂：写入前截断条数；读取时校验结构，且只在快照首条与当前
  * SSR 首条 id 一致（数据集没变）且未过期时返回，其余情况一律返回 null。
  */
-function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
-  schema: z.ZodType<Snapshot>;
+function createStreamSnapshot<Snapshot extends StreamSnapshot, Encoded>(config: {
+  schema: Schema.Schema<Snapshot, Encoded>;
   storageKey: string;
 }) {
   return {
@@ -35,9 +35,9 @@ function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
     from(raw: string | null, headId: string | undefined, now = Date.now()): Snapshot | null {
       if (!raw || !headId) return null;
       try {
-        const parsed = config.schema.safeParse(JSON.parse(raw));
-        if (!parsed.success) return null;
-        const snapshot = parsed.data;
+        const parsed = Schema.decodeUnknownEither(config.schema)(JSON.parse(raw));
+        if (Either.isLeft(parsed)) return null;
+        const snapshot = parsed.right;
         if (snapshot.items[0].id !== headId) return null;
         if (now - snapshot.savedAt > SNAPSHOT_TTL_MS) return null;
         return snapshot;
@@ -64,16 +64,16 @@ function createStreamSnapshot<Snapshot extends StreamSnapshot>(config: {
 
 // —— 每日动态 ——
 
-const aiNewsStreamSnapshotSchema = z.object({
-  activeCategory: z.string().nullable(),
-  hasMore: z.boolean(),
-  items: z.array(
-    aiNewsItemContentSchema
-      .omit({ reason: true, score: true, url: true })
-      .extend({ selected: z.boolean() }),
-  ).min(1),
-  savedAt: z.number(),
-  scrollTop: z.number().min(0),
+const aiNewsStreamSnapshotSchema = Schema.Struct({
+  activeCategory: Schema.NullOr(Schema.String),
+  hasMore: Schema.Boolean,
+  items: Schema.Array(
+    Schema.Struct({ ...aiNewsItemContentSchema.omit("reason", "score", "url").fields, selected: Schema.Boolean }),
+  )
+    .pipe(Schema.mutable)
+    .pipe(Schema.minItems(1)),
+  savedAt: Schema.Number.pipe(Schema.finite()),
+  scrollTop: Schema.Number.pipe(Schema.finite()).pipe(Schema.greaterThanOrEqualTo(0)),
 });
 
 export const aiNewsStreamSnapshot = createStreamSnapshot({
@@ -83,15 +83,28 @@ export const aiNewsStreamSnapshot = createStreamSnapshot({
 
 // —— 剪报簿（每日关注 / 设计收藏 / 抖音收藏共用条目结构，仅存储 key 不同）——
 
-const curationListItemSchema = curationItemSchema
-  .pick({ author: true, collectedAt: true, design: true, id: true, media: true, publishedAt: true, source: true, summary: true, tags: true, text: true, title: true })
-  .extend({ attachments: z.array(z.string()) });
+const curationListItemSchema = Schema.Struct({
+  ...curationItemSchema.pick(
+    "author",
+    "collectedAt",
+    "design",
+    "id",
+    "media",
+    "publishedAt",
+    "source",
+    "summary",
+    "tags",
+    "text",
+    "title",
+  ).fields,
+  attachments: Schema.Array(Schema.String).pipe(Schema.mutable),
+});
 
-const curationStreamSnapshotSchema = z.object({
-  hasMore: z.boolean(),
-  items: z.array(curationListItemSchema).min(1),
-  savedAt: z.number(),
-  scrollTop: z.number().min(0),
+const curationStreamSnapshotSchema = Schema.Struct({
+  hasMore: Schema.Boolean,
+  items: Schema.Array(curationListItemSchema).pipe(Schema.mutable).pipe(Schema.minItems(1)),
+  savedAt: Schema.Number.pipe(Schema.finite()),
+  scrollTop: Schema.Number.pipe(Schema.finite()).pipe(Schema.greaterThanOrEqualTo(0)),
 });
 
 export const curationStreamSnapshot = createStreamSnapshot({

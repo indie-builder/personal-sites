@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
 // lib/curation 顶部 import "server-only" 只面向 RSC 边界；测试里替换为空实现。
@@ -10,7 +11,7 @@ const { getCurationEntryMetadata } = await import("../components/curation-entry"
 // 验证详情元数据的 canonical 归一与分享卡片字段。
 describe("getCurationEntryMetadata", () => {
   it("每日关注详情 canonical 指向 /curation/<id> 并带完整分享卡片", async () => {
-    const { items } = await getCurationPage(0, 1);
+    const { items } = await Effect.runPromise(getCurationPage(0, 1));
     const item = items[0];
     const metadata = await getCurationEntryMetadata(item.id, "curation");
     const canonicalPath = `/curation/${item.id}`;
@@ -31,7 +32,7 @@ describe("getCurationEntryMetadata", () => {
   });
 
   it("设计收藏详情 canonical 同样归一到 /curation/<id>", async () => {
-    const { items } = await getDesignCurationPage(0, 1);
+    const { items } = await Effect.runPromise(getDesignCurationPage(0, 1));
     expect(items.length, "投影中应存在设计收录条目").toBeGreaterThan(0);
     const designItem = items[0];
 
@@ -43,7 +44,7 @@ describe("getCurationEntryMetadata", () => {
   });
 
   it("未收录设计的条目在设计路径下不产出元数据", async () => {
-    const { items } = await getCurationPage(0, 50);
+    const { items } = await Effect.runPromise(getCurationPage(0, 50));
     const plainItem = items.find((entry) => entry.design?.status !== "include");
     expect(plainItem, "投影中应存在非设计收录条目").toBeTruthy();
 

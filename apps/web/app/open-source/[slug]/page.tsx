@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
@@ -20,7 +21,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: OpenSourceEntryPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const entry = await getOpenSourceEntry(slug);
+  const entry = await Effect.runPromise(getOpenSourceEntry(slug));
   if (!entry) return {};
   const title = `${entry.repository}｜开源关注`;
   const description = entry.personalNote || entry.repository;
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: OpenSourceEntryPageProps): Pr
 
 export default async function OpenSourceEntryPage({ params }: OpenSourceEntryPageProps) {
   const { slug } = await params;
-  const entry = await getOpenSourceEntry(slug);
+  const entry = await Effect.runPromise(getOpenSourceEntry(slug));
   if (!entry) notFound();
 
   return (

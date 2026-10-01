@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 
 import { TaggedCurationStream } from "@/components/curation-stream";
@@ -16,8 +17,8 @@ export const metadata: Metadata = {
 };
 
 async function CurationFeed() {
-  const curationPage = await getCurationPage();
-  return <TaggedCurationStream initialHasMore={curationPage.hasMore} initialItems={curationPage.items} tags={getCurationTags()} />;
+  const { page, tags } = await Effect.runPromise(Effect.all({ page: getCurationPage(), tags: getCurationTags() }));
+  return <TaggedCurationStream initialHasMore={page.hasMore} initialItems={page.items} tags={tags} />;
 }
 
 export default function CurationPage() {

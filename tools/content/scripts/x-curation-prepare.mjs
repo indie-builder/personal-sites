@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { Effect } from "effect";
 /**
  * x-curation-prepare.mjs
  *
@@ -30,9 +31,7 @@ import { firstSeenMetadata, parseSourceOrderSnapshot } from "../modules/x-sync/s
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
-const config = JSON.parse(
-  await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"),
-);
+const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));
 
 const sourceArgIndex = process.argv.findIndex((arg) => arg === "--source");
 const sourceArg = process.argv.find((arg) => arg.startsWith("--source="));
@@ -42,7 +41,7 @@ const fetchSource = sourceArg
   : sourceArgIndex >= 0
     ? process.argv[sourceArgIndex + 1]
     : "bookmarks";
-if (!['bookmarks', 'likes', 'both'].includes(fetchSource)) {
+if (!["bookmarks", "likes", "both"].includes(fetchSource)) {
   throw new Error("--source 只能是 bookmarks、likes 或 both。");
 }
 
@@ -88,7 +87,7 @@ function normalizeEntry(bookmark) {
 async function readSourceOrder() {
   if (!sourceOrderFileArg) return null;
   const sourceOrderPath = sourceOrderFileArg.slice("--source-order-file=".length);
-  const snapshot = await readJsonOr(sourceOrderPath, null);
+  const snapshot = await Effect.runPromise(readJsonOr(sourceOrderPath, null));
   return parseSourceOrderSnapshot(snapshot, fetchSource);
 }
 
@@ -104,10 +103,10 @@ await mkdir(rawDir, { recursive: true });
 const rawBody = JSON.stringify(pending);
 const rawHash = createHash("sha256").update(rawBody).digest("hex");
 const rawPath = path.join(rawDir, `${rawHash}.json`);
-await writeTextAtomically(rawPath, rawBody);
+await Effect.runPromise(writeTextAtomically(rawPath, rawBody));
 
 // 2. 合并进策展队列（按 tweet id 去重）
-const queue = await readJsonOr(queuePath, { version: 2, items: [] });
+const queue = await Effect.runPromise(readJsonOr(queuePath, { version: 2, items: [] }));
 queue.version = Math.max(Number(queue.version ?? 0), 3);
 const existing = new Map(queue.items.map((item) => [item.id, item]));
 const sourceOrder = await readSourceOrder();
@@ -138,7 +137,7 @@ for (const bookmark of bookmarks) {
 
 queue.updatedAt = new Date().toISOString();
 await mkdir(path.dirname(queuePath), { recursive: true });
-await writeJsonAtomically(queuePath, queue);
+await Effect.runPromise(writeJsonAtomically(queuePath, queue));
 
 console.log(`Raw 快照: ${path.relative(repoRoot, rawPath)}`);
 console.log(`新增策展条目: ${added}（队列共 ${queue.items.length} 条）`);

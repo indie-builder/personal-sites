@@ -1,3 +1,6 @@
+import { attempt } from "@site/effect";
+import { Effect } from "effect";
+
 import "server-only";
 
 import { searchAiNewsDocuments } from "@/lib/ai-news";
@@ -21,28 +24,37 @@ export function fuseAskSearchDocuments(batches: RankedBatch[], limit = 6): Searc
     });
   }
   return [...fused.values()]
-    .sort((left, right) => right.score - left.score || right.matches - left.matches || right.rawScore - left.rawScore
-      || (right.document.publishedAt ?? "").localeCompare(left.document.publishedAt ?? ""))
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        right.matches - left.matches ||
+        right.rawScore - left.rawScore ||
+        (right.document.publishedAt ?? "").localeCompare(left.document.publishedAt ?? ""),
+    )
     .slice(0, limit)
     .map(({ document, score }) => ({ ...document, score }));
 }
 
-async function searchDocuments(query: string, scope: AskScope): Promise<SearchDocument[]> {
-  const localScopes = scope === "all"
-    ? ["profile", "daily", "open-source"] as const
-    : scope === "ai-news" ? [] : [scope];
-  const batches: RankedBatch[] = localScopes.map((localScope) => ({
-    documents: searchLocalAskDocuments(query, localScope),
-  }));
-  const aiDocuments = scope === "all" || scope === "ai-news"
-    ? (await searchAiNewsDocuments(query)).map((document) => ({
-        ...document,
-        scope: "ai-news" as const,
-        section: null,
-      }))
-    : [];
-  if (aiDocuments.length > 0) batches.push({ documents: aiDocuments });
-  return fuseAskSearchDocuments(batches);
+function searchDocuments(query: string, scope: AskScope) {
+  return Effect.gen(function* () {
+    const localScopes =
+      scope === "all" ? (["profile", "daily", "open-source"] as const) : scope === "ai-news" ? [] : [scope];
+    const batches: RankedBatch[] = yield* attempt("ask.local-search", () =>
+      localScopes.map((localScope) => ({
+        documents: searchLocalAskDocuments(query, localScope),
+      })),
+    );
+    const aiDocuments =
+      scope === "all" || scope === "ai-news"
+        ? (yield* searchAiNewsDocuments(query)).map((document) => ({
+            ...document,
+            scope: "ai-news" as const,
+            section: null,
+          }))
+        : [];
+    if (aiDocuments.length > 0) batches.push({ documents: aiDocuments });
+    return fuseAskSearchDocuments(batches);
+  });
 }
 
 function toAskSource(document: SearchDocument): AskSource {
@@ -58,13 +70,17 @@ function toAskSource(document: SearchDocument): AskSource {
   };
 }
 
-export async function searchAskDocuments(query: string, scope: AskScope): Promise<AskSource[]> {
-  const exactDocuments = await searchDocuments(query, scope);
-  const fallbackTerms = getAskSearchFallbackTerms(query);
-  if (fallbackTerms.length === 0) return exactDocuments.map(toAskSource);
-  const fallbackDocuments = await Promise.all(fallbackTerms.map((term) => searchDocuments(term, scope)));
-  return fuseAskSearchDocuments([
-    { documents: exactDocuments, weight: 2 },
-    ...fallbackDocuments.map((documents) => ({ documents })),
-  ]).map(toAskSource);
+export function searchAskDocuments(query: string, scope: AskScope) {
+  return Effect.gen(function* () {
+    const exactDocuments = yield* searchDocuments(query, scope);
+    const fallbackTerms = getAskSearchFallbackTerms(query);
+    if (fallbackTerms.length === 0) return exactDocuments.map(toAskSource);
+    const fallbackDocuments = yield* Effect.forEach(fallbackTerms, (term) => searchDocuments(term, scope), {
+      concurrency: 4,
+    });
+    return fuseAskSearchDocuments([
+      { documents: exactDocuments, weight: 2 },
+      ...fallbackDocuments.map((documents) => ({ documents })),
+    ]).map(toAskSource);
+  });
 }

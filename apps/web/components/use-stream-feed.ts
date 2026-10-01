@@ -1,5 +1,8 @@
 "use client";
 
+import { Effect } from "effect";
+import { io } from "@site/effect";
+
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { getCurationScrollTarget, observeCurationScrollEnd } from "./curation-scroll";
@@ -18,7 +21,10 @@ export type StreamSnapshotState<Item, Extra> = Extra & {
 
 /** createStreamSnapshot（components/stream-snapshot.ts）实例的最小接口。 */
 export interface StreamSnapshotAdapter<Item, Extra> {
-  read(headId: string | undefined, storageKey?: string): (StreamSnapshotState<Item, Extra> & { savedAt: number }) | null;
+  read(
+    headId: string | undefined,
+    storageKey?: string,
+  ): (StreamSnapshotState<Item, Extra> & { savedAt: number }) | null;
   to(state: StreamSnapshotState<Item, Extra>, now?: number): object;
   write(snapshot: object, storageKey?: string): void;
 }
@@ -33,23 +39,17 @@ const STREAM_FETCH_TIMEOUT_MS = 10_000;
  * 形状非法的 2xx 响应（items 非数组、hasMore 缺失）与失败同权回落，
  * 避免 updater 里的 TypeError 逃逸出错误 UI。
  */
-export async function requestStreamPage<Item>(
-  url: string,
-  fallbackError: string,
-): Promise<StreamPage<Item> | string> {
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(STREAM_FETCH_TIMEOUT_MS) });
+export function requestStreamPage<Item>(url: string, fallbackError: string) {
+  return io("feed.page", async (signal): Promise<StreamPage<Item> | string> => {
+    const response = await fetch(url, { signal });
     const payload = (await response.json().catch(() => null)) as StreamPage<Item> | null;
-    if (!response.ok) {
-      return typeof payload?.error === "string" && payload.error ? payload.error : fallbackError;
-    }
-    if (payload === null || !Array.isArray(payload.items) || typeof payload.hasMore !== "boolean") {
-      return fallbackError;
-    }
+    if (!response.ok) return typeof payload?.error === "string" && payload.error ? payload.error : fallbackError;
+    if (payload === null || !Array.isArray(payload.items) || typeof payload.hasMore !== "boolean") return fallbackError;
     return payload;
-  } catch {
-    return fallbackError;
-  }
+  }).pipe(
+    Effect.timeoutFail({ duration: STREAM_FETCH_TIMEOUT_MS, onTimeout: () => new Error(fallbackError) }),
+    Effect.catchAll(() => Effect.succeed(fallbackError)),
+  );
 }
 
 type StreamFeedOptions<Item, Extra> = {
@@ -76,7 +76,11 @@ type StreamFeedOptions<Item, Extra> = {
  * 以及「详情页返回还原」的会话快照（写入门闩 + 一次性恢复 + 卸载兜底写）。
  * 组件只保留各自的渲染逻辑。
  */
-export function useStreamFeed<Item extends { id: string }, Extra extends object = Record<never, never>, Element extends HTMLElement = HTMLElement>({
+export function useStreamFeed<
+  Item extends { id: string },
+  Extra extends object = Record<never, never>,
+  Element extends HTMLElement = HTMLElement,
+>({
   apiPath,
   pageSize,
   loadErrorMessage,
@@ -157,7 +161,7 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
   }, []);
 
   const toSnapshot = (state: { hasMore: boolean; items: Item[]; scrollTop: number }) =>
-    snapshot.to({ ...extraRef.current?.() ?? {} as Extra, ...state });
+    snapshot.to({ ...(extraRef.current?.() ?? ({} as Extra)), ...state });
 
   // 分页变化时持久化快照；滚动位置与扩展字段在写入时从 ref 取最新值。
   useEffect(() => {
@@ -168,13 +172,16 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
   }, [hasMore, items, snapshot, storageKey]);
 
   // 路由离开（点进详情）时组件卸载，兜底写一次最终状态。
-  useEffect(() => () => {
-    if (!writesEnabledRef.current) return;
-    const latest = latestRef.current;
-    if (latest.items.length === 0) return;
-    snapshot.write(toSnapshot({ ...latest, scrollTop: scrollTopRef.current }), storageKey);
+  useEffect(
+    () => () => {
+      if (!writesEnabledRef.current) return;
+      const latest = latestRef.current;
+      if (latest.items.length === 0) return;
+      snapshot.write(toSnapshot({ ...latest, scrollTop: scrollTopRef.current }), storageKey);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 卸载只执行一次
-  }, [snapshot, storageKey]);
+    [snapshot, storageKey],
+  );
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasMore) return;
@@ -183,9 +190,11 @@ export function useStreamFeed<Item extends { id: string }, Extra extends object 
     setLoadError(null);
     setAppendStart(items.length);
     try {
-      const page = await requestStreamPage<Item>(
-        `${apiPath}${apiPath.includes("?") ? "&" : "?"}offset=${items.length}&limit=${pageSize}`,
-        loadErrorMessage,
+      const page = await Effect.runPromise(
+        requestStreamPage<Item>(
+          `${apiPath}${apiPath.includes("?") ? "&" : "?"}offset=${items.length}&limit=${pageSize}`,
+          loadErrorMessage,
+        ),
       );
       if (typeof page === "string") {
         setLoadError(page);

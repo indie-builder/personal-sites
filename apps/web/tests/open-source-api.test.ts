@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OpenSourceEntry } from "../lib/open-source-types";
@@ -52,11 +53,11 @@ describe("open-source public API", () => {
   it("slices the curated list into { hasMore, items } pages", async () => {
     const { getOpenSourcePage } = await import("../lib/open-source");
 
-    const firstPage = await getOpenSourcePage(0, 20);
+    const firstPage = await Effect.runPromise(getOpenSourcePage(0, 20));
     expect(firstPage.items).toHaveLength(20);
     expect(firstPage.hasMore).toBe(true);
 
-    const lastPage = await getOpenSourcePage(20, 20);
+    const lastPage = await Effect.runPromise(getOpenSourcePage(20, 20));
     expect(lastPage.items).toHaveLength(5);
     expect(lastPage.hasMore).toBe(false);
     expect(lastPage.items.every((item) => item.slug.startsWith("repo-"))).toBe(true);

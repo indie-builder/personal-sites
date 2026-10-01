@@ -1,8 +1,17 @@
+import { Effect } from "effect";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { copyFileSync, renameSync, rmSync } from "node:fs";
-import { archiveCutoff, archiveMetadata, ARCHIVE_PATH, openArchive, pruneArchivedRows, readPublicRows, saveArchive } from "@site/public-data/ai-news/archive.mjs";
+import {
+  archiveCutoff,
+  archiveMetadata,
+  ARCHIVE_PATH,
+  openArchive,
+  pruneArchivedRows,
+  readPublicRows,
+  saveArchive,
+} from "@site/public-data/ai-news/archive.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -13,17 +22,24 @@ const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVI
 });
 if (process.argv.includes("--prune")) {
   const response = await fetch("https://default-coder.lovemyrmb.cn/api/health/ai-news/archive", {
-    cache: "no-store", signal: AbortSignal.timeout(15000),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error(`无法确认生产归档：HTTP ${response.status}`);
   const db = openArchive(archivePath);
   try {
-    console.log(await pruneArchivedRows(client, db, await response.json(), { dryRun: !process.argv.includes("--apply") }));
-  } finally { db.close(); }
+    console.log(
+      await Effect.runPromise(
+        pruneArchivedRows(client, db, await response.json(), { dryRun: !process.argv.includes("--apply") }),
+      ),
+    );
+  } finally {
+    db.close();
+  }
 } else {
   const capturedAt = new Date().toISOString();
   const cutoff = archiveCutoff(new Date(capturedAt));
-  const rows = await readPublicRows(client, { cutoff });
+  const rows = await Effect.runPromise(readPublicRows(client, { cutoff }));
   const temporary = `${archivePath}.tmp`;
   copyFileSync(archivePath, temporary);
   const db = openArchive(temporary, false);

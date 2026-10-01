@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { runCli } from "@site/effect/cli";
+import { Effect } from "effect";
+import { io } from "@site/effect";
 /**
  * Fetch X bookmarks/likes with the local smaug installation, move only the
  * result into the ignored sensitive queue, then analyze it with the selected local model runtime.
@@ -14,7 +17,11 @@ import { fileURLToPath } from "node:url";
 import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
-import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
+import {
+  DEFAULT_ANALYSIS_ENGINE,
+  resolveAnalysisConcurrency,
+  resolveAnalysisEngine,
+} from "../modules/analysis/runtime.mjs";
 import { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
 
 export { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
@@ -58,7 +65,12 @@ export function parseSyncArgs(args) {
   if (!new Set(["none", "low", "medium", "high", "xhigh", "max"]).has(options.reasoningEffort)) {
     throw new Error("--reasoning-effort 仅支持 none、low、medium、high、xhigh 或 max。");
   }
-  options.designConcurrency = resolveAnalysisConcurrency({ codex: 40, engine: options.engine, override: options.designConcurrency, pi: 15 });
+  options.designConcurrency = resolveAnalysisConcurrency({
+    codex: 40,
+    engine: options.engine,
+    override: options.designConcurrency,
+    pi: 15,
+  });
   return options;
 }
 
@@ -97,17 +109,20 @@ function tweetsFromBirdResponse(raw) {
   return Array.isArray(parsed) ? parsed : Array.isArray(parsed.tweets) ? parsed.tweets : [];
 }
 
-async function captureSourceOrder({ birdPath, credentials, source }) {
-  try {
+function captureSourceOrder({ birdPath, credentials, source }) {
+  return io("x.source-order", async (signal) => {
     const { stdout } = await execFileAsync(birdPath, [source, "-n", "20", "--json"], {
       cwd: repoRoot,
       env: { ...process.env, AUTH_TOKEN: credentials.authToken, CT0: credentials.ct0 },
       maxBuffer: 10 * 1024 * 1024,
+      signal,
     });
     const capturedAt = new Date().toISOString();
     const snapshot = {
       capturedAt,
-      ids: tweetsFromBirdResponse(stdout).map((tweet) => String(tweet.id)).filter(Boolean),
+      ids: tweetsFromBirdResponse(stdout)
+        .map((tweet) => String(tweet.id))
+        .filter(Boolean),
       source,
       version: 1,
     };
@@ -117,62 +132,70 @@ async function captureSourceOrder({ birdPath, credentials, source }) {
     const outputPath = path.join(sourceOrderDir, filename);
     await writeFile(outputPath, JSON.stringify(snapshot, null, 2) + "\n", { mode: 0o600 });
     return outputPath;
-  } catch (error) {
-    console.warn(`无法读取 X ${source} 列表顺序；新条目将暂不写入收录时间和顺序：${error.message}`);
-    return null;
-  }
+  }).pipe(
+    Effect.catchAll((error) =>
+      Effect.sync(() => {
+        console.warn(`无法读取 X ${source} 列表顺序；新条目将暂不写入收录时间和顺序：${error.message}`);
+        return null;
+      }),
+    ),
+  );
 }
 
-async function main() {
-  const options = parseSyncArgs(process.argv.slice(2));
-  if (options.help) return printUsage();
+function main() {
+  return Effect.gen(function* () {
+    const options = parseSyncArgs(process.argv.slice(2));
+    if (options.help) return printUsage();
 
-  loadLocalEnv(repoRoot);
-  const smaugConfig = path.join(repoRoot, "tools/smaug/smaug.config.json");
-  if (!existsSync(smaugConfig)) {
-    throw new Error("缺少 tools/smaug/smaug.config.json；请在该目录完成本机 X 登录态配置。");
-  }
-  if (!process.env.BIRD_PATH && !existsSync(path.join(repoRoot, "tools/content/node_modules/.bin/bird"))) {
-    throw new Error("缺少本地 bird 依赖；请先执行 pnpm install。");
-  }
-  const credentials = readSmaugCredentials(smaugConfig);
-
-  if (options.history) {
-    const curationConfig = JSON.parse(readFileSync(path.join(repoRoot, "config/x-curation.json"), "utf8"));
-    await mkdir(path.join(repoRoot, curationConfig.rawDir), { recursive: true });
-    const birdPath = process.env.BIRD_PATH ?? path.join(repoRoot, "tools/content/node_modules/.bin/bird");
-    console.log("开始导入全部历史 X 书签与点赞（不调用模型）。");
-    await runHistoryPipeline({
-      repoRoot,
-      birdPath,
-      credentials,
-    });
-    return;
-  }
-
-  if (!options.fetchOnly) {
-    if (options.engine === "pi") {
-      const model = resolvePiModelConfig({ env: process.env });
-      if (!process.env.BIGMODEL_API_KEY) {
-        throw new Error("缺少 BIGMODEL_API_KEY（可写入本项目被忽略的 .env.local）。");
-      }
-      console.log(`解析运行时：Pi Coding Agent / ${model.provider}/${model.model}`);
-    } else {
-      console.log(`解析运行时：Codex CLI / ${options.codexModel}（推理 ${options.reasoningEffort}）`);
+    loadLocalEnv(repoRoot);
+    const smaugConfig = path.join(repoRoot, "tools/smaug/smaug.config.json");
+    if (!existsSync(smaugConfig)) {
+      return yield* Effect.fail(new Error("缺少 tools/smaug/smaug.config.json；请在该目录完成本机 X 登录态配置。"));
     }
-  }
+    if (!process.env.BIRD_PATH && !existsSync(path.join(repoRoot, "tools/content/node_modules/.bin/bird"))) {
+      return yield* Effect.fail(new Error("缺少本地 bird 依赖；请先执行 pnpm install。"));
+    }
+    const credentials = readSmaugCredentials(smaugConfig);
 
-  console.log(`开始 X 策展同步：${options.source}${options.fetchOnly ? "（仅抓取）" : "（抓取、解析并生成公开 SQLite）"}`);
-  const birdPath = process.env.BIRD_PATH ?? path.join(repoRoot, "tools/content/node_modules/.bin/bird");
-  await runSyncPipeline({
-    repoRoot,
-    options,
-    captureSourceOrder: (source) => captureSourceOrder({ birdPath, credentials, source }),
+    if (options.history) {
+      const curationConfig = JSON.parse(readFileSync(path.join(repoRoot, "config/x-curation.json"), "utf8"));
+      yield* io("main", () => mkdir(path.join(repoRoot, curationConfig.rawDir), { recursive: true }));
+      const birdPath = process.env.BIRD_PATH ?? path.join(repoRoot, "tools/content/node_modules/.bin/bird");
+      console.log("开始导入全部历史 X 书签与点赞（不调用模型）。");
+      yield* runHistoryPipeline({
+        repoRoot,
+        birdPath,
+        credentials,
+      });
+      return;
+    }
+
+    if (!options.fetchOnly) {
+      if (options.engine === "pi") {
+        const model = resolvePiModelConfig({ env: process.env });
+        if (!process.env.BIGMODEL_API_KEY) {
+          return yield* Effect.fail(new Error("缺少 BIGMODEL_API_KEY（可写入本项目被忽略的 .env.local）。"));
+        }
+        console.log(`解析运行时：Pi Coding Agent / ${model.provider}/${model.model}`);
+      } else {
+        console.log(`解析运行时：Codex CLI / ${options.codexModel}（推理 ${options.reasoningEffort}）`);
+      }
+    }
+
+    console.log(
+      `开始 X 策展同步：${options.source}${options.fetchOnly ? "（仅抓取）" : "（抓取、解析并生成公开 SQLite）"}`,
+    );
+    const birdPath = process.env.BIRD_PATH ?? path.join(repoRoot, "tools/content/node_modules/.bin/bird");
+    yield* runSyncPipeline({
+      repoRoot,
+      options,
+      captureSourceOrder: (source) => captureSourceOrder({ birdPath, credentials, source }),
+    });
   });
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  main().catch((error) => {
+  runCli(main()).catch((error) => {
     console.error(`X 策展同步失败：${error.message}`);
     process.exitCode = 1;
   });

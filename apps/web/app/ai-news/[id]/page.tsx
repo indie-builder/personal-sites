@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -29,7 +30,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: AiNewsDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const item = await getAiNewsItem(id);
+  const item = await Effect.runPromise(getAiNewsItem(id));
   if (!item) return {};
   const title = `${item.title}｜每日动态`;
   const description = item.summary || item.title;
@@ -55,12 +56,17 @@ export default function AiNewsDetailPage({ params }: AiNewsDetailPageProps) {
 }
 
 async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
-  const item = await getAiNewsItem((await params).id);
+  const item = await Effect.runPromise(getAiNewsItem((await params).id));
   if (!item) notFound();
 
   return (
     <article className="ai-news-detail__article" data-content-id={item.id}>
-      <DetailTopbar backClassName="ai-news-detail__back" backHref="/ai-news" backLabel="返回每日动态" className="ai-news-detail__topbar" />
+      <DetailTopbar
+        backClassName="ai-news-detail__back"
+        backHref="/ai-news"
+        backLabel="返回每日动态"
+        className="ai-news-detail__topbar"
+      />
 
       <header className="ai-news-detail__header">
         <p className="ai-news-detail__kicker">

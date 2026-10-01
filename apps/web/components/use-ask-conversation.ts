@@ -1,5 +1,8 @@
 "use client";
 
+import { Effect } from "effect";
+import { io } from "@site/effect";
+
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
@@ -37,7 +40,7 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
   useEffect(() => () => requestController.current?.abort(), []);
 
   const updateAssistant = (id: string, update: (message: ChatMessage) => ChatMessage) => {
-    setMessages((current) => current.map((message) => message.id === id ? update(message) : message));
+    setMessages((current) => current.map((message) => (message.id === id ? update(message) : message)));
   };
 
   const submit = async (suggestion?: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
@@ -59,42 +62,71 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
     setIsStreaming(true);
     const controller = new AbortController();
     requestController.current = controller;
-    setMessages((current) => [...current,
+    setMessages((current) => [
+      ...current,
       { citations: [], content: trimmedQuestion, id: userId, isComplete: true, role: "user" },
       { citations: [], content: "", id: assistantId, isComplete: false, role: "assistant" },
     ]);
 
     try {
-      const response = await fetch("/api/ask", {
-        body: JSON.stringify({ conversationId: session.conversationId, question: trimmedQuestion, scope: "all", visitorId: session.visitorId }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        signal: controller.signal,
-      });
-      if (!response.ok || !response.body) {
-        const payload = await response.json().catch(() => null) as { error?: unknown } | null;
-        throw new Error(typeof payload?.error === "string" ? payload.error : "回答暂时不可用，请稍后重试。");
-      }
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const response = yield* io("ask.request", (signal) =>
+              fetch("/api/ask", {
+                body: JSON.stringify({
+                  conversationId: session.conversationId,
+                  question: trimmedQuestion,
+                  scope: "all",
+                  visitorId: session.visitorId,
+                }),
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
+                signal: AbortSignal.any([signal, controller.signal]),
+              }),
+            );
+            if (!response.ok || !response.body) {
+              const payload = yield* io(
+                "ask.error",
+                () => response.json().catch(() => null) as Promise<{ error?: unknown } | null>,
+              );
+              return yield* Effect.fail(
+                new Error(typeof payload?.error === "string" ? payload.error : "回答暂时不可用，请稍后重试。"),
+              );
+            }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-        const parsed = parseEvents(buffer);
-        buffer = parsed.remainder;
-        for (const item of parsed.events) {
-          updateAssistant(assistantId, (message) => applyStreamEvent(message, item));
-        }
-        if (done) break;
-      }
-      updateAssistant(assistantId, (message) => ({ ...message, isComplete: true }));
+            const reader = yield* Effect.acquireRelease(
+              Effect.sync(() => response.body!.getReader()),
+              (reader) =>
+                io("ask.cancel", () => reader.cancel()).pipe(
+                  Effect.catchAll(() => Effect.void),
+                  Effect.ensuring(Effect.sync(() => reader.releaseLock())),
+                ),
+            );
+            const decoder = new TextDecoder();
+            let buffer = "";
+            while (true) {
+              const { done, value } = yield* io("ask.read", () => reader.read());
+              buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+              const parsed = parseEvents(buffer);
+              buffer = parsed.remainder;
+              for (const item of parsed.events) {
+                updateAssistant(assistantId, (message) => applyStreamEvent(message, item));
+              }
+              if (done) break;
+            }
+            updateAssistant(assistantId, (message) => ({ ...message, isComplete: true }));
+          }),
+        ),
+        { signal: controller.signal },
+      );
     } catch (error) {
       const stopped = controller.signal.aborted;
       const message = stopped
         ? "已停止生成。"
-        : error instanceof Error ? error.message : "回答暂时不可用，请稍后重试。";
+        : error instanceof Error
+          ? error.message
+          : "回答暂时不可用，请稍后重试。";
       updateAssistant(assistantId, (current) => ({
         ...current,
         interruption: { kind: stopped ? "stopped" : "error", message },
@@ -108,7 +140,15 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
   };
 
   return {
-    ensureVisitorSession, isRetryingSession, isStreaming, messages, question, retryVisitorSession,
-    setQuestion, stop: () => requestController.current?.abort(), submit, visitorId,
+    ensureVisitorSession,
+    isRetryingSession,
+    isStreaming,
+    messages,
+    question,
+    retryVisitorSession,
+    setQuestion,
+    stop: () => requestController.current?.abort(),
+    submit,
+    visitorId,
   };
 }

@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { AiNewsStream } from "@/components/ai-news-stream";
 import { FeedErrorBoundary, FeedRecoveryTarget } from "@/components/focus-stream-error-boundary";
 import { FeedSkeleton } from "@/components/page-shell";
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 async function HomeNews() {
-  const aiNewsPage = await getAiNewsPage(0, AI_NEWS_LIST_LIMIT);
+  const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_LIST_LIMIT));
   return <AiNewsStream initialHasMore={aiNewsPage.hasMore} initialItems={aiNewsPage.items} />;
 }
 
@@ -28,11 +29,18 @@ export default function HomePage() {
     <main className="curation-home curation-home--mobile-home" id="site-main" tabIndex={-1}>
       <SiteProfile animateOnFirstHomeVisit mobileSection="home" />
       <SectionMotionLifecycle section="home" />
-      <section aria-label="每日动态" className="curation-home__feed site-section-motion" data-feed-recovery-root tabIndex={-1}>
+      <section
+        aria-label="每日动态"
+        className="curation-home__feed site-section-motion"
+        data-feed-recovery-root
+        tabIndex={-1}
+      >
         <ContentSectionNavigation current="ai-news" />
         <FeedErrorBoundary label="每日动态">
           <Suspense fallback={<FeedSkeleton label="每日动态" />}>
-            <FeedRecoveryTarget><HomeNews /></FeedRecoveryTarget>
+            <FeedRecoveryTarget>
+              <HomeNews />
+            </FeedRecoveryTarget>
           </Suspense>
         </FeedErrorBoundary>
       </section>

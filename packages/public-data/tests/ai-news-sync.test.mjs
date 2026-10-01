@@ -1,13 +1,8 @@
+import { Effect } from "effect";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import {
-  buildSyncRows,
-  fetchFeed,
-  stripEmoji,
-  syncAiNews,
-  toPublicAiNewsItem,
-} from "../src/ai-news/sync.mjs";
+import { buildSyncRows, fetchFeed, stripEmoji, syncAiNews, toPublicAiNewsItem } from "../src/ai-news/sync.mjs";
 
 const upstreamItem = {
   category: "ai-models",
@@ -26,9 +21,9 @@ const upstreamItem = {
 
 describe("ai news sync", () => {
   const availableStateStore = () => ({
-    acquire: async () => ({ acquired: true, etags: {} }),
-    fail: async () => {},
-    succeed: async () => {},
+    acquire: () => Effect.succeed({ acquired: true, etags: {} }),
+    fail: () => Effect.void,
+    succeed: () => Effect.void,
   });
 
   it("projects upstream items to public content without upstream links", () => {
@@ -65,37 +60,22 @@ describe("ai news sync", () => {
   });
 
   it("builds private and public rows, marking the selected feed", () => {
-    const { privateRows, publicRows } = buildSyncRows(
-      [upstreamItem],
-      "selected",
-      "2026-08-14T13:00:00.000Z",
-    );
+    const { privateRows, publicRows } = buildSyncRows([upstreamItem], "selected", "2026-08-14T13:00:00.000Z");
     assert.equal(privateRows.length, 1);
     assert.deepEqual(privateRows[0].feeds, ["selected"]);
     assert.equal(privateRows[0].raw_payload.id, upstreamItem.id);
     assert.equal(privateRows[0].synced_at, "2026-08-14T13:00:00.000Z");
     assert.equal(publicRows.length, 1);
     assert.equal(publicRows[0].selected, true);
-    assert.equal(
-      publicRows[0].content.url,
-      "https://mp.weixin.qq.com/s/example",
-    );
+    assert.equal(publicRows[0].content.url, "https://mp.weixin.qq.com/s/example");
 
-    const allFeed = buildSyncRows(
-      [upstreamItem],
-      "all",
-      "2026-08-14T13:00:00.000Z",
-    );
+    const allFeed = buildSyncRows([upstreamItem], "all", "2026-08-14T13:00:00.000Z");
     assert.equal(allFeed.publicRows[0].selected, false);
   });
 
   it("keeps non-public items out of the public rows but in the private backup", () => {
     const noOriginal = { ...upstreamItem, id: "no-original", links: {} };
-    const { privateRows, publicRows } = buildSyncRows(
-      [noOriginal],
-      "all",
-      "2026-08-14T13:00:00.000Z",
-    );
+    const { privateRows, publicRows } = buildSyncRows([noOriginal], "all", "2026-08-14T13:00:00.000Z");
     assert.equal(privateRows.length, 1);
     assert.equal(publicRows.length, 0);
   });
@@ -123,7 +103,7 @@ describe("ai news sync", () => {
         { status: 200 },
       );
     };
-    const feed = await fetchFeed("all", { fetchImpl, window: "7d" });
+    const feed = await Effect.runPromise(fetchFeed("all", { fetchImpl, window: "7d" }));
     assert.equal(feed.changed, true);
     assert.deepEqual(
       feed.items.map((item) => item.id),
@@ -140,20 +120,14 @@ describe("ai news sync", () => {
       seen.push(init.headers["if-none-match"]);
       return new Response(null, { status: 304 });
     };
-    const feed = await fetchFeed("selected", { etag: 'W/"old"', fetchImpl });
+    const feed = await Effect.runPromise(fetchFeed("selected", { etag: 'W/"old"', fetchImpl }));
     assert.deepEqual(feed, { changed: false, items: [] });
     assert.deepEqual(seen, ['W/"old"']);
   });
 
   it("strips leftover emoji from upstream copy in the public projection", () => {
-    assert.equal(
-      stripEmoji("发布新模型 🚀🎉 性能提升 ⚡️"),
-      "发布新模型 性能提升",
-    );
-    assert.equal(
-      stripEmoji("持续增长 📈。下一步：扩大访问"),
-      "持续增长。下一步：扩大访问",
-    );
+    assert.equal(stripEmoji("发布新模型 🚀🎉 性能提升 ⚡️"), "发布新模型 性能提升");
+    assert.equal(stripEmoji("持续增长 📈。下一步：扩大访问"), "持续增长。下一步：扩大访问");
     assert.equal(stripEmoji("没有 emoji 的文本"), "没有 emoji 的文本");
     const item = toPublicAiNewsItem({
       ...upstreamItem,
@@ -195,15 +169,12 @@ describe("ai news sync", () => {
     const fakeTable = {
       select: () => ({
         eq: async (column, value) => ({
-          data: [...store.values()]
-            .filter((row) => row[column] === value)
-            .map((row) => ({ id: row.id })),
+          data: [...store.values()].filter((row) => row[column] === value).map((row) => ({ id: row.id })),
           error: null,
         }),
       }),
       upsert: async (rows) => {
-        for (const row of rows)
-          store.set(row.id, { ...store.get(row.id), ...row });
+        for (const row of rows) store.set(row.id, { ...store.get(row.id), ...row });
         return { error: null };
       },
       update: (patch) => ({
@@ -216,8 +187,7 @@ describe("ai news sync", () => {
                 .filter(Boolean),
             );
             for (const row of store.values()) {
-              if (row[column] === value && !excluded.has(row.id))
-                Object.assign(row, patch);
+              if (row[column] === value && !excluded.has(row.id)) Object.assign(row, patch);
             }
             return { error: null };
           },
@@ -233,30 +203,30 @@ describe("ai news sync", () => {
       delete: () => ({ or: async () => ({ error: null }) }),
     };
     const cleanupTables = [];
-    const clientFactory = () => ({ from: (table) => ({
-      ...fakeTable,
-      delete: () => {
-        cleanupTables.push(table);
-        return { or: async () => ({ error: null }) };
-      },
-    }) });
-
-    await syncAiNews({
-      backfill: true,
-      clientFactory,
-      env: {
-        SUPABASE_SERVICE_ROLE_KEY: "test",
-        SUPABASE_URL: "https://example.supabase.co",
-      },
-      fetchImpl,
-      stateStore: availableStateStore(),
+    const clientFactory = () => ({
+      from: (table) => ({
+        ...fakeTable,
+        delete: () => {
+          cleanupTables.push(table);
+          return { or: async () => ({ error: null }) };
+        },
+      }),
     });
 
-    assert.equal(
-      store.get("stale-y").selected,
-      false,
-      "掉出精选 feed 的旧条目必须复位",
+    await Effect.runPromise(
+      syncAiNews({
+        backfill: true,
+        clientFactory,
+        env: {
+          SUPABASE_SERVICE_ROLE_KEY: "test",
+          SUPABASE_URL: "https://example.supabase.co",
+        },
+        fetchImpl,
+        stateStore: availableStateStore(),
+      }),
     );
+
+    assert.equal(store.get("stale-y").selected, false, "掉出精选 feed 的旧条目必须复位");
     assert.equal(store.get("keep-x").selected, true);
     assert.equal(store.get("fresh-z").selected, true);
     assert.deepEqual(cleanupTables, ["ai_news_items"], "同步不得按年龄直接删除公开历史");
@@ -264,22 +234,53 @@ describe("ai news sync", () => {
 
   it("skips before fetching when another sync holds the shared lease", async () => {
     let fetched = false;
-    const stats = await syncAiNews({
-      clientFactory: () => ({}),
-      env: {
-        SUPABASE_SERVICE_ROLE_KEY: "test",
-        SUPABASE_URL: "https://example.supabase.co",
-      },
-      fetchImpl: async () => {
-        fetched = true;
-        throw new Error("should not fetch");
-      },
-      stateStore: {
-        acquire: async () => ({ acquired: false, etags: {} }),
-      },
-    });
+    const stats = await Effect.runPromise(
+      syncAiNews({
+        clientFactory: () => ({}),
+        env: {
+          SUPABASE_SERVICE_ROLE_KEY: "test",
+          SUPABASE_URL: "https://example.supabase.co",
+        },
+        fetchImpl: async () => {
+          fetched = true;
+          throw new Error("should not fetch");
+        },
+        stateStore: {
+          acquire: () => Effect.succeed({ acquired: false, etags: {} }),
+        },
+      }),
+    );
 
     assert.equal(fetched, false);
     assert.equal(stats.skipped, true);
   });
+});
+
+it("interruption aborts the fetch and releases the acquired synchronization lease", async () => {
+  const controller = new AbortController();
+  let abortedSignal;
+  let failures = 0;
+  const client = { from: () => ({ select: () => ({ eq: async () => ({ data: [], error: null }) }) }) };
+  await Effect.runPromiseExit(
+    syncAiNews({
+      env: { SUPABASE_URL: "https://example.test", SUPABASE_SERVICE_ROLE_KEY: "fixture" },
+      clientFactory: () => client,
+      stateStore: {
+        acquire: () => Effect.succeed({ acquired: true, etags: {} }),
+        fail: () =>
+          Effect.sync(() => {
+            failures += 1;
+          }),
+        succeed: () => Effect.die("interrupted sync must not succeed"),
+      },
+      fetchImpl: (_url, { signal }) => {
+        abortedSignal = signal;
+        queueMicrotask(() => controller.abort());
+        return new Promise(() => {});
+      },
+    }),
+    { signal: controller.signal },
+  );
+  assert.equal(abortedSignal.aborted, true);
+  assert.equal(failures, 1);
 });

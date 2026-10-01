@@ -1,7 +1,8 @@
+import { DateTimeString } from "@site/effect/schema";
 import "server-only";
 
 import { statSync } from "node:fs";
-import { z } from "zod";
+import { Schema } from "effect";
 
 import { getPublicDatabase, PUBLIC_DATABASE_PATH } from "@/lib/public-database";
 import type { AskDocumentScope, AskSource } from "@/lib/ask-types";
@@ -18,18 +19,21 @@ function occurrences(text: string, needle: string) {
   }
 }
 
-const localSearchRowSchema = z.object({
-  content: z.string().min(1),
-  id: z.string().min(1),
-  published_at: z.string().datetime({ offset: true }).nullable(),
-  search_text: z.string().min(1),
-  section: z.string().nullable(),
-  source_id: z.string().min(1),
-  source_scope: z.enum(["daily", "open-source", "profile"]),
-  source_url: z.string().min(1),
-  title: z.string().min(1),
+const localSearchRowSchema = Schema.Struct({
+  content: Schema.String.pipe(Schema.minLength(1)),
+  id: Schema.String.pipe(Schema.minLength(1)),
+  published_at: Schema.NullOr(DateTimeString),
+  search_text: Schema.String.pipe(Schema.minLength(1)),
+  section: Schema.NullOr(Schema.String),
+  source_id: Schema.String.pipe(Schema.minLength(1)),
+  source_scope: Schema.Literal("daily", "open-source", "profile"),
+  source_url: Schema.String.pipe(Schema.minLength(1)),
+  title: Schema.String.pipe(Schema.minLength(1)),
 });
-const localSearchFtsRowSchema = z.object({ id: z.string().min(1), rank: z.number() });
+const localSearchFtsRowSchema = Schema.Struct({
+  id: Schema.String.pipe(Schema.minLength(1)),
+  rank: Schema.Number.pipe(Schema.finite()),
+});
 
 export type LocalAskDocument = Omit<AskSource, "scope"> & {
   score: number;
@@ -45,7 +49,7 @@ type DailySearchCorpusEntry = Omit<LocalAskDocument, "score"> & {
 };
 
 // 语料随部署冻结（curation.sqlite 打包进产物）：按 DB 文件 mtime 做模块级缓存，
-// 小写文本只预处理一次，避免每次提问都全表 SELECT + 逐行 zod parse + 三次 lowercase
+// 小写文本只预处理一次，避免每次提问都全表 SELECT + 逐行 Schema decode + 三次 lowercase
 //（检索的 fallback 路径下单次提问会重复调用本函数多次）。
 let dailySearchCorpusCache: { entries: DailySearchCorpusEntry[]; mtimeMs: number } | undefined;
 
@@ -54,9 +58,11 @@ function getDailySearchCorpus(): DailySearchCorpusEntry[] {
   if (dailySearchCorpusCache?.mtimeMs === mtimeMs) return dailySearchCorpusCache.entries;
 
   const entries = getPublicDatabase()
-    .prepare("SELECT id, source_scope, published_at, title, section, content, search_text, source_id, source_url FROM ask_documents")
+    .prepare(
+      "SELECT id, source_scope, published_at, title, section, content, search_text, source_id, source_url FROM ask_documents",
+    )
     .all()
-    .map((row) => localSearchRowSchema.parse(row))
+    .map((row) => Schema.decodeUnknownSync(localSearchRowSchema)(row))
     .map((row) => ({
       content: row.content,
       id: row.id,
@@ -78,14 +84,16 @@ function searchLocalAskFts(query: string, scope: LocalAskDocument["scope"], limi
   if (Array.from(query).length < 3) return [];
   try {
     return getPublicDatabase()
-      .prepare(`SELECT documents.id, bm25(ask_documents_fts, 6.0, 1.0) AS rank
+      .prepare(
+        `SELECT documents.id, bm25(ask_documents_fts, 6.0, 1.0) AS rank
         FROM ask_documents_fts
         JOIN ask_documents AS documents ON documents.rowid = ask_documents_fts.rowid
         WHERE ask_documents_fts MATCH ? AND documents.source_scope = ?
         ORDER BY rank
-        LIMIT ?`)
+        LIMIT ?`,
+      )
       .all(`"${query.replaceAll('"', '""')}"`, scope, limit)
-      .map((row) => localSearchFtsRowSchema.parse(row));
+      .map((row) => Schema.decodeUnknownSync(localSearchFtsRowSchema)(row));
   } catch {
     return [];
   }
@@ -121,17 +129,27 @@ export function searchLocalAskDocuments(
       .flatMap((row, index) => {
         const entry = byId.get(String(row.id));
         if (!entry) return [];
-        return [toAskDocument(entry, 4 / (index + 1)
-            + occurrences(entry.lowercaseTitle, needle) * 8
-            + occurrences(entry.lowercaseSearchText, needle) * 2)];
+        return [
+          toAskDocument(
+            entry,
+            4 / (index + 1) +
+              occurrences(entry.lowercaseTitle, needle) * 8 +
+              occurrences(entry.lowercaseSearchText, needle) * 2,
+          ),
+        ];
       })
       .slice(0, limit);
   }
 
   return corpus
-    .map((entry) => toAskDocument(entry, occurrences(entry.lowercaseTitle, needle) * 8
-        + occurrences(entry.lowercaseSearchText, needle) * 2
-        + occurrences(entry.lowercaseContent, needle)))
+    .map((entry) =>
+      toAskDocument(
+        entry,
+        occurrences(entry.lowercaseTitle, needle) * 8 +
+          occurrences(entry.lowercaseSearchText, needle) * 2 +
+          occurrences(entry.lowercaseContent, needle),
+      ),
+    )
     .filter((row) => row.score > 0)
     .sort((left, right) => right.score - left.score || (right.publishedAt ?? "").localeCompare(left.publishedAt ?? ""))
     .slice(0, limit);

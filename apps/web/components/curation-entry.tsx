@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,25 +9,25 @@ import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import { XAppLink } from "@/components/x-app-link";
 import { XVideoPlayer } from "@/components/x-video-player";
 import { findCurationItem, getCurationNeighbors } from "@/lib/curation";
-import {
-  formatCurationDate,
-  formatCurationMediaAlt,
-  formatOriginalPublicationDate,
-} from "@/lib/curation-format";
+import { formatCurationDate, formatCurationMediaAlt, formatOriginalPublicationDate } from "@/lib/curation-format";
 import type { CurationItem } from "@/lib/curation-types";
 import { entryShareMetadata, withCanonical } from "@/lib/metadata";
 
 type CurationEntryContext = "curation" | "design";
 
 /** 板块归属：详情返回链接、页面标题共用同一份解析。 */
-const SECTION_BY_CONTEXT: Record<CurationEntryContext, (item: CurationItem) => {
-  backHref: string;
-  backLabel: string;
-  label: string;
-}> = {
-  curation: (item) => item.source.platform === "douyin"
-    ? { backHref: "/douyin", backLabel: "返回抖音收藏", label: "抖音收藏" }
-    : { backHref: "/curation", backLabel: "返回每日关注", label: "每日关注" },
+const SECTION_BY_CONTEXT: Record<
+  CurationEntryContext,
+  (item: CurationItem) => {
+    backHref: string;
+    backLabel: string;
+    label: string;
+  }
+> = {
+  curation: (item) =>
+    item.source.platform === "douyin"
+      ? { backHref: "/douyin", backLabel: "返回抖音收藏", label: "抖音收藏" }
+      : { backHref: "/curation", backLabel: "返回每日关注", label: "每日关注" },
   design: () => ({ backHref: "/design", backLabel: "返回设计收藏", label: "设计收藏" }),
 };
 
@@ -48,11 +49,8 @@ function linkifyText(text: string, links: CurationItem["links"]) {
   });
 }
 
-export async function getCurationEntryMetadata(
-  id: string,
-  context: CurationEntryContext,
-): Promise<Metadata> {
-  const item = await findCurationItem(id);
+export async function getCurationEntryMetadata(id: string, context: CurationEntryContext): Promise<Metadata> {
+  const item = await Effect.runPromise(findCurationItem(id));
   if (!item || (context === "design" && item.design?.status !== "include")) return {};
   const section = SECTION_BY_CONTEXT[context](item);
   const title = `${item.title}｜${section.label}`;
@@ -81,21 +79,14 @@ export function createCurationEntryRoute(context: CurationEntryContext) {
   return { EntryPage, generateMetadata };
 }
 
-async function CurationEntry({
-  context,
-  id,
-}: {
-  context: CurationEntryContext;
-  id: string;
-}) {
-  const item = await findCurationItem(id);
+async function CurationEntry({ context, id }: { context: CurationEntryContext; id: string }) {
+  const item = await Effect.runPromise(findCurationItem(id));
   if (!item || (context === "design" && item.design?.status !== "include")) notFound();
   const designContext = context === "design";
-  const neighbors = await getCurationNeighbors(id, designContext);
+  const neighbors = await Effect.runPromise(getCurationNeighbors(id, designContext));
   const section = SECTION_BY_CONTEXT[context](item);
-  const neighborHref = (neighborId: string) => (
-    designContext ? `/design/${neighborId}` : `/curation/${neighborId}`
-  ) as Route;
+  const neighborHref = (neighborId: string) =>
+    (designContext ? `/design/${neighborId}` : `/curation/${neighborId}`) as Route;
 
   return (
     <DetailPage mainClassName="curation-home curation-detail curation-detail--spread">
@@ -111,7 +102,11 @@ async function CurationEntry({
             <p>{item.summary}</p>
           </div>
           {item.tags.length > 0 ? (
-            <div className="curation-detail__tags">{item.tags.map((tag) => <em key={tag}>{tag}</em>)}</div>
+            <div className="curation-detail__tags">
+              {item.tags.map((tag) => (
+                <em key={tag}>{tag}</em>
+              ))}
+            </div>
           ) : null}
         </header>
 
@@ -122,16 +117,18 @@ async function CurationEntry({
               <figcaption className="curation-detail__specimen-byline">
                 <strong>{item.author.name}</strong>
                 {item.source.platform === "x" ? <span>@{item.author.handle}</span> : <span>{item.source.label}</span>}
-                <time dateTime={item.publishedAt ?? undefined}>
-                  原内容发布于 {formatOriginalPublicationDate(item)}
-                </time>
+                <time dateTime={item.publishedAt ?? undefined}>原内容发布于 {formatOriginalPublicationDate(item)}</time>
                 {item.excerptTime ? <span>摘录出现于 {item.excerptTime}</span> : null}
               </figcaption>
-              <blockquote><p>{linkifyText(item.text, item.links)}</p></blockquote>
+              <blockquote>
+                <p>{linkifyText(item.text, item.links)}</p>
+              </blockquote>
               {item.quoteContext ? (
                 <blockquote className="curation-detail__quote">
                   <p>{linkifyText(item.quoteContext.text, item.links)}</p>
-                  <footer>— @{item.quoteContext.author}（{item.quoteContext.authorName}）的引用原文</footer>
+                  <footer>
+                    — @{item.quoteContext.author}（{item.quoteContext.authorName}）的引用原文
+                  </footer>
                 </blockquote>
               ) : null}
               {item.media.length > 0 ? (
@@ -167,7 +164,10 @@ async function CurationEntry({
                           src={media.previewUrl ?? media.url}
                           width={media.width ?? undefined}
                         />
-                        <span><Play aria-hidden="true" />视频内容 · 查看原始来源</span>
+                        <span>
+                          <Play aria-hidden="true" />
+                          视频内容 · 查看原始来源
+                        </span>
                       </XAppLink>
                     ),
                   )}
@@ -187,13 +187,17 @@ async function CurationEntry({
           <ul>
             <li>
               <XAppLink href={item.source.url}>
-                {item.source.label}{item.source.platform === "x" ? `（@${item.author.handle}）` : `（${item.author.name}）`}
+                {item.source.label}
+                {item.source.platform === "x" ? `（@${item.author.handle}）` : `（${item.author.name}）`}
                 <ArrowUpRight aria-hidden="true" />
               </XAppLink>
             </li>
             {item.links.map((link) => (
               <li key={link.url}>
-                <XAppLink href={link.url}>{link.url}<ArrowUpRight aria-hidden="true" /></XAppLink>
+                <XAppLink href={link.url}>
+                  {link.url}
+                  <ArrowUpRight aria-hidden="true" />
+                </XAppLink>
               </li>
             ))}
           </ul>
@@ -203,12 +207,14 @@ async function CurationEntry({
           <nav aria-label="相邻剪报" className="curation-detail__neighbors">
             {neighbors.newer ? (
               <Link data-dir="newer" href={neighborHref(neighbors.newer.id)}>
-                <span>上一则 · 较新收录</span><strong>{neighbors.newer.title}</strong>
+                <span>上一则 · 较新收录</span>
+                <strong>{neighbors.newer.title}</strong>
               </Link>
             ) : null}
             {neighbors.older ? (
               <Link data-dir="older" href={neighborHref(neighbors.older.id)}>
-                <span>下一则 · 较早收录</span><strong>{neighbors.older.title}</strong>
+                <span>下一则 · 较早收录</span>
+                <strong>{neighbors.older.title}</strong>
               </Link>
             ) : null}
           </nav>

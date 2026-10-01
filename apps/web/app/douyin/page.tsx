@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Metadata } from "next";
 
 import { CurationStream } from "@/components/curation-stream";
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 async function DouyinFeed() {
-  const douyinPage = await getDouyinCurationPage(0, 20);
+  const douyinPage = await Effect.runPromise(getDouyinCurationPage(0, 20));
   return (
     <CurationStream
       apiPath="/api/douyin"
