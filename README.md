@@ -23,9 +23,14 @@
 
 ## 技术栈
 
-- **Web**：Next.js 16（App Router）、React 19、Tailwind CSS 4、shadcn/ui；部署在 Vercel。
+- **Web**：Next.js 16.3.8（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.1 / `@shadcn/react` 0.3.1、Radix UI 1.6.7、Motion 14.0.0、Lucide 1.50.0；部署在 Vercel。
+- **运行时与工程工具**：Node.js 24.21.0（最新 LTS；Vercel 支持 24.x）、pnpm 12.8.1、TypeScript 7.0.2、Effect 4.0.0、Turbo 2.11.7、oxlint 1.86.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.2 与 Playwright 1.63.0。
+- **数据与 AI**：Supabase JS 2.117.2、better-sqlite3 13.0.3、AI SDK 7.0.127 / Anthropic 4.0.71、Pi 1.0.0、Transformers.js 4.3.0、sqlite-vec 0.1.9。
+- **原生客户端**：Android 使用 AGP 9.4.1、Gradle 9.8.0、Kotlin 2.4.20、Compose BOM 2026.09.00（compileSdk 37.1）；iOS 使用 Xcode 27 / Swift 6.4 工具链、Swift 6 语言模式与 SwiftUI（iOS 26+），无第三方依赖。
 - **公开数据**：每日动态从只读 `data/ai-news.sqlite` 历史归档与 Supabase 公开增量合并读取；X、抖音、开源关注与本地问答全文索引从随 Git 部署的只读 `data/curation.sqlite` 读取。
 - **问一问**：仅检索已发布的个人简介、每日动态、每日关注和开源资料；使用智谱 GLM 流式回答并附来源。离线策展解析默认通过 Pi 调用智谱 GLM。
+
+以上版本于 2026-10-03 核对稳定发布；精确依赖见各工作区 `package.json`、`pnpm-lock.yaml` 和 `android/gradle/libs.versions.toml`。Node.js 26.10.0 属于 Current 发布线，待部署平台支持后再升级。`@steipete/bird` 0.8.0 已停止维护且无新版，当前仅用于离线抓取工具。
 
 X / 抖音 / GitHub Star 的抓取与模型结果留在本机忽略目录；只有筛选后的公开投影进入 SQLite。每日动态由上游接口同步到 Supabase 私有表与公开投影，网站不直接请求上游。SQLite 内容需要随 Git 合并并重新部署才会更新；每日动态落库后，下一次页面请求即可读到新内容；每日历史归档 PR 部署成功后才允许清理对应云端记录。
 
