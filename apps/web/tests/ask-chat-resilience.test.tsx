@@ -97,14 +97,14 @@ describe("AskChat interrupted reading and session continuity", () => {
   it("renders Markdown while streaming and reveals sources only after completion", async () => {
     render(<AskChat />);
     await sendQuestion();
-    await emit("text", { delta: "## 进展\n\n这是**重点" });
+    await emit("text", { delta: 'root = Stack([TextContent("## 进展\\n\\n这是**重点' });
     expect(screen.getByRole("heading", { name: "进展" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "停止生成" })).toBeTruthy();
 
-    await emit("text", { delta: "**。\n\n- 第一项\n- 第二项\n\n```ts\nconst ready = true;\n```" });
+    await emit("text", { delta: '**。\\n\\n- 第一项\\n- 第二项\\n\\n```ts\\nconst ready = true;\\n```")])' });
     expect(screen.getByText("重点").tagName).toBe("STRONG");
     expect(screen.getByText("第一项").tagName).toBe("LI");
-    expect(screen.getByText("const ready = true;").tagName).toBe("CODE");
+    expect(document.querySelector("pre code")?.textContent).toContain("const ready = true;");
     await emit("sources", { sources: [source] });
     expect(screen.queryByRole("list", { name: "回答来源" })).toBeNull();
 
@@ -121,11 +121,35 @@ describe("AskChat interrupted reading and session continuity", () => {
     expect(screen.getByRole("heading", { name: "进展" })).toBeTruthy();
   });
 
+  it("continues from a default OpenUI button without losing the draft", async () => {
+    render(<AskChat />);
+    await sendQuestion();
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body)).format).toBe("openui");
+    await emit("text", { delta: 'root = Stack([TextContent("回答"), Buttons([Button("继续了解", Action([@ToAssistant("详细介绍工程经历")]))])])' });
+    await emit("done", {});
+    await act(async () => stream.close());
+    fireEvent.change(screen.getByRole("textbox", { name: "输入问题" }), { target: { value: "保留我的草稿" } });
+    fireEvent.click(screen.getByRole("button", { name: "继续了解" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body)).question).toBe("详细介绍工程经历");
+    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("保留我的草稿");
+  });
+
+  it("reports malformed OpenUI without exposing the raw program", async () => {
+    render(<AskChat />);
+    await sendQuestion();
+    await emit("text", { delta: "not a valid program" });
+    await emit("done", {});
+    await act(async () => stream.close());
+    expect((await screen.findByRole("alert")).textContent).toContain("回答未能完整显示");
+    expect(screen.queryByText("not a valid program")).toBeNull();
+  });
+
   it("keeps partial text and sources when stopped, without successful-answer followups", async () => {
     render(<AskChat />);
     await sendQuestion();
     await emit("sources", { sources: [source] });
-    await emit("text", { delta: "已经收到的部分回答。" });
+    await emit("text", { delta: 'root = Stack([TextContent("已经收到的部分回答。")])' });
     fireEvent.click(screen.getByRole("button", { name: "停止生成" }));
 
     expect(await screen.findByText("已停止生成。")).toBeTruthy();
@@ -133,13 +157,13 @@ describe("AskChat interrupted reading and session continuity", () => {
     fireEvent.click(screen.getByText("参考资料 · 1 篇"));
     expect(screen.getByRole("link", { name: /项目来源/ }).getAttribute("href")).toBe("/curation/source");
     expect(screen.queryByText("继续问")).toBeNull();
-    expect(readAskChatSnapshot()?.messages.at(-1)?.content).toBe("已经收到的部分回答。");
+    expect(readAskChatSnapshot()?.messages.at(-1)?.content).toBe('root = Stack([TextContent("已经收到的部分回答。")])');
   });
 
   it("preserves text on stream error and resends the original question on retry", async () => {
     render(<AskChat />);
     await sendQuestion();
-    await emit("text", { delta: "先完成的部分。" });
+    await emit("text", { delta: 'root = Stack([TextContent("先完成的部分。")])' });
     await emit("error", { message: "回答中断，请重试。" });
     await act(async () => stream.close());
 

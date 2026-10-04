@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronDown, Search } from "lucide-react";
 import { motion } from "motion/react";
 import { memo } from "react";
 
-import { AskAnswerMarkdown } from "@/components/ask-answer-markdown";
+import { AskAnswer } from "@/components/ask-answer";
 import { Button } from "@/components/ui/button";
 import { MessageScroller } from "@shadcn/react/message-scroller";
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
@@ -21,9 +21,10 @@ const MESSAGE_ENTER_DURATION = 0.24;
 
 // 单条消息气泡独立 memo：流式 delta 只更新目标 message 对象引用，
 // 历史消息引用保持不变即可整体跳过重渲染（含其中的 Markdown 解析）。
-const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
+const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder, message, onContinue, onRetry, prefersReducedMotion }: {
   isStreamingPlaceholder: boolean;
   message: ChatMessage;
+  onContinue?: (question: string) => void;
   onRetry?: () => void;
   prefersReducedMotion: boolean;
 }) {
@@ -39,7 +40,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
           <div className={styles.bubbleFrame} data-align={isUser ? "end" : "start"} data-slot="bubble" data-variant={isUser ? "default" : "ghost"}>
             <div aria-live={isUser ? undefined : "polite"} className={`${styles.bubbleContent} ${isUser ? styles.userBubble : styles.assistantBubble}`} data-slot="bubble-content">
               {!isUser
-                ? <AskAnswerMarkdown source={message.content} />
+                ? <AskAnswer isStreaming={!message.isComplete} onContinue={onContinue} source={message.content} />
                 : message.content}
             </div>
           </div>
@@ -90,9 +91,10 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
   );
 });
 
-export function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefersReducedMotion }: {
+export function AskMessageItem({ isStreamingPlaceholder, message, onContinue, onRetry, prefersReducedMotion }: {
   isStreamingPlaceholder: boolean;
   message: ChatMessage;
+  onContinue?: (question: string) => void;
   onRetry?: () => void;
   prefersReducedMotion: boolean;
 }) {
@@ -108,7 +110,7 @@ export function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefe
       scrollAnchor={message.role === "user"}
       transition={{ duration: MESSAGE_ENTER_DURATION, ease: STREAM_EASE }}
     >
-      <AskMessageBubble isStreamingPlaceholder={isStreamingPlaceholder} message={message} onRetry={onRetry} prefersReducedMotion={prefersReducedMotion} />
+      <AskMessageBubble isStreamingPlaceholder={isStreamingPlaceholder} message={message} onContinue={onContinue} onRetry={onRetry} prefersReducedMotion={prefersReducedMotion} />
     </MotionMessageScrollerItem>
   );
 }

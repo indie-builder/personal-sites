@@ -4,6 +4,7 @@ packages:
   - tools/content
 
 allowBuilds:
+  '@openuidev/lang-core': false
   '@google/genai': false
   better-sqlite3: true
   esbuild: true

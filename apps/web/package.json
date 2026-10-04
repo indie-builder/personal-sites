@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.71",
+    "@openuidev/react-lang": "0.3.0",
+    "@openuidev/react-ui": "0.16.3",
     "@shadcn/react": "^0.3.1",
     "@site/effect": "workspace:*",
     "@site/public-data": "workspace:*",

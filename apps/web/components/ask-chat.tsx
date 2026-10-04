@@ -191,6 +191,7 @@ export function AskChat() {
                     isStreamingPlaceholder={isStreaming && index === messages.length - 1}
                     key={message.id}
                     message={message}
+                    onContinue={isStreaming ? undefined : (question) => { void submit(question, { preserveDraft: true }); }}
                     onRetry={message.interruption?.kind === "error" && !isStreaming ? () => {
                       const previousQuestion = messages[index - 1];
                       if (previousQuestion?.role !== "user") return;
