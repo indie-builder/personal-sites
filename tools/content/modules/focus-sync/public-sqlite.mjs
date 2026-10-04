@@ -8,11 +8,9 @@ import { toDailySearchDocuments } from "@site/public-data/ask/search-index.mjs";
 import {
   compactPublicDatabase,
   initializePublicDatabase,
+  insertAskDocuments,
   preserveSupplementalProjection,
-  PUBLIC_DATABASE_PATH,
 } from "@site/public-data/sqlite.mjs";
-
-export const PUBLIC_CURATION_DATABASE_PATH = PUBLIC_DATABASE_PATH;
 
 function sortPublicFocusItems(items) {
   return [...items].sort(
@@ -68,26 +66,10 @@ export function buildPublicCurationDatabase({ outputPath, items: unsortedItems }
               }
             })(items);
 
-            const insertDocument = database.prepare(`
-      INSERT INTO ask_documents (id, source_scope, published_at, title, content, search_text, source_id, source_url)
-      VALUES (?, 'daily', ?, ?, ?, ?, ?, ?)
-    `);
             const documents = toDailySearchDocuments(
               items.map((content) => ({ content, published_at: content.publishedAt })),
             );
-            database.transaction((rows) => {
-              for (const document of rows) {
-                insertDocument.run(
-                  document.id,
-                  document.published_at,
-                  document.title,
-                  document.content,
-                  document.search_text,
-                  document.source_id,
-                  document.source_url,
-                );
-              }
-            })(documents);
+            database.transaction(() => insertAskDocuments(database, documents))();
             compactPublicDatabase(database);
             return documents;
           });

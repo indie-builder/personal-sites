@@ -28,7 +28,7 @@ export default function HomePage() {
   return (
     <main className="curation-home curation-home--mobile-home" id="site-main" tabIndex={-1}>
       <SiteProfile animateOnFirstHomeVisit mobileSection="home" />
-      <SectionMotionLifecycle section="home" />
+      <SectionMotionLifecycle />
       <section
         aria-label="每日动态"
         className="curation-home__feed site-section-motion"

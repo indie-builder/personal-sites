@@ -1,21 +1,10 @@
 {
-  "schema_version": "1.0.0",
-  "source_system": "github",
-  "account": "indie-builder",
-  "api_version": "2026-03-10",
   "storage": {
     "raw_root": "data/sensitive/github/starred/raw",
     "derived_root": "data/sensitive/github/starred/derived"
   },
-  "collections": {
-    "owned": true,
-    "starred": true,
-    "watched": true
-  },
   "readme": {
-    "owned_non_forks": true,
-    "max_bytes": 1048576,
-    "concurrency": 15
+    "max_bytes": 1048576
   },
   "analysis": {
     "concurrency": 15,
@@ -27,8 +16,5 @@
       "model": "gpt-5.6-luna",
       "reasoning_effort": "xhigh"
     }
-  },
-  "retention": {
-    "keep_snapshot_history": true
   }
 }

@@ -1,6 +1,6 @@
 export const BIGMODEL_BASE_URL = "https://open.bigmodel.cn/api/anthropic";
 export const BIGMODEL_PROVIDER = "bigmodel-coding";
-export const BIGMODEL_DEFAULT_MODEL = "glm-5.3-flash";
+const BIGMODEL_DEFAULT_MODEL = "glm-5.3-flash";
 
 export function resolveBigModel(model) {
   const value = model?.trim() || BIGMODEL_DEFAULT_MODEL;

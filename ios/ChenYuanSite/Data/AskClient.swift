@@ -7,7 +7,7 @@ nonisolated enum AskEvent: Equatable, Sendable {
     case done
     case error(String)
 
-    var isTerminal: Bool {
+    fileprivate var isTerminal: Bool {
         switch self {
         case .done, .error: true
         default: false
@@ -35,7 +35,7 @@ nonisolated enum AskScope: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-nonisolated struct AskSource: Decodable, Identifiable, Hashable, Sendable {
+nonisolated struct AskSource: Equatable, Sendable {
     var id = ""
     var sourceId = ""
     var content = ""
@@ -44,32 +44,6 @@ nonisolated struct AskSource: Decodable, Identifiable, Hashable, Sendable {
     var title = ""
     var sourceUrl = ""
     var section: String?
-
-    init(
-        id: String = "", sourceId: String = "", content: String = "", scope: String = "",
-        publishedAt: String? = nil, title: String = "", sourceUrl: String = "", section: String? = nil,
-    ) {
-        self.id = id
-        self.sourceId = sourceId
-        self.content = content
-        self.scope = scope
-        self.publishedAt = publishedAt
-        self.title = title
-        self.sourceUrl = sourceUrl
-        self.section = section
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: JSONKey.self)
-        id = try c.decode("id", default: "")
-        sourceId = try c.decode("sourceId", default: "")
-        content = try c.decode("content", default: "")
-        scope = try c.decode("scope", default: "")
-        publishedAt = try c.decodeOptional("publishedAt")
-        title = try c.decode("title", default: "")
-        sourceUrl = try c.decode("sourceUrl", default: "")
-        section = try c.decodeOptional("section")
-    }
 }
 
 /// 问一问流式客户端：POST /api/ask（SSE），逐行解析 event/data 帧。

@@ -1,5 +1,4 @@
 {
-  "source": "douyin-curation",
   "queueFile": "data/sensitive/douyin-curation/review-queue.json",
   "rawDir": "data/sensitive/douyin-curation/raw",
   "analyzer": {

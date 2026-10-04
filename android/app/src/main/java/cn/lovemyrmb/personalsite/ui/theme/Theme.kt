@@ -49,7 +49,7 @@ private val DarkSiteColors = SiteColors(
     glass = Color(0xB3181818),
 )
 
-val LocalSiteColors = staticCompositionLocalOf { LightSiteColors }
+private val LocalSiteColors = staticCompositionLocalOf { LightSiteColors }
 
 object SiteTheme {
     val colors: SiteColors

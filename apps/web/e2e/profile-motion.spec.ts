@@ -91,6 +91,39 @@ test("mobile profile bridge uses Motion and clears transition state", async ({ p
   expect(reduced).toMatchObject({ bridging: undefined, feedHold: undefined, ghosts: 0, profileTransition: undefined });
 });
 
+test("mobile navigation shows destination content when profile storage writes fail", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.addInitScript(() => {
+    const testWindow = window as typeof window & { __profileStorageWriteFailures: number };
+    testWindow.__profileStorageWriteFailures = 0;
+    const nativeSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (this === window.sessionStorage && key === "site-profile-transition") {
+        testWindow.__profileStorageWriteFailures += 1;
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }
+      return nativeSetItem.call(this, key, value);
+    };
+  });
+
+  await page.goto("/");
+  await page.getByRole("link", { name: "开源关注" }).click();
+
+  await expect(page).toHaveURL(/\/open-source$/u);
+  await expect(page.getByRole("region", { name: "已判读的开源项目" })).toBeVisible();
+  await expect(page.locator(".curation-home__profile-header")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".profile-transition-ghost")).toHaveCount(0);
+  expect(await page.evaluate(() => ({
+    failures: (window as typeof window & { __profileStorageWriteFailures: number }).__profileStorageWriteFailures,
+    feedHold: document.documentElement.dataset.profileFeedHold,
+    profileTransition: document.documentElement.dataset.profileTransition,
+  }))).toEqual({ failures: 1, feedHold: undefined, profileTransition: undefined });
+  expect(pageErrors).toEqual([]);
+});
+
 test("technical signal motion pauses while offscreen", async ({ page }) => {
   await page.setViewportSize({ height: 250, width: 390 });
   await page.goto("/");

@@ -111,9 +111,9 @@ final class PagedFeed<Value> {
 @Observable
 final class HomeModel {
     let aiNews: PagedFeed<AiNewsItem>
-    let curation: PagedFeed<CurationItem>
-    let design: PagedFeed<CurationItem>
-    let douyin: PagedFeed<CurationItem>
+    private let curation: PagedFeed<CurationItem>
+    private let design: PagedFeed<CurationItem>
+    private let douyin: PagedFeed<CurationItem>
     let openSource: PagedFeed<OpenSourceListEntry>
 
     init(api: SiteAPI) {
@@ -122,5 +122,14 @@ final class HomeModel {
         design = PagedFeed(idOf: { $0.id }) { try await api.feed(.design, offset: $0) }
         douyin = PagedFeed(idOf: { $0.id }) { try await api.feed(.douyin, offset: $0) }
         openSource = PagedFeed(idOf: { $0.slug }) { try await api.feed(.openSource, offset: $0) }
+    }
+
+    /// 策展三栏共用的分页器查表。
+    func curated(_ section: Section) -> PagedFeed<CurationItem> {
+        switch section {
+        case .curation: curation
+        case .design: design
+        default: douyin
+        }
     }
 }

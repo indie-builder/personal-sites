@@ -11,17 +11,18 @@ import {
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { BIGMODEL_BASE_URL, BIGMODEL_DEFAULT_MODEL, BIGMODEL_PROVIDER } from "../../../config/bigmodel.mjs";
+import { BIGMODEL_BASE_URL, BIGMODEL_PROVIDER, resolveBigModel } from "../../../config/bigmodel.mjs";
 import { resolvePiModelConfig, configureBigModelRuntime } from "../lib/pi-runtime.mjs";
 
 test("analysis registers BigModel before resolving credentials, including images", async () => {
+  assert.equal(resolveBigModel(), "glm-5.3-flash");
   const calls = [];
   const runtime = {
     registerProvider: (id, config) => calls.push({ id, config }),
     setRuntimeApiKey: async (id, key) => calls.push({ id, key }),
   };
   await Effect.runPromise(
-    configureBigModelRuntime(runtime, BIGMODEL_DEFAULT_MODEL, { BIGMODEL_API_KEY: "fixture-key" }),
+    configureBigModelRuntime(runtime, resolveBigModel(), { BIGMODEL_API_KEY: "fixture-key" }),
   );
   assert.equal(calls[0].id, BIGMODEL_PROVIDER);
   assert.equal(calls[0].config.baseUrl, BIGMODEL_BASE_URL);
@@ -30,10 +31,10 @@ test("analysis registers BigModel before resolving credentials, including images
   assert.deepEqual(calls[1], { id: BIGMODEL_PROVIDER, key: "fixture-key" });
   assert.deepEqual(resolvePiModelConfig({ env: {} }), {
     provider: BIGMODEL_PROVIDER,
-    model: BIGMODEL_DEFAULT_MODEL,
+    model: resolveBigModel(),
   });
   await assert.rejects(
-    Effect.runPromise(configureBigModelRuntime(runtime, BIGMODEL_DEFAULT_MODEL, {})),
+    Effect.runPromise(configureBigModelRuntime(runtime, resolveBigModel(), {})),
     /BIGMODEL_API_KEY/,
   );
 });
@@ -50,9 +51,9 @@ test("installed Pi SDK creates an isolated BigModel session with no tools", asyn
       refreshOnCreate: false,
     });
     await Effect.runPromise(
-      configureBigModelRuntime(runtime, BIGMODEL_DEFAULT_MODEL, { BIGMODEL_API_KEY: "fixture-key" }),
+      configureBigModelRuntime(runtime, resolveBigModel(), { BIGMODEL_API_KEY: "fixture-key" }),
     );
-    const model = runtime.getModel(BIGMODEL_PROVIDER, BIGMODEL_DEFAULT_MODEL);
+    const model = runtime.getModel(BIGMODEL_PROVIDER, resolveBigModel());
     assert.ok(model);
     const resourceLoader = new DefaultResourceLoader({
       cwd: directory,

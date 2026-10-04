@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { MessageScroller } from "@shadcn/react/message-scroller";
 import { SpriteWalker } from "@/components/assistant-sprite";
-import { AskMessageItem, EMPTY_ENTER_DURATION, MESSAGE_ENTER_EASE, MotionMessageScrollerItem } from "@/components/ask-message";
+import { AskMessageItem, MotionMessageScrollerItem } from "@/components/ask-message";
+import { STREAM_EASE } from "@/components/motion-tokens";
 import { useAskConversation } from "@/components/use-ask-conversation";
 import { useMediaQuery } from "@/components/use-media-query";
 import { ArrowDown, ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
@@ -11,6 +12,8 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, type ComponentProps } from "react";
 
 import styles from "./ask-chat.module.css";
+
+const EMPTY_ENTER_DURATION = 0.32;
 
 const suggestedQuestions = [
   "你的工程经历和目前关注的方向是什么？",
@@ -151,7 +154,7 @@ export function AskChat() {
                   className={styles.emptyItem}
                   initial={prefersReducedMotion ? false : { y: "0.4rem" }}
                   messageId="ask-empty-state"
-                  transition={{ duration: EMPTY_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
+                  transition={{ duration: EMPTY_ENTER_DURATION, ease: STREAM_EASE }}
                 >
                   <div className={styles.empty} data-slot="empty">
                     <AssistantWelcome />
@@ -164,7 +167,7 @@ export function AskChat() {
                           transition={{
                             delay: prefersReducedMotion ? 0 : 0.15 + suggestionIndex * 0.05,
                             duration: 0.24,
-                            ease: MESSAGE_ENTER_EASE,
+                            ease: STREAM_EASE,
                           }}
                         >
                           <Button onClick={() => void submit(suggestion)} size="sm" type="button" variant="ghost">
@@ -198,7 +201,7 @@ export function AskChat() {
                   animate={{ opacity: 1, y: 0 }}
                   className={styles.followups}
                   initial={prefersReducedMotion ? false : { opacity: 0, y: "0.3rem" }}
-                  transition={{ duration: 0.24, ease: MESSAGE_ENTER_EASE }}
+                  transition={{ duration: 0.24, ease: STREAM_EASE }}
                 >
                   <div className={styles.suggestions}>
                     {followUpQuestions.slice(0, 1).map((suggestion) => (

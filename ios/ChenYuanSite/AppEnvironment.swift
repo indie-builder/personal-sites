@@ -8,18 +8,15 @@ import Security
 @Observable
 final class AppEnvironment {
     let api = SiteAPI()
-    let askClient = AskClient()
-    let entryHolder = EntryHolder()
+    var pendingDetail: DetailEntry?
     let homeModel: HomeModel
     let askController: AskController
 
-    /// 问一问的匿名访客 id：客户端生成一次并持久化（[A-Za-z0-9_-]{16,128}）。
-    let visitorId: String
-
     init() {
-        visitorId = Self.loadOrCreateVisitorID()
+        // 匿名访客 id 生成一次并持久化（[A-Za-z0-9_-]{16,128}），由会话持有。
+        let visitorId = Self.loadOrCreateVisitorID()
         homeModel = HomeModel(api: api)
-        askController = AskController(client: askClient, visitorId: visitorId)
+        askController = AskController(client: AskClient(), visitorId: visitorId)
     }
 
     private static func loadOrCreateVisitorID() -> String {
@@ -38,30 +35,8 @@ final class AppEnvironment {
 
 /// 详情页的跳转载体：列表 → 详情通过内存持有（与站内行为一致，
 /// 列表数据已含全文与媒体），进程重建后为空时详情页回退返回。
-enum DetailEntry: Identifiable {
+enum DetailEntry {
     case aiNews(String)
     case curation(Section, CurationItem)
     case openSource(OpenSourceListEntry)
-
-    var section: Section {
-        switch self {
-        case .aiNews: .aiNews
-        case .curation(let section, _): section
-        case .openSource: .openSource
-        }
-    }
-
-    var id: String {
-        switch self {
-        case .aiNews(let id): id
-        case .curation(_, let item): item.id
-        case .openSource(let entry): entry.slug
-        }
-    }
-}
-
-@MainActor
-@Observable
-final class EntryHolder {
-    var pending: DetailEntry?
 }

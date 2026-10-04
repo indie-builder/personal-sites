@@ -49,7 +49,7 @@ function linkifyText(text: string, links: CurationItem["links"]) {
   });
 }
 
-export async function getCurationEntryMetadata(id: string, context: CurationEntryContext): Promise<Metadata> {
+async function getCurationEntryMetadata(id: string, context: CurationEntryContext): Promise<Metadata> {
   const item = await Effect.runPromise(findCurationItem(id));
   if (!item || (context === "design" && item.design?.status !== "include")) return {};
   const section = SECTION_BY_CONTEXT[context](item);

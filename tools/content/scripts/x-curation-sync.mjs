@@ -24,18 +24,15 @@ import {
 } from "../modules/analysis/runtime.mjs";
 import { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
 
-export { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
-
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const execFileAsync = promisify(execFile);
 
 export function parseSyncArgs(args) {
-  const parsed = parseCliOptions(args, {
+  const { model, positionals: _positionals, ...parsed } = parseCliOptions(args.map((arg) => arg === "-h" ? "--help" : arg), {
     "--design-concurrency": "int",
     "--engine": "string",
     "--fetch-only": "flag",
     "--help": "flag",
-    "-h": "flag",
     "--history": "flag",
     "--limit": "int",
     "--media": "flag",
@@ -51,12 +48,11 @@ export function parseSyncArgs(args) {
     fetchOnly: false,
     history: false,
     engine: DEFAULT_ANALYSIS_ENGINE,
-    codexModel: "gpt-5.6-luna",
+    codexModel: model ?? "gpt-5.6-luna",
     designConcurrency: null,
     reasoningEffort: "max",
     ...parsed,
   };
-  delete options.positionals;
   if (parsed.noMedia) options.media = false;
   if (!["bookmarks", "likes", "both"].includes(options.source)) {
     throw new Error("--source 只能是 bookmarks、likes 或 both。");

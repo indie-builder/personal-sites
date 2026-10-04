@@ -67,7 +67,7 @@ export function formatAiNewsClock(publishedAt: string | null) {
   return shanghaiClock.format(new Date(publishedAt));
 }
 
-export type AiNewsDayGroup<T extends Pick<AiNewsItem, "publishedAt"> = AiNewsItem> = {
+type AiNewsDayGroup<T extends Pick<AiNewsItem, "publishedAt"> = AiNewsItem> = {
   dayKey: string;
   items: T[];
   label: string;

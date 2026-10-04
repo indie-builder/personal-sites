@@ -35,7 +35,7 @@ const localSearchFtsRowSchema = Schema.Struct({
   rank: Schema.Number.check(Schema.isFinite()),
 });
 
-export type LocalAskDocument = Omit<AskSource, "scope"> & {
+type LocalAskDocument = Omit<AskSource, "scope"> & {
   score: number;
   scope: Exclude<AskDocumentScope, "ai-news">;
 };

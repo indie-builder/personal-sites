@@ -18,6 +18,7 @@ import coil3.intercept.Interceptor
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -26,12 +27,17 @@ import org.junit.runner.RunWith
 /**
  * SiteAsyncImage 的自动重试：首次获取失败后按退避自动重发、成功收敛；
  * 持续失败则收敛在重试上限。用可切换的计数拦截器确定性证明。
- * 注意：单例拦截器驻留进程且 setSafe 二次调用是静默 no-op，因此两阶段
- * 必须在同一个测试方法内完成（靠新 model 实例获得全新重试预算）。
+ * 两阶段使用同一个拦截器，靠新 model 实例获得全新重试预算；
+ * 测试前后重置图片加载单例，避免依赖其他用例的执行顺序。
  */
 @RunWith(AndroidJUnit4::class)
 class SiteAsyncImageTest {
     @get:Rule val compose = createComposeRule()
+
+    @After
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+    }
 
     @Test
     fun retryRecoversFromTransientFailureAndConvergesAtLimitOnPersistentFailure() {
@@ -43,6 +49,7 @@ class SiteAsyncImageTest {
             chain.proceed()
         }
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        SingletonImageLoader.reset()
         SingletonImageLoader.setSafe(
             object : SingletonImageLoader.Factory {
                 override fun newImageLoader(context: Context): ImageLoader =

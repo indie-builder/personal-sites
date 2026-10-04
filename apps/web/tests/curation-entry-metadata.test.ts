@@ -5,15 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const { getCurationPage, getDesignCurationPage } = await import("../lib/curation");
-const { getCurationEntryMetadata } = await import("../components/curation-entry");
+const { createCurationEntryRoute } = await import("../components/curation-entry");
+const { generateMetadata: generateCurationMetadata } = createCurationEntryRoute("curation");
+const { generateMetadata: generateDesignMetadata } = createCurationEntryRoute("design");
 
 // 集成测试直接读随仓库打包的公开投影 data/curation.sqlite，
 // 验证详情元数据的 canonical 归一与分享卡片字段。
-describe("getCurationEntryMetadata", () => {
+describe("createCurationEntryRoute metadata", () => {
   it("每日关注详情 canonical 指向 /curation/<id> 并带完整分享卡片", async () => {
     const { items } = await Effect.runPromise(getCurationPage(0, 1));
     const item = items[0];
-    const metadata = await getCurationEntryMetadata(item.id, "curation");
+    const metadata = await generateCurationMetadata({ params: Promise.resolve({ id: item.id }) });
     const canonicalPath = `/curation/${item.id}`;
 
     expect(metadata.alternates?.canonical).toBe(canonicalPath);
@@ -36,7 +38,7 @@ describe("getCurationEntryMetadata", () => {
     expect(items.length, "投影中应存在设计收录条目").toBeGreaterThan(0);
     const designItem = items[0];
 
-    const metadata = await getCurationEntryMetadata(designItem.id, "design");
+    const metadata = await generateDesignMetadata({ params: Promise.resolve({ id: designItem.id }) });
     expect(metadata.alternates?.canonical).toBe(`/curation/${designItem.id}`);
     expect(metadata.title).toBe(`${designItem.title}｜设计收藏`);
     expect(metadata.openGraph?.url).toBe(`/curation/${designItem.id}`);
@@ -48,7 +50,7 @@ describe("getCurationEntryMetadata", () => {
     const plainItem = items.find((entry) => entry.design?.status !== "include");
     expect(plainItem, "投影中应存在非设计收录条目").toBeTruthy();
 
-    expect(await getCurationEntryMetadata(plainItem!.id, "design")).toEqual({});
-    expect(await getCurationEntryMetadata("missing-entry-id", "curation")).toEqual({});
+    expect(await generateDesignMetadata({ params: Promise.resolve({ id: plainItem!.id }) })).toEqual({});
+    expect(await generateCurationMetadata({ params: Promise.resolve({ id: "missing-entry-id" }) })).toEqual({});
   });
 });

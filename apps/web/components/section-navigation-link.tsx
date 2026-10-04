@@ -5,10 +5,6 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import {
-  beginSectionTransition,
-  type SectionTransition,
-} from "@/components/section-motion-state";
 import { beginProfileTransition } from "@/components/profile-transition-state";
 
 type SectionNavigationLinkProps = {
@@ -18,7 +14,6 @@ type SectionNavigationLinkProps = {
   from: string;
   href: Route;
   to: string;
-  transition: SectionTransition;
 };
 
 // 移动端 profile 过渡有 ghost 遮挡版块的退出过程，退出动画不必播完再导航，
@@ -44,7 +39,6 @@ export function SectionNavigationLink({
   from,
   href,
   to,
-  transition,
   ...props
 }: SectionNavigationLinkProps) {
   const router = useRouter();
@@ -52,14 +46,10 @@ export function SectionNavigationLink({
   const link = useRef<HTMLAnchorElement>(null);
   const keyboardNavigation = useRef(false);
   const timeout = useRef<number | null>(null);
-  const exitAnimation = useRef<NonNullable<ReturnType<typeof beginSectionTransition>> | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => () => {
     if (timeout.current !== null) window.clearTimeout(timeout.current);
-    const animation = exitAnimation.current;
-    exitAnimation.current = null;
-    animation?.stop();
   }, []);
 
   useEffect(() => {
@@ -98,38 +88,20 @@ export function SectionNavigationLink({
           commitNavigation(router, href);
           return;
         }
-        if (keyboardNavigation.current || transition === "swap"
+        const isMobileProfileTransition = (from === "home" || to === "home")
+          && window.matchMedia("(max-width: 900px)").matches;
+        if (!isMobileProfileTransition || keyboardNavigation.current
           || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
         event.preventDefault();
         setIsNavigating(true);
-        const isMobileProfileTransition = (from === "home" || to === "home")
-          && window.matchMedia("(max-width: 900px)").matches;
-
-        const profileTransitionStarted = beginProfileTransition(from, to);
-        if (isMobileProfileTransition && !profileTransitionStarted) {
+        if (!beginProfileTransition(from, to)) {
           commitNavigation(router, href);
           return;
         }
-        if (isMobileProfileTransition) {
-          timeout.current = window.setTimeout(() => {
-            commitNavigation(router, href);
-          }, mobileProfileExitDuration);
-          return;
-        }
-
-        const animation = beginSectionTransition(transition);
-        if (!animation) {
+        timeout.current = window.setTimeout(() => {
           commitNavigation(router, href);
-          return;
-        }
-        exitAnimation.current = animation;
-        const finish = () => {
-          if (exitAnimation.current !== animation) return;
-          exitAnimation.current = null;
-          commitNavigation(router, href);
-        };
-        void animation.then(finish, finish);
+        }, mobileProfileExitDuration);
       }}
     >
       {children}

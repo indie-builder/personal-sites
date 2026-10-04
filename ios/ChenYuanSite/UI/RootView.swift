@@ -38,7 +38,7 @@ struct RootView: View {
                     )
                     .navigationDestination(for: Route.self) { route in
                         switch route {
-                        case .detail: DetailRouteView(onScrollDelta: noteScroll)
+                        case .detail: DetailRouteView()
                         case .portfolio: PortfolioView(bottomPadding: barTotal)
                         case .portfolioCollection(let collection): PortfolioCollectionView(collection: collection)
                         case .portfolioTools: PortfolioToolsView()
@@ -133,7 +133,7 @@ struct RootView: View {
     }
 
     private func openDetail(_ entry: DetailEntry) {
-        env.entryHolder.pending = entry
+        env.pendingDetail = entry
         path.append(.detail)
     }
 

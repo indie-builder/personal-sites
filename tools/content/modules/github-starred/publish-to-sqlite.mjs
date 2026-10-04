@@ -5,11 +5,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { toOpenSourceSearchDocuments } from "@site/public-data/ask/search-index.mjs";
-import { compactPublicDatabase, initializePublicDatabase, PUBLIC_DATABASE_PATH } from "@site/public-data/sqlite.mjs";
+import { compactPublicDatabase, initializePublicDatabase, insertAskDocuments, PUBLIC_DATABASE_PATH } from "@site/public-data/sqlite.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 
-export function toPublicOpenSourceItem(record, analysis, entry, displayRank, now) {
+function toPublicOpenSourceItem(record, analysis, entry, displayRank, now) {
   return {
     content: {
       category: entry.category,
@@ -74,11 +74,6 @@ export function publishStarredRecords({
         published_at = excluded.published_at,
         content_json = excluded.content_json
     `);
-        const insertDocument = database.prepare(`
-      INSERT INTO ask_documents
-        (id, source_scope, source_id, title, section, source_url, published_at, content, search_text)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
         database.transaction(() => {
           for (const record of records) {
             deleteItem.run(record.repository.nodeId);
@@ -87,19 +82,11 @@ export function publishStarredRecords({
           for (const row of publicRows) {
             insertItem.run(row.repo_node_id, row.slug, row.display_rank, row.published_at, JSON.stringify(row.content));
           }
-          for (const document of documents) {
-            insertDocument.run(
-              document.id,
-              document.source_scope,
-              document.source_id,
-              document.title,
-              document.section,
-              document.source_url,
-              document.published_at,
-              document.content,
-              document.search_text,
-            );
+          // The shared writer upserts; preserve this publisher's rejection of duplicate chunks.
+          if (new Set(documents.map((document) => document.id)).size !== documents.length) {
+            throw new Error("重复的公开问答文档 ID，无法发布 GitHub 投影。");
           }
+          insertAskDocuments(database, documents);
         })();
         compactPublicDatabase(database);
 

@@ -5,25 +5,39 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { buildRepositoryStructureMarkdown, isChineseMarkdown } from "../modules/github-starred/github-api.mjs";
+import { isChineseMarkdown } from "../modules/github-starred/github-api.mjs";
 import {
   readLocalSourceRecords,
   syncRepositorySource,
   syncStarredRepositories,
 } from "../modules/github-starred/source.mjs";
 
-test("README 缺失时以仓库结构作为原始证据", () => {
-  const markdown = buildRepositoryStructureMarkdown(
-    { fullName: "example/no-readme" },
-    [
-      { path: "src", type: "dir" },
-      { path: "package.json", type: "file" },
-    ],
-    { "package.json": '{"name":"no-readme"}' },
-  );
-  assert.match(markdown, /README 不存在/u);
-  assert.match(markdown, /\[dir\] src/u);
-  assert.match(markdown, /## package\.json/u);
+test("README 缺失时以仓库结构作为原始证据", async () => {
+  const root = [
+    { name: "src", path: "src", type: "dir", size: 0 },
+    { name: "package.json", path: "package.json", type: "file", size: 20 },
+  ];
+  const manifest = '{"name":"no-readme"}';
+  const record = await Effect.runPromise(syncRepositorySource(
+    { fullName: "example/no-readme", defaultBranch: "main" },
+    {
+      exec: async (_command, args) => {
+        if (args[1] === "repos/example/no-readme/readme") throw new Error("HTTP 404 Not Found");
+        if (args[1] === "repos/example/no-readme/contents?ref=main") return { stdout: JSON.stringify(root) };
+        if (args[1] === "repos/example/no-readme/contents/package.json") return { stdout: manifest };
+        assert.fail(`Unexpected fixture request: ${args[1]}`);
+      },
+    },
+  ));
+  assert.equal(record.sourceKind, "repository");
+  assert.match(record.sourceMarkdown, /README 不存在/u);
+  assert.match(record.sourceMarkdown, /\[dir\] src/u);
+  assert.match(record.sourceMarkdown, /## package\.json/u);
+  assert.ok(record.sourceMarkdown.includes(manifest));
+  assert.deepEqual(record.sourceStructure, {
+    root: [root[1], root[0]],
+    manifests: { "package.json": manifest },
+  });
 });
 
 test("原始中文 README 直接成为中文阅读版", async () => {

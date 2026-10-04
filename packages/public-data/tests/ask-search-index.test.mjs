@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  splitReadmeByHeading,
   toDailySearchDocuments,
   toOpenSourceSearchDocuments,
   toProfileSearchDocument,
@@ -41,9 +40,6 @@ test("daily public projections become one searchable document per item", () => {
 });
 
 test("published README is split at headings and has stable source citations", () => {
-  const sections = splitReadmeByHeading("# 安装\n\n第一段。\n\n## 使用\n\n第二段。");
-  assert.deepEqual(sections.map(({ heading }) => heading), ["安装", "使用"]);
-
   const documents = toOpenSourceSearchDocuments([{
     content: {
       category: "agents",
@@ -59,6 +55,7 @@ test("published README is split at headings and has stable source citations", ()
   }]);
 
   assert.equal(documents.length, 2);
+  assert.deepEqual(documents.map((document) => document.section), ["安装", "使用"]);
   assert.deepEqual(documents.map((document) => document.id), ["open-source:example-agent:1", "open-source:example-agent:2"]);
   assert.deepEqual(documents.map((document) => document.source_url), ["/open-source/example-agent#安装", "/open-source/example-agent#使用"]);
   assert.ok(documents.every((document) => document.source_id === "example-agent"));
@@ -66,17 +63,17 @@ test("published README is split at headings and has stable source citations", ()
 });
 
 test("README duplicate headings and repository ids remain stable for citation and withdrawal", () => {
-  const sections = splitReadmeByHeading("# 介绍\n\n第一段。\n\n## 介绍\n\n第二段。");
-  assert.deepEqual(sections.map(({ anchor }) => anchor), ["介绍", "介绍-2"]);
-
   const documents = toOpenSourceSearchDocuments([{
     content: {
-      parsedMarkdown: "# 介绍\n\n第一段。",
+      parsedMarkdown: "# 介绍\n\n第一段。\n\n## 介绍\n\n第二段。",
       repository: "example/agent",
       slug: "example-agent",
     },
     repo_node_id: "repo-node-1",
   }]);
-  assert.equal(documents[0].source_id, "repo-node-1");
-  assert.equal(documents[0].source_url, "/open-source/example-agent#介绍");
+  assert.deepEqual(documents.map((document) => document.section), ["介绍", "介绍"]);
+  assert.ok(documents.every((document) => document.source_id === "repo-node-1"));
+  assert.deepEqual(documents.map((document) => document.source_url), [
+    "/open-source/example-agent#介绍", "/open-source/example-agent#介绍-2",
+  ]);
 });

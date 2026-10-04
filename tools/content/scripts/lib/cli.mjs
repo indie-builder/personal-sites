@@ -28,8 +28,11 @@ export function parseCliOptions(args, spec) {
     if (kind === "flag") {
       options[key] = true;
     } else if (kind === "int") {
-      const value = Number.parseInt(read(), 10);
-      if (!Number.isInteger(value) || value < 1) throw new Error(`${name} 必须是大于 0 的整数。`);
+      const raw = read();
+      const value = Number(raw);
+      if (!/^\d+$/u.test(raw) || !Number.isSafeInteger(value) || value < 1) {
+        throw new Error(`${name} 必须是大于 0 的整数。`);
+      }
       options[key] = value;
     } else if (kind === "csv") {
       const values = read().split(",").filter(Boolean);

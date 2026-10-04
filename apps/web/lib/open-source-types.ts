@@ -8,7 +8,7 @@ export const openSourceCategories = [
   { id: "tools", label: "AI 开发工具" },
 ] as const;
 
-export const openSourceDimensions = [
+const openSourceDimensions = [
   { id: "agent-skills", label: "Agent Skills" },
   { id: "coding-agent", label: "Coding Agent" },
   { id: "agent-runtime", label: "Agent 运行时" },
@@ -23,7 +23,7 @@ export const openSourceDimensions = [
 ] as const;
 
 export type OpenSourceCategory = (typeof openSourceCategories)[number]["id"];
-export type OpenSourceDimension = (typeof openSourceDimensions)[number]["id"];
+type OpenSourceDimension = (typeof openSourceDimensions)[number]["id"];
 export type OpenSourceEntry = typeof openSourceEntrySchema.Type;
 
 /**

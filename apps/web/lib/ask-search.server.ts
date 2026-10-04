@@ -12,7 +12,7 @@ type SearchDocument = AskSource & { score: number };
 
 type RankedBatch = { documents: SearchDocument[]; weight?: number };
 
-export function fuseAskSearchDocuments(batches: RankedBatch[], limit = 6): SearchDocument[] {
+function fuseAskSearchDocuments(batches: RankedBatch[], limit = 6): SearchDocument[] {
   const fused = new Map<string, { document: SearchDocument; matches: number; rawScore: number; score: number }>();
   for (const { documents, weight = 1 } of batches) {
     documents.forEach((document, index) => {

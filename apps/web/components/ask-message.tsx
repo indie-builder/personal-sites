@@ -21,8 +21,6 @@ const AskAnswerMarkdown = dynamic(() => import("@/components/ask-answer-markdown
 export { MotionMessageScrollerItem };
 
 const MESSAGE_ENTER_DURATION = 0.24;
-export const EMPTY_ENTER_DURATION = 0.32;
-export const MESSAGE_ENTER_EASE = STREAM_EASE;
 
 // 单条消息气泡独立 memo：流式 delta 只更新目标 message 对象引用，
 // 历史消息引用保持不变即可整体跳过重渲染（含其中的 Markdown 解析）。
@@ -86,7 +84,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
                   transition={{
                     delay: prefersReducedMotion ? 0 : sourceIndex * 0.045,
                     duration: 0.22,
-                    ease: MESSAGE_ENTER_EASE,
+                    ease: STREAM_EASE,
                   }}
                 >
                   <a className={styles.citation} href={source.sourceUrl}>
@@ -119,7 +117,7 @@ export function AskMessageItem({ isStreamingPlaceholder, message, onRetry, prefe
         : { opacity: 0, y: "0.4rem" }}
       messageId={message.id}
       scrollAnchor={message.role === "user"}
-      transition={{ duration: MESSAGE_ENTER_DURATION, ease: MESSAGE_ENTER_EASE }}
+      transition={{ duration: MESSAGE_ENTER_DURATION, ease: STREAM_EASE }}
     >
       <AskMessageBubble isStreamingPlaceholder={isStreamingPlaceholder} message={message} onRetry={onRetry} prefersReducedMotion={prefersReducedMotion} />
     </MotionMessageScrollerItem>

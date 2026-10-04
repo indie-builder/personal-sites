@@ -113,13 +113,13 @@ class HomeViewModel(private val api: SiteApi) : ViewModel() {
     val aiNews = PagedFeed(viewModelScope, idOf = AiNewsListItem::id) { offset ->
         api.aiNews(offset, Section.AI_NEWS.pageSize)
     }
-    val curation = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
+    private val curation = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
         api.curation(offset, Section.CURATION.pageSize)
     }
-    val design = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
+    private val design = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
         api.design(offset, Section.DESIGN.pageSize)
     }
-    val douyin = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
+    private val douyin = PagedFeed(viewModelScope, idOf = CurationItem::id) { offset ->
         api.douyin(offset, Section.DOUYIN.pageSize)
     }
     val openSource = PagedFeed(viewModelScope, idOf = OpenSourceListEntry::slug) { offset ->

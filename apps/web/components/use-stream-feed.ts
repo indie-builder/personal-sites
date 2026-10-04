@@ -7,20 +7,20 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import { getCurationScrollTarget, observeCurationScrollEnd } from "./curation-scroll";
 
-export type StreamPage<Item> = {
+type StreamPage<Item> = {
   error?: string;
   hasMore: boolean;
   items: Item[];
 };
 
-export type StreamSnapshotState<Item, Extra> = Extra & {
+type StreamSnapshotState<Item, Extra> = Extra & {
   hasMore: boolean;
   items: Item[];
   scrollTop: number;
 };
 
 /** createStreamSnapshot（components/stream-snapshot.ts）实例的最小接口。 */
-export interface StreamSnapshotAdapter<Item, Extra> {
+interface StreamSnapshotAdapter<Item, Extra> {
   read(
     headId: string | undefined,
     storageKey?: string,
@@ -220,5 +220,5 @@ export function useStreamFeed<
     return observeCurationScrollEnd(stream, () => void loadMore());
   }, [hasMore, loadError, loadMore]);
 
-  return { appendStart, hasMore, isLoading, items, loadError, loadMore, setItems, streamRef };
+  return { appendStart, hasMore, isLoading, items, loadError, loadMore, streamRef };
 }

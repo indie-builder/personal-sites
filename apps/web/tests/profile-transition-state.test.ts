@@ -1,7 +1,7 @@
 import { animate } from "motion/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { beginProfileTransition, clearProfileTransition } from "@/components/profile-transition-state";
+import { beginProfileTransition, clearProfileTransition, readProfileTransition } from "@/components/profile-transition-state";
 
 vi.mock("motion/react", () => ({
   animate: vi.fn(() => ({ stop: vi.fn() })),
@@ -40,6 +40,78 @@ describe("beginProfileTransition", () => {
     second.forEach(controls => expect(controls.stop).toHaveBeenCalledOnce());
     expect(document.querySelectorAll(".profile-transition-ghost")).toHaveLength(0);
     expect(document.documentElement.dataset.profileFeedHold).toBeUndefined();
+  });
+
+  it.each(["access", "read"])("returns no transition when storage %s throws", (failure) => {
+    expect(beginProfileTransition("home", "ask")).toBe(true);
+    if (failure === "access") {
+      vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
+        throw new DOMException("Storage denied", "SecurityError");
+      });
+    } else {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new DOMException("Storage denied", "SecurityError");
+      });
+    }
+
+    expect(readProfileTransition()).toBeNull();
+  });
+
+  it.each(["access", "removal"])("cleans up ghosts even when storage %s throws", (failure) => {
+    expect(beginProfileTransition("home", "ask")).toBe(true);
+    const controls = vi.mocked(animate).mock.results.slice(-3).map(result => result.value);
+    if (failure === "access") {
+      vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
+        throw new DOMException("Storage denied", "SecurityError");
+      });
+    } else {
+      vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+        throw new DOMException("Storage denied", "SecurityError");
+      });
+    }
+
+    expect(() => clearProfileTransition()).not.toThrow();
+    controls.forEach(control => expect(control.stop).toHaveBeenCalledOnce());
+    expect(document.querySelectorAll(".profile-transition-ghost")).toHaveLength(0);
+    expect(document.documentElement.dataset.profileFeedHold).toBeUndefined();
+    expect(document.documentElement.dataset.profileTransition).toBeUndefined();
+  });
+
+  it.each(["access", "write", "write-and-removal"])("falls back without hidden content when storage %s fails", (failure) => {
+    if (failure === "access") {
+      vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
+        throw new DOMException("Storage denied", "SecurityError");
+      });
+    } else {
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("Storage full", "QuotaExceededError");
+      });
+      if (failure === "write-and-removal") {
+        vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+          throw new DOMException("Storage denied", "SecurityError");
+        });
+      }
+    }
+    const previousAnimationCount = vi.mocked(animate).mock.results.length;
+
+    expect(beginProfileTransition("home", "ask")).toBe(false);
+
+    const controls = vi.mocked(animate).mock.results.slice(previousAnimationCount).map(result => result.value);
+    expect(controls).toHaveLength(3);
+    controls.forEach(control => expect(control.stop).toHaveBeenCalledOnce());
+    expect(document.querySelectorAll(".profile-transition-ghost")).toHaveLength(0);
+    expect(document.documentElement.dataset.profileFeedHold).toBeUndefined();
+    expect(document.documentElement.dataset.profileTransition).toBeUndefined();
+  });
+
+  it("starts a transition when only storage removal fails", () => {
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new DOMException("Storage denied", "SecurityError");
+    });
+
+    expect(beginProfileTransition("home", "ask")).toBe(true);
+    expect(readProfileTransition()?.kind).toBe("collapse");
+    expect(document.querySelectorAll(".profile-transition-ghost")).toHaveLength(3);
   });
 
   it("does not create flying ghosts when the header has scrolled out of view", () => {

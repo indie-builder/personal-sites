@@ -4,7 +4,6 @@ import "server-only";
 
 import { getAdminSupabaseClient } from "@/lib/supabase.server";
 import { syncAiNews } from "@site/public-data/ai-news/sync.mjs";
-import { toPublicAiNewsHealth } from "@site/public-data/ai-news/public-health.mjs";
 import { createSupabaseAiNewsStateStore } from "@site/public-data/ai-news/state.mjs";
 
 function createAdminClient() {
@@ -32,6 +31,13 @@ export function runAiNewsCron(backfill = false) {
 export function readAiNewsCronHealth() {
   return Effect.gen(function* () {
     const client = yield* attempt("ai-news.admin", createAdminClient);
-    return toPublicAiNewsHealth(yield* createSupabaseAiNewsStateStore(client).health());
+    const health = yield* createSupabaseAiNewsStateStore(client).health();
+    return {
+      ageMinutes: health.ageMinutes,
+      healthy: health.healthy,
+      lastStartedAt: health.lastStartedAt ?? null,
+      lastSucceededAt: health.lastSucceededAt ?? null,
+      running: health.running,
+    };
   });
 }

@@ -34,7 +34,7 @@ function splitAtParagraphs(markdown, maximumLength = MAX_CHUNK_CHARACTERS) {
  * Split published Markdown at headings first, then at paragraph boundaries.
  * The heading stays on every resulting chunk so citation context is stable.
  */
-export function splitReadmeByHeading(markdown) {
+function splitReadmeByHeading(markdown) {
   const sections = [];
   let heading = "概览";
   let anchor = null;

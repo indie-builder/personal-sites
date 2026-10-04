@@ -6,8 +6,6 @@ import { cache } from "react";
 import { Schema, Struct } from "effect";
 
 import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
-import type { AiNewsListItem } from "@/lib/ai-news-types";
-import type { AskSource } from "@/lib/ask-types";
 import { getPublicSupabaseClient } from "@/lib/supabase.server";
 import { getAiNewsArchive } from "@/lib/ai-news-archive.server";
 import {
@@ -19,8 +17,6 @@ import {
   searchArchivedItems,
 } from "@site/public-data/ai-news/archive.mjs";
 
-export type { AiNewsItem, AiNewsListItem } from "@/lib/ai-news-types";
-export type AiNewsSearchDocument = Omit<AskSource, "scope" | "section"> & { score: number };
 export const AI_NEWS_LIST_LIMIT = 50;
 
 function getPublicAiNewsClient() {
@@ -50,8 +46,6 @@ const readLiveList = cache(() =>
   ),
 );
 
-export type AiNewsPage = { hasMore: boolean; items: AiNewsListItem[] };
-
 export function getAiNewsPage(offset = 0, limit = AI_NEWS_LIST_LIMIT) {
   return Effect.gen(function* () {
     const live = yield* readLiveList();
@@ -71,12 +65,6 @@ export function getAiNewsPage(offset = 0, limit = AI_NEWS_LIST_LIMIT) {
       hasMore: items.length > limit,
       items: yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(items.slice(0, limit)),
     };
-  });
-}
-
-export function getAiNewsSitemapItems() {
-  return Effect.gen(function* () {
-    return (yield* getAiNewsPage(0, 2500)).items.map(({ id, publishedAt }) => ({ id, publishedAt }));
   });
 }
 

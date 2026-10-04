@@ -1,6 +1,5 @@
 package cn.lovemyrmb.personalsite
 
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -59,6 +58,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
+import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.data.Section
 import kotlinx.coroutines.launch
 import cn.lovemyrmb.personalsite.ui.ask.AskScreen
@@ -150,15 +150,14 @@ fun PersonalSiteApp(container: AppContainer) {
                     pagerState = pagerState,
                     bottomBarPadding = bottomBarTotal + 24.dp,
                     onOpenDetail = { entry ->
-                        container.entryHolder.set(entry)
-                        navController.navigate("detail/${entry.section.name}/${Uri.encode(entry.id)}")
+                        container.pendingDetail = entry
+                        navController.navigate("detail")
                     },
-                    onOpenLink = { openExternally(context, it) },
                 )
             }
-            composable("detail/{section}/{id}") {
+            composable("detail") {
                 DetailRoute(
-                    entry = container.entryHolder.pending,
+                    entry = container.pendingDetail,
                     api = container.api,
                     bottomBarPadding = PaddingValues(bottom = bottomBarTotal),
                     onBack = { navController.popBackStack() },
@@ -185,14 +184,14 @@ fun PersonalSiteApp(container: AppContainer) {
                     bottomPadding = bottomBarTotal,
                     onBack = { navController.popBackStack() },
                     onOpenItem = { items, index ->
-                        container.portfolioReader.open(collection, items, index)
+                        container.pendingPortfolioReader = ReaderPayload(collection, items, index)
                         navController.navigate("portfolio-reader")
                     },
                 )
             }
             composable("portfolio-reader") {
                 PortfolioItemReader(
-                    payload = container.portfolioReader.pending,
+                    payload = container.pendingPortfolioReader,
                     api = container.portfolioApi,
                     bottomPadding = bottomBarTotal,
                     onBack = { navController.popBackStack() },

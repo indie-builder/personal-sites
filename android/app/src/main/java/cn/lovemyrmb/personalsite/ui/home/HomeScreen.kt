@@ -59,7 +59,6 @@ fun HomeScreen(
     pagerState: PagerState,
     bottomBarPadding: Dp,
     onOpenDetail: (DetailEntry) -> Unit,
-    onOpenLink: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 

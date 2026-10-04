@@ -2,14 +2,8 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-function requiredEnvironment(key: "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_SERVICE_ROLE_KEY", purpose: string) {
-  const value = process.env[key];
-  if (!value) throw new Error(`缺少 ${key}；${purpose}`);
-  return value;
-}
-
 function createSupabaseClient(key: "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_SERVICE_ROLE_KEY", purpose: string): SupabaseClient {
-  return createClient(requiredEnvironment("SUPABASE_URL", purpose), requiredEnvironment(key, purpose), {
+  return createClient(requiredEnv("SUPABASE_URL", purpose), requiredEnv(key, purpose), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
