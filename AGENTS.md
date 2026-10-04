@@ -49,10 +49,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Preserve the desktop-first identity rail plus continuous content-flow layout. Do not restore the legacy knowledge/workspace shell or introduce card grids, glass, heavy shadows, or broad accent colors.
 - Reuse the identity rail on detail pages. New motion needs cleanup, a stable final state, and a `prefers-reduced-motion` path.
 - Mobile browsers are a supported product surface: verify narrow screens (320/390px), landscape layouts, touch targets, detail reading, and the Ask composer alongside desktop.
-- Verify UI changes in the running Next app with ego lite: inspect compiler issues, routes, browser errors, and the rendered interaction in a real page.
-- Use ego lite for all agent-driven browser work — opening URLs, verifying UI, clicking through flows. Run everything through `ego-browser nodejs <<'EOF' ... EOF` heredocs; follow the ego-browser skill for task spaces, snapshots, and helpers.
-- Debug through ego lite CDP: `cdp(...)` for protocol-level needs (console messages, network, dialogs), `js(...)` for in-page state and DOM inspection. Collect browser errors this way instead of guessing from screenshots.
-- Keep Playwright specs in `apps/web/e2e/` for automated regression; ego lite is for agent-driven inspection and does not replace them.
+- For UI changes, use ego lite to verify the running Next app: compiler issues, routes, console/network errors, and rendered interactions. Keep automated browser regressions in `apps/web/e2e/`; live inspection and regression tests serve different purposes.
 
 ## Data, Privacy, and Caching
 
