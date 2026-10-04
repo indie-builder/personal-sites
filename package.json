@@ -2,7 +2,7 @@
   "name": "chen-yuan-personal-site",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.8.1",
+  "packageManager": "pnpm@12.9.1",
   "engines": {
     "node": ">=24.21.0"
   },
@@ -58,11 +58,11 @@
   },
   "devDependencies": {
     "@shadcn/lint": "^0.2.0",
-    "@types/node": "26.6.3",
+    "@types/node": "26.6.4",
     "@typescript/native": "npm:typescript@7.0.2",
     "oxlint": "^1.86.0",
-    "portless": "^0.15.6",
+    "portless": "^0.15.7",
     "typescript": "7.0.2",
-    "turbo": "2.11.6"
+    "turbo": "2.11.7"
   }
 }
