@@ -27,9 +27,11 @@ test("published database contains only active sources and aligned FTS", () => {
     assert.equal(database.prepare("SELECT count(*) AS count FROM ask_documents WHERE source_scope='works' OR source_url LIKE '/works/%'").get().count, 0);
     const health = readPublicDataHealth(database);
     assert.equal(health.quickCheck, "ok");
-    assert.equal(health.askDocuments, health.askFts);
+    assert.equal(health.askSearchableDocuments, health.askFts);
     assert.equal(health.askMissingFts, 0);
     assert.equal(health.askOrphanFts, 0);
+    assert.equal(health.askMissingPostings, 0);
+    assert.equal(health.askExtraPostings, 0);
     assert.ok(health.curation.x.count > 0 && health.curation.douyin.count > 0 && health.openSource.count > 0);
   } finally {
     database.close();
