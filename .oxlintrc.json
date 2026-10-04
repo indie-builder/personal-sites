@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "jsPlugins": ["@shadcn/lint"],
+  "jsPlugins": ["@shadcn/lint", { "name": "site-effect", "specifier": "./scripts/effect-lint-plugin.mjs" }],
   "plugins": ["react", "jsx-a11y", "nextjs"],
   "env": {
     "browser": true,
@@ -20,6 +20,20 @@
     ],
     "shadcn/no-raw-colors": "error"
   },
+  "overrides": [
+    {
+      "files": ["tools/content/modules/**/*.mjs"],
+      "rules": { "site-effect/execution-boundary": ["error", "business"] }
+    },
+    {
+      "files": [
+        "tools/content/scripts/x-curation-enrich.mjs",
+        "tools/content/scripts/douyin-curation.mjs",
+        "tools/content/scripts/ai-news-sync.mjs"
+      ],
+      "rules": { "site-effect/execution-boundary": ["error", "cli"] }
+    }
+  ],
   "settings": {
     "shadcn": {
       "mergeFunctions": ["cn"],

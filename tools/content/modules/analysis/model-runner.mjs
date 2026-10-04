@@ -1,3 +1,4 @@
+// @ts-check
 import { Effect } from "effect";
 import { attempt, io } from "@site/effect";
 import {
@@ -9,6 +10,12 @@ import {
 
 import { getFinalAssistantFailure, getFinalAssistantText } from "../../lib/agent-response.mjs";
 
+/**
+ * @template A, E, R
+ * @param {Effect.Effect<A, E, R>} request
+ * @param {number} timeoutMilliseconds
+ * @param {{ label?: string }} [options]
+ */
 export function withModelTimeout(request, timeoutMilliseconds, { label } = {}) {
   if (!Number.isInteger(timeoutMilliseconds) || timeoutMilliseconds < 1000) {
     return Effect.fail(new Error("模型请求超时必须是不小于 1000 的整数毫秒数。"));
@@ -22,7 +29,18 @@ export function withModelTimeout(request, timeoutMilliseconds, { label } = {}) {
   );
 }
 
-/** A scoped Pi session is aborted and disposed on success, failure, or interruption. */
+/**
+ * A scoped Pi session is aborted and disposed on success, failure, or interruption.
+ * @param {{
+ *   cwd: string,
+ *   images?: Array<{ data: string, mediaType: string }>,
+ *   label?: string,
+ *   model: NonNullable<import("@earendil-works/pi-coding-agent").CreateAgentSessionOptions["model"]>,
+ *   prompt: string,
+ *   runtime: NonNullable<import("@earendil-works/pi-coding-agent").CreateAgentSessionOptions["modelRuntime"]>,
+ *   timeoutMilliseconds?: number,
+ * }} options
+ */
 export function runPiPrompt({ cwd, images = [], label = "模型", model, prompt, runtime, timeoutMilliseconds }) {
   return Effect.scoped(
     Effect.gen(function* () {
