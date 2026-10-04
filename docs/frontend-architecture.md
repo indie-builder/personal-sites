@@ -150,7 +150,6 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 
 ## 2026-09-08 设计工程更新
 
-- `emil-design-eng` 安装在项目 `.agents/skills/`；本轮设计规则以 DESIGN.md 的「Emil Design Engineering」专节及 `docs/design/emil-delivery.md` 为准。
 - 同级栏目链接直接提交 Next 路由，键盘导航不经过退出动效；手机身份展开/收拢保留现有桥接。之前描述的桌面淡入换页已被这一规则取代。
 - 主题即时应用，图标使用 160ms 可中断反馈；问答输入统一 16px，主要控件统一 44px。
 - `apps/web/app/not-found.tsx` 为缺失页面提供共享身份轨、主题与真实阅读出口。

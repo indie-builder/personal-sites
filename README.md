@@ -91,15 +91,6 @@ Supabase Cron 每 5 分钟触发每日动态增量同步，GitHub Actions 每天
 - [DESIGN.md](DESIGN.md) — 视觉与交互规则
 - [前端架构](docs/frontend-architecture.md) — 页面和数据读取职责
 - [AGENTS.md](AGENTS.md) — 协作与工程约定
-- [技术栈维护 SOP](docs/tech-stack-maintenance.md) — `/maintain-stack` 执行维护，`/maintain-stack check` 只读盘点；可追加 `web`、`android`、`ios`、`video` 限定范围
-
-## 项目技能
-
-所有项目技能的实体文件统一存放在 `.agents/skills/<name>/`，`.claude/skills/<name>` 只使用指向 `../../.agents/skills/<name>` 的相对软链接；包括本地自定义技能，不维护第二份副本。上游来源与内容散列记录在 `skills-lock.json`。
-
-`mattpocock/skills` 于 2026-10-04 同步至 [`24fe0ef`](https://github.com/mattpocock/skills/commit/24fe0ef7737efae15c87225755e9f6f5965e4888)，包含全部 37 个当前技能。`/prototype` 使用 Matt 版本；原 Emil UI 变体技能保留为 `/emil-prototype`（仅修改本地名称，更新上游时需保留该别名）。上游已退役的 `resolving-merge-conflicts` 不再安装。
-
-新增入口包括 `/implement-spec`、`/pr`、`/retro`、`/to-questionnaire`、`/wait-what`、`/wizard` 和 `/writing-for-agents`。上游领域文档约定已改为 `GLOSSARY.md` / `GLOSSARY-MAP.md`；本次只更新技能，不自动迁移项目原有领域文档，也不执行技能附带的安装、凭据或 hooks 操作。
 
 ## 工作区
 
