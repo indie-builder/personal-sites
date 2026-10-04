@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Schedule } from "effect";
 import { attempt, io } from "@site/effect";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -66,11 +66,20 @@ function compactRepository(node, starredAt) {
   };
 }
 
+function isTransientGhError(error) {
+  const cause = error.cause ?? error;
+  if (cause.name === "AbortError" || cause.code === "ABORT_ERR" || cause.killed || cause.signal) return false;
+  const message = `${cause.stderr ?? ""}\n${cause.message ?? ""}`;
+  if (/(?:\b(?:HTTP|status(?: code)?)\s*:?\s*4\d\d\b|bad credentials|\bauthentication\b|\bauthorization\b|\bforbidden\b|permission denied|not found|gh auth login|requires authentication|unknown (?:flag|argument)|invalid (?:argument|parameter)|\b(?:cancell?ed|aborted)\b)/iu.test(message)) return false;
+  return /(?:\bunexpected EOF\b|(?:^|:\s*|\n)EOF\s*(?:$|\n)|\b(?:ECONNRESET|ETIMEDOUT)\b|connection reset|\bi\/o timeout\b|\bTLS handshake timeout\b|\btemporary timeout\b|\b(?:HTTP|status(?: code)?)\s*:?\s*50[234]\b)/iu.test(message);
+}
+
 function gh(args, { exec = execFileAsync } = {}) {
-  return Effect.gen(function* () {
-    const { stdout } = yield* io("gh", (signal) => exec("gh", args, { maxBuffer: 8 * 1024 * 1024, signal }));
-    return stdout;
-  });
+  // All callers perform read-only GraphQL queries or REST GET requests.
+  return io("gh", (signal) => exec("gh", args, { maxBuffer: 8 * 1024 * 1024, signal })).pipe(
+    Effect.retry({ while: isTransientGhError, times: 2, schedule: Schedule.spaced("1 second") }),
+    Effect.map(({ stdout }) => stdout),
+  );
 }
 
 function ghJson(args, options) {
@@ -91,11 +100,11 @@ export function listStarredRepositories({ limit = Infinity, exec } = {}) {
     let after = null;
 
     while (repositories.length < limit) {
-      const stdout = yield* gh(
+      const response = yield* ghJson(
         ["api", "graphql", "-f", `query=${STARRED_REPOSITORIES_QUERY}`, "-f", `after=${after ?? ""}`],
         { exec },
       );
-      const page = JSON.parse(stdout).data.viewer.starredRepositories;
+      const page = response.data.viewer.starredRepositories;
       for (const edge of page.edges) {
         repositories.push(compactRepository(edge.node, edge.starredAt));
         if (repositories.length >= limit) break;

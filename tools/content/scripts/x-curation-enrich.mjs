@@ -177,7 +177,7 @@ const program = Effect.gen(function* () {
           Effect.tapError((error) =>
             Effect.sync(() => console.warn(`  调用失败（${error.message.slice(0, 80)}），最多重试一次`)),
           ),
-          Effect.retry(Schedule.spaced("5 seconds").pipe(Schedule.both(Schedule.recurs(1)))),
+          Effect.retry(Schedule.spaced("5 seconds").pipe(Schedule.upTo({ times: 1 }))),
         );
 
         if (DESIGN_ONLY) {
