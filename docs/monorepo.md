@@ -17,16 +17,19 @@ Web 和内容管道通过 `workspace:*` 依赖 `@site/public-data`，使用显�
 pnpm install --frozen-lockfile
 pnpm dev:domain                              # https://personal-site.localhost
 pnpm dev                                     # 默认端口 Web 开发
-pnpm --filter @site/web dev --port 7100       # 第二个开发服务
 pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
 pnpm test:e2e
-pnpm --filter @site/web exec vitest run tests/ai-news.test.ts
+pnpm --filter @site/web exec vitest run tests/ai-news-hybrid.test.ts
 pnpm --filter @site/content test
 pnpm exec turbo run build test --dry=json     # 只看任务依赖，不运行任务
 ```
+
+Web 源码直接位于 `apps/web/app/`、`apps/web/components/`、`apps/web/lib/`；内容工具位于 `tools/content/modules/`、`tools/content/lib/`、`tools/content/scripts/`。查找未知文件先从所属目录的 `rg --files` 定位；第三方依赖从实际消费它的 workspace 解析，不假定在根 `node_modules` 可见。
+
+同一 `apps/web` 目录只运行一个 Next dev 实例，实时验证复用已有服务。Playwright 独占 7100 端口，`pnpm test:e2e` 默认自己构建并启动生产服务，这次成功构建可计入交付验证。若刚对同一份未变化源码执行过 `pnpm build`，可用 `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e` 只启动该产物；源码变化后重新构建。该开关不复用其他进程、不跳过测试，也不能在缺少生产产物时使用。
 
 TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版本或既有 peer exceptions。数据操作命令例如 `pnpm ai-news:archive`、`pnpm curation:sync`、`pnpm github:starred:daily` 保留在根目录，转发给内容管道；它们会访问或写入真实数据，不是验证命令，不挂到 Turbo 的 build/test 依赖中。
 
@@ -44,7 +47,8 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 - 根 Git 保护测试依赖 Git 状态，不缓存。Web build 会预渲染来自 Supabase 的 Sitemap，外部数据变化不体现在 Git，因此 build 关闭缓存。只有消除或显式版本化外部构建输入后才能开启。
 - 同步、归档、清理、数据库推送、部署等有副作用的命令直接通过 pnpm 执行，不使用 Turbo 缓存。
 - 暂不开启远程缓存。Web `.next` 可能包含构建时读取的外部内容；不要把私有队列、原始资料或凭据加入任何缓存 outputs。
-- GitHub Code quality 继续调用根命令。原生工程保留各自操作系统和路径触发规则。每日动态工作流调用新位置的脚本，提交的归档路径仍为根 `data/ai-news.sqlite`。
+- GitHub Code quality 调用根类型检查、lint、单测，并构建一次后运行关键 Web E2E。`apps/web/scripts/ci-public-data.mjs` 只在 CI 启动，提供空新闻增量，配合已提交的公开 SQLite；不使用生产数据库或模型凭据。Ask 回归在浏览器拦截模型请求；失败保存 trace。原生工程保留各自操作系统和路径触发规则。
+- 根 `tests/agent-environment.test.mjs` 随 `pnpm test` 检查已跟踪技能的相对软链接、核心导航文档的本地链接/路径及明确列出的 pnpm 命令，避免机械性漂移。事实和领域语义仍需评审核对。每日动态工作流调用内容工具脚本，归档仍为根 `data/ai-news.sqlite`。
 
 ## Vercel
 

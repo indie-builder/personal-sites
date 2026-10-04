@@ -34,7 +34,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - For app code or configuration changes, run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. For documentation-only changes, verify referenced commands/paths and run `git diff --check`; no app build is required.
 - `pnpm test` runs package tests through Turborepo (Vitest and Node); Playwright is separate (`pnpm test:e2e`). Run relevant browser regressions for changed UI flows in addition to live verification below.
 - Keep the intentional TS7 setup in `scripts/tsc7.mjs` and the peer exceptions in `pnpm-workspace.yaml`; lint uses oxlint/oxc-parser. Do not downgrade TypeScript to satisfy the unused typescript-eslint fallback's peer cap.
-- For a second dev server, use `pnpm --filter @site/web dev --port 7100`; do not use `pnpm dev -- --port 7100`.
+- Reuse the running Web dev server: Next allows one dev instance per app directory. Playwright owns port 7100 and builds by default; after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e` reuses it.
 
 ## File-Scoped Commands
 
