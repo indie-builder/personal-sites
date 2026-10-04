@@ -21,6 +21,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/`. Do not copy sensitive directories.
 - Data operations bypass Turbo caching; Web build caching stays disabled while prerendering reads Supabase. See `docs/monorepo.md`.
 
+## Task and Domain Context
+
+- For issues or specifications, follow `docs/agents/issue-tracker.md` for this repository's GitHub Issues.
+- For issue triage, use the role mapping in `docs/agents/triage-labels.md`.
+- For domain concepts or design decisions, follow `docs/agents/domain.md` to read the root glossary and relevant ADRs.
+
 ## Effect
 
 - Effect is the default for TypeScript/JavaScript business I/O and asynchronous orchestration across Web, shared packages, and content pipelines; follow `docs/effect-architecture.md`. Pure transformations and React/platform lifecycles stay native.
