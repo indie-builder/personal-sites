@@ -3,16 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/ai-news-sync.server", () => ({
   authorizeAiNewsCron: vi.fn(),
-  readAiNewsCronHealth: vi.fn(),
   runAiNewsCron: vi.fn(),
 }));
 
 const syncModule = await import("../lib/ai-news-sync.server");
 const { POST } = await import("../app/api/cron/ai-news/route");
-const { GET: healthGET } = await import("../app/api/health/ai-news/route");
 
 const authorizeMock = vi.mocked(syncModule.authorizeAiNewsCron);
-const healthMock = vi.mocked(syncModule.readAiNewsCronHealth);
 const runMock = vi.mocked(syncModule.runAiNewsCron);
 
 describe("AI news Cron routes", () => {
@@ -52,40 +49,4 @@ describe("AI news Cron routes", () => {
     expect(runMock).toHaveBeenCalledWith(false);
   });
 
-  it("reports stale synchronization as unhealthy", async () => {
-    healthMock.mockReturnValue(
-      Effect.succeed({
-        ageMinutes: 25,
-        healthy: false,
-        lastStartedAt: null,
-        lastSucceededAt: "2026-08-29T00:00:00.000Z",
-        running: false,
-      }),
-    );
-    const response = await healthGET();
-
-    expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({
-      ageMinutes: 25,
-      healthy: false,
-    });
-  });
-
-  it("never exposes the stored synchronization error text", async () => {
-    const internalHealth = {
-      ageMinutes: 1,
-      healthy: false,
-      lastError: "database connection failed with internal details",
-      lastStartedAt: "2026-08-29T00:00:00.000Z",
-      lastSucceededAt: "2026-08-29T00:00:00.000Z",
-      running: false,
-    };
-    healthMock.mockReturnValue(Effect.succeed(internalHealth));
-
-    const response = await healthGET();
-    const body = await response.json();
-
-    expect(body).not.toHaveProperty("lastError");
-    expect(JSON.stringify(body)).not.toContain("internal details");
-  });
 });

@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { runWorkerPool } from "../analysis/runtime.mjs";
 import {
   fetchReadme,
   fetchOfficialChineseReadme,
@@ -136,9 +135,8 @@ export function syncStarredRepositories({
     const records = [];
     const changedRecords = [];
     let completed = 0;
-    yield* runWorkerPool(repositories.length, concurrency, (index) =>
+    yield* Effect.forEach(repositories, (repository) =>
       Effect.gen(function* () {
-        const repository = repositories[index];
         const existing = existingByNodeId.get(repository.nodeId);
         const changed = !incremental || repositoryNeedsSourceRefresh(repository, existing);
         const record = changed
@@ -152,6 +150,7 @@ export function syncStarredRepositories({
           Promise.resolve(onRecord?.(record, completed, repositories.length, { changed })),
         );
       }),
+      { concurrency, discard: true },
     );
     const sortedRecords = records.sort((left, right) =>
       left.repository.fullName.localeCompare(right.repository.fullName),

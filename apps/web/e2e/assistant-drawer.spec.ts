@@ -77,8 +77,10 @@ test("drawer keeps mobile input readable, restores drafts and renders replies", 
 
 test("drawer keeps the same model conversation after closing and reopening", async ({ page }) => {
   const conversationIds: string[] = [];
+  const visitorIds: string[] = [];
   await page.route("**/api/ask", async (route) => {
     conversationIds.push(route.request().postDataJSON().conversationId);
+    visitorIds.push(route.request().postDataJSON().visitorId);
     await route.fulfill({ contentType: "text/event-stream", body: 'event: text\ndata: {"delta":"已根据公开资料回答。"}\n\nevent: done\ndata: {}\n\n' });
   });
   await page.goto("/curation");
@@ -93,6 +95,10 @@ test("drawer keeps the same model conversation after closing and reopening", asy
   }
   expect(conversationIds).toHaveLength(2);
   expect(conversationIds[1]).toBe(conversationIds[0]);
+  expect(visitorIds[0]).toMatch(/^[0-9a-f-]{36}$/);
+  expect(visitorIds[1]).toBe(visitorIds[0]);
+  expect(conversationIds[0]).toMatch(/^[0-9a-f-]{36}$/);
+  expect(visitorIds[0]).not.toBe(conversationIds[0]);
 });
 
 test("drawer transitions do not resize the page on every animation frame", async ({ page }) => {

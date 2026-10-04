@@ -22,7 +22,6 @@ function publicationFixture(fullName, nodeId, slug, { defaultBranch, sourceMarkd
     },
     entry: {
       category: "skills",
-      caveats: [],
       dimensions: ["agent-skills"],
       evidence: {
         checkedAt: "2026-08-09",
@@ -31,16 +30,12 @@ function publicationFixture(fullName, nodeId, slug, { defaultBranch, sourceMarkd
         note: "来源",
         url: `${repositoryUrl}/blob/main/README.md`,
       },
-      judgement: "判断",
-      nextStep: "下一步",
       personalNote: "备注",
       repository: fullName,
-      scenarios: [],
       slug,
       sourceSummary: "摘要",
       status: "持续跟踪",
       type: "Skill",
-      workflow: [],
     },
   };
 }
@@ -61,6 +56,11 @@ test("公开投影只携带选中的单仓库资料及双版本 Markdown", () =>
   assert.equal(item.content.repositoryUrl, record.repository.repositoryUrl);
   assert.equal(item.content.readingSource, "model-translation");
   assert.equal(item.content.repositoryDefaultBranch, "main");
+  assert.deepEqual(Object.keys(item.content).sort(), [
+    "category", "dimensions", "evidence", "parsedMarkdown", "personalNote",
+    "readingSource", "readingSourcePath", "repository", "repositoryDefaultBranch",
+    "repositoryUrl", "slug", "sourceMarkdown", "sourceSummary", "status", "type",
+  ]);
 });
 
 test("发布器把公开投影和问答分块写入本地 SQLite", async () => {

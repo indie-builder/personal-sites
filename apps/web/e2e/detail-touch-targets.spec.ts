@@ -9,8 +9,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function expectTouchTargets(controls: Locator) {
+  await expect(controls.first()).toBeVisible();
   const count = await controls.count();
-  expect(count).toBeGreaterThan(0);
   for (let index = 0; index < count; index += 1) {
     const box = await controls.nth(index).boundingBox();
     expect(box).not.toBeNull();
@@ -62,7 +62,8 @@ test("curation detail gives its return link a mobile touch target", async ({ pag
 
 test("open-source document tabs and GitHub CTA keep sticky, dark mobile controls", async ({ page }) => {
   await page.setViewportSize(MOBILE_VIEWPORT);
-  await page.goto("/open-source/loopx");
+  await page.goto("/open-source");
+  await page.locator('a[href^="/open-source/"]').first().click();
 
   const tabs = page.getByRole("tab");
   const github = page.getByRole("link", { name: /在 GitHub 查看仓库/u });

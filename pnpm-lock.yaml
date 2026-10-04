@@ -205,9 +205,6 @@ importers:
       '@ai-sdk/anthropic':
         specifier: 4.0.71
         version: 4.0.71(zod@4.6.5)
-      '@fingerprintjs/fingerprintjs':
-        specifier: ^5.2.0
-        version: 5.2.0
       '@shadcn/react':
         specifier: ^0.3.1
         version: 0.3.1(@types/react@19.3.0)(react@19.3.0)
@@ -919,9 +916,6 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
-
-  '@fingerprintjs/fingerprintjs@5.2.0':
-    resolution: {integrity: sha512-j+2nInkwCQNTJcNhOjvkGM/nLRTuGJTC6xai4quqvUpjob2ssrGwBZjS7k55nOmKvge7qvJT2nS3i/IRvQSTQA==}
 
   '@floating-ui/core@1.8.0':
     resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
@@ -6009,8 +6003,6 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.15.1': {}
-
-  '@fingerprintjs/fingerprintjs@5.2.0': {}
 
   '@floating-ui/core@1.8.0':
     dependencies:

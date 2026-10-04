@@ -20,7 +20,6 @@ vi.mock("../lib/public-database", () => ({
 function makeEntry(index: number): OpenSourceEntry {
   return {
     category: "agents",
-    caveats: [],
     dimensions: ["coding-agent"],
     evidence: {
       checkedAt: `2026-08-${String((index % 28) + 1).padStart(2, "0")}T10:00:00.000Z`,
@@ -29,17 +28,13 @@ function makeEntry(index: number): OpenSourceEntry {
       note: "核读记录。",
       url: "https://github.com/example/repo",
     },
-    judgement: "值得跟踪。",
-    nextStep: "继续观察。",
     personalNote: "个人判读。",
     repository: "example/repo",
     repositoryUrl: "https://github.com/example/repo",
-    scenarios: ["场景"],
     slug: `repo-${index}`,
     sourceSummary: `仓库 ${index} 的摘要。`,
     status: "持续跟踪",
     type: "智能体",
-    workflow: [],
   };
 }
 

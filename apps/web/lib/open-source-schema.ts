@@ -3,7 +3,6 @@ import { Schema } from "effect";
 
 export const openSourceEntrySchema = Schema.Struct({
   category: Schema.Literals(["skills", "agents", "context", "tools"]),
-  caveats: Schema.Array(Schema.String).pipe(Schema.mutable),
   dimensions: Schema.Array(
     Schema.Literals([
       "agent-skills",
@@ -26,8 +25,6 @@ export const openSourceEntrySchema = Schema.Struct({
     note: Schema.String,
     url: UrlString,
   }),
-  judgement: Schema.String,
-  nextStep: Schema.String,
   parsedMarkdown: Schema.optional(Schema.NullOr(Schema.String)),
   personalNote: Schema.String,
   readingSource: Schema.optional(Schema.Literals(["official-zh-readme", "model-translation"])),
@@ -35,14 +32,9 @@ export const openSourceEntrySchema = Schema.Struct({
   repository: Schema.String,
   repositoryDefaultBranch: Schema.optional(Schema.NullOr(Schema.String)),
   repositoryUrl: UrlString,
-  scenarios: Schema.Array(Schema.String).pipe(Schema.mutable),
   slug: Schema.String,
   sourceMarkdown: Schema.optional(Schema.NullOr(Schema.String)),
   sourceSummary: Schema.String,
-  sourceTitle: Schema.optional(Schema.String),
   status: Schema.Literals(["持续跟踪", "计划试用", "已提炼"]),
   type: Schema.String,
-  workflow: Schema.Array(Schema.Struct({ description: Schema.String, label: Schema.String })).pipe(
-    Schema.mutable,
-  ),
 });

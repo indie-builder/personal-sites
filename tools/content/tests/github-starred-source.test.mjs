@@ -124,3 +124,35 @@ test("每日增量同步只重新读取新增或更新过的 Star 仓库", async
     await rm(rawRoot, { force: true, recursive: true });
   }
 });
+
+test("Star 同步按指定并发上限读取仓库并发布全部完成结果", async () => {
+  const rawRoot = await mkdtemp(path.join(os.tmpdir(), "github-starred-concurrency-"));
+  let active = 0;
+  let maximum = 0;
+  try {
+    const records = await Effect.runPromise(syncStarredRepositories({
+      concurrency: 2,
+      rawRoot,
+      repositories: Array.from({ length: 5 }, (_, index) => ({
+        defaultBranch: "main", fullName: `example/repo-${index}`, nodeId: `node-${index}`,
+        repositoryUrl: `https://github.com/example/repo-${index}`,
+      })),
+      exec: async () => {
+        active += 1;
+        maximum = Math.max(maximum, active);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return { stdout: "# 示例\n\n这是仓库维护的中文 README，包含足够多的说明文字用于识别中文原文，而不是模型翻译结果。\n" };
+        } finally {
+          active -= 1;
+        }
+      },
+    }));
+    assert.equal(maximum, 2);
+    assert.equal(active, 0);
+    assert.equal(records.length, 5);
+    assert.equal((await Effect.runPromise(readLocalSourceRecords(rawRoot))).length, 5);
+  } finally {
+    await rm(rawRoot, { force: true, recursive: true });
+  }
+});

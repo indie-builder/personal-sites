@@ -21,6 +21,10 @@ test("public discovery endpoints remain machine readable", async ({ request }) =
     database: { healthy: true, quickCheck: "ok" },
   });
   expect(healthBody.aiNews).not.toHaveProperty("lastError");
+  expect((await request.get("/api/health/ai-news")).status()).toBe(404);
+  const archive = await request.get("/api/health/ai-news/archive");
+  expect(archive.status()).toBe(200);
+  expect(await archive.json()).toMatchObject({ digest: expect.any(String) });
 });
 
 test("curation feeds have no automatically detectable accessibility violations", async ({ page }) => {

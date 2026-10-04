@@ -3,7 +3,6 @@ import { attempt, io } from "@site/effect";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { runWorkerPool } from "../analysis/runtime.mjs";
 import { stripJsonFence } from "../../lib/pi-runtime.mjs";
 import { repositoryDirectoryName } from "./source.mjs";
 
@@ -287,8 +286,7 @@ export function analyzeStarredRecords(
     const analyses = [];
     const failures = [];
     let completed = 0;
-    yield* runWorkerPool(records.length, concurrency, (index) => {
-      const record = records[index];
+    yield* Effect.forEach(records, (record) => {
       return analyzeStarredRecord(record, { chunkCharacters, derivedRoot, model, prompt }).pipe(
         Effect.flatMap((analysis) =>
           Effect.gen(function* () {
@@ -311,7 +309,7 @@ export function analyzeStarredRecords(
           }),
         ),
       );
-    });
+    }, { concurrency, discard: true });
     const completedAnalyses = analyses.sort((left, right) => left.repository.localeCompare(right.repository));
     Object.defineProperty(completedAnalyses, "failures", { enumerable: false, value: failures });
     return completedAnalyses;

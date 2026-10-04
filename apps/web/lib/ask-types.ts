@@ -3,10 +3,6 @@ export const askScopes = ["all", "profile", "ai-news", "daily", "open-source"] a
 export type AskScope = (typeof askScopes)[number];
 export type AskDocumentScope = Exclude<AskScope, "all">;
 
-export function isAskScope(value: string): value is AskScope {
-  return askScopes.includes(value as AskScope);
-}
-
 export type AskSource = {
   content: string;
   id: string;
