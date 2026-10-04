@@ -41,8 +41,8 @@ X / 抖音 / GitHub Star 的抓取与模型结果留在本机忽略目录；只�
 | 要追踪的功能 | 写入或入口 | 读取与界面 |
 | --- | --- | --- |
 | 每日动态 | `packages/public-data/src/ai-news/sync.mjs` → Supabase 公开投影 | `apps/web/lib/ai-news.ts` → `apps/web/app/ai-news/`、`apps/web/app/api/ai-news/` 与首页 |
-| X / 抖音 / GitHub Star | `scripts/` 调度 `modules/x-sync/`、`modules/douyin-sync/`、`modules/github-starred/` → `data/curation.sqlite` | `apps/web/lib/curation.ts`、`apps/web/lib/open-source.ts` → 栏目与公开 GET API |
-| 问一问 | `apps/web/app/api/ask/route.ts` → `apps/web/lib/ask-search.server.ts`、`apps/web/lib/ask-session.server.ts` | `apps/web/components/use-ask-conversation.ts` 管会话与 SSE，`apps/web/components/ask-chat.tsx` 渲染抽屉；原生客户端复用公开 API |
+| X / 抖音 / GitHub Star | `tools/content/scripts/` 调度 `tools/content/modules/x-sync/`、`tools/content/modules/douyin-sync/`、`tools/content/modules/github-starred/` → `data/curation.sqlite` | `apps/web/lib/curation.ts`、`apps/web/lib/open-source.ts` → 栏目与公开 GET API |
+| 问一问 | `apps/web/app/api/ask/route.ts` → `apps/web/lib/ask-search.server.ts`、`apps/web/lib/ask-session.server.ts` | `apps/web/components/use-ask-conversation.ts` 管会话、`apps/web/components/ask-sse.ts` 解析流；`apps/web/components/ask-chat.tsx` → `apps/web/components/ask-message.tsx` → `apps/web/components/ask-answer.tsx` 渲染抽屉、消息与 OpenUI；原生客户端复用公开 API |
 | 本地向量检索 | `tools/content/scripts/local-vectors.mjs` → `tools/content/modules/local-vectors/indexer.mjs`、`tools/content/modules/local-vectors/search.mjs` | 私有文件与公开 Ask 投影只进入本机忽略索引；Web 不读取该索引 |
 | 原生客户端 | [Android data](android/app/src/main/java/cn/lovemyrmb/personalsite/data/) 与 [iOS Data](ios/ChenYuanSite/Data/) | 各自原生界面消费公开 GET API 与 `POST /api/ask`；构建命令见各端 README |
 
@@ -88,6 +88,7 @@ Supabase Cron 每 5 分钟触发每日动态增量同步，GitHub Actions 每天
 ## 文档
 
 - [PRODUCT.md](PRODUCT.md) — 产品定位与功能边界
+- [GLOSSARY.md](GLOSSARY.md) — 公开内容、收录与问答的领域术语
 - [DESIGN.md](DESIGN.md) — 视觉与交互规则
 - [前端架构](docs/frontend-architecture.md) — 页面和数据读取职责
 - [AGENTS.md](AGENTS.md) — 协作与工程约定

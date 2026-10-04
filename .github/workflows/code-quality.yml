@@ -14,6 +14,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -32,3 +33,28 @@ jobs:
         run: pnpm lint
       - name: Test
         run: pnpm test
+      - name: Install Chromium and system dependencies
+        run: pnpm --filter @site/web exec playwright install --with-deps chromium
+      - name: Build and test public Web flows
+        # No production secrets: the fixture serves empty news increments over the committed SQLite archive.
+        # Keep build and E2E in one step so the fixture is ready first and always cleaned up.
+        env:
+          SUPABASE_URL: http://127.0.0.1:7101
+          SUPABASE_PUBLISHABLE_KEY: ci-public-data
+        run: |
+          node apps/web/scripts/ci-public-data.mjs > ci-public-data.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:7101/rest/v1/ai_news_public_items
+          pnpm build
+          PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e ask-flow.spec.ts assistant-drawer.spec.ts ask-scroll-to-latest.spec.ts entry-metadata.spec.ts retired-works.spec.ts
+      - name: Upload Web E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-e2e-failure
+          path: |
+            apps/web/test-results/
+            ci-public-data.log
+          if-no-files-found: ignore
+          retention-days: 7
