@@ -105,6 +105,56 @@ test("Ask can return to the latest message after reading earlier messages", asyn
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
 });
 
+for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 812 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
+  test(`Ask streams default OpenUI components before citations at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.addInitScript(() => {
+      const originalFetch = window.fetch.bind(window);
+      const controls = window as typeof window & { emitAsk: (event: string, data: unknown) => void };
+      window.fetch = (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (!url.endsWith("/api/ask")) return originalFetch(input, init);
+        return Promise.resolve(new Response(new ReadableStream({
+          start(controller) {
+            controls.emitAsk = (event, data) => {
+              controller.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+              if (event === "done") controller.close();
+            };
+          },
+        }), { headers: { "Content-Type": "text/event-stream" } }));
+      };
+    });
+    const dialog = await openAssistant(page);
+    await dialog.getByRole("textbox", { name: "输入问题" }).fill("请整理公开资料");
+    await dialog.getByRole("button", { name: "发送问题" }).click();
+    await expect(dialog.getByRole("button", { name: "停止生成" })).toBeVisible();
+    const emit = (event: string, data: unknown) => page.evaluate(({ event, data }) => {
+      (window as typeof window & { emitAsk: (event: string, data: unknown) => void }).emitAsk(event, data);
+    }, { event, data });
+    await emit("text", { delta: `root = Stack([TextContent(${JSON.stringify("## 资料概览\n\n先看**工程实践**。\n\n- 连续阅读\n- 来源可追溯\n\n```ts\nconst ready = true;\n```")}), Tabs([TabItem("overview", "摘要", [TextContent("先看概览")]), TabItem("details", "详细内容", [TextContent("这里是详细说明")])])` });
+    await expect(dialog.getByRole("heading", { name: "资料概览" })).toBeVisible();
+    await expect(dialog.locator("strong")).toHaveText("工程实践");
+    await expect(dialog.locator(".ask-openui ul")).toHaveCSS("list-style-type", "disc");
+    await expect(dialog.locator(".ask-openui p").first()).toHaveCSS("font-size", "13px");
+    await emit("sources", { sources: [{ id: "source-1", title: "测试公开来源", sourceUrl: "/curation/source" }] });
+    await expect(dialog.getByRole("list", { name: "回答来源" })).toHaveCount(0);
+    await emit("done", {});
+    await dialog.getByRole("tab", { name: "详细内容" }).click();
+    await expect(dialog.getByText("这里是详细说明")).toBeVisible();
+    const sourcesToggle = dialog.locator("summary").filter({ hasText: "参考资料 · 1 篇" });
+    await expect(sourcesToggle).toBeVisible();
+    await expect(dialog.getByRole("list", { name: "回答来源" })).toBeHidden();
+    await sourcesToggle.click();
+    await expect(dialog.getByRole("list", { name: "回答来源" })).toBeVisible();
+    await sourcesToggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(dialog.getByRole("list", { name: "回答来源" })).toBeHidden();
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    if (viewport.width <= 900) await expect(dialog.getByRole("textbox")).toHaveCSS("font-size", "16px");
+  });
+}
+
 test("Ask has no automatically detectable accessibility violations", async ({ page }) => {
   await openAssistant(page);
   const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();

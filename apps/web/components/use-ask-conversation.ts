@@ -86,6 +86,7 @@ export function useAskConversation(onStarted: () => void) {
               fetch("/api/ask", {
                 body: JSON.stringify({
                   conversationId: identity.conversationId,
+                  format: "openui",
                   question: trimmedQuestion,
                   scope: "all",
                   visitorId: identity.visitorId,

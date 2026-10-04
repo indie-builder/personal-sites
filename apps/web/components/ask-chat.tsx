@@ -58,13 +58,18 @@ export function AskChat() {
     };
     resize();
     let width = textarea.clientWidth;
+    let resizeFrame = 0;
     const observer = new ResizeObserver(() => {
       if (textarea.clientWidth === width) return;
       width = textarea.clientWidth;
-      resize();
+      window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(resize);
     });
     observer.observe(textarea);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(resizeFrame);
+    };
   }, [question]);
 
   useEffect(() => {
@@ -186,6 +191,7 @@ export function AskChat() {
                     isStreamingPlaceholder={isStreaming && index === messages.length - 1}
                     key={message.id}
                     message={message}
+                    onContinue={isStreaming ? undefined : (question) => { void submit(question, { preserveDraft: true }); }}
                     onRetry={message.interruption?.kind === "error" && !isStreaming ? () => {
                       const previousQuestion = messages[index - 1];
                       if (previousQuestion?.role !== "user") return;

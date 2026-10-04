@@ -13,6 +13,7 @@ const sessionSchema = Schema.Struct({
 
 const requestSchema = Schema.Struct({
   ...sessionSchema.fields,
+  format: Schema.optional(Schema.Literals(["text", "openui"])),
   ...{
     question: Schema.Trim.check(Schema.isMinLength(2)).check(Schema.isMaxLength(1_000)),
     scope: Schema.Literals(askScopes),
@@ -60,7 +61,9 @@ export async function POST(request: Request) {
         });
         if (sources.length === 0) {
           const message = "现有公开资料不足以确认这个问题。你可以换一个更具体的关键词，或切换检索范围后再试。";
-          write("text", { delta: message });
+          write("text", { delta: parsed.success.format === "openui"
+            ? `root = Stack([TextContent(${JSON.stringify(message)})])`
+            : message });
           write("sources", { sources });
           write("done", {});
           return;
@@ -69,6 +72,7 @@ export async function POST(request: Request) {
         await Effect.runPromise(
           streamAskAnswer({
             conversationId: parsed.success.conversationId,
+            format: parsed.success.format,
             onText: (delta) => write("text", { delta }),
             question: parsed.success.question,
             // 客户端断连即中止生成，不再为已离开的访客烧 token。

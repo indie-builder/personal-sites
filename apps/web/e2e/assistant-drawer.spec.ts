@@ -63,7 +63,7 @@ test("drawer keeps mobile input readable, restores drafts and renders replies", 
   await expect(input).toHaveValue("你的工程经历是什么？");
   await page.route("**/api/ask", async (route) => {
     expect(route.request().postDataJSON().scope).toBe("all");
-    await route.fulfill({ contentType: "text/event-stream", body: 'event: text\ndata: {"delta":"这是一条用于验证布局的回答。"}\n\nevent: done\ndata: {}\n\n' });
+    await route.fulfill({ contentType: "text/event-stream", body: `event: text\ndata: ${JSON.stringify({ delta: 'root = Stack([TextContent("这是一条用于验证布局的回答。")])' })}\n\nevent: done\ndata: {}\n\n` });
   });
   await dialog.getByRole("button", { name: "发送问题" }).click();
   await expect(dialog.getByText("这是一条用于验证布局的回答。")).toBeVisible();
@@ -81,7 +81,7 @@ test("drawer keeps the same model conversation after closing and reopening", asy
   await page.route("**/api/ask", async (route) => {
     conversationIds.push(route.request().postDataJSON().conversationId);
     visitorIds.push(route.request().postDataJSON().visitorId);
-    await route.fulfill({ contentType: "text/event-stream", body: 'event: text\ndata: {"delta":"已根据公开资料回答。"}\n\nevent: done\ndata: {}\n\n' });
+    await route.fulfill({ contentType: "text/event-stream", body: `event: text\ndata: ${JSON.stringify({ delta: 'root = Stack([TextContent("已根据公开资料回答。")])' })}\n\nevent: done\ndata: {}\n\n` });
   });
   await page.goto("/curation");
   for (const question of ["先介绍你的工程经历", "刚才的经历里有什么重点"]) {

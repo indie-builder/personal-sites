@@ -35,7 +35,16 @@ export const ASK_CHAT_STORAGE_KEY = "personal-site:ask-chat";
 export function readAskChatSnapshot(): AskChatSnapshot | null {
   try {
     const raw = window.sessionStorage.getItem(ASK_CHAT_STORAGE_KEY);
-    return raw ? Schema.decodeUnknownSync(snapshotSchema)(JSON.parse(raw)) : null;
+    if (!raw) return null;
+    const stored = JSON.parse(raw);
+    const snapshot = Schema.decodeUnknownSync(snapshotSchema)(stored);
+    // 一次性迁移已有文字回答；界面始终只走 OpenUI，保留旧会话和草稿。
+    if (stored.format !== "openui") {
+      return { ...snapshot, messages: snapshot.messages.map((message) => message.role === "assistant" && message.content
+        ? { ...message, content: `root = Stack([TextContent(${JSON.stringify(message.content)})])` }
+        : message) };
+    }
+    return snapshot;
   } catch {
     return null;
   }
@@ -51,6 +60,7 @@ export function writeAskChatSnapshot(snapshot: AskChatSnapshot) {
       ASK_CHAT_STORAGE_KEY,
       JSON.stringify({
         ...snapshot,
+        format: "openui",
         // 快照不是后台生成任务；离开页面后回来，已有部分正文可读且不再显示转圈。
         messages: snapshot.messages.map((message) =>
           message.isComplete

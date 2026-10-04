@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   blockFirst: false, model: vi.fn(() => ({})), provider: vi.fn(),
-  started: vi.fn(), uploaded: vi.fn(async () => ({ error: null })),
+  options: vi.fn(), started: vi.fn(), uploaded: vi.fn(async () => ({ error: null })),
 }));
 vi.mock("@/lib/supabase.server", () => ({ getAdminSupabaseClient: () => ({ storage: { from: () => ({
   download: async () => ({ data: null, error: { statusCode: "404" } }),
@@ -17,7 +17,9 @@ vi.mock("@ai-sdk/anthropic", () => ({ createAnthropic: (options: unknown) => {
 } }));
 vi.mock("ai", () => ({
   generateText: vi.fn(),
-  streamText: ({ abortSignal }: { abortSignal: AbortSignal }) => ({
+  streamText: ({ abortSignal, system }: { abortSignal: AbortSignal; system: string }) => {
+    mocks.options(system);
+    return ({
     finishReason: Promise.resolve("stop"),
     textStream: (async function* () {
       const turn = mocks.started.mock.calls.length;
@@ -27,7 +29,7 @@ vi.mock("ai", () => ({
       });
       yield "回答";
     })(),
-  }),
+  }); },
 }));
 beforeEach(() => {
   vi.stubEnv("VERCEL", "1");
@@ -69,6 +71,16 @@ it.each([
     baseURL: "https://open.bigmodel.cn/api/anthropic/v1", apiKey: "fixture",
   });
   expect(mocks.model).toHaveBeenCalledExactlyOnceWith(expected);
+});
+
+it("uses the default OpenUI library prompt only for Web requests", async () => {
+  const { streamAskAnswer } = await import("@/lib/ask-session.server");
+  const request = { conversationId: "conversation", visitorId: "visitor", question: "问题", sources: [], onText: vi.fn() };
+  await Effect.runPromise(streamAskAnswer({ ...request, format: "openui" }));
+  expect(mocks.options.mock.calls[0][0]).toContain("TextContent(");
+  expect(mocks.options.mock.calls[0][0]).toContain("Tabs(");
+  await Effect.runPromise(streamAskAnswer(request));
+  expect(mocks.options.mock.calls[1][0]).not.toContain("openui-lang");
 });
 
 it("fails before invoking the model when its configuration is invalid", async () => {
