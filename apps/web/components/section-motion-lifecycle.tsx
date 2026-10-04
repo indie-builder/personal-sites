@@ -6,18 +6,37 @@ import {
   hasOpeningPlayedThisSession,
   onOpeningReveal,
 } from "@/components/opening-reveal";
-import {
-  clearSectionTransition,
-  enterSectionTransition,
-  getSectionRevealTargets,
-  isSectionTransition,
-  playSectionReveal,
-  resetSectionMotion,
-} from "@/components/section-motion-state";
+import { animate } from "motion/react";
 
-type SectionMotionLifecycleProps = {
-  section: string;
-};
+// 「档案摊开」入场：首访仪式揭幕时，刊头与首批内容单元按 32ms 阶梯就位，
+// 与内容流追加/筛选揭示共用 0.45rem 上浮 + [0.16,1,0.3,1] 的既有语言。
+const revealUnitSelector =
+  ":scope .ai-news__day-heading, :scope ol > li:not(.curation-home__stream-status)";
+const REVEAL_MAX_UNITS = 6;
+const REVEAL_STAGGER = 0.032;
+
+function getSectionRevealTargets() {
+  const container = document.querySelector<HTMLElement>(".site-section-motion");
+  if (!container) return [];
+  const targets: HTMLElement[] = [];
+  const header = container.querySelector<HTMLElement>(":scope > nav");
+  if (header) targets.push(header);
+  const units = container.querySelectorAll<HTMLElement>(revealUnitSelector);
+  for (const unit of Array.from(units).slice(0, REVEAL_MAX_UNITS)) {
+    targets.push(unit);
+  }
+  return targets;
+}
+
+function playSectionReveal(targets: HTMLElement[]) {
+  return targets.map((element, index) =>
+    animate(
+      element,
+      { opacity: [0, 1], y: ["0.45rem", "0rem"] },
+      { delay: index * REVEAL_STAGGER, duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+    ),
+  );
+}
 
 function clearRevealStyles(targets: HTMLElement[]) {
   window.requestAnimationFrame(() => {
@@ -28,40 +47,7 @@ function clearRevealStyles(targets: HTMLElement[]) {
   });
 }
 
-export function SectionMotionLifecycle({ section }: SectionMotionLifecycleProps) {
-  useLayoutEffect(() => {
-    const transition = window.sessionStorage.getItem("site-section-transition");
-    if (!isSectionTransition(transition)) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      clearSectionTransition();
-      return;
-    }
-
-    const run = enterSectionTransition(transition);
-    if (!run) {
-      clearSectionTransition();
-      return;
-    }
-
-    let active = true;
-    let cleanupFrame = 0;
-    const finish = () => {
-      if (!active) return;
-      run.animation.cancel();
-      cleanupFrame = window.requestAnimationFrame(() => {
-        if (active) clearSectionTransition(run.element);
-      });
-    };
-    void run.animation.then(finish, finish);
-
-    return () => {
-      active = false;
-      window.cancelAnimationFrame(cleanupFrame);
-      run.animation.stop();
-      resetSectionMotion(run.element);
-    };
-  }, [section]);
-
+export function SectionMotionLifecycle() {
   // 首访仪式的「档案摊开」入场：仅当仪式本会话尚未播放时武装——先把目标藏起，
   // 等 OpeningLoader 揭幕广播后按阶梯播放入场；仪式之外（回访/切版块）完全不参与。
   useLayoutEffect(() => {

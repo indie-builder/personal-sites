@@ -42,17 +42,6 @@ struct HomeView: View {
     }
 }
 
-/// 策展三栏共用的分页器查表。
-extension HomeModel {
-    func curated(_ section: Section) -> PagedFeed<CurationItem> {
-        switch section {
-        case .curation: curation
-        case .design: design
-        default: douyin
-        }
-    }
-}
-
 /// 单行页头：左侧固定身份区块，右侧栏目独立横滚；下划线不参与文字对齐。
 private struct SectionTabs: View {
     let selected: Section

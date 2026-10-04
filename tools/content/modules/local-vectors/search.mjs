@@ -5,7 +5,7 @@ import * as sqliteVec from "sqlite-vec";
 
 import { compactText, mergeRankings } from "./algorithms.mjs";
 import { databasePath, MODEL_ID, QUERY_PREFIX, VECTOR_DIMENSIONS } from "./config.mjs";
-import { embed, getEmbedder } from "./model.mjs";
+import { embed, loadEmbedder } from "./model.mjs";
 
 function quoteFtsQuery(query) {
   return `"${query.replaceAll('"', '""')}"`;
@@ -16,7 +16,7 @@ export function search(query) {
     Effect.gen(function* () {
       if (!compactText(query)) return yield* Effect.fail(new Error("搜索词不能为空。"));
 
-      const embedder = yield* getEmbedder();
+      const embedder = yield* loadEmbedder;
       const [queryVector] = yield* embed(embedder, [`${QUERY_PREFIX}${compactText(query)}`]);
       const database = yield* Effect.acquireRelease(
         attempt("vectors.database", () => new Database(databasePath, { fileMustExist: true, readonly: true })),

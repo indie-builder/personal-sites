@@ -1,6 +1,6 @@
 import { animate } from "motion/react";
 
-export type ProfileTransitionKind = "collapse" | "expand";
+type ProfileTransitionKind = "collapse" | "expand";
 
 type ProfileTransitionBox = {
   height: number;
@@ -9,7 +9,7 @@ type ProfileTransitionBox = {
   width: number;
 };
 
-export type ProfileTransitionPayload = {
+type ProfileTransitionPayload = {
   avatar: ProfileTransitionBox;
   kind: ProfileTransitionKind;
   summary: ProfileTransitionBox;
@@ -123,20 +123,25 @@ export function beginProfileTransition(from: string, to: string) {
   // 由 ProfileTransitionBridge 在飞行开始后解除。
   document.documentElement.dataset.profileFeedHold = "true";
   document.documentElement.dataset.profileTransition = `leaving-${kind}`;
-  window.sessionStorage.setItem(profileTransitionStorageKey, JSON.stringify({
-    avatar: avatarBox,
-    kind,
-    summary: summaryBox,
-    links: linksBox,
-  } satisfies ProfileTransitionPayload));
+  try {
+    window.sessionStorage.setItem(profileTransitionStorageKey, JSON.stringify({
+      avatar: avatarBox,
+      kind,
+      summary: summaryBox,
+      links: linksBox,
+    } satisfies ProfileTransitionPayload));
+  } catch {
+    clearProfileTransition();
+    return false;
+  }
   return true;
 }
 
 export function readProfileTransition(): ProfileTransitionPayload | null {
-  const raw = window.sessionStorage.getItem(profileTransitionStorageKey);
-  if (!raw) return null;
-
   try {
+    const raw = window.sessionStorage.getItem(profileTransitionStorageKey);
+    if (!raw) return null;
+
     const value = JSON.parse(raw) as Partial<ProfileTransitionPayload>;
     if (
       (value.kind !== "collapse" && value.kind !== "expand")
@@ -172,5 +177,9 @@ export function clearProfileTransition() {
   });
   delete document.documentElement.dataset.profileTransition;
   delete document.documentElement.dataset.profileFeedHold;
-  window.sessionStorage.removeItem(profileTransitionStorageKey);
+  try {
+    window.sessionStorage.removeItem(profileTransitionStorageKey);
+  } catch {
+    // 存储不可用时仍完成动画与 DOM 清理，避免阻断挂载或导航。
+  }
 }

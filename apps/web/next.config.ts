@@ -20,7 +20,6 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   reactStrictMode: true,
-  serverExternalPackages: ["better-sqlite3"],
   typedRoutes: true,
   // public/ 下的静态资源没有内容哈希，给一周浏览器缓存而非 immutable。
   async headers() {

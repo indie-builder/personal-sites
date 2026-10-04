@@ -3,6 +3,9 @@ package cn.lovemyrmb.personalsite.ui.portfolio
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -16,6 +19,8 @@ import cn.lovemyrmb.personalsite.data.PortfolioItem
 import cn.lovemyrmb.personalsite.data.PortfolioPage
 import cn.lovemyrmb.personalsite.data.PortfolioProducts
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
+import cn.lovemyrmb.personalsite.data.ReaderPayload
+import org.junit.Assert.assertEquals
 import cn.lovemyrmb.personalsite.ui.theme.PersonalSiteTheme
 import kotlinx.coroutines.delay
 import org.junit.Rule
@@ -35,6 +40,7 @@ class PortfolioCollectionScreenTest {
     private class FakePortfolioApi : PortfolioApi {
         @Volatile var failCollection = false
         @Volatile var collectionCalls = 0
+        @Volatile var failDetail = false
 
         override suspend fun products(): PortfolioProducts = PortfolioProducts()
         override suspend fun collection(
@@ -62,8 +68,10 @@ class PortfolioCollectionScreenTest {
             )
         }
 
-        override suspend fun detail(collection: String, id: String): PortfolioDetail =
-            PortfolioDetail(PortfolioItem(id = id))
+        override suspend fun detail(collection: String, id: String): PortfolioDetail {
+            if (failDetail) throw IOException("network")
+            return PortfolioDetail(PortfolioItem(id = id))
+        }
 
         private fun item(id: String, title: String) = PortfolioItem(
             id = id,
@@ -92,6 +100,43 @@ class PortfolioCollectionScreenTest {
         compose.waitUntil(timeoutMillis) {
             compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun readerPagesThroughPayloadAndKeepsListContentWhenDetailFails() {
+        val api = FakePortfolioApi().apply { failDetail = true }
+        val items = listOf(
+            PortfolioItem(id = "first", title = "第一件", text = "第一件全文"),
+            PortfolioItem(id = "second", title = "第二件", text = "第二件全文"),
+        )
+        var returned = 0
+        compose.setContent {
+            PersonalSiteTheme {
+                PortfolioItemReader(ReaderPayload("muse", items, 1), api, 0.dp, { returned++ }, {})
+            }
+        }
+        compose.onNodeWithText("第二件全文").assertIsDisplayed()
+        compose.onNodeWithText("2 / 2").assertIsDisplayed()
+        compose.onNodeWithContentDescription("下一件").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("上一件").performClick()
+        compose.onNodeWithText("第一件全文").assertIsDisplayed()
+        compose.onNodeWithText("1 / 2").assertIsDisplayed()
+        compose.onNodeWithContentDescription("上一件").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("下一件").assertIsEnabled().performClick()
+        compose.onNodeWithText("第二件全文").assertIsDisplayed()
+        compose.onNodeWithContentDescription("返回灵感集").performClick()
+        compose.runOnIdle { assertEquals(1, returned) }
+    }
+
+    @Test
+    fun readerReturnsWhenPayloadIsMissing() {
+        var returned = 0
+        compose.setContent {
+            PersonalSiteTheme {
+                PortfolioItemReader(null, FakePortfolioApi(), 0.dp, { returned++ }, {})
+            }
+        }
+        compose.runOnIdle { assertEquals(1, returned) }
     }
 
     @Test

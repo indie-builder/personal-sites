@@ -72,10 +72,8 @@ const program = Effect.gen(function* () {
     normalizedStatuses += 1;
   }
   if (normalizedStatuses > 0) {
-    console.log(`已校正 ${normalizedStatuses} 条历史设计分类状态。`);
+    console.log(`${DRY_RUN ? "预览校正" : "已校正"} ${normalizedStatuses} 条历史设计分类状态。`);
   }
-  // 运行前基线落盘（紧凑 JSON），断点续跑依赖它。
-  yield* writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`);
   let targets = queue.items.filter((item) =>
     DESIGN_ONLY
       ? item.ai.enrichedAt && (!item.ai.design || (REFRESH && Number(item.pipeline?.stages?.design?.version ?? 0) < 2))
@@ -85,23 +83,38 @@ const program = Effect.gen(function* () {
   targets = targets.slice(0, LIMIT);
 
   console.log(
-    `待${DESIGN_ONLY ? "补设计分类" : "解析"}: ${targets.length} 条，并发 ${CONCURRENCY}${REFRESH ? "（强制刷新）" : ""}${DRY_RUN ? "（dry-run，不调用模型）" : ""}`,
+    `待${DESIGN_ONLY ? "补设计分类" : "解析"}: ${targets.length} 条，并发 ${CONCURRENCY}${REFRESH ? "（强制刷新）" : ""}${DRY_RUN ? "（dry-run，仅预览计划）" : ""}`,
   );
-  if (!DRY_RUN && ENGINE === "pi" && !process.env.BIGMODEL_API_KEY) {
+  if (DRY_RUN) {
+    for (const item of targets) {
+      const links = item.links ?? [];
+      const linkTypes = [...new Set(links.map((link) => link.type ?? "external"))].join("、") || "无";
+      const unresolved = links.filter((link) => link.type === "unexpanded").length;
+      const fetchable = links.filter((link) =>
+        link.expanded && ["github", "article", "x-article"].includes(link.type),
+      ).length;
+      const visualWork = hasReusableVisualFacts(item) ? "复用视觉事实" : "收集媒体证据";
+      console.log(
+        `[dry-run] ${item.id} @${item.author.handle}: 现有链接类型 ${linkTypes}，未展开 ${unresolved}/${links.length}，媒体 ${item.media?.length ?? 0}；计划：${DESIGN_ONLY ? "补设计分类" : `展开 ${unresolved} 条短链、抓取 ${fetchable} 条已解析链接及展开后支持的链接、完整解析`}，${visualWork}`,
+      );
+    }
+    return;
+  }
+  // 运行前基线落盘（紧凑 JSON），断点续跑依赖它。
+  yield* writeTextAtomically(queuePath, `${JSON.stringify(queue)}\n`);
+  if (ENGINE === "pi" && !process.env.BIGMODEL_API_KEY) {
     console.error("缺少 BIGMODEL_API_KEY 环境变量，Pi 无法使用 智谱 GLM Coding 模型。");
     process.exit(1);
   }
-  const reader = DRY_RUN
-    ? null
-    : yield* createAnalysisReader({
-        engine: ENGINE,
-        config: {
-          ...config,
-          analysis: { ...config.analysis, codex_cli: { model: CODEX_MODEL, reasoning_effort: CODEX_REASONING_EFFORT } },
-        },
-        repoRoot,
-        timeoutMilliseconds: ENGINE === "pi" ? null : undefined,
-      });
+  const reader = yield* createAnalysisReader({
+    engine: ENGINE,
+    config: {
+      ...config,
+      analysis: { ...config.analysis, codex_cli: { model: CODEX_MODEL, reasoning_effort: CODEX_REASONING_EFFORT } },
+    },
+    repoRoot,
+    timeoutMilliseconds: ENGINE === "pi" ? null : undefined,
+  });
   const MODEL_LABEL =
     ENGINE === "codex-cli"
       ? `codex-cli/${CODEX_MODEL}`
@@ -150,17 +163,6 @@ const program = Effect.gen(function* () {
               linkContents.push({ ...link, article });
             }
           }
-        }
-
-        if (DRY_RUN) {
-          const expanded = item.links.filter((l) => l.expanded).length;
-          const repos = linkContents.filter((l) => l.repo).length;
-          const articles = linkContents.filter((l) => l.article).length;
-          console.log(
-            `[dry-run] ${item.id} @${item.author.handle}: 展开 ${expanded}/${item.links.length} 链接，仓库 ${repos}，文章 ${articles}`,
-          );
-          done += 1;
-          return;
         }
 
         // 3. AI 解析（带一次重试）

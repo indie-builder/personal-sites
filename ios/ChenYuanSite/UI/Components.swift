@@ -45,18 +45,15 @@ struct BackButton: View {
 /// 方形图标按钮（复制 / 重试 / 回到底部等）。
 struct IconButton: View {
     let systemName: String
-    var pointSize: CGFloat = 15
-    var side: CGFloat = SiteSpace.touch
-    var tint: Color = SiteTheme.muted
     let accessibilityLabel: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: pointSize))
-                .foregroundStyle(tint)
-                .frame(width: side, height: side)
+                .font(.system(size: 15))
+                .foregroundStyle(SiteTheme.muted)
+                .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -46,7 +46,6 @@ import cn.lovemyrmb.personalsite.ui.theme.SiteText
 fun VideoCard(
     media: CurationMedia,
     source: CurationSource,
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val preloader = LocalVideoPreloader.current
@@ -63,7 +62,7 @@ fun VideoCard(
     }
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(aspect)
             .clip(RoundedCornerShape(8))

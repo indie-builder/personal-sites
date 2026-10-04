@@ -1,3 +1,5 @@
+import type { PublicDataHealthEvidence } from "./sqlite.mjs";
+
 export type DataSourceStatus = {
   ageMinutes: number | null;
   count: number;
@@ -23,13 +25,5 @@ export function buildDataHealth(options: {
   commit?: string | null;
   insights?: DataHealth["insights"];
   now?: Date;
-  publicData: {
-    askDocuments: number;
-    askFts: number;
-    askMissingFts: number;
-    askOrphanFts: number;
-    curation: { douyin: { count: number; latestAt: string | null }; x: { count: number; latestAt: string | null } };
-    openSource: { count: number; latestAt: string | null };
-    quickCheck: string;
-  };
+  publicData: PublicDataHealthEvidence;
 }): DataHealth;

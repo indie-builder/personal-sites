@@ -2,7 +2,8 @@ import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseSyncArgs, runHistoryPipeline, runSyncPipeline } from "../scripts/x-curation-sync.mjs";
+import { parseSyncArgs } from "../scripts/x-curation-sync.mjs";
+import { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 
 test("sync pipeline fetches X data, prepares the sensitive queue, then enriches it", async () => {
@@ -144,6 +145,33 @@ test("BigModel Pi is the default and backfills design classification at concurre
   ]);
 });
 
+test("Codex model overrides reach both enrichment stages without duplicate option state", async () => {
+  const calls = [];
+  const options = parseSyncArgs(["--source", "bookmarks", "--engine", "codex-cli", "--model", "custom-codex-model"]);
+  assert.equal(options.codexModel, "custom-codex-model");
+  assert.equal(Object.hasOwn(options, "model"), false);
+
+  await Effect.runPromise(runSyncPipeline({
+    repoRoot: "/repo",
+    options,
+    execute: (_command, args) => Effect.sync(() => calls.push(args)),
+  }));
+
+  assert.deepEqual(calls[2], [
+    "/repo/tools/content/scripts/x-curation-enrich.mjs", "--engine", "codex-cli",
+    "--model", "custom-codex-model", "--reasoning-effort", "max",
+  ]);
+  assert.deepEqual(calls[3], [
+    "/repo/tools/content/scripts/x-curation-enrich.mjs", "--design-only", "--engine", "codex-cli",
+    "--model", "custom-codex-model", "--reasoning-effort", "high", "--concurrency", "40",
+  ]);
+});
+
+test("short help sets the same help option as long help", () => {
+  assert.equal(parseSyncArgs(["-h"]).help, true);
+  assert.deepEqual(parseSyncArgs(["-h"]), parseSyncArgs(["--help"]));
+});
+
 test("design backfill concurrency can be overridden without changing full enrichment", () => {
   const options = parseSyncArgs(["--design-concurrency", "12"]);
   assert.equal(options.designConcurrency, 12);
@@ -201,7 +229,6 @@ test("history pipeline uses bird pagination directly and imports both raw source
 
 test("Pi analysis uses BigModel and permits GLM model overrides", () => {
   const resolved = resolvePiModelConfig({
-    config: { ai: { provider: "bigmodel-coding" } },
     env: { BIGMODEL_MODEL: "glm-5.3", PI_MODEL_PROVIDER: "another-provider" },
   });
 

@@ -24,7 +24,7 @@ import org.commonmark.ext.gfm.tables.*
 import org.commonmark.ext.gfm.strikethrough.*
 import org.commonmark.parser.Parser
 
-internal val answerParser: Parser = Parser.builder().extensions(listOf(TablesExtension.create(), StrikethroughExtension.create())).build()
+private val answerParser: Parser = Parser.builder().extensions(listOf(TablesExtension.create(), StrikethroughExtension.create())).build()
 
 private fun Node.children(): List<Node> = buildList {
     var child = firstChild

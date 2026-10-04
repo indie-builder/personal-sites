@@ -172,7 +172,7 @@ export function fetchOfficialChineseReadme(repository, { exec, maxBytes } = {}) 
   });
 }
 
-export function buildRepositoryStructureMarkdown(repository, rootEntries, manifests) {
+function buildRepositoryStructureMarkdown(repository, rootEntries, manifests) {
   const lines = [
     `# ${repository.fullName}`,
     "",

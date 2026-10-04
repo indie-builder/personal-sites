@@ -6,11 +6,6 @@ import styles from "./site-section-navigation.module.css";
 
 export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source";
 
-type SiteSectionNavigationProps = {
-  current: SiteSection;
-  includeHome?: boolean;
-};
-
 // 刊头只包含阅读版块；问答由个人简介中的角色打开。
 const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; label: string }> = [
   { href: "/ai-news", id: "ai-news", label: "每日动态" },
@@ -22,37 +17,23 @@ const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; la
 
 const homeSection = { href: "/" as Route, id: "home" as const, label: "首页" };
 
-function getTransition(current: SiteSection, destination: SiteSection) {
-  if (current === "home") return "forward" as const;
-  if (destination === "home") return "back" as const;
-  return "swap" as const;
-}
-
-function SiteSectionNavigation({ current, includeHome = false }: SiteSectionNavigationProps) {
-  const sections = includeHome ? [homeSection, ...siblingSections] : siblingSections;
-  return (
-    <nav aria-label="内容导航" className={styles.navigation}>
-      {sections.map((section) => (
-        <SectionNavigationLink
-          aria-current={current === section.id ? "page" : undefined}
-          className={styles.link}
-          from={current}
-          href={section.href}
-          key={`${current}-${section.id}`}
-          to={section.id}
-          transition={getTransition(current, section.id)}
-        >
-          {section.label}
-        </SectionNavigationLink>
-      ))}
-    </nav>
-  );
-}
-
-export function MobileSectionNavigation({ current }: Pick<SiteSectionNavigationProps, "current">) {
+export function MobileSectionNavigation({ current }: { current: SiteSection }) {
   return (
     <div className={styles.mobileNavigation} data-mobile-navigation>
-      <SiteSectionNavigation current={current} includeHome />
+      <nav aria-label="内容导航" className={styles.navigation}>
+        {[homeSection, ...siblingSections].map((section) => (
+          <SectionNavigationLink
+            aria-current={current === section.id ? "page" : undefined}
+            className={styles.link}
+            from={current}
+            href={section.href}
+            key={`${current}-${section.id}`}
+            to={section.id}
+          >
+            {section.label}
+          </SectionNavigationLink>
+        ))}
+      </nav>
     </div>
   );
 }
@@ -60,7 +41,7 @@ export function MobileSectionNavigation({ current }: Pick<SiteSectionNavigationP
 // 桌面刊头：当前版块是 Title 档刊名，兄弟版块收为 quiet 同行链接，
 // 整个头部共享一条细线——导航不再使用 tab 语法。桌面无独立「首页」：/ 的右侧即每日动态，
 // 「首页」只保留在移动端导航（回到展开的个人资料）。
-export function ContentSectionNavigation({ current }: Pick<SiteSectionNavigationProps, "current">) {
+export function ContentSectionNavigation({ current }: { current: SiteSection }) {
   const currentSection = siblingSections.find((section) => section.id === current) ?? siblingSections[0];
   const siblings = siblingSections.filter((section) => section.id !== currentSection.id);
   return (
@@ -76,7 +57,6 @@ export function ContentSectionNavigation({ current }: Pick<SiteSectionNavigation
             href={section.href}
             key={`${current}-${section.id}`}
             to={section.id}
-            transition={getTransition(current, section.id)}
           >
             {section.label}
           </SectionNavigationLink>

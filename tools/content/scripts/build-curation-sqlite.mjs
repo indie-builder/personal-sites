@@ -9,7 +9,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { toPublicDouyinItem } from "../modules/douyin-sync/curation-projection.mjs";
-import { PUBLIC_CURATION_DATABASE_PATH, buildPublicCurationDatabase } from "../modules/focus-sync/public-sqlite.mjs";
+import { PUBLIC_DATABASE_PATH } from "@site/public-data/sqlite.mjs";
+import { buildPublicCurationDatabase } from "../modules/focus-sync/public-sqlite.mjs";
 import { summarizeDesignClassifications } from "../modules/x-sync/design-classification.mjs";
 import { isReadyForPublication, toPublicCurationItem } from "../modules/x-sync/curation-projection.mjs";
 import { rebuildDefaultIndex } from "../modules/local-vectors/indexer.mjs";
@@ -71,13 +72,13 @@ if (duplicates.length > 0) {
 
 const result = await Effect.runPromise(
   buildPublicCurationDatabase({
-    outputPath: path.join(repoRoot, PUBLIC_CURATION_DATABASE_PATH),
+    outputPath: path.join(repoRoot, PUBLIC_DATABASE_PATH),
     items,
   }),
 );
 
 console.log(
-  `公开 SQLite 已生成：${PUBLIC_CURATION_DATABASE_PATH}（策展 ${result.itemCount} 条，问答索引 ${result.documentCount} 条）。`,
+  `公开 SQLite 已生成：${PUBLIC_DATABASE_PATH}（策展 ${result.itemCount} 条，问答索引 ${result.documentCount} 条）。`,
 );
 const designSummary = summarizeDesignClassifications(xItems);
 console.log(

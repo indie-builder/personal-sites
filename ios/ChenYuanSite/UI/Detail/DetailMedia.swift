@@ -2,7 +2,7 @@ import AVKit
 import SwiftUI
 
 /// 媒体宽高比：宽高缺失或非法时回退。
-func mediaAspect(_ media: CurationMedia, fallback: CGFloat) -> CGFloat {
+private func mediaAspect(_ media: CurationMedia, fallback: CGFloat) -> CGFloat {
     guard let width = media.width, width > 0, let height = media.height, height > 0 else { return fallback }
     return CGFloat(width) / CGFloat(height)
 }

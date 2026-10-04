@@ -5,7 +5,7 @@ import { attempt, io } from "@site/effect";
 import { MODEL_DTYPE, MODEL_ID, modelCachePath, VECTOR_DIMENSIONS } from "./config.mjs";
 
 // Allocation is synchronous; model loading stays lazy and is shared by indexing and search.
-const embedder = Effect.runSync(
+export const loadEmbedder = Effect.runSync(
   Effect.cached(
     Effect.gen(function* () {
       env.cacheDir = modelCachePath;
@@ -16,9 +16,6 @@ const embedder = Effect.runSync(
     }),
   ),
 );
-export function getEmbedder() {
-  return embedder;
-}
 
 export function embed(embedder, texts) {
   return io("vectors.embed", () => embedder(texts, { normalize: true, pooling: "cls", truncation: true })).pipe(

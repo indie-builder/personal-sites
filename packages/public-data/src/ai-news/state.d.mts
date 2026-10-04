@@ -10,7 +10,6 @@ export type AiNewsSyncStats = {
 
 export type AiNewsStateStore = {
   acquire(options: {
-    backfill?: boolean;
     now: Date;
   }): Effect.Effect<{ acquired: boolean; etags: Record<string, string | null> }, Error>;
   fail(error: unknown): Effect.Effect<void, Error>;

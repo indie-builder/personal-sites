@@ -54,14 +54,14 @@ function normalizedList(value, limit = 15) {
   return uniqueStrings(Array.isArray(value) ? value : [], limit);
 }
 
-export function normalizeCurationTags(value) {
+function normalizeCurationTags(value) {
   const tags = normalizedList(value);
   // 词表约定：除总类外，以「提示词」结尾的主题都是用途子类。
   const promptTypes = tags.filter((tag) => tag !== "提示词" && tag.endsWith("提示词"));
   return normalizedList(promptTypes.length ? ["提示词", ...promptTypes, ...tags.filter((tag) => tag === "技能"), ...tags] : tags, 4);
 }
 
-export function extractCurationFacts(item) {
+function extractCurationFacts(item) {
   const text = [item.text, item.quoteContext?.text].filter(Boolean).join("\n");
   const urls = (item.links ?? [])
     .map((link) => link.expanded ?? link.original)

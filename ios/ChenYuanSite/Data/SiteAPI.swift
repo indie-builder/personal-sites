@@ -3,7 +3,15 @@ import Foundation
 /// 站点公共 GET API。全部公开读，无需鉴权；分页契约 { hasMore, items }。
 /// 类型为 nonisolated：网络与 JSON 解析不占用主线程。
 nonisolated struct SiteAPI: Sendable {
-    static let baseURL = URL(string: "https://default-coder.lovemyrmb.cn/")!
+    static let baseURL: URL = {
+        #if DEBUG
+        if let value = ProcessInfo.processInfo.environment["SITE_TEST_BASE_URL"],
+           let url = URL(string: value), url.scheme == "http", url.host == "127.0.0.1" {
+            return url
+        }
+        #endif
+        return URL(string: "https://default-coder.lovemyrmb.cn/")!
+    }()
 
     private let session: URLSession
     private let decoder = JSONDecoder()
@@ -27,7 +35,7 @@ nonisolated struct SiteAPI: Sendable {
     private func get<T: Decodable>(url: URL) async throws -> T {
         let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw SiteAPIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+            throw URLError(.badServerResponse)
         }
         return try decoder.decode(T.self, from: data)
     }
@@ -41,10 +49,6 @@ nonisolated struct SiteAPI: Sendable {
         }
         return components.url!
     }
-}
-
-nonisolated enum SiteAPIError: Error {
-    case badStatus(Int)
 }
 
 /// 站内媒体 URL 语义：X 平台视频必须走 /api/x-media 代理，其余直连。

@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { Effect } from "effect";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fuseAskSearchDocuments } from "@/lib/ask-search.server";
+import { searchAiNewsDocuments } from "@/lib/ai-news";
+import { searchAskDocuments } from "@/lib/ask-search.server";
+import { searchLocalAskDocuments } from "@/lib/curation-search.server";
+
+vi.mock("@/lib/ai-news", () => ({ searchAiNewsDocuments: vi.fn() }));
+vi.mock("@/lib/curation-search.server", () => ({ searchLocalAskDocuments: vi.fn() }));
 
 const document = (id: string, score = 1) => ({
   content: id,
@@ -14,21 +20,31 @@ const document = (id: string, score = 1) => ({
   title: id,
 });
 
-describe("fuseAskSearchDocuments", () => {
-  it("rewards documents found by both exact and fallback retrieval", () => {
-    const results = fuseAskSearchDocuments([
-      { documents: [document("exact"), document("shared")], weight: 2 },
-      { documents: [document("shared"), document("fallback")] },
-    ]);
+beforeEach(() => {
+  vi.resetAllMocks();
+});
+
+describe("searchAskDocuments ranking", () => {
+  it("rewards documents found by both exact and fallback retrieval", async () => {
+    vi.mocked(searchLocalAskDocuments).mockImplementation((query) => {
+      if (query === "alpha beta") return [document("exact"), document("shared")];
+      if (query === "alpha") return [document("shared"), document("fallback")];
+      return [];
+    });
+
+    const results = await Effect.runPromise(searchAskDocuments("alpha beta", "daily"));
     expect(results.map(({ id }) => id)).toEqual(["shared", "exact", "fallback"]);
   });
 
-  it("normalizes incompatible source scores by rank", () => {
-    const results = fuseAskSearchDocuments([
-      { documents: [document("local", 1)] },
-      { documents: [document("remote", 1_000)] },
-    ]);
-    expect(results.map(({ id }) => id)).toEqual(["remote", "local"]);
-    expect(results.every(({ score }) => score === 1)).toBe(true);
+  it("normalizes incompatible source scores by rank", async () => {
+    vi.mocked(searchLocalAskDocuments).mockImplementation((_query, scope) =>
+      scope === "daily" ? [document("localFirst", 1), document("localSecond", 1)] : [],
+    );
+    vi.mocked(searchAiNewsDocuments).mockReturnValue(
+      Effect.succeed([document("remoteFirst", 1_000), document("remoteSecond", 999)]),
+    );
+
+    const results = await Effect.runPromise(searchAskDocuments("?", "all"));
+    expect(results.map(({ id }) => id)).toEqual(["remoteFirst", "localFirst", "remoteSecond", "localSecond"]);
   });
 });

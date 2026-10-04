@@ -6,6 +6,7 @@ import { CheckIcon, ChevronDown } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { useRef, useState } from "react";
 
+import { STREAM_EASE } from "@/components/motion-tokens";
 import styles from "@/components/open-source.module.css";
 import { useStreamDate } from "@/components/use-stream-date";
 import {
@@ -21,7 +22,6 @@ type OpenSourceStreamProps = {
 };
 
 const FILTER_REVEAL_COUNT = 8;
-const FILTER_REVEAL_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
   const [category, setCategory] = useState<OpenSourceCategory>("all");
@@ -85,7 +85,7 @@ export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
               transition={{
                 delay: animateEntry ? index * 0.032 : 0,
                 duration: animateEntry ? 0.28 : 0,
-                ease: FILTER_REVEAL_EASE,
+                ease: STREAM_EASE,
               }}
             >
               <Link href={`/open-source/${entry.slug}`}>

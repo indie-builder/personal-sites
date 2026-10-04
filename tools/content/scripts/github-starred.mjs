@@ -28,7 +28,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/github-sync.json"), "utf8"));
 loadLocalEnv(repoRoot);
 
-export function parseGithubStarredArgs(args) {
+function parseGithubStarredArgs(args) {
   const parsed = parseCliOptions(args, {
     "--concurrency": "int",
     "--engine": "string",

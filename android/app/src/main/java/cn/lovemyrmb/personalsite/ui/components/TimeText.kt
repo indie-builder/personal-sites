@@ -6,7 +6,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** ISO 时间 → 相对时间文案（与站点一致的措辞：刚刚/N分钟前/N小时前/N天前）。 */
-fun relativeTimeLabel(iso: String?, now: Long = System.currentTimeMillis()): String? {
+private fun relativeTimeLabel(iso: String?, now: Long = System.currentTimeMillis()): String? {
     val instant = parseIso(iso) ?: return null
     val minutes = Duration.between(instant, Instant.ofEpochMilli(now)).toMinutes()
     if (minutes < 0) return null
@@ -20,7 +20,7 @@ fun relativeTimeLabel(iso: String?, now: Long = System.currentTimeMillis()): Str
 }
 
 /** ISO 时间 → 「M月d日」；解析失败返回 null。 */
-fun dayLabel(iso: String?): String? {
+private fun dayLabel(iso: String?): String? {
     val instant = parseIso(iso) ?: return null
     val formatter = DateTimeFormatter.ofPattern("M月d日").withZone(ZoneId.systemDefault())
     return formatter.format(instant)

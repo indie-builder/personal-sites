@@ -51,7 +51,7 @@ RootLayout
 | 策展数据 | `apps/web/lib/curation.ts` | Effect Schema 校验、Effect 查询、日期格式化 | 页面布局、问答检索 |
 | 本地问答检索 | `apps/web/lib/curation-search.server.ts` | 公开 SQLite 语料缓存、全文匹配与排序 | 策展页面查询 |
 | 公开发现 | `apps/web/lib/discovery.server.ts` | 汇总公开 SQLite 与 Supabase，生成 Sitemap/RSS 数据 | 私有原始资料或运行时写入 |
-| 数据健康 | `apps/web/lib/data-health.server.ts` + `packages/public-data/src/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
+| 数据健康 | `apps/web/app/api/health/data/route.ts` + `packages/public-data/src/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
 
 统一健康状态会执行 SQLite `quick_check`，并按 `rowid` 双向核对 `ask_documents` 与 FTS5，而不是只比较总数；数据库损坏、缺失索引行或孤儿索引行都会让健康端点返回 503。
 
@@ -90,7 +90,7 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 | 层级 | 细线 + 留白 + 字重 | 禁止卡片网格、装饰阴影和玻璃效果 |
 | 技术感 | 等宽技术节点 + 低幅运动效 | 禁止把页面正文全面等宽化 |
 | 简介 | 英文输入、删除、空光标两次、中文输入；完成后标题轮换多语言问候语 | `prefers-reduced-motion` 下保留最终中文状态，不进入轮换 |
-| 流式内容 | 三列策展行，hover 只做文字/箭头轻变化 | 禁止 hover 变卡片或填充色块 |
+| 流式内容 | 双列登记簿行（元信息列 + 内容列），窄屏收为单列；hover 只更新标题颜色 | 禁止 hover 变卡片或填充色块 |
 | 深色模式 | 替换黑白灰令牌 | 不新建独立暗色品牌风格 |
 
 异步业务逻辑与 I/O 默认使用 Effect，开发约定与平台边界见 [Effect 开发规则](effect-architecture.md)。
@@ -128,12 +128,12 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 | 层 | 适用场景 | 现有示例 |
 |---|---|---|
 | CSS keyframes / transitions | 声明式简单动效、无限循环、hover/focus 过渡 | 进出场 stagger、shimmer、marquee、状态脉冲、开屏 Loading |
-| Motion（`motion/react`） | JS 调度的状态驱动动效：值动画、序列、挂载/卸载进出场 | 双语简介打字序列（`profile-introduction.tsx`）、问答消息入场（`ask-chat.tsx`） |
-| 原生 WAAPI / CSS scroll-driven | Motion 无法等价覆盖的场景 | `profile-transition-bridge.tsx` 的 FLIP 覆盖层无缝接管、`feed-print.tsx` 的合成器驱动滚动打印 |
+| Motion（`motion/react`） | JS 调度的状态驱动动效：值动画、序列、挂载/卸载进出场 | 双语简介打字序列（`profile-introduction.tsx`）、问答消息入场（`ask-chat.tsx`）、身份轨 FLIP 覆盖层飞行与揭幕（`profile-transition-bridge.tsx`） |
+| 原生 WAAPI / CSS scroll-driven | 原生 DOM 测量驱动的尺寸过渡、CSS 滚动驱动动效 | 简介正文高度过渡（`growing-paragraph.tsx`） |
 
 约束：
 
-- CSS 能表达的简单动效不引入 Motion；FLIP 与 scroll-driven 场景不反向迁回 Motion（主线程 rAF 属于降级）。
+- CSS 能表达的简单动效不引入 Motion；CSS scroll-driven 场景不迁回主线程 rAF。
 - Motion 只驱动 transform/opacity/clip-path 及小面积一次性 filter，禁止持续驱动布局属性或大面积绘制属性。
 - 各层都必须保留 `prefers-reduced-motion` 终态路径（变更准则 3 不变）。
 
@@ -141,7 +141,7 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 
 - 首页和详情页均采用同一左侧身份轨，避免旧版详情页回退为独立工作台。
 - 桌面左侧个人资料是首页锚点，右侧默认显示每日动态；移动端把个人资料展开为默认首页，导航置于身份区与内容区之间，并在内容页随紧凑身份区固定。移动端内容 Grid 必须从顶部自然排布，避免少量内容拉伸身份区与内容区之间的间距。每日动态、每日关注、抖音收藏、开源关注不再重复显示栏目标题或摘要。
-- 动效分工保持克制：Loading、技术信号场和双语简介分别承担揭幕、环境与叙事；栏目导航只负责解释状态变化。移动端首页与内容页之间使用短促的前进/返回内容过渡，桌面同级栏目与开源主题筛选使用轻量淡入换页；所有栏目动效必须在 `prefers-reduced-motion` 下即时完成。
+- 动效分工保持克制：Loading、技术信号场和双语简介分别承担揭幕、环境与叙事。首访内容揭幕由 `SectionMotionLifecycle` 私有实现；同级栏目直接提交路由，移动端首页与内容页之间保留身份轨桥接；`prefers-reduced-motion` 下即时完成。
 - 移动端首页进入内容页时，身份轨不直接动画整体高度：信号场和简介先离场，头像与身份信息通过临时共享覆盖层收拢到紧凑头部，导航与内容流随后落位；从内容页回首页按相反节奏展开。该覆盖层必须 `aria-hidden`、不可交互并在终态后清理。
 - 策展内容已从卡片选择器收敛为默认信息流；详情页继承同样的排版语法。
 - 开源关注的主题筛选与每日关注共用右侧单选菜单样式，工具栏左侧显示当前结果的项目数，菜单保留各主题的全库计数；当前项由勾选与触发器文字表达，小屏菜单限制在视口内。筛选仍对已载入的完整公开仓库集合执行。

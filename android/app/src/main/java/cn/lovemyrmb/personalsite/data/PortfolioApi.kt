@@ -33,7 +33,6 @@ data class PortfolioCategory(val id: String = "", val name: String = "", val cou
 
 @Serializable
 data class PortfolioMedia(
-    val id: String = "",
     val kind: String = "image",
     val url: String = "",
     val poster: String = "",
@@ -41,7 +40,6 @@ data class PortfolioMedia(
     val height: Int = 0,
 ) {
     val isVideo: Boolean get() = kind == "video"
-    val aspect: Float get() = if (width > 0 && height > 0) width.toFloat() / height else 4f / 3f
 }
 
 @Serializable
@@ -160,19 +158,10 @@ class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
 
 /**
  * 阅读器的跳转载体：集合网格 → 全屏阅读，携带同屏条目支持前后翻页。
- * 进程重建后为空时阅读器回退返回（与详情页 EntryHolder 同策略）。
+ * 由 AppContainer 在应用进程内持有；进程重建后为空时阅读器回退返回。
  */
-class PortfolioReaderHolder {
-    @Volatile
-    var pending: ReaderPayload? = null
-
-    data class ReaderPayload(
-        val collection: String,
-        val items: List<PortfolioItem>,
-        val index: Int,
-    )
-
-    fun open(collection: String, items: List<PortfolioItem>, index: Int) {
-        pending = ReaderPayload(collection, items, index)
-    }
-}
+data class ReaderPayload(
+    val collection: String,
+    val items: List<PortfolioItem>,
+    val index: Int,
+)

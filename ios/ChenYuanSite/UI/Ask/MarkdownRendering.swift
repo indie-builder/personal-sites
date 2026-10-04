@@ -27,7 +27,7 @@ struct MarkdownView: View {
             parseCache.text = text
             parseCache.blocks = blocks
         }
-        return BlockListView(blocks: blocks, sourceCount: sourceCount, onSource: onSource)
+        return BlockListView(blocks: blocks, sourceCount: sourceCount)
             .textSelection(.enabled)
             .tint(SiteTheme.ink)
             .environment(\.openURL, OpenURLAction { url in
@@ -45,7 +45,6 @@ struct MarkdownView: View {
 private struct BlockListView: View {
     let blocks: [MarkdownBlock]
     let sourceCount: Int
-    let onSource: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: SiteSpace.related) {
@@ -70,7 +69,7 @@ private struct BlockListView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { offset, item in
                     HStack(alignment: .firstTextBaseline, spacing: SiteSpace.compact) {
                         Text(ordered ? "\(start + offset)." : "•").siteBodyStyle(SiteTheme.muted)
-                        BlockListView(blocks: item, sourceCount: sourceCount, onSource: onSource)
+                        BlockListView(blocks: item, sourceCount: sourceCount)
                     }
                 }
             }
@@ -87,7 +86,7 @@ private struct BlockListView: View {
             .padding(SiteSpace.related)
             .background(SiteTheme.line)
         case let .quote(blocks):
-            BlockListView(blocks: blocks, sourceCount: sourceCount, onSource: onSource)
+            BlockListView(blocks: blocks, sourceCount: sourceCount)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(SiteSpace.related)
                 .background(SiteTheme.line)

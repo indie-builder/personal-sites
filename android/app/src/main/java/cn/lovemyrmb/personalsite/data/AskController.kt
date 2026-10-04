@@ -137,8 +137,6 @@ class AskController(
 
     private fun nextMessageId(): Long = ++messageId
 
-    private fun newConversationId(): String = UUID.randomUUID().toString().replace("-", "").let {
-        // 服务端要求 [A-Za-z0-9_-]{16,128}：取 uuid 十六进制串（32 位）即可。
-        it
-    }
+    // 服务端要求 [A-Za-z0-9_-]{16,128}：取 uuid 十六进制串（32 位）即可。
+    private fun newConversationId(): String = UUID.randomUUID().toString().replace("-", "")
 }

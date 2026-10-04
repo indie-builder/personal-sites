@@ -1,7 +1,7 @@
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
 import type { AskSource } from "@/lib/ask-types";
 
-export type AskStreamEvent = {
+type AskStreamEvent = {
   data: Record<string, unknown>;
   event: string;
 };

@@ -15,7 +15,7 @@ struct AskView: View {
     @State private var confirmReset = false
     @FocusState private var inputFocused: Bool
 
-    struct SelectedSource: Equatable, Identifiable {
+    private struct SelectedSource: Equatable, Identifiable {
         var id: String { "\(messageID)-\(index)" }
         let messageID: Int
         let index: Int

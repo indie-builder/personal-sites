@@ -125,7 +125,7 @@ export function syncAiNews({
       }),
     );
     const stateStore = providedStateStore ?? createSupabaseAiNewsStateStore(client);
-    const lease = yield* stateStore.acquire({ backfill, now });
+    const lease = yield* stateStore.acquire({ now });
     if (!lease.acquired) return { backfill, modes: {}, publicCount: 0, skipped: true };
 
     const state = { etags: backfill ? {} : { ...lease.etags } };

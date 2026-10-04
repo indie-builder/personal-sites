@@ -1,11 +1,8 @@
 {
-  "source": "x-curation",
   "smaugPendingFile": "tools/smaug/.state/pending-bookmarks.json",
   "rawDir": "data/sensitive/x-curation/raw",
   "queueFile": "data/sensitive/x-curation/curation-queue.json",
   "ai": {
-    "runtime": "pi-coding-agent",
-    "provider": "bigmodel-coding",
     "model": "glm-5.3-flash"
   },
   "taxonomy": [

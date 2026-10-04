@@ -51,11 +51,6 @@ function toCurationListItem(item: CurationItem): CurationListItem {
   };
 }
 
-export type CurationPage = {
-  hasMore: boolean;
-  items: CurationListItem[];
-};
-
 type CurationPlatform = "douyin" | "x";
 
 function selectCurationRows(where: string, parameters: unknown[], offset: number, limit: number) {
@@ -127,22 +122,13 @@ export function getCurationTags() {
 
 /** 抖音收藏板块：只呈现公开投影中已发布的抖音来源条目。 */
 export function getDouyinCurationPage(offset = 0, limit = 20) {
-  return Effect.gen(function* () {
-    return yield* getCurationPageByPlatform("douyin", offset, limit);
-  });
+  return getCurationPageByPlatform("douyin", offset, limit);
 }
 
 /** 设计收藏：呈现模型判断为设计相关的 X 条目。 */
 export function getDesignCurationPage(offset = 0, limit = 20) {
-  return Effect.gen(function* () {
-    return yield* getCurationPageByPlatform("x", offset, limit, true);
-  });
+  return getCurationPageByPlatform("x", offset, limit, true);
 }
-
-export type CurationNeighbors = {
-  newer: { id: string; title: string } | null;
-  older: { id: string; title: string } | null;
-};
 
 const curationPlatformRowSchema = Schema.Struct({ platform: Schema.Literals(["douyin", "x"]) });
 

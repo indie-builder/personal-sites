@@ -39,6 +39,16 @@ vi.mock("@site/public-data/ai-news/archive.mjs", async (original) => ({
   ),
 }));
 
+vi.mock("../lib/public-database", () => ({ getPublicDatabase: () => publicDb }));
+
+const publicDb = openArchive(":memory:", false);
+publicDb.exec(`
+  CREATE TABLE curation_items (id TEXT, published_at TEXT);
+  CREATE TABLE open_source_items (slug TEXT, published_at TEXT);
+  INSERT INTO curation_items VALUES ('curation/encoded', NULL);
+  INSERT INTO open_source_items VALUES ('owner/repo', '2026-09-21T00:00:00Z');
+`);
+
 const db = openArchive(":memory:", false);
 const content = (id: string, publishedAt: string | null, title: string): Omit<AiNewsItem, "selected"> => ({
   id,
@@ -76,10 +86,15 @@ const live = [
   content("late", "2026-09-25T00:00:00Z", "迟到模型"),
   content("corrected", "2026-09-28T00:00:00Z", "修订模型"),
 ].map((item) => ({ id: item.id, content: item, selected: false }));
-afterAll(() => db.close());
+afterAll(() => {
+  db.close();
+  publicDb.close();
+});
 
 it("merges archive and live corrections across page boundaries, details, search and sitemap", async () => {
-  const { getAiNewsPage, getAiNewsItem, searchAiNewsDocuments, getAiNewsSitemapItems } = await import("../lib/ai-news");
+  const { getAiNewsPage, getAiNewsItem, searchAiNewsDocuments } = await import("../lib/ai-news");
+  const { getSitemapRecords } = await import("../lib/discovery.server");
+  const { SITE_URL } = await import("../lib/site");
   const pages = await Promise.all([
     Effect.runPromise(getAiNewsPage(0, 2)),
     Effect.runPromise(getAiNewsPage(2, 2)),
@@ -109,11 +124,13 @@ it("merges archive and live corrections across page boundaries, details, search 
   expect((await Effect.runPromise(searchAiNewsDocuments("历史模型")))[0].sourceId).toBe("old");
   expect((await Effect.runPromise(searchAiNewsDocuments("迟到模型")))[0].sourceId).toBe("late");
   expect(await Effect.runPromise(searchAiNewsDocuments("  "))).toEqual([]);
-  expect((await Effect.runPromise(getAiNewsSitemapItems())).map((item) => item.id)).toEqual([
-    "today",
-    "corrected",
-    "late",
-    "old",
-    "unknown-date",
+  expect(await Effect.runPromise(getSitemapRecords())).toEqual([
+    { url: `${SITE_URL}/ai-news/today`, lastModified: "2026-09-29T00:00:00Z" },
+    { url: `${SITE_URL}/ai-news/corrected`, lastModified: "2026-09-28T00:00:00Z" },
+    { url: `${SITE_URL}/ai-news/late`, lastModified: "2026-09-25T00:00:00Z" },
+    { url: `${SITE_URL}/ai-news/old`, lastModified: "2026-09-20T00:00:00Z" },
+    { url: `${SITE_URL}/ai-news/unknown-date`, lastModified: null },
+    { url: `${SITE_URL}/curation/curation%2Fencoded`, lastModified: null },
+    { url: `${SITE_URL}/open-source/owner%2Frepo`, lastModified: "2026-09-21T00:00:00Z" },
   ]);
 });

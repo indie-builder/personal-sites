@@ -11,14 +11,6 @@ import androidx.compose.ui.unit.dp
 
 /** 专为小站底栏绘制：24px 网格，圆端点、圆转角和一致的 1.7px 线宽。 */
 object NavigationIcons {
-    val Notes = outline("语雀") {
-        moveTo(12f, 5f); curveTo(9f, 3f, 5f, 3f, 2.5f, 4.5f)
-        lineTo(2.5f, 19f); curveTo(5f, 17.5f, 9f, 17.5f, 12f, 19.5f)
-        curveTo(15f, 17.5f, 19f, 17.5f, 21.5f, 19f); lineTo(21.5f, 4.5f)
-        curveTo(19f, 3f, 15f, 3f, 12f, 5f); lineTo(12f, 19.5f)
-        moveTo(6f, 8f); lineTo(8.5f, 8.5f)
-        moveTo(15.5f, 8.5f); lineTo(18f, 8f)
-    }
     // 两条信息摘要与更新圆点：表达持续更新的信息流。
     val Activity = outline("动态") {
         moveTo(16f, 3.5f); lineTo(6f, 3.5f)
@@ -30,13 +22,6 @@ object NavigationIcons {
         moveTo(7.5f, 13f); lineTo(16.5f, 13f)
         moveTo(7.5f, 17f); lineTo(13.5f, 17f)
         circle(19f, 5f, 2f)
-    }
-    // 提交节点与分支汇流，区别于泛用的代码括号。
-    val GitHub = outline("GitHub") {
-        circle(6.5f, 5f, 2f); circle(6.5f, 19f, 2f); circle(17.5f, 6f, 2f)
-        moveTo(6.5f, 7f); lineTo(6.5f, 17f)
-        moveTo(17.5f, 8f); lineTo(17.5f, 10f)
-        curveTo(17.5f, 14.5f, 6.5f, 10.5f, 6.5f, 16f)
     }
     // 微笑对话气泡：把“问一问”表达为可以亲近的助手。
     val Ask = outline("问一问") {

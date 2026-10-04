@@ -3,10 +3,8 @@ import test from "node:test";
 
 import {
   applyCurationAnalysis,
-  extractCurationFacts,
   hasReusableVisualFacts,
   needsCurationAnalysis,
-  normalizeCurationTags,
   prepareCurationItem,
   recordCurationAnalysisFailure,
 } from "../modules/x-sync/analysis.mjs";
@@ -41,7 +39,7 @@ test("X 策展提示与链接分类保留来源和设计证据", () => {
 test("analysis preparation extracts deterministic facts and creates resumable stages", () => {
   const prepared = prepareCurationItem(rawItem, { now: "2026-08-21T00:00:00.000Z" });
 
-  assert.deepEqual(extractCurationFacts(rawItem), {
+  assert.deepEqual(prepared.facts, {
     version: 1,
     contentType: "quote",
     domains: ["github.com"],
@@ -57,18 +55,30 @@ test("analysis preparation extracts deterministic facts and creates resumable st
 });
 
 test("prompt subtypes retain their parent and skill tags through model analysis", () => {
-  const tags = normalizeCurationTags(["AI 应用", "视频提示词", "软件工程提示词", "技能", "视频提示词"]);
-  assert.deepEqual(tags, ["提示词", "视频提示词", "软件工程提示词", "技能"]);
-  const analyzed = applyCurationAnalysis(rawItem, {
-    analysis: "解析", summary: "摘要", title: "标题",
-    tags: ["软件工程提示词", "技能", "Agent 工程"],
-  }, { model: "test" });
-  assert.deepEqual(analyzed.ai.tags, ["提示词", "软件工程提示词", "技能", "Agent 工程"]);
-  assert.deepEqual(normalizeCurationTags(["AI 应用", "视频提示词", "技能"]), ["提示词", "视频提示词", "技能", "AI 应用"]);
-  for (const subtype of ["图像提示词", "写作提示词", "学习提示词", "研究提示词", "助手提示词"]) {
-    assert.deepEqual(normalizeCurationTags([subtype]), ["提示词", subtype]);
+  const cases = [
+    {
+      input: ["AI 应用", "视频提示词", "软件工程提示词", "技能", "视频提示词"],
+      expected: ["提示词", "视频提示词", "软件工程提示词", "技能"],
+    },
+    {
+      input: ["软件工程提示词", "技能", "Agent 工程"],
+      expected: ["提示词", "软件工程提示词", "技能", "Agent 工程"],
+    },
+    {
+      input: ["AI 应用", "视频提示词", "技能"],
+      expected: ["提示词", "视频提示词", "技能", "AI 应用"],
+    },
+    ...["图像提示词", "写作提示词", "学习提示词", "研究提示词", "助手提示词"].map((subtype) => ({
+      input: [subtype], expected: ["提示词", subtype],
+    })),
+    { input: null, expected: [] },
+  ];
+  for (const { input, expected } of cases) {
+    const analyzed = applyCurationAnalysis(rawItem, {
+      analysis: "解析", summary: "摘要", title: "标题", tags: input,
+    }, { model: "test" });
+    assert.deepEqual(analyzed.ai.tags, expected);
   }
-  assert.deepEqual(normalizeCurationTags(null), []);
 });
 
 test("editorial analysis persists bounded search and visual facts for reuse", () => {

@@ -4,7 +4,7 @@ import "server-only";
 
 import { Schema } from "effect";
 
-import { getAiNewsPage, getAiNewsSitemapItems } from "@/lib/ai-news";
+import { getAiNewsPage } from "@/lib/ai-news";
 import { getPublicDatabase } from "@/lib/public-database";
 import { SITE_URL } from "@/lib/site";
 
@@ -28,15 +28,13 @@ export function getSitemapRecords() {
         lastModified: row.published_at,
         url: `${SITE_URL}/open-source/${encodeURIComponent(row.slug)}`,
       }));
-    const aiNews = (yield* getAiNewsSitemapItems()).map((item) => ({
+    const aiNews = (yield* getAiNewsPage(0, 2500)).items.map((item) => ({
       lastModified: item.publishedAt,
       url: `${SITE_URL}/ai-news/${encodeURIComponent(item.id)}`,
     }));
     return [...aiNews, ...curation, ...openSource];
   });
 }
-
-export type FeedItem = { description: string; publishedAt: string | null; title: string; url: string };
 
 export function getFeedItems(limit = 100) {
   return Effect.gen(function* () {

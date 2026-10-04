@@ -47,7 +47,7 @@ import cn.lovemyrmb.personalsite.data.PORTFOLIO_BASE_URL
 import cn.lovemyrmb.personalsite.data.PortfolioApi
 import cn.lovemyrmb.personalsite.data.PortfolioMedia
 import cn.lovemyrmb.personalsite.data.PortfolioProduct
-import cn.lovemyrmb.personalsite.data.PortfolioReaderHolder
+import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
@@ -165,7 +165,7 @@ fun PortfolioScreen(
 /** 全屏阅读器：同屏条目前后翻页，媒体在应用内播放，来源跳外部。 */
 @Composable
 fun PortfolioItemReader(
-    payload: PortfolioReaderHolder.ReaderPayload?,
+    payload: ReaderPayload?,
     api: PortfolioApi,
     bottomPadding: Dp,
     onBack: () -> Unit,
@@ -247,7 +247,6 @@ fun PortfolioItemReader(
 
 /** 复用策展媒体组件：作品集视频直连 mp4（platform 非 x 不走代理），图片用 poster。 */
 private fun PortfolioMedia.toCurationMedia() = CurationMedia(
-    type = kind,
     url = poster.ifBlank { url },
     videoUrl = url.takeIf { isVideo },
     width = width.takeIf { it > 0 },

@@ -22,7 +22,7 @@ import {
   SUPPORTED_EXTENSIONS,
   VECTOR_DIMENSIONS,
 } from "./config.mjs";
-import { embed, getEmbedder } from "./model.mjs";
+import { embed, loadEmbedder } from "./model.mjs";
 
 function resolveInsideRepo(input) {
   const absolutePath = path.resolve(repoRoot, input);
@@ -257,7 +257,7 @@ export function buildIndex(inputs, { fingerprint = null, includeCuration = false
             const vectors = batch.map((chunk) => cachedVectors.get(contentHash(chunk.content)) ?? null);
             const missingIndexes = vectors.flatMap((vector, index) => (vector ? [] : [index]));
             if (missingIndexes.length > 0) {
-              embedder ??= yield* getEmbedder();
+              embedder ??= yield* loadEmbedder;
               const generated = yield* embed(
                 embedder,
                 missingIndexes.map((index) => batch[index].content),

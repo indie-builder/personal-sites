@@ -47,12 +47,10 @@ data class CurationAuthor(
 data class CurationMedia(
     val height: Int? = null,
     val previewUrl: String? = null,
-    val type: String = "photo",
     val url: String = "",
     val videoUrl: String? = null,
     val width: Int? = null,
 ) {
-    val isVideo: Boolean get() = type == "video" || type == "animated_gif"
     val posterUrl: String get() = previewUrl ?: url
 }
 
@@ -93,13 +91,13 @@ data class OpenSourceListEntry(
     val type: String = "",
 )
 
-/** 顶部栏目：label 是站点导航用词，path 是公共 API 路径，pageSize 与站点客户端一致。 */
-enum class Section(val label: String, val path: String, val pageSize: Int) {
-    AI_NEWS("每日动态", "api/ai-news", 50),
-    CURATION("每日关注", "api/curation", 20),
-    DESIGN("设计收藏", "api/design", 20),
-    DOUYIN("抖音收藏", "api/douyin", 20),
-    OPEN_SOURCE("开源关注", "api/open-source", 20),
+/** 顶部栏目：label 是站点导航用词，pageSize 与站点客户端一致。 */
+enum class Section(val label: String, val pageSize: Int) {
+    AI_NEWS("每日动态", 50),
+    CURATION("每日关注", 20),
+    DESIGN("设计收藏", 20),
+    DOUYIN("抖音收藏", 20),
+    OPEN_SOURCE("开源关注", 20),
 }
 
 /** 开源关注维度 id 的中文标签（与 lib/open-source-types.ts 对齐）。 */

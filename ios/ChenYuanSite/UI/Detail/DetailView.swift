@@ -5,17 +5,16 @@ import SwiftUI
 struct DetailRouteView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
-    let onScrollDelta: (CGFloat) -> Void
 
     var body: some View {
         Group {
-            switch env.entryHolder.pending {
+            switch env.pendingDetail {
             case .aiNews(let id):
-                AiNewsDetailScreen(id: id, onScrollDelta: onScrollDelta)
+                AiNewsDetailScreen(id: id)
             case .curation(let section, let item):
-                CurationDetailScreen(section: section, item: item, onScrollDelta: onScrollDelta)
+                CurationDetailScreen(section: section, item: item)
             case .openSource(let entry):
-                OpenSourceDetailScreen(entry: entry, onScrollDelta: onScrollDelta)
+                OpenSourceDetailScreen(entry: entry)
             case nil:
                 // 载体为空（进程重建）：直接返回列表。
                 Color.clear.onAppear { dismiss() }
@@ -27,10 +26,9 @@ struct DetailRouteView: View {
 }
 
 /// 详情页统一外壳：自绘顶栏（返回 + 栏目名，隐藏系统导航栏但保留右滑返回）
-/// + 滚动内容 + 底栏滚动联动。
+/// + 滚动内容；详情不显示全局底栏。
 private struct DetailScaffold<Content: View>: View {
     let label: String
-    let onScrollDelta: (CGFloat) -> Void
     @ViewBuilder let content: () -> Content
 
     @Environment(\.dismiss) private var dismiss
@@ -45,9 +43,6 @@ private struct DetailScaffold<Content: View>: View {
             .padding(.horizontal, SiteSpace.compact)
             .padding(.vertical, SiteSpace.micro)
             ScrollView { content().padding(.horizontal, SiteSpace.page).padding(.bottom, SiteSpace.section).textSelection(.enabled) }
-                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { old, new in
-                    onScrollDelta(new - old)
-                }
         }
     }
 }
@@ -71,14 +66,13 @@ private struct DetailSection: View {
 private struct AiNewsDetailScreen: View {
     @Environment(AppEnvironment.self) private var env
     let id: String
-    let onScrollDelta: (CGFloat) -> Void
 
     @State private var item: AiNewsItem?
     @State private var error: String?
     @State private var attempt = 0
 
     var body: some View {
-        DetailScaffold(label: "每日动态", onScrollDelta: onScrollDelta) {
+        DetailScaffold(label: "每日动态") {
             if let item {
                 AiNewsDetailBody(item: item).padding(.bottom, SiteSpace.section)
             } else if let error {
@@ -148,10 +142,9 @@ private struct CurationDetailScreen: View {
     @Environment(\.openURL) private var openURL
     let section: Section
     let item: CurationItem
-    let onScrollDelta: (CGFloat) -> Void
 
     var body: some View {
-        DetailScaffold(label: section.label, onScrollDelta: onScrollDelta) {
+        DetailScaffold(label: section.label) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(metaLine(authorLabel, feedTimeLabel(item.displayTime))).siteMetaStyle()
                 if let title = item.title, !title.isEmpty {
@@ -203,10 +196,9 @@ private struct CurationDetailScreen: View {
 private struct OpenSourceDetailScreen: View {
     @Environment(\.openURL) private var openURL
     let entry: OpenSourceListEntry
-    let onScrollDelta: (CGFloat) -> Void
 
     var body: some View {
-        DetailScaffold(label: "开源关注", onScrollDelta: onScrollDelta) {
+        DetailScaffold(label: "开源关注") {
             VStack(alignment: .leading, spacing: 0) {
                 Text(metaLine(entry.status.isEmpty ? nil : entry.status, entry.type.isEmpty ? nil : entry.type))
                     .font(SiteText.eyebrow).foregroundStyle(SiteTheme.quiet)

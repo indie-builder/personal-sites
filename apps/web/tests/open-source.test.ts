@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { openSourceEntries } from "../../../config/open-source-curation.mjs";
-import { openSourceCategories, openSourceDimensions, toOpenSourceListEntry } from "../lib/open-source-types";
+import { getOpenSourceDimensionLabel, openSourceCategories, toOpenSourceListEntry } from "../lib/open-source-types";
 import { resolveGitHubReadmeAssetUrl, resolveGitHubReadmeUrl } from "../lib/github-readme-url";
 import { buildGitHubRepositoryTree, githubRepositoryFileUrl, normalizeGitHubPath } from "../lib/github-repository-browser";
 
@@ -23,7 +23,7 @@ describe("open-source curation", () => {
     ]);
     expect(openSourceEntries.some((entry) => entry.category === "skills")).toBe(true);
     expect(openSourceEntries.some((entry) => entry.category === "agents")).toBe(true);
-    expect(openSourceDimensions.some((dimension) => dimension.id === "agent-control")).toBe(true);
+    expect(getOpenSourceDimensionLabel("agent-control")).toBe("Agent 控制面");
     expect(openSourceEntries.some((entry) => entry.dimensions.includes("multi-agent"))).toBe(true);
   });
 

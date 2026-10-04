@@ -29,7 +29,7 @@ const snapshotSchema = Schema.Struct({
   question: Schema.String,
 });
 
-export type AskChatSnapshot = typeof snapshotSchema.Type;
+type AskChatSnapshot = typeof snapshotSchema.Type;
 export const ASK_CHAT_STORAGE_KEY = "personal-site:ask-chat";
 
 export function readAskChatSnapshot(): AskChatSnapshot | null {
