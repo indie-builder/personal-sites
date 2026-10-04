@@ -11,6 +11,14 @@ const documents = ["README.md", "AGENTS.md", "apps/web/AGENTS.md", "GLOSSARY.md"
 const text = (file) => readFileSync(path.join(root, file), "utf8");
 // Generated framework guides resolve paths from their installed package, not the repo root.
 const authoredText = (file) => text(file).replace(/<!-- BEGIN:[\s\S]*?<!-- END:[^>]*-->/g, "");
+// These document generated or private locations, not source navigation targets.
+const nonSourcePaths = new Set([
+  "apps/web/node_modules/next/dist/docs/",
+  "apps/web/data/",
+  "tools/smaug/.state/",
+  "tools/smaug/smaug.config.json",
+  "tools/smaug/bookmarks.md",
+]);
 
 test("tracked Claude skill entries are relative links to the sole canonical skill directory", () => {
   const names = tracked.filter((file) => /^\.agents\/skills\/[^/]+\/SKILL\.md$/.test(file)).map((file) => file.split("/")[2]);
@@ -36,7 +44,9 @@ test("navigation documents resolve their explicit local links and source paths",
       assert.ok(existsSync(resolved), `${file}: ${target}`);
     }
     for (const [, target] of content.matchAll(/`((?:apps|tools|packages|scripts|docs|tests)\/[\w./-]+)`/g)) {
-      assert.ok(existsSync(path.join(root, target)), `${file}: ${target}`);
+      if (nonSourcePaths.has(target)) continue;
+      const prefix = `${target.replace(/\/$/, "")}/`;
+      assert.ok(tracked.some((source) => source === target || source.startsWith(prefix)), `${file}: ${target}`);
     }
   }
 });
