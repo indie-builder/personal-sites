@@ -6,7 +6,7 @@ import Foundation
 // { ignoreUnknownKeys, coerceInputValues }。
 
 /// JSON 键直取：键名即字段名，模型无需逐个声明 CodingKeys。
-nonisolated struct JSONKey: CodingKey {
+nonisolated private struct JSONKey: CodingKey {
     let stringValue: String
 
     init(_ string: String) { stringValue = string }
@@ -15,14 +15,14 @@ nonisolated struct JSONKey: CodingKey {
     init?(intValue: Int) { nil }
 }
 
-nonisolated extension KeyedDecodingContainer where K == JSONKey {
+nonisolated private extension KeyedDecodingContainer where K == JSONKey {
     /// 非可选字段的容错读取。
-    func decode<Value: Decodable>(_ key: String, default: Value) throws -> Value {
+    func decode<Value: Decodable>(_ key: String, default: Value) -> Value {
         (try? decodeIfPresent(Value.self, forKey: JSONKey(key))) ?? `default`
     }
 
     /// 可选字段的容错读取：类型不符同样收敛为 nil。
-    func decodeOptional<Value: Decodable>(_ key: String) throws -> Value? {
+    func decodeOptional<Value: Decodable>(_ key: String) -> Value? {
         try? decodeIfPresent(Value.self, forKey: JSONKey(key))
     }
 }
@@ -37,8 +37,8 @@ nonisolated struct FeedPage<Value> {
 nonisolated extension FeedPage: Decodable where Value: Decodable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        hasMore = try c.decode("hasMore", default: false)
-        items = try c.decode("items", default: [])
+        hasMore = c.decode("hasMore", default: false)
+        items = c.decode("items", default: [])
     }
 }
 
@@ -58,15 +58,15 @@ nonisolated struct AiNewsItem: Decodable, Identifiable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        category = try c.decode("category", default: "")
-        id = try c.decode("id", default: "")
-        publishedAt = try c.decodeOptional("publishedAt")
-        reason = try c.decode("reason", default: "")
-        selected = try c.decode("selected", default: false)
-        sourceName = try c.decode("sourceName", default: "")
-        summary = try c.decode("summary", default: "")
-        title = try c.decode("title", default: "")
-        url = try c.decode("url", default: "")
+        category = c.decode("category", default: "")
+        id = c.decode("id", default: "")
+        publishedAt = c.decodeOptional("publishedAt")
+        reason = c.decode("reason", default: "")
+        selected = c.decode("selected", default: false)
+        sourceName = c.decode("sourceName", default: "")
+        summary = c.decode("summary", default: "")
+        title = c.decode("title", default: "")
+        url = c.decode("url", default: "")
     }
 }
 
@@ -83,8 +83,8 @@ nonisolated struct CurationAuthor: Decodable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        handle = try c.decode("handle", default: "")
-        name = try c.decode("name", default: "")
+        handle = c.decode("handle", default: "")
+        name = c.decode("name", default: "")
     }
 }
 
@@ -103,11 +103,11 @@ nonisolated struct CurationMedia: Decodable, Identifiable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        height = try c.decodeOptional("height")
-        previewUrl = try c.decodeOptional("previewUrl")
-        width = try c.decodeOptional("width")
-        url = try c.decode("url", default: "")
-        videoUrl = try c.decodeOptional("videoUrl")
+        height = c.decodeOptional("height")
+        previewUrl = c.decodeOptional("previewUrl")
+        width = c.decodeOptional("width")
+        url = c.decode("url", default: "")
+        videoUrl = c.decodeOptional("videoUrl")
     }
 }
 
@@ -120,9 +120,9 @@ nonisolated struct CurationSource: Decodable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        label = try c.decode("label", default: "")
-        platform = try c.decode("platform", default: "")
-        url = try c.decode("url", default: "")
+        label = c.decode("label", default: "")
+        platform = c.decode("platform", default: "")
+        url = c.decode("url", default: "")
     }
 }
 
@@ -145,17 +145,17 @@ nonisolated struct CurationItem: Decodable, Identifiable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        author = try c.decode("author", default: CurationAuthor())
-        collectedAt = try c.decodeOptional("collectedAt")
-        id = try c.decode("id", default: "")
-        media = try c.decode("media", default: [])
-        publishedAt = try c.decodeOptional("publishedAt")
-        source = try c.decode("source", default: CurationSource())
-        summary = try c.decodeOptional("summary")
-        tags = try c.decode("tags", default: [])
-        text = try c.decodeOptional("text")
-        title = try c.decodeOptional("title")
-        attachments = try c.decode("attachments", default: [])
+        author = c.decode("author", default: CurationAuthor())
+        collectedAt = c.decodeOptional("collectedAt")
+        id = c.decode("id", default: "")
+        media = c.decode("media", default: [])
+        publishedAt = c.decodeOptional("publishedAt")
+        source = c.decode("source", default: CurationSource())
+        summary = c.decodeOptional("summary")
+        tags = c.decode("tags", default: [])
+        text = c.decodeOptional("text")
+        title = c.decodeOptional("title")
+        attachments = c.decode("attachments", default: [])
     }
 }
 
@@ -173,13 +173,13 @@ nonisolated struct OpenSourceListEntry: Decodable, Identifiable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONKey.self)
-        checkedAt = try c.decode("checkedAt", default: "")
-        dimensions = try c.decode("dimensions", default: [])
-        repository = try c.decode("repository", default: "")
-        slug = try c.decode("slug", default: "")
-        sourceSummary = try c.decode("sourceSummary", default: "")
-        status = try c.decode("status", default: "")
-        type = try c.decode("type", default: "")
+        checkedAt = c.decode("checkedAt", default: "")
+        dimensions = c.decode("dimensions", default: [])
+        repository = c.decode("repository", default: "")
+        slug = c.decode("slug", default: "")
+        sourceSummary = c.decode("sourceSummary", default: "")
+        status = c.decode("status", default: "")
+        type = c.decode("type", default: "")
     }
 }
 

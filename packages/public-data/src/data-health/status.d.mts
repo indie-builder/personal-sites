@@ -9,7 +9,17 @@ export type DataSourceStatus = {
 
 export type DataHealth = {
   aiNews: { ageMinutes: number | null; healthy: boolean; lastError?: string | null; lastStartedAt?: string | null; lastSucceededAt: string | null; running: boolean };
-  askIndex: { documents: number; fts: number; healthy: boolean; missingFts: number; orphanFts: number };
+  askIndex: {
+    documents: number;
+    searchableDocuments: number;
+    /** Documents with indexed tokens, including orphan postings. */
+    fts: number;
+    healthy: boolean;
+    missingFts: number;
+    orphanFts: number;
+    missingPostings: number;
+    extraPostings: number;
+  };
   curation: { douyin: DataSourceStatus; x: DataSourceStatus };
   database: { healthy: boolean; quickCheck: string };
   deployment: { commit: string | null };

@@ -18,7 +18,9 @@
    - Supabase Cron 每 5 分钟通过 `pg_net` 调用 `POST /api/cron/ai-news`，执行 24h 增量同步。Bearer 密钥由迁移随机生成，明文只保存在 Supabase Vault；Vercel 接口读取私有状态表中的 SHA-256 摘要校验请求。
    - `.github/workflows/ai-news-sync.yml`：每天 20:17 UTC（北京时间 04:17）跑 7 天回填，并保留 `workflow_dispatch` 手动增量/回填入口。需在仓库 Actions Secrets 配置 `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY`。
    - `/api/health/data` 的 `aiNews` 返回每日动态的最近成功时间和同步年龄；同一接口同时校验全部公开投影的新鲜度、Ask FTS 一致性与部署 Commit。
-   - 两个公开健康端点只返回状态、年龄和时间，不返回 `ai_news_sync_state.last_error` 的内部错误正文；本机 `pnpm focus:status` 仍可读取该信息排障。
+   - `askIndex.documents` 是全部文档数，`searchableDocuments` 是当前内容经生产 tokenizer（`unicode61 remove_diacritics 2`）分词后有词项的文档数，`fts` 是实际索引中有词项的文档数（含孤儿）。`missingFts` 统计可检索但无索引词项的文档，`orphanFts` 统计词项指向不存在的文档；`missingPostings` / `extraPostings` 比较词项、文档、列及位置，发现旧词项、部分索引和位置漂移。空文本或纯标点不要求有索引词项；没有词项的孤儿元数据不在此项检查范围内，文档总数为零仍不健康。
+   - FTS 检查在同一事务快照内逐次重建 TEMP 预期索引并读取实际 `fts5vocab(instance)`，结束或失败后清理 TEMP；主库保持只读。每次检查的耗时与临时空间随总词项数增长，不缓存证据；连接须允许 TEMP 写入，不能设置 `PRAGMA query_only=ON`。检查不能完成时端点返回 503。
+   - 统一公开健康端点只返回状态、计数、年龄、时间及部署版本等公开证据，不返回 `ai_news_sync_state.last_error` 的内部错误正文；本机 `pnpm focus:status` 仍可读取该信息排障。
    - `.github/workflows/data-health.yml` 每 15 分钟探测统一健康端点，连续三次异常才失败并触发 GitHub 通知。
    - 首页与每日动态页面动态渲染：读取部署内的 SQLite 历史，以及归档快照之后的 Supabase 增量；包含迟到记录与旧条目修订，按 id 去重并稳定排序。
    - ETag、4 分钟租约、最后成功/失败和统计统一保存在 `ai_news_sync_state`；Supabase Cron、GitHub Actions、手动 CLI 和本机 launchd 共享同一租约，重复触发会安全跳过。

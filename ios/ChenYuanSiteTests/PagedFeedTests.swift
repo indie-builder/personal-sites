@@ -4,6 +4,78 @@ import Testing
 
 @testable import ChenYuanSite
 
+/// 容错解码通过真实模型验证，私有 JSON 键与读取辅助函数无需测试接口。
+struct ModelDecodingTests {
+    @Test(arguments: [
+        "{}",
+        #"{"id":null,"selected":null,"publishedAt":null,"height":null,"url":null,"hasMore":null,"items":null}"#,
+        #"{"id":42,"selected":"true","publishedAt":false,"height":"100","url":[],"hasMore":1,"items":{}}"#,
+    ])
+    func missingNullAndWrongTypesUseDefaults(json: String) throws {
+        let data = Data(json.utf8)
+        let news = try JSONDecoder().decode(AiNewsItem.self, from: data)
+        #expect(news.id == "")
+        #expect(!news.selected)
+        #expect(news.publishedAt == nil)
+        let media = try JSONDecoder().decode(CurationMedia.self, from: data)
+        #expect(media.height == nil)
+        #expect(media.url == "")
+        let page = try JSONDecoder().decode(FeedPage<AiNewsItem>.self, from: data)
+        #expect(!page.hasMore)
+        #expect(page.items.isEmpty)
+    }
+
+    @Test func malformedNestedObjectsAndArrayElementsUseDefaults() throws {
+        let data = Data(#"{"id":"kept","author":[],"source":{"label":7,"platform":"x"},"media":[{"url":"image"},null],"tags":["tag",9],"attachments":false}"#.utf8)
+        let item = try JSONDecoder().decode(CurationItem.self, from: data)
+        #expect(item.id == "kept")
+        #expect(item.author.handle == "")
+        #expect(item.author.name == "")
+        #expect(item.source.label == "")
+        #expect(item.source.platform == "x")
+        // 任一元素无法解码时，整个数组回退；不静默保留部分内容。
+        #expect(item.media.isEmpty)
+        #expect(item.tags.isEmpty)
+        #expect(item.attachments.isEmpty)
+    }
+
+    @Test func malformedPageElementFallsBackToEmptyItems() throws {
+        let data = Data(#"{"hasMore":true,"items":[{"id":"valid"},42]}"#.utf8)
+        let page = try JSONDecoder().decode(FeedPage<AiNewsItem>.self, from: data)
+        #expect(page.hasMore)
+        #expect(page.items.isEmpty)
+    }
+
+    @Test func validNestedValuesAndArraysArePreserved() throws {
+        let data = Data(#"{"hasMore":true,"items":[{"id":"kept","author":{"handle":"author"},"source":{"url":"source"},"media":[{"height":100,"url":"image"}],"tags":["tag"],"attachments":["file"]}]}"#.utf8)
+        let page = try JSONDecoder().decode(FeedPage<CurationItem>.self, from: data)
+        #expect(page.hasMore)
+        #expect(page.items.count == 1)
+        let item = try #require(page.items.first)
+        #expect(item.id == "kept")
+        #expect(item.author.handle == "author")
+        #expect(item.source.url == "source")
+        #expect(item.media.count == 1)
+        let media = try #require(item.media.first)
+        #expect(media.height == 100)
+        #expect(media.url == "image")
+        #expect(item.tags == ["tag"])
+        #expect(item.attachments == ["file"])
+    }
+
+    @Test(arguments: ["[]", "null", "42", "true", #""text""#])
+    func incompatibleRootsStillThrow(json: String) {
+        let data = Data(json.utf8)
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(FeedPage<AiNewsItem>.self, from: data) }
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(AiNewsItem.self, from: data) }
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(CurationAuthor.self, from: data) }
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(CurationMedia.self, from: data) }
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(CurationSource.self, from: data) }
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(CurationItem.self, from: data) }
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(OpenSourceListEntry.self, from: data) }
+    }
+}
+
 /// 移植安卓 PagedFeedTest 的核心行为规格：分页追加、按 id 去重、
 /// 失败不丢数据、刷新/追加互斥、首屏重载防重入。
 @MainActor
