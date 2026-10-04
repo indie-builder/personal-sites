@@ -58,13 +58,18 @@ export function AskChat() {
     };
     resize();
     let width = textarea.clientWidth;
+    let resizeFrame = 0;
     const observer = new ResizeObserver(() => {
       if (textarea.clientWidth === width) return;
       width = textarea.clientWidth;
-      resize();
+      window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(resize);
     });
     observer.observe(textarea);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(resizeFrame);
+    };
   }, [question]);
 
   useEffect(() => {

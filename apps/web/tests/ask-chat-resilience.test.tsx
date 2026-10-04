@@ -4,8 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AskChat } from "@/components/ask-chat";
 import { ASK_CHAT_STORAGE_KEY, readAskChatSnapshot } from "@/components/ask-chat-snapshot";
 
-vi.mock("next/dynamic", () => ({ default: () => ({ source }: { source: string }) => <div>{source}</div> }));
-
 const source = {
   content: "公开关注资料", id: "source-1", publishedAt: null, scope: "daily",
   section: null, sourceId: "project", sourceUrl: "/curation/source", title: "项目来源",
@@ -96,6 +94,33 @@ describe("AskChat interrupted reading and session continuity", () => {
     }
   });
 
+  it("renders Markdown while streaming and reveals sources only after completion", async () => {
+    render(<AskChat />);
+    await sendQuestion();
+    await emit("text", { delta: "## 进展\n\n这是**重点" });
+    expect(screen.getByRole("heading", { name: "进展" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "停止生成" })).toBeTruthy();
+
+    await emit("text", { delta: "**。\n\n- 第一项\n- 第二项\n\n```ts\nconst ready = true;\n```" });
+    expect(screen.getByText("重点").tagName).toBe("STRONG");
+    expect(screen.getByText("第一项").tagName).toBe("LI");
+    expect(screen.getByText("const ready = true;").tagName).toBe("CODE");
+    await emit("sources", { sources: [source] });
+    expect(screen.queryByRole("list", { name: "回答来源" })).toBeNull();
+
+    await emit("done", {});
+    await act(async () => stream.close());
+    const summary = await screen.findByText("参考资料 · 1 篇");
+    expect(summary.closest("details")?.open).toBe(false);
+    fireEvent.click(summary);
+    expect(summary.closest("details")?.open).toBe(true);
+    expect(screen.getByRole("list", { name: "回答来源" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /项目来源/ }).getAttribute("href")).toBe("/curation/source");
+    fireEvent.click(summary);
+    expect(summary.closest("details")?.open).toBe(false);
+    expect(screen.getByRole("heading", { name: "进展" })).toBeTruthy();
+  });
+
   it("keeps partial text and sources when stopped, without successful-answer followups", async () => {
     render(<AskChat />);
     await sendQuestion();
@@ -105,6 +130,7 @@ describe("AskChat interrupted reading and session continuity", () => {
 
     expect(await screen.findByText("已停止生成。")).toBeTruthy();
     expect(screen.getByText("已经收到的部分回答。")).toBeTruthy();
+    fireEvent.click(screen.getByText("参考资料 · 1 篇"));
     expect(screen.getByRole("link", { name: /项目来源/ }).getAttribute("href")).toBe("/curation/source");
     expect(screen.queryByText("继续问")).toBeNull();
     expect(readAskChatSnapshot()?.messages.at(-1)?.content).toBe("已经收到的部分回答。");

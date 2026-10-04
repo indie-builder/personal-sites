@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowUpRight, Search } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Search } from "lucide-react";
 import { motion } from "motion/react";
-import dynamic from "next/dynamic";
 import { memo } from "react";
 
+import { AskAnswerMarkdown } from "@/components/ask-answer-markdown";
 import { Button } from "@/components/ui/button";
 import { MessageScroller } from "@shadcn/react/message-scroller";
 import type { ChatMessage } from "@/components/ask-chat-snapshot";
@@ -14,9 +14,6 @@ import styles from "./ask-chat.module.css";
 
 const MotionMessageScrollerItem = motion.create(MessageScroller.Item);
 const MotionSearch = motion.create(Search);
-
-// react-markdown 生态只在收到第一条回答时才需要，按需加载。
-const AskAnswerMarkdown = dynamic(() => import("@/components/ask-answer-markdown").then((module) => module.AskAnswerMarkdown));
 
 export { MotionMessageScrollerItem };
 
@@ -41,9 +38,7 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
         {message.content ? (
           <div className={styles.bubbleFrame} data-align={isUser ? "end" : "start"} data-slot="bubble" data-variant={isUser ? "default" : "ghost"}>
             <div aria-live={isUser ? undefined : "polite"} className={`${styles.bubbleContent} ${isUser ? styles.userBubble : styles.assistantBubble}`} data-slot="bubble-content">
-              {/* 流式期间渲染纯文本：Markdown 组件对每个 delta 全量重解析是 O(n²)，
-                  落定（isComplete）后才挂 ReactMarkdown；bubble 的 pre-wrap 保证换行不丢。 */}
-              {!isUser && message.isComplete
+              {!isUser
                 ? <AskAnswerMarkdown source={message.content} />
                 : message.content}
             </div>
@@ -73,28 +68,22 @@ const AskMessageBubble = memo(function AskMessageBubble({ isStreamingPlaceholder
           </div>
         ) : null}
         {message.role === "assistant" && message.isComplete && message.citations.length > 0 ? (
-          <div className={styles.sources} data-slot="message-footer">
-            {/* 回答落定后来源逐条阶梯入场；减少动态时直接静态呈现。 */}
+          <details className={styles.sources} data-slot="message-footer">
+            <summary className={styles.sourcesSummary}>
+              <span>参考资料 · {message.citations.length} 篇</span>
+              <ChevronDown aria-hidden="true" />
+            </summary>
             <ol aria-label="回答来源" className={styles.citations}>
               {message.citations.map((source, sourceIndex) => (
-                <motion.li
-                  animate={{ opacity: 1, y: 0 }}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: "0.3rem" }}
-                  key={source.id}
-                  transition={{
-                    delay: prefersReducedMotion ? 0 : sourceIndex * 0.045,
-                    duration: 0.22,
-                    ease: STREAM_EASE,
-                  }}
-                >
+                <li key={source.id}>
                   <a className={styles.citation} href={source.sourceUrl}>
                     <span>【{sourceIndex + 1}】{source.title}{source.section ? ` · ${source.section}` : ""}</span>
                     <ArrowUpRight aria-hidden="true" />
                   </a>
-                </motion.li>
+                </li>
               ))}
             </ol>
-          </div>
+          </details>
         ) : null}
       </div>
     </div>
