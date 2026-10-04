@@ -1,5 +1,5 @@
 import { attempt } from "@site/effect";
-import { Effect } from "effect";
+import { Cause, Effect, Exit, Fiber } from "effect";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import path from "node:path";
@@ -9,6 +9,8 @@ import { promisify } from "node:util";
 import { toPublicDouyinItem } from "../modules/douyin-sync/curation-projection.mjs";
 import {
   buildCurationPrompt,
+  curateDouyinVideo,
+  parseDownloadedVideos,
   groundEvidenceExcerpt,
   parseAnalyzerOutput,
   parseCurationResponse,
@@ -33,13 +35,13 @@ test("Douyin manifest and analyzer output form an auditable queue item", () => {
     })}\n`,
   );
   const video = { ...toDouyinVideo(record, "/downloads"), collectedOrder: 2 };
-  const evidence = parseAnalyzerOutput({
+  const evidence = Effect.runSync(parseAnalyzerOutput({
     metadata: { title: "demo" },
     ocrResults: [{ confidence: 90, text: "Example Project", time: "0:03" }],
     timeline: [{ ocrText: "Example Project", time: "0:03", transcript: "今天介绍它" }],
     transcript: [{ text: "今天介绍它", time: "0:03" }],
     warnings: [],
-  });
+  }));
   const parsed = parseCurationResponse(
     JSON.stringify({
       analysis: "**是什么**\n\n解析内容",
@@ -78,7 +80,7 @@ test("Douyin manifest and analyzer output form an auditable queue item", () => {
 
 test("Douyin importer rejects malformed or evidence-free input", () => {
   assert.throws(() => parseDownloadManifest("not-json\n"), /第 1 行/u);
-  assert.throws(() => parseAnalyzerOutput({ ocrResults: [], transcript: [] }), /没有得到语音转写或屏幕文字/u);
+  assert.throws(() => Effect.runSync(parseAnalyzerOutput({ ocrResults: [], transcript: [] })), /没有得到语音转写或屏幕文字/u);
   assert.deepEqual(parseArgs(["sync", "--manifest", "downloads/download_manifest.jsonl", "--limit", "5"]), {
     analyzerConcurrency: null,
     concurrency: null,
@@ -110,11 +112,12 @@ test("Douyin importer rejects malformed or evidence-free input", () => {
 
 test("Douyin retries refresh analyzer results and key Whisper settings explicitly", () => {
   const args = buildAnalyzerArgs("video.mp4", "frames", {
+    analyzer: {},
     env: { WHISPER_MODEL: "small", WHISPER_LANGUAGE: "zh" },
     forceRefresh: true,
   });
   assert.deepEqual(args.slice(-5), ["--model", "small", "--language", "zh", "--force-refresh"]);
-  assert.equal(buildAnalyzerArgs("video.mp4", "frames", { env: {} }).includes("--force-refresh"), false);
+  assert.equal(buildAnalyzerArgs("video.mp4", "frames", { analyzer: {}, env: {} }).includes("--force-refresh"), false);
 });
 
 test("Curated tags are normalized against the configured taxonomy whitelist", () => {
@@ -151,7 +154,7 @@ test("Evidence truncation declares how much of the video the model can see", () 
     text: `第${index}段内容，用于撑满证据窗口的转写句子。`,
     time: `${Math.floor(index / 60)}:${String(index % 60).padStart(2, "0")}`,
   }));
-  const evidence = parseAnalyzerOutput({ metadata: {}, ocrResults: [], timeline: [], transcript, warnings: [] });
+  const evidence = Effect.runSync(parseAnalyzerOutput({ metadata: {}, ocrResults: [], timeline: [], transcript, warnings: [] }));
   const prompt = buildCurationPrompt(
     { sourceUrl: "https://www.douyin.com/video/1", author: { name: "作者" }, description: "", tags: [] },
     evidence,
@@ -289,6 +292,59 @@ for (const scenario of [
     }
   });
 }
+
+test("Douyin business boundaries expose malformed input as typed failures", async () => {
+  for (const input of ["not-json", JSON.stringify({ media_type: "video" }), JSON.stringify({ aweme_id: "1", media_type: "video", file_paths: [] })]) {
+    const recovered = await Effect.runPromise(parseDownloadedVideos(input, "/synthetic").pipe(
+      Effect.catchTag("OperationError", (error) => Effect.succeed(error.operation)),
+    ));
+    assert.equal(recovered, "douyin.manifest");
+  }
+  const parsed = await Effect.runPromise(parseDownloadedVideos(JSON.stringify({ aweme_id: "1", media_type: "video", file_paths: ["a.mp4"] }), "/synthetic"));
+  assert.equal(parsed[0].videoPath, "/synthetic/a.mp4");
+});
+
+for (const scenario of ["valid", "syntax-repair", "invalid-repair", "semantic", "ungroundable"]) {
+  test(`Douyin curation business interface handles ${scenario} without CLI hooks`, async () => {
+    const evidence = await Effect.runPromise(parseAnalyzerOutput({ transcript: [{ text: scenario === "ungroundable" ? "短句" : "Synthetic evidence from the video", time: "0:03" }] }));
+    const video = toDouyinVideo({ aweme_id: "1", media_type: "video", file_paths: ["a.mp4"] }, "/synthetic");
+    let calls = 0;
+    const reader = { prompt: () => Effect.sync(() => {
+      calls += 1;
+      if (scenario === "invalid-repair" || (scenario === "syntax-repair" && calls === 1)) return "invalid JSON";
+      return JSON.stringify({ title: "标题", summary: "摘要", analysis: "分析", excerpt: "Synthetic evidence from the video", tags: scenario === "semantic" ? [] : ["AI 应用"] });
+    }) };
+    const result = await Effect.runPromise(curateDouyinVideo(reader, video, evidence, {
+      taxonomy: ["AI 应用"], rawEvidencePath: "synthetic/analysis.json",
+    }).pipe(Effect.match({ onFailure: (error) => ({ error }), onSuccess: (item) => ({ item }) })));
+    assert.equal(calls, ["syntax-repair", "invalid-repair"].includes(scenario) ? 2 : 1);
+    if (["semantic", "ungroundable", "invalid-repair"].includes(scenario)) assert.equal(result.error._tag, "OperationError");
+    else {
+      assert.equal(result.item.id, "douyin:1");
+      assert.equal(result.item.ai.excerptTime, "0:03");
+      assert.equal(result.item.privateEvidencePath, "synthetic/analysis.json");
+    }
+  });
+}
+
+test("Douyin settlement propagates defects and interruption and runs finalizers", async () => {
+  const defect = new Error("programmer defect");
+  const defectExit = await Effect.runPromiseExit(settleConcurrently([1], 1, () => Effect.die(defect)));
+  assert.ok(Exit.isFailure(defectExit));
+  assert.equal(Cause.squash(defectExit.cause), defect);
+  let finalized = false;
+  await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+    const fiber = yield* Effect.forkChild(settleConcurrently([1], 1, () => Effect.never.pipe(
+      Effect.ensuring(Effect.sync(() => { finalized = true; })),
+    )));
+    yield* Effect.yieldNow;
+    yield* Fiber.interrupt(fiber);
+    const exit = yield* Fiber.await(fiber);
+    assert.ok(Exit.isFailure(exit));
+    assert.ok(Cause.hasInterrupts(exit.cause));
+  })));
+  assert.equal(finalized, true);
+});
 
 test("Douyin worker pool records one failure without stopping later work", async () => {
   const completed = [];

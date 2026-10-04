@@ -8,6 +8,7 @@
     "./cli": "./src/cli.mjs"
   },
   "scripts": {
+    "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
     "lint": "oxlint --deny-warnings src tests",
     "test": "node --test tests/*.test.mjs"
   },

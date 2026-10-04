@@ -1,4 +1,6 @@
 import path from "node:path";
+import { attempt } from "@site/effect";
+import { Effect } from "effect";
 import { stripJsonFence } from "../../lib/pi-runtime.mjs";
 
 const VIDEO_EXTENSIONS = new Set([".m4v", ".mov", ".mp4", ".webm"]);
@@ -18,6 +20,13 @@ export function parseDownloadManifest(body) {
         throw new Error(`download_manifest.jsonl 第 ${index + 1} 行不是有效 JSON：${error.message}`);
       }
     });
+}
+
+/** Parse and normalize an entire download input at one failure boundary. */
+export function parseDownloadedVideos(body, manifestDirectory) {
+  return attempt("douyin.manifest", () => parseDownloadManifest(body)
+    .map((record) => toDouyinVideo(record, manifestDirectory))
+    .filter(Boolean));
 }
 
 export function toDouyinVideo(record, manifestDirectory) {
@@ -47,7 +56,12 @@ export function toDouyinVideo(record, manifestDirectory) {
   };
 }
 
+/** Decode analyzer input into typed failure before it enters the curation pipeline. */
 export function parseAnalyzerOutput(value) {
+  return attempt("douyin.analyzer.parse", () => normalizeAnalyzerOutput(value));
+}
+
+function normalizeAnalyzerOutput(value) {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   const transcript = Array.isArray(parsed?.transcript) ? parsed.transcript : [];
   const ocrResults = Array.isArray(parsed?.ocrResults) ? parsed.ocrResults : [];
@@ -183,6 +197,30 @@ export function groundEvidenceExcerpt(candidate, evidence) {
   };
   const best = entries.sort((left, right) => score(right.text) - score(left.text) || right.text.length - left.text.length)[0];
   return { text: best.text.slice(0, 280), time: best.time || null };
+}
+
+/** Repair malformed JSON once; semantic/grounding failures never repeat a paid request. */
+export function curateDouyinVideo(reader, video, evidence, { taxonomy, rawEvidencePath }) {
+  const parse = (raw) => attempt("douyin.parse", () => parseCurationResponse(raw, { allowedTags: taxonomy }));
+  return Effect.gen(function* () {
+    const raw = yield* reader.prompt(buildCurationPrompt(video, evidence, taxonomy));
+    const parsed = yield* parse(raw).pipe(Effect.catch((error) =>
+      error.cause instanceof SyntaxError
+        ? reader.prompt([
+          "你上一次的输出无法解析为 JSON：",
+          error.message,
+          "请把它修复为合法 JSON；只输出 JSON 本身，不要解释、不要代码围栏。原始输出：",
+          raw.slice(0, 8_000),
+        ].join("\n")).pipe(Effect.flatMap(parse))
+        : Effect.fail(error),
+    ));
+    return yield* attempt("douyin.excerpt.ground", () => {
+      const grounded = groundEvidenceExcerpt(parsed.ai.excerpt, evidence);
+      parsed.ai.excerpt = grounded.text;
+      parsed.ai.excerptTime = grounded.time;
+      return toQueueItem(video, parsed, rawEvidencePath);
+    });
+  });
 }
 
 export function toQueueItem(video, parsed, rawEvidencePath) {

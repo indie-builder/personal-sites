@@ -1,4 +1,6 @@
-import { Effect, Fiber } from "effect";
+import { Cause, Effect, Exit, Fiber } from "effect";
+import { OperationError } from "@site/effect";
+import { isTransientModelError, withModelRetry } from "../modules/analysis/retry.mjs";
 import { TestClock } from "effect/testing";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -110,7 +112,7 @@ for (const normalized of [false, true]) {
         globalThis[key] = state;
         globalThis.fetch = state.forbidden("fetch");
         console.log = (...values) => logs.push(values.join(" "));
-        process.argv = [process.execPath, cliUrl.pathname, "--dry-run", ...scenario.args];
+        process.argv = [process.execPath, `${cliUrl.pathname}?${key}`, "--dry-run", ...scenario.args];
         hooks = mockCliAdapters(key, state);
         // Import only after all module-scope config/environment and I/O adapters are mocked.
         await import(`${cliUrl.href}?${key}`);
@@ -137,9 +139,50 @@ for (const normalized of [false, true]) {
   }
 }
 
-for (const failures of [0, 1, 2]) {
-  test(`enrich CLI handles ${failures} model failures with at most one retry after five seconds`, async () => {
-    const key = `enrichRetry_${failures}`;
+test("model retry recognizes explicit transient causes and refuses permanent or ambiguous errors", () => {
+  for (const error of [
+    new Error("HTTP 503"), { status: 429 }, { statusCode: 502 },
+    new OperationError("pi.prompt", new TypeError("fetch failed", { cause: { code: "ECONNRESET" } })),
+    new Error("智谱 GLM 请求超时（240 秒）。"),
+  ]) assert.equal(isTransientModelError(error), true);
+  for (const error of [
+    new Error("HTTP 401 fetch failed"), { status: 400 },
+    new Error("authentication failed: HTTP 503"), new Error("invalid request: service unavailable"),
+    new SyntaxError("HTTP 503"), new Error("expected 503 characters"), new Error("unknown model failure"),
+    { name: "AbortError", message: "fetch failed" }, { code: "ABORT_ERR", message: "network error" },
+    new Error("缺少 BIGMODEL_API_KEY"),
+  ]) assert.equal(isTransientModelError(error), false);
+  const cyclic = new Error("ambiguous");
+  cyclic.cause = cyclic;
+  assert.equal(isTransientModelError(cyclic), false);
+});
+
+test("model retry propagates cancellation without repeating the request", async () => {
+  let calls = 0;
+  await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+    const fiber = yield* Effect.forkChild(Effect.suspend(() => {
+      calls += 1;
+      return Effect.fail(new Error("HTTP 503"));
+    }).pipe(withModelRetry));
+    yield* TestClock.adjust("1 second");
+    yield* Fiber.interrupt(fiber);
+    yield* TestClock.adjust("10 seconds");
+    const exit = yield* Fiber.await(fiber);
+    assert.ok(Exit.isFailure(exit));
+    assert.ok(Cause.hasInterrupts(exit.cause));
+  })).pipe(Effect.provide(TestClock.layer())));
+  assert.equal(calls, 1);
+});
+
+for (const scenario of [
+  { failures: 0 }, { failures: 1 }, { failures: 2 },
+  { failures: 1, permanent: true }, { failures: 0, badJson: true },
+]) {
+  const { failures, permanent = false, badJson = false } = scenario;
+  const expectedCalls = failures === 0 || permanent ? 1 : 2;
+  const expectedFailure = failures === 2 || permanent || badJson;
+  test(`enrich CLI handles ${JSON.stringify(scenario)} without retrying parsing or permanent failures`, async () => {
+    const key = `enrichRetry_${failures}_${permanent}_${badJson}`;
     const queuePath = path.join(repoRoot, "synthetic-enrich-queue.json");
     const reads = [];
     const writes = [];
@@ -158,7 +201,7 @@ for (const failures of [0, 1, 2]) {
       createAnalysisReader: () => Effect.succeed({
         prompt: () => Effect.suspend(() => {
           calls += 1;
-          return calls <= failures ? Effect.fail(new Error("synthetic model failure")) : Effect.succeed(response);
+          return calls <= failures ? Effect.fail(new Error(permanent ? "HTTP 401 unauthorized" : "HTTP 503 synthetic model failure")) : Effect.succeed(badJson ? "invalid JSON" : response);
         }),
       }),
       collectDesignEvidenceImages: () => Effect.succeed({ images: [] }),
@@ -173,11 +216,11 @@ for (const failures of [0, 1, 2]) {
         yield* TestClock.adjust("4999 millis");
         assert.equal(calls, 1, "no retry before five seconds");
         yield* TestClock.adjust("1 millis");
-        assert.equal(calls, failures === 0 ? 1 : 2);
+        assert.equal(calls, expectedCalls);
         yield* TestClock.adjust("10 seconds");
         const exit = yield* Fiber.join(fiber);
         assert.equal(exit._tag, "Success", "CLI must handle model failures without defects");
-        assert.equal(calls, failures === 0 ? 1 : 2, "no additional retry after the limit");
+        assert.equal(calls, expectedCalls, "no additional retry after the limit");
       }).pipe(Effect.provide(TestClock.layer()), Effect.scoped)),
       forbidden: (name) => () => assert.fail(`unexpected external adapter: ${name}`),
     };
@@ -191,16 +234,16 @@ for (const failures of [0, 1, 2]) {
       globalThis.fetch = state.forbidden("fetch");
       for (const method of Object.keys(originalConsole)) console[method] = (...values) => logs.push(values.join(" "));
       process.exitCode = 0;
-      process.argv = [process.execPath, cliUrl.pathname, "--engine=codex-cli", "--concurrency=1"];
+      process.argv = [process.execPath, `${cliUrl.pathname}?${key}`, "--engine=codex-cli", "--concurrency=1"];
       hooks = mockCliAdapters(key, state);
       await import(`${cliUrl.href}?${key}`);
       assert.deepEqual(reads, [configPath, queuePath]);
       assert.equal(writes.length, 2, "persist the baseline and the final result");
       const item = writes[1].items[0];
-      assert.equal(item.pipeline.stages.editorial.status, failures === 2 ? "error" : "complete");
-      assert.equal(item.ai.title, failures === 2 ? undefined : "Fixture title");
-      assert.equal(process.exitCode, failures === 2 ? 1 : 0);
-      assert.ok(logs.some((line) => line.includes(failures === 2 ? "完成: 0 条解析，1 条失败" : "完成: 1 条解析，0 条失败")));
+      assert.equal(item.pipeline.stages.editorial.status, expectedFailure ? "error" : "complete");
+      assert.equal(item.ai.title, expectedFailure ? undefined : "Fixture title");
+      assert.equal(process.exitCode, expectedFailure ? 1 : 0);
+      assert.ok(logs.some((line) => line.includes(expectedFailure ? "完成: 0 条解析，1 条失败" : "完成: 1 条解析，0 条失败")));
     } finally {
       hooks?.deregister();
       Object.assign(console, originalConsole);

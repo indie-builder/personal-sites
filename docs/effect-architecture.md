@@ -51,4 +51,8 @@ const result = await Effect.runPromise(readRemote(url), { signal });
 
 ## 验证
 
+内容管线关键 SDK 适配层通过工作区 `typecheck` 检查安装依赖的真实类型；类型回归保留旧图片参数与不存在的 Schedule API 等反例。类型检查范围由对应 tsconfig 决定，不将通过根检查等同于所有 `.mjs` 已被检查。
+
+`pnpm lint` 的 `site-effect/execution-boundary` 检查内容业务模块的运行时执行边界，允许 `runSync(cached(...))` 仅分配懒缓存。已收敛的 X 解析、抖音策展、新闻同步 CLI 使用 `runCli`，禁止直接 `process.exit`。同一范围内的重试必须显式提供有限次数、间隔和错误筛选条件。规则也拒绝直接在 `Effect.gen` / `Effect.sync` 回调中抛错；它不能推断被调用函数是否抛错，输入校验仍由 Effect 业务接口和行为测试保证。其余旧 CLI 按实际改动逐步收敛。
+
 迁移后的调用方和测试使用 Effect 接口；覆盖失败、取消、并发上限与清理，继续使用现有 Vitest / Node / Playwright。运行根目录 `pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm build`，并按根 `AGENTS.md` 使用 ego lite 验证页面。同步、发布、索引、归档和 Supabase 写入命令不是测试。

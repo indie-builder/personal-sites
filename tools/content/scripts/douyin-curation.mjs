@@ -12,13 +12,9 @@ import { fileURLToPath } from "node:url";
 import { createAnalysisReader } from "../modules/analysis/readers.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import {
-  buildCurationPrompt,
-  groundEvidenceExcerpt,
+  curateDouyinVideo,
   parseAnalyzerOutput,
-  parseCurationResponse,
-  parseDownloadManifest,
-  toDouyinVideo,
-  toQueueItem,
+  parseDownloadedVideos,
 } from "../modules/douyin-sync/import.mjs";
 import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
@@ -27,11 +23,6 @@ import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const config = JSON.parse(await readFile(path.join(repoRoot, "config/douyin-curation.json"), "utf8"));
-const queuePath = path.join(repoRoot, config.queueFile);
-const rawRoot = path.join(repoRoot, config.rawDir);
-const failuresPath = path.join(path.dirname(queuePath), "analysis-failures.json");
-const favoriteIndexPath = path.join(path.dirname(queuePath), "favorite-index.json");
 
 export function parseArgs(args) {
   const parsed = parseCliOptions(args, {
@@ -71,7 +62,7 @@ export function parseArgs(args) {
   return options;
 }
 
-function readFavoriteOrders() {
+function readFavoriteOrders(favoriteIndexPath) {
   return Effect.gen(function* () {
     const index = yield* readJsonOr(favoriteIndexPath, { items: [] });
     return new Map(index.items.map((item, order) => [`douyin:${item.id}`, order]));
@@ -97,18 +88,18 @@ export function settleConcurrently(targets, concurrency, processTarget) {
   });
 }
 
-export function buildAnalyzerArgs(videoPath, outputDirectory, { forceRefresh = false, env = process.env } = {}) {
+export function buildAnalyzerArgs(videoPath, outputDirectory, { analyzer, forceRefresh = false, env = process.env }) {
   const args = [
     "-y",
-    config.analyzer.package,
+    analyzer.package,
     "analyze",
     videoPath,
     "--detail",
-    config.analyzer.detail,
+    analyzer.detail,
     "--fields",
-    config.analyzer.fields,
+    analyzer.fields,
     "--ocr-language",
-    config.analyzer.ocrLanguage,
+    analyzer.ocrLanguage,
     "--out",
     outputDirectory,
   ];
@@ -118,60 +109,34 @@ export function buildAnalyzerArgs(videoPath, outputDirectory, { forceRefresh = f
   return args;
 }
 
-function analyzeVideo(video, forceRefresh = false) {
+function analyzeVideo(video, { analyzer, rawRoot, forceRefresh = false }) {
   return Effect.gen(function* () {
     const outputDirectory = path.join(rawRoot, video.awemeId, "frames");
     const { stdout } = yield* io("analyzeVideo", (signal) =>
-      execFileAsync("npx", buildAnalyzerArgs(video.videoPath, outputDirectory, { forceRefresh }), {
+      execFileAsync("npx", buildAnalyzerArgs(video.videoPath, outputDirectory, { analyzer, forceRefresh }), {
         cwd: repoRoot,
         env: { ...process.env, MCP_WRITE_SIDECARS: "1" },
         maxBuffer: 64 * 1024 * 1024,
         signal,
       }),
     );
-    return yield* attempt("douyin.analyzer.parse", () => parseAnalyzerOutput(stdout));
+    return yield* parseAnalyzerOutput(stdout);
   });
 }
 
-/**
- * 调用模型并解析策展 JSON。语法级解析失败时做一次「修复为 JSON」的廉价重试，
- * 避免整条视频重新转写分析；字段缺失等语义错误仍直接失败进失败清单。
- */
-function promptCurationResponse(reader, prompt, taxonomy) {
-  const parse = (raw) => attempt("douyin.parse", () => parseCurationResponse(raw, { allowedTags: taxonomy }));
-  return reader
-    .prompt(prompt)
-    .pipe(
-      Effect.flatMap((raw) =>
-        parse(raw).pipe(
-          Effect.catch((error) =>
-            error.cause instanceof SyntaxError
-              ? reader
-                  .prompt(
-                    [
-                      "你上一次的输出无法解析为 JSON：",
-                      error.message,
-                      "请把它修复为合法 JSON；只输出 JSON 本身，不要解释、不要代码围栏。原始输出：",
-                      raw.slice(0, 8_000),
-                    ].join("\n"),
-                  )
-                  .pipe(Effect.flatMap(parse))
-              : Effect.fail(error),
-          ),
-        ),
-      ),
-    );
-}
-
-function sync(options) {
+function sync(options, config) {
   return Effect.gen(function* () {
-    loadLocalEnv(repoRoot);
+    const queuePath = path.join(repoRoot, config.queueFile);
+    const rawRoot = path.join(repoRoot, config.rawDir);
+    const failuresPath = path.join(path.dirname(queuePath), "analysis-failures.json");
+    const favoriteIndexPath = path.join(path.dirname(queuePath), "favorite-index.json");
+    yield* attempt("douyin.env", () => loadLocalEnv(repoRoot));
     const manifestPath = options.manifest ? path.resolve(repoRoot, options.manifest) : null;
-    const records = manifestPath ? parseDownloadManifest(yield* io("sync", () => readFile(manifestPath, "utf8"))) : [];
-    const favoriteOrders = yield* readFavoriteOrders();
-    const videos = records
-      .map((record) => toDouyinVideo(record, manifestPath ? path.dirname(manifestPath) : repoRoot))
-      .filter(Boolean)
+    const downloaded = manifestPath
+      ? yield* parseDownloadedVideos(yield* io("douyin.manifest.read", () => readFile(manifestPath, "utf8")), path.dirname(manifestPath))
+      : [];
+    const favoriteOrders = yield* readFavoriteOrders(favoriteIndexPath);
+    const videos = downloaded
       .map((video) => ({ ...video, collectedOrder: favoriteOrders.get(`douyin:${video.awemeId}`) ?? null }))
       // 收藏顺序小的更新（收藏页最新在前），--limit 只截最新收藏。
       .sort(
@@ -249,20 +214,13 @@ function sync(options) {
     function processVideo(video) {
       return Effect.gen(function* () {
         const id = `douyin:${video.awemeId}`;
-        const evidence = yield* analyzerLock.withPermits(1)(analyzeVideo(video, options.force || failuresById.has(id)));
+        const evidence = yield* analyzerLock.withPermits(1)(analyzeVideo(video, { analyzer: config.analyzer, rawRoot, forceRefresh: options.force || failuresById.has(id) }));
         const rawEvidencePath = path.join(rawRoot, video.awemeId, "analysis.json");
         yield* writeJsonAtomically(rawEvidencePath, { evidence, source: video });
-        const parsed = yield* promptCurationResponse(
-          reader,
-          buildCurationPrompt(video, evidence, config.taxonomy),
-          config.taxonomy,
-        );
-        const grounded = yield* attempt("douyin.excerpt.ground", () => groundEvidenceExcerpt(parsed.ai.excerpt, evidence));
-        parsed.ai.excerpt = grounded.text;
-        parsed.ai.excerptTime = grounded.time;
-        const item = yield* attempt("douyin.queue.item", () =>
-          toQueueItem(video, parsed, path.relative(repoRoot, rawEvidencePath)),
-        );
+        const item = yield* curateDouyinVideo(reader, video, evidence, {
+          taxonomy: config.taxonomy,
+          rawEvidencePath: path.relative(repoRoot, rawEvidencePath),
+        });
         byId.set(id, item);
         failuresById.delete(id);
         yield* persistQueue();
@@ -299,10 +257,11 @@ function sync(options) {
   });
 }
 
-function main() {
+export function main(args = process.argv.slice(2)) {
   return Effect.gen(function* () {
-    const options = parseArgs(process.argv.slice(2));
-    yield* sync(options);
+    const options = yield* attempt("douyin.options", () => parseArgs(args));
+    const config = yield* io("douyin.config", async () => JSON.parse(await readFile(path.join(repoRoot, "config/douyin-curation.json"), "utf8")));
+    yield* sync(options, config);
   });
 }
 
