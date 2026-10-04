@@ -23,7 +23,7 @@ import { expandUrl, classifyUrl, fetchGithubRepo, fetchArticleText } from "../mo
 import { buildPrompt, buildDesignPrompt, parseJsonResponse, parseDesignResponse } from "../modules/x-sync/prompts.mjs";
 import { writeTextAtomically } from "./lib/atomic-file.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
-import { resolveAnalysisConcurrency, resolveAnalysisEngine, runWorkerPool } from "../modules/analysis/runtime.mjs";
+import { resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
@@ -208,7 +208,7 @@ const program = Effect.gen(function* () {
     );
   }
 
-  yield* runWorkerPool(targets.length, CONCURRENCY, (index) => processItem(targets[index]));
+  yield* Effect.forEach(targets, processItem, { concurrency: CONCURRENCY, discard: true });
 
   console.log(`\n完成: ${done} 条解析，${failed} 条失败（可重跑续传）`);
   if (failed > 0) process.exitCode = 1;

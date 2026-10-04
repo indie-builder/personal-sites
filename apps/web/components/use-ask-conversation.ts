@@ -3,22 +3,32 @@
 import { Effect } from "effect";
 import { io } from "@site/effect";
 
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
-import { useVisitorSession } from "@/components/use-visitor-session";
 
-export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | null>, onStarted: () => void) {
+function readOrCreateId(storageName: "localStorage" | "sessionStorage", key: string) {
+  const id = crypto.randomUUID();
+  try {
+    const storage = window[storageName];
+    const stored = storage.getItem(key);
+    if (stored && /^[A-Za-z0-9_-]{16,128}$/.test(stored)) return stored;
+    storage.setItem(key, id);
+  } catch {} // 存储被禁用时，当前抽屉仍使用内存中的随机标识。
+  return id;
+}
+
+export function useAskConversation(onStarted: () => void) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [restored, setRestored] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const requestController = useRef<AbortController | null>(null);
-  // 会话预热期间尚未置位 isStreaming；同步标记阻止双击或回车重入。
+  // React 提交状态更新前，同步标记阻止双击或回车重入。
   const submitInFlight = useRef(false);
   const snapshotRead = useRef(false);
-  const { ensureVisitorSession, isRetryingSession, retryVisitorSession, visitorId } = useVisitorSession(textareaRef);
+  const session = useRef<{ conversationId: string; visitorId: string } | null>(null);
 
   useLayoutEffect(() => {
     // Lazy Markdown 可重新连接 layout effect；一次实例只恢复一次快照。
@@ -45,14 +55,14 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
 
   const submit = async (suggestion?: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
     const trimmedQuestion = (suggestion ?? question).trim();
-    if (!trimmedQuestion || isStreaming || visitorId === "unavailable" || submitInFlight.current) return;
+    if (!trimmedQuestion || isStreaming || submitInFlight.current) return;
     submitInFlight.current = true;
 
-    const session = await ensureVisitorSession();
-    if (session.visitorId === "unavailable") {
-      submitInFlight.current = false;
-      return;
-    }
+    session.current ??= {
+      conversationId: readOrCreateId("sessionStorage", "personal-site:ask-conversation-id"),
+      visitorId: readOrCreateId("localStorage", "personal-site:ask-visitor-id"),
+    };
+    const identity = session.current;
 
     const userId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
@@ -75,10 +85,10 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
             const response = yield* io("ask.request", (signal) =>
               fetch("/api/ask", {
                 body: JSON.stringify({
-                  conversationId: session.conversationId,
+                  conversationId: identity.conversationId,
                   question: trimmedQuestion,
                   scope: "all",
-                  visitorId: session.visitorId,
+                  visitorId: identity.visitorId,
                 }),
                 headers: { "Content-Type": "application/json" },
                 method: "POST",
@@ -140,15 +150,11 @@ export function useAskConversation(textareaRef: RefObject<HTMLTextAreaElement | 
   };
 
   return {
-    ensureVisitorSession,
-    isRetryingSession,
     isStreaming,
     messages,
     question,
-    retryVisitorSession,
     setQuestion,
     stop: () => requestController.current?.abort(),
     submit,
-    visitorId,
   };
 }

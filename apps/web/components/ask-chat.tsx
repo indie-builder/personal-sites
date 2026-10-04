@@ -39,9 +39,8 @@ export function AskChat() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const {
-    ensureVisitorSession, isRetryingSession, isStreaming, messages, question, retryVisitorSession,
-    setQuestion, stop, submit, visitorId,
-  } = useAskConversation(textareaRef, () => { shouldFollowLatest.current = true; });
+    isStreaming, messages, question, setQuestion, stop, submit,
+  } = useAskConversation(() => { shouldFollowLatest.current = true; });
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -88,7 +87,7 @@ export function AskChat() {
     return () => window.cancelAnimationFrame(frame);
   }, [messages, scrollToLatest]);
 
-  const canSubmit = Boolean(question.trim() && visitorId !== "unavailable" && !isStreaming);
+  const canSubmit = Boolean(question.trim() && !isStreaming);
 
   // 追问引导：回答完成后给出还没用过的建议问题，沿用空态的细线行语言；
   // 点击只填入组合器并聚焦，是否发送仍由访客决定。
@@ -101,12 +100,8 @@ export function AskChat() {
     && Boolean(lastMessage.content)
     && followUpQuestions.length > 0;
   const inputProps: ComponentProps<"textarea"> = {
-    "aria-describedby": visitorId === "unavailable" ? "ask-session-status" : undefined,
-    "aria-invalid": visitorId === "unavailable",
     "aria-label": "输入问题",
-    disabled: visitorId === "unavailable",
     onChange: (event) => setQuestion(event.target.value),
-    onFocus: () => void ensureVisitorSession(),
     onKeyDown: (event) => {
       if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
         event.preventDefault();
@@ -256,25 +251,6 @@ export function AskChat() {
             </button>
           </div>
         </div>
-        {visitorId === "unavailable" ? (
-          <div className={styles.sessionRecovery}>
-            <p id="ask-session-status" role={isRetryingSession ? "status" : "alert"}>
-              {isRetryingSession
-                ? "正在重新建立浏览器会话…"
-                : "浏览器会话未建立，暂时无法发送。请检查网络或隐私设置后重试。"}
-            </p>
-            <Button
-              className={styles.sessionRetry}
-              disabled={isRetryingSession}
-              onClick={() => void retryVisitorSession()}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              {isRetryingSession ? "正在重试…" : "重试建立会话"}
-            </Button>
-          </div>
-        ) : null}
       </form>
     </section>
   );

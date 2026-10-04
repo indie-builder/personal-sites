@@ -8,7 +8,7 @@ import path from "node:path";
 import { Effect, Schema, Stream, Semaphore } from "effect";
 import { io, OperationError } from "@site/effect";
 
-import { requireAskApiKey, resolveAskModelConfig } from "@/lib/ask-model.mjs";
+import { BIGMODEL_BASE_URL, requireBigModelApiKey, resolveBigModel } from "../../../config/bigmodel.mjs";
 import type { AskSource } from "@/lib/ask-types";
 import { getAdminSupabaseClient } from "@/lib/supabase.server";
 
@@ -205,8 +205,8 @@ export function streamAskAnswer({
       Effect.gen(function* () {
         yield* cleanExpiredSessions();
         const existing = yield* readSession(key);
-        const { baseUrl, model } = resolveAskModelConfig();
-        const anthropic = createAnthropic({ baseURL: `${baseUrl}/v1`, apiKey: requireAskApiKey() });
+        const model = resolveBigModel(process.env.ASK_MODEL?.trim() || process.env.BIGMODEL_MODEL);
+        const anthropic = createAnthropic({ baseURL: `${BIGMODEL_BASE_URL}/v1`, apiKey: requireBigModelApiKey() });
         const languageModel = anthropic(model);
         const session = yield* compactSession(existing, languageModel, signal);
         if (session !== existing) yield* writeSession(key, session);

@@ -84,10 +84,14 @@ test("intermediate spread widths keep wheel scrolling on the document", async ({
   await expect(page.locator(".curation-detail__article")).toHaveCSS("overflow", "visible");
 });
 
-for (const path of [LONG_MEDIA_DETAIL_PATH, "/open-source/loopx"] as const) {
+for (const path of [LONG_MEDIA_DETAIL_PATH, "/open-source"] as const) {
   test(`${path} keeps native BODY PageDown scrolling`, async ({ page }) => {
     await page.setViewportSize({ height: 640, width: 1_440 });
     await page.goto(path);
+    if (path === "/open-source") {
+      await page.locator('a[href^="/open-source/"]').first().click();
+      await expect(page.locator(".curation-open-source__article")).toBeVisible();
+    }
 
     await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollHeight)).toBeGreaterThan(640);
     await expect.poll(() => page.evaluate(() => document.activeElement === document.body)).toBe(true);

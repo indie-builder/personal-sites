@@ -4,9 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AskChat } from "@/components/ask-chat";
 import { ASK_CHAT_STORAGE_KEY, readAskChatSnapshot } from "@/components/ask-chat-snapshot";
 
-vi.mock("@fingerprintjs/fingerprintjs", () => ({
-  default: { load: async () => ({ get: async () => ({ visitorId: "test-visitor-123456789" }) }) },
-}));
 vi.mock("next/dynamic", () => ({ default: () => ({ source }: { source: string }) => <div>{source}</div> }));
 
 const source = {
@@ -20,6 +17,7 @@ describe("AskChat interrupted reading and session continuity", () => {
 
   beforeEach(() => {
     window.sessionStorage.clear();
+    window.localStorage.clear();
     fetchMock.mockReset().mockImplementation((_url: string, init: RequestInit) => Promise.resolve(new Response(
       new ReadableStream<Uint8Array>({
         start(controller) {
@@ -43,6 +41,7 @@ describe("AskChat interrupted reading and session continuity", () => {
     cleanup();
     vi.unstubAllGlobals();
     window.sessionStorage.clear();
+    window.localStorage.clear();
   });
 
   async function sendQuestion() {
@@ -54,6 +53,48 @@ describe("AskChat interrupted reading and session continuity", () => {
   async function emit(event: string, data: unknown) {
     await act(async () => stream.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)));
   }
+
+  it("reuses random anonymous identity and conversation after reopening the drawer", async () => {
+    const view = render(<AskChat />);
+    await sendQuestion();
+    const first = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+    expect(first.visitorId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(first.conversationId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(first.visitorId).not.toBe(first.conversationId);
+    await act(async () => stream.close());
+    await waitFor(() => expect(screen.getByRole("button", { name: "发送问题" })).toBeTruthy());
+    view.unmount();
+
+    render(<AskChat />);
+    fireEvent.change(screen.getByRole("textbox", { name: "输入问题" }), { target: { value: "再问一个问题" } });
+    fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const next = JSON.parse(String(fetchMock.mock.calls[1][1].body));
+    expect(next.visitorId).toBe(first.visitorId);
+    expect(next.conversationId).toBe(first.conversationId);
+  });
+
+  it("can send and retry with one in-memory identity when browser storage is blocked", async () => {
+    const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
+    const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
+    try {
+      render(<AskChat />);
+      await sendQuestion();
+      const first = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+      expect(first.visitorId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(first.conversationId).toMatch(/^[0-9a-f-]{36}$/);
+      await emit("error", { message: "回答中断，请重试。" });
+      await act(async () => stream.close());
+      fireEvent.click(await screen.findByRole("button", { name: "重新提问" }));
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      const next = JSON.parse(String(fetchMock.mock.calls[1][1].body));
+      expect(next.visitorId).toBe(first.visitorId);
+      expect(next.conversationId).toBe(first.conversationId);
+    } finally {
+      read.mockRestore();
+      write.mockRestore();
+    }
+  });
 
   it("keeps partial text and sources when stopped, without successful-answer followups", async () => {
     render(<AskChat />);

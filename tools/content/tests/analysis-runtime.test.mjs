@@ -43,32 +43,3 @@ test("analysis reader selects the requested CLI adapter and keeps its model conf
   assert.deepEqual(zcode.modelConfig, { model: "glm-test", provider: "zcode" });
   await assert.rejects(Effect.runPromise(createAnalysisReader({ engine: "unknown", repoRoot: "/project" })), /仅支持/u);
 });
-
-test("bounded workers interrupt siblings and finalize resources on failure", async () => {
-  const { runWorkerPool } = await import("../modules/analysis/runtime.mjs");
-  const { Deferred } = await import("effect");
-  const ready = await Effect.runPromise(Deferred.make());
-  let released = 0;
-  const failure = new Error("worker failed");
-  const result = await Effect.runPromise(
-    Effect.flip(
-      runWorkerPool(3, 2, (index) =>
-        index === 0
-          ? Effect.scoped(
-              Effect.gen(function* () {
-                yield* Effect.acquireRelease(Effect.void, () =>
-                  Effect.sync(() => {
-                    released += 1;
-                  }),
-                );
-                yield* Deferred.succeed(ready, true);
-                yield* Effect.never;
-              }),
-            )
-          : Deferred.await(ready).pipe(Effect.flatMap(() => Effect.fail(failure))),
-      ),
-    ),
-  );
-  assert.equal(result, failure);
-  assert.equal(released, 1);
-});

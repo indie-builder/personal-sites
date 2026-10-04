@@ -2,31 +2,14 @@ import type { CSSProperties } from "react";
 
 import { DotFieldParallax } from "@/components/dot-field-parallax";
 
-export const TECHNICAL_TERM_SETS = [
-  [
-    "agent.runtime", "multi.agent", "workflow.graph", "tool.call()",
-    "mcp.protocol", "skills.registry", "prompt.ops", "context.engine",
-    "observe.trace", "eval.loop", "rag.retrieval", "vector.search",
-  ],
-  [
-    "sse.stream", "ship.systems", "code.diff", "session.state",
-    "planner.agent", "executor.agent", "router.policy", "memory.store",
-    "context.window", "model.gateway", "structured.output", "function.calling",
-  ],
-  [
-    "retry.policy", "human.in.loop", "agent.runtime", "tool.call()",
-    "rag.retrieval", "sse.stream", "planner.agent", "memory.store",
-    "function.calling", "eval.loop", "context.engine", "ship.systems",
-  ],
-  [
-    "workflow.graph", "mcp.protocol", "skills.registry", "prompt.ops",
-    "vector.search", "code.diff", "session.state", "executor.agent",
-    "router.policy", "context.window", "model.gateway", "structured.output",
-  ],
+const TECHNICAL_TERMS = [
+  "retry.policy", "human.in.loop", "agent.runtime", "tool.call()",
+  "rag.retrieval", "sse.stream", "planner.agent", "memory.store",
+  "function.calling", "eval.loop", "context.engine", "ship.systems",
 ] as const;
 
 // 技术栈词条：前半复刻 aryankarma.com 的 Skills 列表，后半为国内常用的 Java 技术栈。
-export const TECH_STACK_TERMS = [
+const TECH_STACK_TERMS = [
   "React.js", "Next.js", "TypeScript", "Node.js", "Python", "Postgres",
   "Docker", "Kubernetes", "Tailwind CSS", "Git/GitHub", "JavaScript",
   "Sass", "Express.js", "Redux", "Java", "Spring", "Spring Boot",
@@ -34,18 +17,8 @@ export const TECH_STACK_TERMS = [
   "Maven", "Nginx",
 ] as const;
 
-export function selectTechnicalTerms(randomValue: number) {
-  const normalizedRandom = Number.isFinite(randomValue)
-    ? Math.min(Math.max(randomValue, 0), 1 - Number.EPSILON)
-    : 0;
-  const index = Math.floor(normalizedRandom * TECHNICAL_TERM_SETS.length);
-  return TECHNICAL_TERM_SETS[index];
-}
-
-// 词条在构建期（SSR/ISR）确定。SSR HTML 会被 ISR 长期缓存，而 hydration 发生在
-// 之后的任意时刻，因此任何随机或时间种子都会在两端漂移、触发 hydration mismatch；
-// 只有代码内的固定种子才能保证服务端渲染与客户端首次渲染产出同一份词条。
-const SELECTED_TERMS = [...selectTechnicalTerms(0.61), ...TECH_STACK_TERMS];
+// 固定词条保证 SSR/ISR 与客户端水合一致。
+const SELECTED_TERMS = [...TECHNICAL_TERMS, ...TECH_STACK_TERMS];
 
 // 弹幕泳道：词条按索引取模分配到六条水平泳道。每条泳道只动一个连续轨道，
 // 轨道内用足够大的固定间隔保持同屏稀疏；复制序列只用于无缝循环。
@@ -85,10 +58,10 @@ function renderTerms(
     <span
       className="interactive-dot-field__term"
       data-emphasis={index === 0 || index === 8 ? "strong" : index === 4 ? "medium" : undefined}
-      data-static-align={!repeated && index < TECHNICAL_TERM_SETS[0].length
+      data-static-align={!repeated && index < TECHNICAL_TERMS.length
         ? index % 3 === 0 ? "start" : index % 3 === 2 ? "end" : undefined
         : undefined}
-      data-static-term={!repeated && index < TECHNICAL_TERM_SETS[0].length ? "" : undefined}
+      data-static-term={!repeated && index < TECHNICAL_TERMS.length ? "" : undefined}
       key={`${repeated ? "repeat" : "original"}-${term}-${index}`}
       style={{ "--term-order": index } as CSSProperties}
     >

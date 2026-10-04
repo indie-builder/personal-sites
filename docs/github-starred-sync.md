@@ -53,3 +53,5 @@ README 存在时优先解析 README。若根目录存在仓库维护的中文 RE
 ## 公开范围
 
 `config/open-source-curation.mjs` 是已选择公开的仓库白名单和个人判读。同步程序会为所有 Star 创建本地私有记录，但只有白名单中的仓库在已有中文阅读版后才生成公开投影。网站服务器只读取 `data/curation.sqlite`；它不会回退到本地敏感目录。
+
+公开投影只发布当前列表、详情和 Ask 检索需要的字段；策展输入中的 `caveats`、`judgement`、`nextStep`、`scenarios`、`workflow` 继续保留在输入资料中，不写入公开 SQLite，也不生成无人消费的 `sourceTitle`。
