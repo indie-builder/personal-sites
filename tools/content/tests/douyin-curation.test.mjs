@@ -1,7 +1,10 @@
 import { attempt } from "@site/effect";
 import { Effect } from "effect";
 import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
+import path from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 
 import { toPublicDouyinItem } from "../modules/douyin-sync/curation-projection.mjs";
 import {
@@ -157,6 +160,135 @@ test("Evidence truncation declares how much of the video the model can see", () 
   assert.match(prompt, /仅覆盖至/u);
   assert.doesNotMatch(prompt, /第899段/u);
 });
+
+for (const scenario of [
+  { name: "evidence-free", transcript: [], error: /没有得到语音转写或屏幕文字/u },
+  { name: "ungroundable", transcript: [{ text: "短句" }], error: /没有可用于公开摘录/u },
+  { name: "valid", transcript: [{ text: "Synthetic evidence from the video", time: "0:03" }] },
+]) {
+  test(`Douyin CLI settles ${scenario.name} input and persists later successes`, async () => {
+    const cliUrl = new URL("../scripts/douyin-curation.mjs", import.meta.url);
+    const repoRoot = path.resolve(path.dirname(cliUrl.pathname), "../../..");
+    const key = `douyinCli_${scenario.name}`;
+    const queuePath = path.join(repoRoot, "synthetic-douyin/queue.json");
+    const failuresPath = path.join(repoRoot, "synthetic-douyin/analysis-failures.json");
+    const manifestPath = path.join(repoRoot, "synthetic-douyin/manifest.jsonl");
+    const analyzed = [];
+    const prompts = [];
+    const writes = [];
+    const logs = [];
+    let running;
+    const state = {
+      readFile: async (filePath) => {
+        if (filePath === path.join(repoRoot, "config/douyin-curation.json")) {
+          return JSON.stringify({
+            queueFile: "synthetic-douyin/queue.json",
+            rawDir: "synthetic-douyin/raw",
+            analyzer: { package: "synthetic-analyzer", detail: "full", fields: "transcript", ocrLanguage: "eng" },
+            taxonomy: ["AI 应用"],
+          });
+        }
+        assert.equal(filePath, manifestPath, "only synthetic config and manifest may be read");
+        return ["first", "later"].map((id) => JSON.stringify({
+          aweme_id: id, media_type: "video", file_paths: [`${id}.mp4`],
+        })).join("\n");
+      },
+      readJsonOr: (filePath, fallback) => {
+        assert.ok([queuePath, failuresPath, path.join(repoRoot, "synthetic-douyin/favorite-index.json")].includes(filePath));
+        return Effect.succeed(fallback);
+      },
+      loadLocalEnv: () => {},
+      execFile: Object.assign(() => assert.fail("analyzer must use the promisified adapter"), {
+        [promisify.custom]: async (command, args) => {
+          assert.equal(command, "npx");
+          const id = path.basename(args[3], ".mp4");
+          analyzed.push(id);
+          return { stdout: JSON.stringify({
+            transcript: id === "first" ? scenario.transcript : [{ text: "Synthetic evidence from the video", time: "0:03" }],
+            ocrResults: [],
+          }) };
+        },
+      }),
+      createAnalysisReader: () => Effect.succeed({
+        prompt: (prompt) => Effect.sync(() => {
+          prompts.push(prompt);
+          return JSON.stringify({
+            title: "合成标题", summary: "合成摘要", analysis: "合成分析", tags: ["AI 应用"],
+            excerpt: "Synthetic evidence from the video",
+          });
+        }),
+      }),
+      writeTextAtomically: (filePath, text) => Effect.sync(() => {
+        assert.equal(filePath, queuePath);
+        writes.push({ filePath, value: JSON.parse(text) });
+      }),
+      writeJsonAtomically: (filePath, value) => Effect.sync(() => {
+        assert.ok(filePath === failuresPath || /^raw\/(first|later)\/analysis\.json$/u.test(path.relative(path.dirname(queuePath), filePath)));
+        writes.push({ filePath, value: structuredClone(value) });
+      }),
+      runCli: (program) => { running = Effect.runPromise(program); return running; },
+    };
+    const adapters = new Map([
+      ["node:fs/promises", ["readFile"]],
+      ["node:child_process", ["execFile"]],
+      ["../../../scripts/lib/load-local-env.mjs", ["loadLocalEnv"]],
+      ["../modules/analysis/readers.mjs", ["createAnalysisReader"]],
+      ["./lib/json-file.mjs", ["readJsonOr"]],
+      ["./lib/atomic-file.mjs", ["writeTextAtomically", "writeJsonAtomically"]],
+      ["@site/effect/cli", ["runCli"]],
+    ]);
+    const sources = new Map([...adapters].map(([specifier, names]) => [
+      `douyin-test:${key}/${encodeURIComponent(specifier)}`,
+      names.map((name) => `export const ${name} = globalThis[${JSON.stringify(key)}].${name};`).join("\n"),
+    ]));
+    const originalArgs = process.argv;
+    const originalExitCode = process.exitCode;
+    const originalConsole = { log: console.log, error: console.error };
+    let hooks;
+    try {
+      globalThis[key] = state;
+      process.argv = [process.execPath, `${cliUrl.pathname}?${key}`, "sync", "--manifest", manifestPath, "--concurrency", "1"];
+      process.exitCode = 0;
+      console.log = console.error = (...values) => logs.push(values.join(" "));
+      hooks = registerHooks({
+        resolve(specifier, context, nextResolve) {
+          if (context.parentURL === `${cliUrl.href}?${key}` && adapters.has(specifier)) {
+            return { url: `douyin-test:${key}/${encodeURIComponent(specifier)}`, shortCircuit: true };
+          }
+          return nextResolve(specifier, context);
+        },
+        load(url, context, nextLoad) {
+          if (sources.has(url)) return { format: "module", source: sources.get(url), shortCircuit: true };
+          return nextLoad(url, context);
+        },
+      });
+      await import(`${cliUrl.href}?${key}`);
+      assert.ok(running, "execute the real CLI entry point");
+      await running;
+      assert.deepEqual(analyzed, ["first", "later"], "a failed first item must not stop the later analyzer");
+      assert.equal(prompts.length, scenario.name === "evidence-free" ? 2 : 3, "no model call for evidence-free input");
+      const queueWrites = writes.filter((write) => write.filePath === queuePath);
+      assert.deepEqual(queueWrites.at(-1).value.items.map((item) => item.id), scenario.error ? ["douyin:later"] : ["douyin:first", "douyin:later"]);
+      if (scenario.error) {
+        assert.ok(queueWrites.every((write) => write.value.items.every((item) => item.id !== "douyin:first")), "invalid items never enter the publishable queue");
+      }
+      const failures = writes.find((write) => write.filePath === failuresPath).value.items;
+      assert.equal(failures.length, scenario.error ? 1 : 0);
+      if (scenario.error) {
+        assert.equal(failures[0].id, "douyin:first");
+        assert.match(failures[0].error, scenario.error);
+      }
+      assert.equal(process.exitCode, scenario.error ? 1 : 0);
+      assert.ok(logs.some((line) => line.includes(scenario.error ? "成功 1 条，失败 1 条" : "成功 2 条，失败 0 条")));
+    } finally {
+      hooks?.deregister();
+      Object.assign(console, originalConsole);
+      process.argv = originalArgs;
+      process.exitCode = originalExitCode;
+      delete globalThis[key];
+    }
+  });
+}
 
 test("Douyin worker pool records one failure without stopping later work", async () => {
   const completed = [];

@@ -129,7 +129,7 @@ function analyzeVideo(video, forceRefresh = false) {
         signal,
       }),
     );
-    return parseAnalyzerOutput(stdout);
+    return yield* attempt("douyin.analyzer.parse", () => parseAnalyzerOutput(stdout));
   });
 }
 
@@ -257,10 +257,12 @@ function sync(options) {
           buildCurationPrompt(video, evidence, config.taxonomy),
           config.taxonomy,
         );
-        const grounded = groundEvidenceExcerpt(parsed.ai.excerpt, evidence);
+        const grounded = yield* attempt("douyin.excerpt.ground", () => groundEvidenceExcerpt(parsed.ai.excerpt, evidence));
         parsed.ai.excerpt = grounded.text;
         parsed.ai.excerptTime = grounded.time;
-        const item = toQueueItem(video, parsed, path.relative(repoRoot, rawEvidencePath));
+        const item = yield* attempt("douyin.queue.item", () =>
+          toQueueItem(video, parsed, path.relative(repoRoot, rawEvidencePath)),
+        );
         byId.set(id, item);
         failuresById.delete(id);
         yield* persistQueue();
@@ -270,6 +272,7 @@ function sync(options) {
     }
 
     const failures = yield* settleConcurrently(targets, concurrency, processVideo);
+    if (failures.length > 0) process.exitCode = 1;
     for (const { error, target } of failures) {
       failuresById.set(`douyin:${target.awemeId}`, {
         error: error instanceof Error ? error.message : String(error),

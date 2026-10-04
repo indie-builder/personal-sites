@@ -67,8 +67,9 @@ export function runPiPrompt({ cwd, images = [], label = "模型", model, prompt,
       const request = io("pi.prompt", () =>
         session.prompt(prompt, {
           images: images.map((image) => ({
-            source: { data: image.data, mediaType: image.mediaType, type: "base64" },
             type: "image",
+            data: image.data,
+            mimeType: image.mediaType,
           })),
         }),
       );

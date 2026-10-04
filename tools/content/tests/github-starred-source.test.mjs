@@ -1,16 +1,160 @@
-import { Effect } from "effect";
+import { Cause, Effect, Fiber } from "effect";
+import { TestClock } from "effect/testing";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { isChineseMarkdown } from "../modules/github-starred/github-api.mjs";
+import { fetchReadme, isChineseMarkdown, listStarredRepositories } from "../modules/github-starred/github-api.mjs";
 import {
   readLocalSourceRecords,
   syncRepositorySource,
   syncStarredRepositories,
 } from "../modules/github-starred/source.mjs";
+
+const emptyStarredPage = JSON.stringify({
+  data: { viewer: { starredRepositories: { edges: [], pageInfo: { hasNextPage: false } } } },
+});
+
+for (const message of [
+  'Post "https://api.github.com/graphql": unexpected EOF',
+  "EOF",
+  'Get "https://api.github.com/repos/example/test/readme": EOF',
+  "read: connection reset by peer",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "i/o timeout",
+  "TLS handshake timeout",
+  "temporary timeout",
+  "HTTP 502 Bad Gateway",
+  "HTTP 503 Service Unavailable",
+  "HTTP 504 Gateway Timeout",
+]) {
+  test(`gh retries transient failure once before success: ${message}`, async () => {
+    let calls = 0;
+    await Effect.runPromise(Effect.gen(function* () {
+      const fiber = yield* Effect.forkChild(fetchReadme({ fullName: "example/test" }, {
+        exec: async () => {
+          calls += 1;
+          if (calls === 1) throw Object.assign(new Error("gh failed"), { stderr: message });
+          return { stdout: "# Fixture README" };
+        },
+      }));
+      yield* TestClock.adjust("999 millis");
+      assert.equal(calls, 1);
+      yield* TestClock.adjust("1 millis");
+      assert.equal(yield* Fiber.join(fiber), "# Fixture README");
+      assert.equal(calls, 2);
+    }).pipe(Effect.provide(TestClock.layer()), Effect.scoped));
+  });
+}
+
+for (const failures of [2, 3]) {
+  test(`GraphQL retries at most twice after ${failures} transient failures`, async () => {
+    let calls = 0;
+    await Effect.runPromise(Effect.gen(function* () {
+      const fiber = yield* Effect.forkChild(Effect.exit(listStarredRepositories({
+        exec: async (_command, args) => {
+          assert.equal(args[1], "graphql");
+          calls += 1;
+          if (calls <= failures) throw new Error("unexpected EOF");
+          return { stdout: emptyStarredPage };
+        },
+      })));
+      yield* TestClock.adjust("999 millis");
+      assert.equal(calls, 1);
+      yield* TestClock.adjust("1 millis");
+      assert.equal(calls, 2);
+      yield* TestClock.adjust("999 millis");
+      assert.equal(calls, 2);
+      yield* TestClock.adjust("1 millis");
+      assert.equal(calls, 3);
+      yield* TestClock.adjust("10 seconds");
+      const exit = yield* Fiber.join(fiber);
+      assert.equal(exit._tag, failures === 2 ? "Success" : "Failure");
+      if (exit._tag === "Success") assert.deepEqual(exit.value, []);
+      else {
+        assert.equal(Cause.hasFails(exit.cause), true);
+        assert.equal(Cause.hasDies(exit.cause), false);
+      }
+      assert.equal(calls, 3);
+    }).pipe(Effect.provide(TestClock.layer()), Effect.scoped));
+  });
+}
+
+for (const error of [
+  new Error("HTTP 404 Not Found"),
+  new Error("HTTP 401 Bad credentials\nunexpected EOF"),
+  new Error("gh auth login"),
+  new Error("HTTP 403 Forbidden\nunexpected EOF"),
+  new Error("permission denied\nunexpected EOF"),
+  new Error("unknown flag: --invalid\nunexpected EOF"),
+  new Error("invalid argument\nunexpected EOF"),
+  new Error("request canceled\nunexpected EOF"),
+  Object.assign(new Error("unexpected EOF"), { name: "AbortError", code: "ABORT_ERR" }),
+  Object.assign(new Error("unexpected EOF"), { signal: "SIGTERM", killed: true }),
+  new Error("unrecognized failure"),
+  new Error("invalid EOF marker"),
+]) {
+  test(`gh does not retry permanent or cancelled failure: ${error.message.split("\n")[0]}`, async () => {
+    let calls = 0;
+    await Effect.runPromise(Effect.gen(function* () {
+      const fiber = yield* Effect.forkChild(Effect.exit(fetchReadme({ fullName: "example/test" }, {
+        exec: async () => { calls += 1; throw error; },
+      })));
+      yield* TestClock.adjust("10 seconds");
+      const exit = yield* Fiber.join(fiber);
+      if (error.message.includes("404")) {
+        assert.equal(exit._tag, "Success");
+        assert.equal(exit.value, null);
+      } else {
+        assert.equal(exit._tag, "Failure");
+        assert.equal(Cause.hasDies(exit.cause), false);
+      }
+      assert.equal(calls, 1);
+    }).pipe(Effect.provide(TestClock.layer()), Effect.scoped));
+  });
+}
+
+for (const pending of [false, true]) {
+  test(`gh cancellation stops ${pending ? "in-flight exec" : "retry delay"}`, async () => {
+    let calls = 0;
+    let signal;
+    await Effect.runPromise(Effect.gen(function* () {
+      const fiber = yield* Effect.forkChild(fetchReadme({ fullName: "example/test" }, {
+        exec: (_command, _args, options) => {
+          calls += 1;
+          signal = options.signal;
+          if (!pending) return Promise.reject(new Error("unexpected EOF"));
+          return new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(new Error("unexpected EOF")), { once: true });
+          });
+        },
+      }));
+      yield* TestClock.adjust("500 millis");
+      assert.equal(calls, 1);
+      yield* Fiber.interrupt(fiber);
+      const exit = yield* Fiber.await(fiber);
+      assert.equal(exit._tag, "Failure");
+      assert.equal(Cause.hasInterruptsOnly(exit.cause), true);
+      if (pending) assert.equal(signal.aborted, true);
+      yield* TestClock.adjust("10 seconds");
+      assert.equal(calls, 1);
+    }).pipe(Effect.provide(TestClock.layer()), Effect.scoped));
+  });
+}
+
+test("invalid GraphQL JSON is a typed failure without reissuing gh", async () => {
+  let calls = 0;
+  const error = await Effect.runPromise(listStarredRepositories({
+    exec: async () => { calls += 1; return { stdout: "{invalid json" }; },
+  }).pipe(Effect.catch((failure) => Effect.succeed(failure))));
+  assert.equal(error._tag, "OperationError");
+  assert.equal(error.operation, "github.json");
+  assert.ok(error.cause instanceof SyntaxError);
+  assert.equal(calls, 1);
+});
 
 test("README 缺失时以仓库结构作为原始证据", async () => {
   const root = [

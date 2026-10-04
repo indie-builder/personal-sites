@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -39,9 +40,13 @@ test("analysis registers BigModel before resolving credentials, including images
   );
 });
 
-test("installed Pi SDK creates an isolated BigModel session with no tools", async () => {
+test("installed Pi SDK accepts model-runner images in an isolated session with no tools", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "site-pi-sdk-"));
+  const runnerUrl = new URL("../modules/analysis/model-runner.mjs", import.meta.url);
+  const key = "sitePiImageContract";
   let session;
+  let hooks;
+  t.mock.method(globalThis, "fetch", () => assert.fail("image contract test must not access the network"));
   try {
     const runtime = await ModelRuntime.create({
       authPath: path.join(directory, "auth.json"),
@@ -78,7 +83,52 @@ test("installed Pi SDK creates an isolated BigModel session with no tools", asyn
     }));
     assert.deepEqual(session.getActiveToolNames(), []);
     assert.deepEqual(session.messages, []);
+    const data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==";
+    const received = [];
+    // Keep the real session.prompt image normalization; stop before model execution.
+    t.mock.method(session.agent, "prompt", async (messages) => { received.push(...messages); });
+    t.mock.method(session.agent, "continue", () => assert.fail("image contract test must not continue a model run"));
+    globalThis[key] = {
+      DefaultResourceLoader: class { async reload() {} },
+      SessionManager,
+      createAgentSession: async () => ({ session }),
+      getAgentDir: () => directory,
+    };
+    hooks = registerHooks({
+      resolve(specifier, context, nextResolve) {
+        if (context.parentURL?.startsWith(runnerUrl.href) && specifier === "@earendil-works/pi-coding-agent") {
+          return { url: "site-pi-image-contract:sdk", shortCircuit: true };
+        }
+        return nextResolve(specifier, context);
+      },
+      load(url, context, nextLoad) {
+        if (url === "site-pi-image-contract:sdk") {
+          return {
+            format: "module",
+            source: `export const { DefaultResourceLoader, SessionManager, createAgentSession, getAgentDir } = globalThis.${key};`,
+            shortCircuit: true,
+          };
+        }
+        return nextLoad(url, context);
+      },
+    });
+    const { runPiPrompt } = await import(`${runnerUrl.href}?image-contract`);
+    await Effect.runPromise(runPiPrompt({
+      cwd: directory,
+      images: [{ data, mediaType: "image/png" }],
+      model,
+      prompt: "Describe this synthetic pixel.",
+      runtime,
+    }));
+    const userMessages = received.filter((message) => message.role === "user");
+    assert.equal(userMessages.length, 1);
+    assert.deepEqual(userMessages[0].content, [
+      { type: "text", text: "Describe this synthetic pixel." },
+      { type: "image", data, mimeType: "image/png" },
+    ]);
   } finally {
+    hooks?.deregister();
+    delete globalThis[key];
     session?.dispose();
     await rm(directory, { recursive: true, force: true });
   }

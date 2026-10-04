@@ -1,3 +1,5 @@
+import { Effect, Fiber } from "effect";
+import { TestClock } from "effect/testing";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { registerHooks } from "node:module";
@@ -9,6 +11,39 @@ import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 const cliUrl = new URL("../scripts/x-curation-enrich.mjs", import.meta.url);
 const repoRoot = path.resolve(path.dirname(cliUrl.pathname), "../../..");
 const configPath = path.join(repoRoot, "config/x-curation.json");
+
+function mockCliAdapters(key, state) {
+  const mockExports = new Map([
+    ["node:fs/promises", ["readFile"]],
+    ["../../../scripts/lib/load-local-env.mjs", ["loadLocalEnv"]],
+    ["../lib/pi-runtime.mjs", ["resolvePiModelConfig"]],
+    ["../modules/analysis/readers.mjs", ["createAnalysisReader"]],
+    ["../modules/x-sync/link-content.mjs", ["expandUrl", "classifyUrl", "fetchGithubRepo", "fetchArticleText"]],
+    ["../modules/x-sync/design-media.mjs", ["collectDesignEvidenceImages"]],
+    ["../modules/x-sync/prompts.mjs", ["buildPrompt", "buildDesignPrompt", "parseJsonResponse", "parseDesignResponse"]],
+    ["./lib/atomic-file.mjs", ["writeTextAtomically"]],
+  ]);
+  if (state.runCli) mockExports.set("@site/effect/cli", ["runCli"]);
+  const sources = new Map();
+  for (const [specifier, names] of mockExports) {
+    const url = `site-enrich-test:${key}/${encodeURIComponent(specifier)}`;
+    sources.set(url, names.map((name) =>
+      `export const ${name} = globalThis[${JSON.stringify(key)}].${Object.hasOwn(state, name) ? name : `forbidden(${JSON.stringify(name)})`};`,
+    ).join("\n"));
+  }
+  return registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (context.parentURL?.startsWith(cliUrl.href) && mockExports.has(specifier)) {
+        return { url: `site-enrich-test:${key}/${encodeURIComponent(specifier)}`, shortCircuit: true };
+      }
+      return nextResolve(specifier, context);
+    },
+    load(url, context, nextLoad) {
+      if (sources.has(url)) return { format: "module", source: sources.get(url), shortCircuit: true };
+      return nextLoad(url, context);
+    },
+  });
+}
 
 function fixtureItems() {
   const item = {
@@ -66,23 +101,6 @@ for (const normalized of [false, true]) {
           assert.fail(`dry-run invoked external adapter: ${name}`);
         },
       };
-      const mockExports = new Map([
-        ["node:fs/promises", ["readFile"]],
-        ["../../../scripts/lib/load-local-env.mjs", ["loadLocalEnv"]],
-        ["../lib/pi-runtime.mjs", ["resolvePiModelConfig"]],
-        ["../modules/analysis/readers.mjs", ["createAnalysisReader"]],
-        ["../modules/x-sync/link-content.mjs", ["expandUrl", "classifyUrl", "fetchGithubRepo", "fetchArticleText"]],
-        ["../modules/x-sync/design-media.mjs", ["collectDesignEvidenceImages"]],
-        ["../modules/x-sync/prompts.mjs", ["buildPrompt", "buildDesignPrompt", "parseJsonResponse", "parseDesignResponse"]],
-        ["./lib/atomic-file.mjs", ["writeTextAtomically"]],
-      ]);
-      const sources = new Map();
-      for (const [specifier, names] of mockExports) {
-        const url = `site-enrich-test:${key}/${encodeURIComponent(specifier)}`;
-        sources.set(url, names.map((name) =>
-          `export const ${name} = globalThis[${JSON.stringify(key)}].${Object.hasOwn(state, name) ? name : `forbidden(${JSON.stringify(name)})`};`,
-        ).join("\n"));
-      }
       const originalArgs = process.argv;
       const originalLog = console.log;
       const originalFetch = globalThis.fetch;
@@ -93,18 +111,7 @@ for (const normalized of [false, true]) {
         globalThis.fetch = state.forbidden("fetch");
         console.log = (...values) => logs.push(values.join(" "));
         process.argv = [process.execPath, cliUrl.pathname, "--dry-run", ...scenario.args];
-        hooks = registerHooks({
-          resolve(specifier, context, nextResolve) {
-            if (context.parentURL?.startsWith(cliUrl.href) && mockExports.has(specifier)) {
-              return { url: `site-enrich-test:${key}/${encodeURIComponent(specifier)}`, shortCircuit: true };
-            }
-            return nextResolve(specifier, context);
-          },
-          load(url, context, nextLoad) {
-            if (sources.has(url)) return { format: "module", source: sources.get(url), shortCircuit: true };
-            return nextLoad(url, context);
-          },
-        });
+        hooks = mockCliAdapters(key, state);
         // Import only after all module-scope config/environment and I/O adapters are mocked.
         await import(`${cliUrl.href}?${key}`);
         assert.equal(await readFile(queuePath, "utf8"), bytes);
@@ -128,4 +135,79 @@ for (const normalized of [false, true]) {
       }
     });
   }
+}
+
+for (const failures of [0, 1, 2]) {
+  test(`enrich CLI handles ${failures} model failures with at most one retry after five seconds`, async () => {
+    const key = `enrichRetry_${failures}`;
+    const queuePath = path.join(repoRoot, "synthetic-enrich-queue.json");
+    const reads = [];
+    const writes = [];
+    const logs = [];
+    let calls = 0;
+    const response = JSON.stringify({ title: "Fixture title", summary: "Fixture summary", analysis: "Fixture analysis", tags: [], design: { relevant: false } });
+    const state = {
+      readFile: async (filePath) => {
+        reads.push(filePath);
+        if (filePath === configPath) return JSON.stringify({ queueFile: path.relative(repoRoot, queuePath), taxonomy: [] });
+        assert.equal(filePath, queuePath, "only the synthetic queue can be read");
+        return JSON.stringify({ items: [{ ...fixtureItems()[0], links: [], media: [] }] });
+      },
+      loadLocalEnv: () => {},
+      resolvePiModelConfig: () => ({ provider: "fixture", model: "fixture" }),
+      createAnalysisReader: () => Effect.succeed({
+        prompt: () => Effect.suspend(() => {
+          calls += 1;
+          return calls <= failures ? Effect.fail(new Error("synthetic model failure")) : Effect.succeed(response);
+        }),
+      }),
+      collectDesignEvidenceImages: () => Effect.succeed({ images: [] }),
+      buildPrompt: () => "synthetic prompt",
+      parseJsonResponse: JSON.parse,
+      writeTextAtomically: (filePath, text) => Effect.sync(() => {
+        assert.equal(filePath, queuePath);
+        writes.push(JSON.parse(text));
+      }),
+      runCli: (program) => Effect.runPromise(Effect.gen(function* () {
+        const fiber = yield* Effect.forkChild(Effect.exit(program));
+        yield* TestClock.adjust("4999 millis");
+        assert.equal(calls, 1, "no retry before five seconds");
+        yield* TestClock.adjust("1 millis");
+        assert.equal(calls, failures === 0 ? 1 : 2);
+        yield* TestClock.adjust("10 seconds");
+        const exit = yield* Fiber.join(fiber);
+        assert.equal(exit._tag, "Success", "CLI must handle model failures without defects");
+        assert.equal(calls, failures === 0 ? 1 : 2, "no additional retry after the limit");
+      }).pipe(Effect.provide(TestClock.layer()), Effect.scoped)),
+      forbidden: (name) => () => assert.fail(`unexpected external adapter: ${name}`),
+    };
+    const originalArgs = process.argv;
+    const originalExitCode = process.exitCode;
+    const originalConsole = { log: console.log, warn: console.warn, error: console.error };
+    const originalFetch = globalThis.fetch;
+    let hooks;
+    try {
+      globalThis[key] = state;
+      globalThis.fetch = state.forbidden("fetch");
+      for (const method of Object.keys(originalConsole)) console[method] = (...values) => logs.push(values.join(" "));
+      process.exitCode = 0;
+      process.argv = [process.execPath, cliUrl.pathname, "--engine=codex-cli", "--concurrency=1"];
+      hooks = mockCliAdapters(key, state);
+      await import(`${cliUrl.href}?${key}`);
+      assert.deepEqual(reads, [configPath, queuePath]);
+      assert.equal(writes.length, 2, "persist the baseline and the final result");
+      const item = writes[1].items[0];
+      assert.equal(item.pipeline.stages.editorial.status, failures === 2 ? "error" : "complete");
+      assert.equal(item.ai.title, failures === 2 ? undefined : "Fixture title");
+      assert.equal(process.exitCode, failures === 2 ? 1 : 0);
+      assert.ok(logs.some((line) => line.includes(failures === 2 ? "完成: 0 条解析，1 条失败" : "完成: 1 条解析，0 条失败")));
+    } finally {
+      hooks?.deregister();
+      Object.assign(console, originalConsole);
+      process.argv = originalArgs;
+      process.exitCode = originalExitCode;
+      globalThis.fetch = originalFetch;
+      delete globalThis[key];
+    }
+  });
 }
