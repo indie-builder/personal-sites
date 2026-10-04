@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
@@ -147,7 +148,8 @@ class PersonalSiteAppNavigationTest {
     private fun openCurationAndReturn(section: Section) {
         val site = NavigationSiteApi()
         val container = launchApp(site, NavigationPortfolioApi())
-        compose.onNodeWithText(section.label).performClick()
+        // Later tabs start offscreen on narrow devices, including the CI emulator.
+        compose.onNodeWithText(section.label).performScrollTo().assertIsDisplayed().performClick()
         val item = site.items(section)[12]
         waitForText(site.items(section).first().title!!)
         val list = verticalList() and hasAnyDescendant(hasText("${section.label}条目", substring = true))
