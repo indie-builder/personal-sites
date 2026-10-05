@@ -33,6 +33,8 @@ test("Effect lint enforces real execution boundaries and allows lazy cache alloc
       ["cli.mjs", 'import { runCli } from "@site/effect/cli"; runCli(program);', true],
       ["cli.mjs", 'import { runCliScript } from "./lib/run-cli.mjs"; runCliScript(program, "标签");', true],
       ["cli.mjs", 'import { runCliScript } from "./other.mjs"; runCliScript(program);', false],
+      ["cli.mjs", 'import { runCliScript } from "../lib/run-cli.mjs"; runCliScript(program);', false],
+      ["cli.mjs", 'import { runCliScript } from "../../apps/web/lib/run-cli.mjs"; runCliScript(program);', false],
       ["cli.mjs", 'import { Effect } from "effect"; Effect.runPromise(program);', false],
       ["cli.mjs", 'import { runCli } from "@site/effect/cli"; process.exit(1);', false],
     ];
