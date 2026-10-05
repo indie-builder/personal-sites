@@ -12,7 +12,7 @@ RootLayout
 └─ 路由页面
    ├─ /                         首页（ISR，revalidate = 60）
    │  ├─ Profile rail（sticky，位于数据 Suspense 外）
-   │  └─ 右侧每日动态数据列表流式补入
+   │  └─ 右侧每日动态列表（保留 Suspense 边界）
    ├─ /ai-news                  每日动态版块（ISR，revalidate = 60）
    ├─ /curation                 每日关注版块（仅 X 来源，ISR，revalidate = 300）
    ├─ /design                   设计收藏版块（X 高置信设计相关内容，ISR，视频站内播放）
@@ -43,7 +43,7 @@ RootLayout
 | 区域 | 主文件 | 责任 | 不应承担的责任 |
 |---|---|---|---|
 | 全局壳 | `apps/web/app/layout.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
-| 首页 | `apps/web/app/page.tsx` | 稳定输出身份轨与刊头，仅流式补入每日动态列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
+| 首页 | `apps/web/app/page.tsx` | 稳定输出身份轨、刊头与每日动态列表，保留数据 Suspense 边界 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
 | 版块页 | `apps/web/app/ai-news/page.tsx`、`apps/web/app/curation/page.tsx`、`apps/web/app/design/page.tsx`、`apps/web/app/douyin/page.tsx`、`apps/web/app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
 | 详情页 | `apps/web/app/curation/[id]/page.tsx`、`apps/web/app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `apps/web/components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
