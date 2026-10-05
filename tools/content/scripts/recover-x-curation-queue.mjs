@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
+import { extractShortLinks } from "../modules/x-sync/media.mjs";
 import { writeJsonAtomically } from "./lib/atomic-file.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -17,14 +18,6 @@ const rawRoot = path.join(root, "raw");
 if (!process.argv.includes("--force")) {
   const queueStat = await stat(queuePath).catch(() => null);
   if (queueStat?.size) throw new Error("策展队列非空；如确认需要恢复，请显式传入 --force。");
-}
-
-function shortLinks(text) {
-  return [...new Set(String(text ?? "").match(/https?:\/\/t\.co\/\w+/gu) ?? [])].map((url) => ({
-    expanded: null,
-    original: url,
-    type: "unexpanded",
-  }));
 }
 
 function mergeLinks(...groups) {
@@ -59,7 +52,7 @@ for (const name of rawNames) {
       ...existing,
       isQuote: Boolean(tweet.quotedTweet) || existing.isQuote,
       isReply: Boolean(tweet.inReplyToStatusId) || existing.isReply,
-      links: mergeLinks(existing.links ?? [], shortLinks(tweet.text)),
+      links: mergeLinks(existing.links ?? [], extractShortLinks(String(tweet.text ?? ""))),
       quoteContext:
         existing.quoteContext ??
         (tweet.quotedTweet
@@ -99,7 +92,7 @@ const items = generated.items.map((item) => {
       id: String(item.id),
       isQuote: Boolean(raw.isQuote ?? item.quoteContext),
       isReply: Boolean(raw.isReply ?? item.facts?.contentType === "reply"),
-      links: mergeLinks(item.links ?? [], raw.links ?? [], shortLinks(item.text)),
+      links: mergeLinks(item.links ?? [], raw.links ?? [], extractShortLinks(String(item.text ?? ""))),
       media: item.media ?? [],
       quoteContext: raw.quoteContext ?? item.quoteContext ?? null,
       replyContext: raw.replyContext ?? null,

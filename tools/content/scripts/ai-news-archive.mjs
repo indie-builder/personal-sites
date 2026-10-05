@@ -1,7 +1,6 @@
 import { Effect } from "effect";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createClient } from "@supabase/supabase-js";
 import { copyFileSync, renameSync, rmSync } from "node:fs";
 import {
   archiveCutoff,
@@ -12,14 +11,13 @@ import {
   readPublicRows,
   saveArchive,
 } from "@site/public-data/ai-news/archive.mjs";
+import { createSupabaseServiceClient } from "@site/public-data/supabase.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 loadLocalEnv(repoRoot);
 const archivePath = path.join(repoRoot, ARCHIVE_PATH);
-const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const client = createSupabaseServiceClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 if (process.argv.includes("--prune")) {
   const response = await fetch("https://default-coder.lovemyrmb.cn/api/health/ai-news/archive", {
     cache: "no-store",

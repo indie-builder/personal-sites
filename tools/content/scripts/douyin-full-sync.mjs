@@ -16,10 +16,6 @@ const dataRoot = path.join(repoRoot, "data/sensitive/douyin-curation");
 const sidecar = path.join(dataRoot, "sidecar");
 const manifest = path.join(dataRoot, "downloads/download_manifest.jsonl");
 
-function run(command, args, { cwd = repoRoot, env = {} } = {}) {
-  return runCommand(command, args, { cwd, env });
-}
-
 function pendingVideoCount() {
   return Effect.gen(function* () {
     return (yield* readJsonOr(path.join(dataRoot, "pending-video-urls.json"), [])).length;
@@ -69,11 +65,11 @@ function main() {
       console.log(`[dry-run] 收藏索引待下载 ${pending} 条；分析阶段计划如下，不重新发现收藏页、不下载、不调用模型。`);
       const args = ["douyin:curation", "--", "sync", "--dry-run"];
       if (existsSync(manifest)) args.push("--manifest", manifest);
-      yield* run("pnpm", args);
+      yield* runCommand("pnpm", args, { cwd: repoRoot });
       return;
     }
 
-    yield* run(
+    yield* runCommand(
       "uv",
       [
         "run",
@@ -90,7 +86,7 @@ function main() {
     const pending = yield* pendingVideoCount();
     if (options.download && pending > 0) {
       console.log(`开始下载 ${pending} 条新增收藏视频。`);
-      yield* run("uv", ["run", "douyin-dl", "-c", "config-incremental.yml", "--show-warnings"], { cwd: sidecar });
+      yield* runCommand("uv", ["run", "douyin-dl", "-c", "config-incremental.yml", "--show-warnings"], { cwd: sidecar });
     }
 
     if (options.analyze) {
@@ -99,7 +95,8 @@ function main() {
       if (options.analyzerConcurrency !== null)
         args.push("--analyzer-concurrency", String(options.analyzerConcurrency));
       if (options.analyzeLimit !== null) args.push("--limit", String(options.analyzeLimit));
-      yield* run("pnpm", args, {
+      yield* runCommand("pnpm", args, {
+        cwd: repoRoot,
         env: {
           WHISPER_BIN: path.join(sidecar, ".venv/bin/whisper-ctranslate2"),
           WHISPER_COMPUTE: "int8",

@@ -5,11 +5,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createClient } from "@supabase/supabase-js";
 import Database from "better-sqlite3";
 
 import { readPublicDataHealth } from "@site/public-data/data-health/sqlite.mjs";
 import { buildDataHealth } from "@site/public-data/data-health/status.mjs";
+import { createSupabaseServiceClient } from "@site/public-data/supabase.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -21,10 +21,9 @@ function requiredEnvironment(key) {
   return value;
 }
 
-const client = createClient(
+const client = createSupabaseServiceClient(
   requiredEnvironment("SUPABASE_URL"),
   requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY"),
-  { auth: { autoRefreshToken: false, persistSession: false } },
 );
 const { data: aiState, error } = await client
   .from("ai_news_sync_state")

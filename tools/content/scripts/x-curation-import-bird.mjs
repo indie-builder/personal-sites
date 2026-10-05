@@ -20,7 +20,7 @@ import { readJsonOr } from "./lib/json-file.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { mergeXMedia, normalizeXMedia } from "../modules/x-sync/media.mjs";
+import { extractShortLinks, mergeXMedia, normalizeXMedia } from "../modules/x-sync/media.mjs";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 import { writeJsonAtomically } from "./lib/atomic-file.mjs";
 
@@ -35,15 +35,6 @@ const SOURCES = [
   { file: path.join(rawDir, "likes-all.json"), fetchSource: "like" },
   { dir: path.join(rawDir, "likes-chunks"), fetchSource: "like" },
 ];
-
-function extractShortLinks(text) {
-  const urls = text.match(/https?:\/\/t\.co\/\w+/gu) ?? [];
-  return [...new Set(urls)].map((url) => ({
-    original: url,
-    expanded: null,
-    type: "unexpanded",
-  }));
-}
 
 function toInt(value) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
