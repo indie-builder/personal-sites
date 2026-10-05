@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
     staleTimes: { dynamic: 30 },
   },
   poweredByHeader: false,
-  reactStrictMode: true,
   typedRoutes: true,
   // public/ 下的静态资源没有内容哈希，给一周浏览器缓存而非 immutable。
   async headers() {

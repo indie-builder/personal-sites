@@ -1,15 +1,13 @@
-import { Effect } from "effect";
 import { attempt } from "@site/effect";
 import "server-only";
 
-import { cache } from "react";
 import { Schema } from "effect";
 
+import { cachedRequest } from "@/lib/cached-request";
 import { curationItemSchema } from "@/lib/curation-types";
 import type { CurationItem, CurationListItem } from "@/lib/curation-types";
-import { getPublicDatabase } from "@/lib/public-database";
+import { contentJsonRowSchema, getPublicDatabase } from "@/lib/public-database";
 
-const curationContentRowSchema = Schema.Struct({ content_json: Schema.String.check(Schema.isMinLength(1)) });
 const curationNeighborRowSchema = Schema.Struct({
   id: Schema.String.check(Schema.isMinLength(1)),
   title: Schema.String.check(Schema.isMinLength(1)),
@@ -57,7 +55,7 @@ function selectCurationRows(where: string, parameters: unknown[], offset: number
   return getPublicDatabase()
     .prepare(`SELECT content_json FROM curation_items WHERE ${where} LIMIT ? OFFSET ?`)
     .all(...parameters, limit + 1, offset)
-    .map((row) => Schema.decodeUnknownSync(curationContentRowSchema)(row))
+    .map((row) => Schema.decodeUnknownSync(contentJsonRowSchema)(row))
     .map((row) => toCurationListItem(parseCurationItem(row.content_json)));
 }
 
@@ -159,14 +157,10 @@ export function getCurationNeighbors(id: string, designOnly = false) {
   });
 }
 
-export const findCurationItem = cache((id: string) =>
-  Effect.runSync(
-    Effect.cached(
-      attempt("curation.detail", () => {
-        const row = getPublicDatabase().prepare("SELECT content_json FROM curation_items WHERE id = ?").get(id);
-        if (!row) return null;
-        return parseCurationItem(Schema.decodeUnknownSync(curationContentRowSchema)(row).content_json);
-      }),
-    ),
-  ),
+export const findCurationItem = cachedRequest((id: string) =>
+  attempt("curation.detail", () => {
+    const row = getPublicDatabase().prepare("SELECT content_json FROM curation_items WHERE id = ?").get(id);
+    if (!row) return null;
+    return parseCurationItem(Schema.decodeUnknownSync(contentJsonRowSchema)(row).content_json);
+  }),
 );

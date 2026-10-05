@@ -1,5 +1,5 @@
 import { UtcDateTimeString, UrlString } from "@site/effect/schema";
-import { Effect, Schema } from "effect";
+import { Effect, Schema, Struct } from "effect";
 
 /**
  * 公开策展投影（curation.sqlite `content_json`）的唯一结构定义：
@@ -124,19 +124,23 @@ export type CurationItem = typeof curationItemSchema.Type;
  * 剪报簿结构在列表里同时呈现判断（title/summary）与证据（text 摘录、tags、attachments），
  * attachments 由投影在读取时从 media 与 quoteContext 归并成登记用词。
  */
-export type CurationListItem = Pick<
-  CurationItem,
-  | "author"
-  | "collectedAt"
-  | "design"
-  | "id"
-  | "media"
-  | "publishedAt"
-  | "source"
-  | "summary"
-  | "tags"
-  | "text"
-  | "title"
-> & {
-  attachments: string[];
-};
+export const curationListItemSchema = Schema.Struct({
+  ...curationItemSchema.mapFields(
+    Struct.pick([
+      "author",
+      "collectedAt",
+      "design",
+      "id",
+      "media",
+      "publishedAt",
+      "source",
+      "summary",
+      "tags",
+      "text",
+      "title",
+    ]),
+  ).fields,
+  attachments: Schema.Array(Schema.String).pipe(Schema.mutable),
+});
+
+export type CurationListItem = typeof curationListItemSchema.Type;
