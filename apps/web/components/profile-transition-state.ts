@@ -23,6 +23,14 @@ function getBox(element: Element): ProfileTransitionBox {
   return { height, left, top, width };
 }
 
+// 序列化载荷来自 sessionStorage，字段可能是任意 JSON 值；
+// 只认四个字段的原始 finite number，不做字符串强转（Number.isFinite 的语义）。
+function isBox(value: unknown): value is ProfileTransitionBox {
+  if (!value) return false;
+  const { height, left, top, width } = value as ProfileTransitionBox;
+  return Number.isFinite(height) && Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width);
+}
+
 function getTransitionKind(from: string, to: string): ProfileTransitionKind | null {
   if (from === "home" && to !== "home") return "collapse";
   if (from !== "home" && to === "home") return "expand";
@@ -60,16 +68,16 @@ export function stopProfileGhostDrift(ghost: HTMLElement) {
   driftControls.delete(ghost);
 }
 
-export function beginProfileTransition(from: string, to: string) {
+export function beginProfileTransition(from: string, to: string): boolean {
   const kind = getTransitionKind(from, to);
   if (!kind || !window.matchMedia("(max-width: 900px)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    return;
+    return false;
   }
 
   const avatar = document.querySelector<HTMLElement>(".curation-home__avatar");
   const summary = document.querySelector<HTMLElement>(".curation-home__identity");
   const links = document.querySelector<HTMLElement>(".curation-home__external-links");
-  if (!avatar || !summary || !links) return;
+  if (!avatar || !summary || !links) return false;
 
   clearProfileTransition();
 
@@ -145,21 +153,9 @@ export function readProfileTransition(): ProfileTransitionPayload | null {
     const value = JSON.parse(raw) as Partial<ProfileTransitionPayload>;
     if (
       (value.kind !== "collapse" && value.kind !== "expand")
-      || !value.avatar
-      || !value.links
-      || !value.summary
-      || !Number.isFinite(value.links.height)
-      || !Number.isFinite(value.links.left)
-      || !Number.isFinite(value.links.top)
-      || !Number.isFinite(value.links.width)
-      || !Number.isFinite(value.avatar.height)
-      || !Number.isFinite(value.avatar.left)
-      || !Number.isFinite(value.avatar.top)
-      || !Number.isFinite(value.avatar.width)
-      || !Number.isFinite(value.summary.height)
-      || !Number.isFinite(value.summary.left)
-      || !Number.isFinite(value.summary.top)
-      || !Number.isFinite(value.summary.width)
+      || !isBox(value.avatar)
+      || !isBox(value.links)
+      || !isBox(value.summary)
     ) {
       return null;
     }
