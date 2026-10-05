@@ -2,9 +2,7 @@
 
 import { useEffect, useState, type RefObject } from "react";
 
-/** 四个阅读栏目共用：工具栏跟随导航停靠，日期随当前可见分组更新。 */
-export function useStreamDate(streamRef: RefObject<HTMLElement | null>, revision: unknown) {
-  const [visibleDay, setVisibleDay] = useState<string | null>(null);
+export function useStickyToolbarOffset(streamRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const stream = streamRef.current;
     if (!stream) return;
@@ -26,6 +24,12 @@ export function useStreamDate(streamRef: RefObject<HTMLElement | null>, revision
       stream.style.removeProperty("--stream-toolbar-top");
     };
   }, [streamRef]);
+}
+
+/** 四个阅读栏目共用：工具栏跟随导航停靠，日期随当前可见分组更新。 */
+export function useStreamDate(streamRef: RefObject<HTMLElement | null>, revision: unknown) {
+  const [visibleDay, setVisibleDay] = useState<string | null>(null);
+  useStickyToolbarOffset(streamRef);
 
   useEffect(() => {
     const stream = streamRef.current;

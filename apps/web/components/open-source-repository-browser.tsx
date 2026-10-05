@@ -60,6 +60,15 @@ function formatFileSize(size?: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function fetchRepositoryJson<T>(operation: "repository.tree" | "repository.file", url: string, fallbackError: string) {
+  return io(operation, async (signal) => {
+    const response = await fetch(url, { signal });
+    const result = (await response.json()) as T & { error?: string };
+    if (!response.ok) throw new Error(result.error ?? fallbackError);
+    return result;
+  });
+}
+
 function RepositoryTreeRows({
   depth = 0,
   expanded,
@@ -149,12 +158,11 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
   useEffect(() => {
     const controller = new AbortController();
     void Effect.runPromise(
-      io("repository.tree", async (signal) => {
-        const response = await fetch(`/api/open-source/${encodeURIComponent(slug)}/repository/tree`, { signal });
-        const result = (await response.json()) as RepositoryTreeResponse & { error?: string };
-        if (!response.ok) throw new Error(result.error ?? "暂时无法读取原始仓库结构。");
-        return result;
-      }),
+      fetchRepositoryJson<RepositoryTreeResponse>(
+        "repository.tree",
+        `/api/open-source/${encodeURIComponent(slug)}/repository/tree`,
+        "暂时无法读取原始仓库结构。",
+      ),
       { signal: controller.signal },
     )
       .then(setTree)
@@ -183,15 +191,11 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
     setLoadingFile(true);
     try {
       const result = await Effect.runPromise(
-        io("repository.file", async (signal) => {
-          const response = await fetch(
-            `/api/open-source/${encodeURIComponent(slug)}/repository/file?path=${encodeURIComponent(node.path)}`,
-            { signal },
-          );
-          const result = (await response.json()) as RepositoryFileResponse & { error?: string };
-          if (!response.ok) throw new Error(result.error ?? "暂时无法读取原始文件。");
-          return result;
-        }),
+        fetchRepositoryJson<RepositoryFileResponse>(
+          "repository.file",
+          `/api/open-source/${encodeURIComponent(slug)}/repository/file?path=${encodeURIComponent(node.path)}`,
+          "暂时无法读取原始文件。",
+        ),
       );
       if (requestVersion.current === currentVersion) setFile(result);
     } catch (error) {

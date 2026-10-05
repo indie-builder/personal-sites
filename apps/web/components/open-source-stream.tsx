@@ -2,13 +2,12 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { CheckIcon, ChevronDown } from "lucide-react";
-import { DropdownMenu } from "radix-ui";
 import { useRef, useState } from "react";
 
 import { STREAM_EASE } from "@/components/motion-tokens";
 import styles from "@/components/open-source.module.css";
-import { useStreamDate } from "@/components/use-stream-date";
+import { useStickyToolbarOffset } from "@/components/use-stream-date";
+import { StreamFilterMenu } from "@/components/stream-filter-menu";
 import {
   getOpenSourceCategoryLabel,
   getOpenSourceDimensionLabel,
@@ -27,7 +26,7 @@ export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
   const [category, setCategory] = useState<OpenSourceCategory>("all");
   const [hasFiltered, setHasFiltered] = useState(false);
   const streamRef = useRef<HTMLElement>(null);
-  useStreamDate(streamRef, category);
+  useStickyToolbarOffset(streamRef);
   const reduceMotion = useReducedMotion();
   const categoryCounts = new Map<OpenSourceCategory, number>(
     openSourceCategories.map((item) => [item.id, item.id === "all" ? entries.length : 0]),
@@ -46,32 +45,22 @@ export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
     <section aria-label="已判读的开源项目" className={styles.streamSection} ref={streamRef}>
       <div className="stream-date-toolbar">
         <span className="curation-stream__date">{visibleEntries.length} 个项目</span>
-        <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild>
-            <button aria-label={`筛选开源关注：${filterLabel}`} className="ai-news__category-select" type="button">
-              <span>{filterLabel}</span><ChevronDown aria-hidden="true" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content align="end" sideOffset={4} collisionPadding={16} className={`ai-news__category-menu ${styles.categoryMenu}`}>
-              <DropdownMenu.RadioGroup value={category} onValueChange={(value) => {
-                const next = openSourceCategories.find((item) => item.id === value);
-                if (!next || next.id === category) return;
-                setHasFiltered(true);
-                setCategory(next.id);
-              }}>
-                {openSourceCategories.map((item) => (
-                  <DropdownMenu.RadioItem data-slot="dropdown-menu-radio-item" key={item.id} value={item.id}>
-                    {item.id === "all" ? "全部主题" : item.label} · {categoryCounts.get(item.id) ?? 0}
-                    <span data-slot="dropdown-menu-radio-item-indicator">
-                      <DropdownMenu.ItemIndicator><CheckIcon aria-hidden="true" /></DropdownMenu.ItemIndicator>
-                    </span>
-                  </DropdownMenu.RadioItem>
-                ))}
-              </DropdownMenu.RadioGroup>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+        <StreamFilterMenu
+          ariaLabel={`筛选开源关注：${filterLabel}`}
+          triggerLabel={filterLabel}
+          value={category}
+          options={openSourceCategories.map((item) => ({
+            value: item.id,
+            label: `${item.id === "all" ? "全部主题" : item.label} · ${categoryCounts.get(item.id) ?? 0}`,
+          }))}
+          onSelect={(value) => {
+            const next = openSourceCategories.find((item) => item.id === value);
+            if (!next || next.id === category) return;
+            setHasFiltered(true);
+            setCategory(next.id);
+          }}
+          menuClassName={styles.categoryMenu}
+        />
       </div>
 
       <ol aria-live="polite" className={styles.stream} key={category}>

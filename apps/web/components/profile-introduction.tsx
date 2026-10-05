@@ -77,6 +77,13 @@ export function ProfileIntroduction({
     setTitleIsTyping(false);
   };
 
+  const typeTitleText = async (driver: ReturnType<typeof createTypewriterDriver>, text: string, characterDelay: number, isCancelled: () => boolean) => {
+    setTitleIsTyping(true);
+    await driver.typeText(text, characterDelay, TITLE_PUNCTUATION, setTitleVisibleCount);
+    if (isCancelled()) return;
+    setTitleIsTyping(false);
+  };
+
   useEffect(() => {
     let cancelled = false;
     const showChinese = () => {
@@ -95,13 +102,6 @@ export function ProfileIntroduction({
 
     const driver = createTypewriterDriver();
 
-    const typeGreeting = async (greeting: string) => {
-      setTitleIsTyping(true);
-      await driver.typeText(greeting, GREETING_CHARACTER_DELAY, TITLE_PUNCTUATION, setTitleVisibleCount);
-      if (cancelled) return;
-      setTitleIsTyping(false);
-    };
-
     const cycleGreetings = async () => {
       let nextGreetingIndex = 1;
 
@@ -111,7 +111,7 @@ export function ProfileIntroduction({
 
         setGreetingIndex(nextGreetingIndex);
         setTitleVisibleCount(0);
-        await typeGreeting(GREETINGS[nextGreetingIndex]);
+        await typeTitleText(driver, GREETINGS[nextGreetingIndex], GREETING_CHARACTER_DELAY, () => cancelled);
         if (cancelled) return;
 
         nextGreetingIndex = (nextGreetingIndex + 1) % GREETINGS.length;
@@ -166,13 +166,6 @@ export function ProfileIntroduction({
       }
     };
 
-    const typeTitle = async (title: string, characterDelay: number) => {
-      setTitleIsTyping(true);
-      await driver.typeText(title, characterDelay, TITLE_PUNCTUATION, setTitleVisibleCount);
-      if (cancelled) return;
-      setTitleIsTyping(false);
-    };
-
     const eraseParagraphs = async () => {
       setPhase("erasing");
 
@@ -201,7 +194,7 @@ export function ProfileIntroduction({
       setPhase("english");
       setVisibleCounts(englishParagraphs.map(() => 0));
       setTitleVisibleCount(0);
-      await typeTitle(ENGLISH_TITLE, ENGLISH_CHARACTER_DELAY);
+      await typeTitleText(driver, ENGLISH_TITLE, ENGLISH_CHARACTER_DELAY, () => cancelled);
       if (cancelled) return;
 
       await typeParagraphs(englishParagraphs, ENGLISH_CHARACTER_DELAY);
@@ -223,7 +216,7 @@ export function ProfileIntroduction({
       setPhase("chinese");
       setVisibleCounts(paragraphs.map(() => 0));
       setTitleVisibleCount(0);
-      await typeTitle(CHINESE_TITLE, CHINESE_CHARACTER_DELAY);
+      await typeTitleText(driver, CHINESE_TITLE, CHINESE_CHARACTER_DELAY, () => cancelled);
       if (cancelled) return;
 
       await typeParagraphs(paragraphs, CHINESE_CHARACTER_DELAY);
