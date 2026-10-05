@@ -10,10 +10,10 @@
 RootLayout
 ├─ OpeningLoader（全屏遮罩，每个浏览器会话的首次完整页面加载播放）
 └─ 路由页面
-   ├─ /                         首页（动态渲染，每请求合并 SQLite 历史与 Supabase 增量）
+   ├─ /                         首页（ISR，revalidate = 60）
    │  ├─ Profile rail（sticky，位于数据 Suspense 外）
-   │  └─ 右侧每日动态数据列表流式补入
-   ├─ /ai-news                  每日动态版块（动态渲染，每请求合并 SQLite 历史与 Supabase 增量）
+   │  └─ 右侧每日动态列表（保留 Suspense 边界）
+   ├─ /ai-news                  每日动态版块（ISR，revalidate = 60）
    ├─ /curation                 每日关注版块（仅 X 来源，ISR，revalidate = 300）
    ├─ /design                   设计收藏版块（X 高置信设计相关内容，ISR，视频站内播放）
    ├─ /design/[id]              设计收藏详情（ISR，复用策展详情骨架与设计子集相邻导航）
@@ -38,11 +38,13 @@ RootLayout
       └─ 文档版本切换为客户端状态，中文阅读版服务端渲染
 ```
 
+首页与每日动态版块在预渲染和再验证时合并 SQLite 历史与 Supabase 增量。命中页面缓存时，首屏直接使用缓存内容，无需每次请求都等待 Supabase。缓存超过 60 秒后，下一次请求仍返回旧页面，并触发后台再验证；成功后，后续请求使用新页面。60 秒是再验证间隔，不是内容陈旧时间的上限。两页保留数据 Suspense 边界与加载状态。分页 API 沿用自身的 HTTP 缓存策略，不受页面 `revalidate` 配置控制。
+
 | 区域 | 主文件 | 责任 | 不应承担的责任 |
 |---|---|---|---|
 | 全局壳 | `apps/web/app/layout.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
-| 首页 | `apps/web/app/page.tsx` | 稳定输出身份轨与刊头，仅流式补入每日动态列表 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
-| 版块页 | `apps/web/app/ai-news/page.tsx`、`apps/web/app/curation/page.tsx`、`apps/web/app/design/page.tsx`、`apps/web/app/douyin/page.tsx`、`apps/web/app/open-source/page.tsx` | 单版块的动态或 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
+| 首页 | `apps/web/app/page.tsx` | 稳定输出身份轨、刊头与每日动态列表，保留数据 Suspense 边界 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
+| 版块页 | `apps/web/app/ai-news/page.tsx`、`apps/web/app/curation/page.tsx`、`apps/web/app/design/page.tsx`、`apps/web/app/douyin/page.tsx`、`apps/web/app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
 | 详情页 | `apps/web/app/curation/[id]/page.tsx`、`apps/web/app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `apps/web/components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
 | 个人简介 | `apps/web/components/profile-introduction.tsx`、`apps/web/components/profile-typewriter.ts`、`apps/web/components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
