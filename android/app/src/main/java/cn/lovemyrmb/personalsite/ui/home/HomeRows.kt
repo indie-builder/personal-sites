@@ -22,12 +22,13 @@ import androidx.compose.ui.unit.dp
 import cn.lovemyrmb.personalsite.data.AiNewsListItem
 import cn.lovemyrmb.personalsite.data.CurationItem
 import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
+import cn.lovemyrmb.personalsite.data.authorLabel
 import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
-import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
+import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 
 /** 每日动态行：无图纯文字（与站点列表一致）：标题、导读、时间与来源。 */
 @Composable
@@ -164,9 +165,5 @@ private fun CurationItem.headline(): String = title?.takeIf { it.isNotBlank() }
 private fun curationMeta(item: CurationItem): String = listOfNotNull(
     feedTimeLabel(item.displayTime),
     item.attachments.take(2).joinToString("·").takeIf { it.isNotEmpty() },
-    when (item.source.platform) {
-        "x" -> "@${item.author.handle}".takeIf { item.author.handle.isNotBlank() }
-        "douyin" -> item.author.name.takeIf { it.isNotBlank() }
-        else -> null
-    },
+    item.authorLabel(),
 ).joinToString(" · ")

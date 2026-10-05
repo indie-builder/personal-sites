@@ -276,8 +276,7 @@ private class PersonalSiteViewModelFactory(
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
         when (modelClass) {
             HomeViewModel::class.java -> HomeViewModel(container.api) as T
-            cn.lovemyrmb.personalsite.data.PortfolioViewModel::class.java ->
-                cn.lovemyrmb.personalsite.data.PortfolioViewModel(container.portfolioApi) as T
+            PortfolioViewModel::class.java -> PortfolioViewModel(container.portfolioApi) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: $modelClass")
         }
 }

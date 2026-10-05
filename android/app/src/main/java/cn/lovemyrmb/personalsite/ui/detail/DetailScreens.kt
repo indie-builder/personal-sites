@@ -21,21 +21,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.CurationItem
 import cn.lovemyrmb.personalsite.data.DetailEntry
 import cn.lovemyrmb.personalsite.data.MediaUrls
 import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.data.SiteApi
+import cn.lovemyrmb.personalsite.data.authorLabel
 import cn.lovemyrmb.personalsite.data.dimensionLabels
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
-import cn.lovemyrmb.personalsite.ui.components.hostOf
 import cn.lovemyrmb.personalsite.ui.components.feedTimeLabel
+import cn.lovemyrmb.personalsite.ui.components.hostOf
 import cn.lovemyrmb.personalsite.ui.components.openExternally
-import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
+import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import java.net.URLEncoder
 
 /**
@@ -109,11 +110,7 @@ private fun CurationDetailScreen(
         ) {
             Text(
                 text = listOfNotNull(
-                    when (item.source.platform) {
-                        "x" -> "@${item.author.handle}".takeIf { item.author.handle.isNotBlank() }
-                        "douyin" -> item.author.name.takeIf { it.isNotBlank() }
-                        else -> null
-                    } ?: item.source.label.takeIf { it.isNotBlank() },
+                    item.authorLabel() ?: item.source.label.takeIf { it.isNotBlank() },
                     feedTimeLabel(item.displayTime),
                 ).joinToString(" · "),
                 style = SiteText.meta,

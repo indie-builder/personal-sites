@@ -124,3 +124,22 @@ private val aiNewsCategoryLabels = mapOf(
 )
 
 fun aiNewsCategoryLabel(category: String) = aiNewsCategoryLabels[category] ?: category
+
+/** 列表与详情共用的作者标签;平台无可用作者时返回 null,由调用方决定兜底。 */
+fun CurationItem.authorLabel(): String? = when (source.platform) {
+    "x" -> "@${author.handle}".takeIf { author.handle.isNotBlank() }
+    "douyin" -> author.name.takeIf { it.isNotBlank() }
+    else -> null
+}
+
+/**
+ * 详情页的跳转载体：列表 → 详情通过内存持有（与站内行为一致，
+ * 列表数据已含全文与媒体），进程重建后为空时详情页回退返回。
+ */
+sealed interface DetailEntry {
+    data class AiNews(val id: String) : DetailEntry
+
+    data class Curation(val section: Section, val item: CurationItem) : DetailEntry
+
+    data class OpenSource(val entry: OpenSourceListEntry) : DetailEntry
+}
