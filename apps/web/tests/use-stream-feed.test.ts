@@ -37,83 +37,66 @@ describe("requestStreamPage", () => {
     expect(options.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("网关返回 HTML 错误页时回落兜底文案，不泄漏解析错误", async () => {
-    stubFetchOnce(async () => new Response("<html>502 Bad Gateway</html>", { status: 502 }));
+  it.each([
+    {
+      expected: FALLBACK,
+      name: "网关返回 HTML 错误页时回落兜底文案，不泄漏解析错误",
+      respond: () => new Response("<html>502 Bad Gateway</html>", { status: 502 }),
+    },
+    {
+      expected: "策展内容暂时不可用。",
+      name: "非 2xx 且服务端给出 error 时原样展示服务端文案",
+      respond: () => jsonResponse({ error: "策展内容暂时不可用。" }, { status: 500 }),
+    },
+    {
+      expected: FALLBACK,
+      name: "非 2xx 且响应体不是 JSON 时回落兜底文案",
+      respond: () => new Response("Service Unavailable", { status: 503 }),
+    },
+    {
+      expected: FALLBACK,
+      name: "2xx 但响应体不是 JSON 时回落兜底文案",
+      respond: () => new Response("<html>unexpected</html>"),
+    },
+    {
+      expected: FALLBACK,
+      name: "2xx 但负载形状非法（缺 items/hasMore）时回落兜底文案",
+      respond: () => jsonResponse({}),
+    },
+    {
+      expected: FALLBACK,
+      name: "2xx 但 items 不是数组时回落兜底文案",
+      respond: () => jsonResponse({ hasMore: false, items: "oops" }),
+    },
+    {
+      expected: FALLBACK,
+      name: "非 2xx 且 error 为空串时回落兜底文案",
+      respond: () => jsonResponse({ error: "" }, { status: 500 }),
+    },
+    {
+      expected: FALLBACK,
+      name: "非 2xx 且 error 非字符串时回落兜底文案",
+      respond: () => jsonResponse({ error: { message: "boom" } }, { status: 500 }),
+    },
+    {
+      expected: FALLBACK,
+      name: "网络中断回落兜底文案，不暴露 Failed to fetch",
+      respond: () => {
+        throw new TypeError("Failed to fetch");
+      },
+    },
+    {
+      expected: FALLBACK,
+      name: "请求超时回落兜底文案",
+      respond: () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      },
+    },
+  ])("$name", async ({ expected, respond }) => {
+    stubFetchOnce(async () => respond());
 
     const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
 
-    expect(result).toBe(FALLBACK);
-  });
-
-  it("非 2xx 且服务端给出 error 时原样展示服务端文案", async () => {
-    stubFetchOnce(async () => jsonResponse({ error: "策展内容暂时不可用。" }, { status: 500 }));
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe("策展内容暂时不可用。");
-  });
-
-  it("非 2xx 且响应体不是 JSON 时回落兜底文案", async () => {
-    stubFetchOnce(async () => new Response("Service Unavailable", { status: 503 }));
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe(FALLBACK);
-  });
-
-  it("2xx 但响应体不是 JSON 时回落兜底文案", async () => {
-    stubFetchOnce(async () => new Response("<html>unexpected</html>"));
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe(FALLBACK);
-  });
-
-  it("2xx 但负载形状非法（缺 items/hasMore）时回落兜底文案", async () => {
-    stubFetchOnce(async () => jsonResponse({}));
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe(FALLBACK);
-  });
-
-  it("2xx 但 items 不是数组时回落兜底文案", async () => {
-    stubFetchOnce(async () => jsonResponse({ hasMore: false, items: "oops" }));
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe(FALLBACK);
-  });
-
-  it("非 2xx 且 error 为空串或非字符串时回落兜底文案", async () => {
-    stubFetchOnce(async () => jsonResponse({ error: "" }, { status: 500 }));
-    expect(await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK))).toBe(
-      FALLBACK,
-    );
-
-    stubFetchOnce(async () => jsonResponse({ error: { message: "boom" } }, { status: 500 }));
-    expect(await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK))).toBe(
-      FALLBACK,
-    );
-  });
-
-  it("网络中断回落兜底文案，不暴露 Failed to fetch", async () => {
-    stubFetchOnce(async () => {
-      throw new TypeError("Failed to fetch");
-    });
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe(FALLBACK);
-  });
-
-  it("请求超时回落兜底文案", async () => {
-    stubFetchOnce(async () => {
-      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
-    });
-
-    const result = await Effect.runPromise(requestStreamPage<TestItem>("/api/curation?offset=20&limit=20", FALLBACK));
-
-    expect(result).toBe(FALLBACK);
+    expect(result).toBe(expected);
   });
 });

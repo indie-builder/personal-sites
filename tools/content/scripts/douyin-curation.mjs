@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { runCli } from "@site/effect/cli";
 import { Effect, Semaphore } from "effect";
 import { attempt, io } from "@site/effect";
 
@@ -7,7 +6,6 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
 
 import { createAnalysisReader } from "../modules/analysis/readers.mjs";
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
@@ -19,10 +17,11 @@ import {
 import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
 import { readJsonOr } from "./lib/json-file.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
+import { runCliScript } from "./lib/run-cli.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
 const execFileAsync = promisify(execFile);
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 export function parseArgs(args) {
   const parsed = parseCliOptions(args, {
@@ -266,8 +265,5 @@ export function main(args = process.argv.slice(2)) {
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  runCli(main()).catch((error) => {
-    console.error(`抖音关注处理失败：${error.message}`);
-    process.exitCode = 1;
-  });
+  runCliScript(main(), "抖音关注处理");
 }

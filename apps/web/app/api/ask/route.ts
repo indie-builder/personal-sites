@@ -14,10 +14,8 @@ const sessionSchema = Schema.Struct({
 const requestSchema = Schema.Struct({
   ...sessionSchema.fields,
   format: Schema.optional(Schema.Literals(["text", "openui"])),
-  ...{
-    question: Schema.Trim.check(Schema.isMinLength(2)).check(Schema.isMaxLength(1_000)),
-    scope: Schema.Literals(askScopes),
-  },
+  question: Schema.Trim.check(Schema.isMinLength(2)).check(Schema.isMaxLength(1_000)),
+  scope: Schema.Literals(askScopes),
 });
 
 // x-real-ip 由平台边缘按真实连接对端写入，客户端无法伪造；

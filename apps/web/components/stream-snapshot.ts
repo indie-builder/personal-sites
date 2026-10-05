@@ -1,7 +1,7 @@
-import { Result, Schema, Struct } from "effect";
+import { Result, Schema } from "effect";
 
-import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
-import { curationItemSchema } from "@/lib/curation-types";
+import { aiNewsListRowSchema } from "@/lib/ai-news-types";
+import { curationListItemSchema } from "@/lib/curation-types";
 
 /*
  * 流式列表的会话快照：从详情页返回列表时，恢复已加载的分页与滚动位置。
@@ -67,14 +67,7 @@ function createStreamSnapshot<Snapshot extends StreamSnapshot, Encoded>(config: 
 const aiNewsStreamSnapshotSchema = Schema.Struct({
   activeCategory: Schema.NullOr(Schema.String),
   hasMore: Schema.Boolean,
-  items: Schema.Array(
-    Schema.Struct({
-      ...aiNewsItemContentSchema.mapFields(Struct.omit(["reason", "score", "url"])).fields,
-      selected: Schema.Boolean,
-    }),
-  )
-    .pipe(Schema.mutable)
-    .check(Schema.isMinLength(1)),
+  items: Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable).check(Schema.isMinLength(1)),
   savedAt: Schema.Number.check(Schema.isFinite()),
   scrollTop: Schema.Number.check(Schema.isFinite()).pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
 });
@@ -85,25 +78,6 @@ export const aiNewsStreamSnapshot = createStreamSnapshot({
 });
 
 // —— 剪报簿（每日关注 / 设计收藏 / 抖音收藏共用条目结构，仅存储 key 不同）——
-
-const curationListItemSchema = Schema.Struct({
-  ...curationItemSchema.mapFields(
-    Struct.pick([
-      "author",
-      "collectedAt",
-      "design",
-      "id",
-      "media",
-      "publishedAt",
-      "source",
-      "summary",
-      "tags",
-      "text",
-      "title",
-    ]),
-  ).fields,
-  attachments: Schema.Array(Schema.String).pipe(Schema.mutable),
-});
 
 const curationStreamSnapshotSchema = Schema.Struct({
   hasMore: Schema.Boolean,

@@ -2,6 +2,7 @@ import { Cause, Effect } from "effect";
 import { attempt, io } from "@site/effect";
 import { createClient } from "@supabase/supabase-js";
 
+import { createSupabaseServiceClient } from "../supabase.mjs";
 import { createSupabaseAiNewsStateStore } from "./state.mjs";
 
 // 上游 AI 资讯聚合接口：匿名只读、无需密钥。精选与全部动态两个 feed 都同步原始数据，
@@ -120,9 +121,11 @@ export function syncAiNews({
 } = {}) {
   return Effect.gen(function* () {
     const client = yield* attempt("ai-news.client", () =>
-      clientFactory(requireEnvironment(env, "SUPABASE_URL"), requireEnvironment(env, "SUPABASE_SERVICE_ROLE_KEY"), {
-        auth: { autoRefreshToken: false, persistSession: false },
-      }),
+      createSupabaseServiceClient(
+        requireEnvironment(env, "SUPABASE_URL"),
+        requireEnvironment(env, "SUPABASE_SERVICE_ROLE_KEY"),
+        clientFactory,
+      ),
     );
     const stateStore = providedStateStore ?? createSupabaseAiNewsStateStore(client);
     const lease = yield* stateStore.acquire({ now });

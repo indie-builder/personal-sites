@@ -15,14 +15,13 @@ import { Effect } from "effect";
 import { createHash } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { isReadyForPublication, toPublicCurationItem } from "../modules/x-sync/curation-projection.mjs";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 import { buildCurationInsights, renderCurationInsightsMarkdown } from "../modules/x-sync/insights.mjs";
 import { writeJsonAtomically, writeTextAtomically } from "./lib/atomic-file.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));
 
 const queuePath = path.join(repoRoot, config.queueFile);

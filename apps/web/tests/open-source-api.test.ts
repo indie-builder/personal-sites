@@ -13,7 +13,8 @@ const fakeDb = {
 };
 let currentRows: FakeRow[] = [];
 
-vi.mock("../lib/public-database", () => ({
+vi.mock("../lib/public-database", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/public-database")>()),
   getPublicDatabase: () => fakeDb,
 }));
 

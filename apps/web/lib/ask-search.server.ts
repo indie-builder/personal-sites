@@ -58,16 +58,8 @@ function searchDocuments(query: string, scope: AskScope) {
 }
 
 function toAskSource(document: SearchDocument): AskSource {
-  return {
-    content: document.content,
-    id: document.id,
-    publishedAt: document.publishedAt,
-    scope: document.scope,
-    section: document.section,
-    sourceId: document.sourceId,
-    sourceUrl: document.sourceUrl,
-    title: document.title,
-  };
+  const { score: _, ...source } = document;
+  return source;
 }
 
 export function searchAskDocuments(query: string, scope: AskScope) {

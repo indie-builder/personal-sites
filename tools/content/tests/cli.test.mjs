@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { registerHooks } from "node:module";
 import { Effect } from "effect";
 import { runCli } from "@site/effect/cli";
 import test from "node:test";
 import { parseCliOptions } from "../scripts/lib/cli.mjs";
+import { registerCliMocks } from "./helpers/cli-mock.mjs";
 
 test("AI news CLI defers work and lets SIGTERM finish sync finalizers", async () => {
   const cliUrl = new URL("../scripts/ai-news-sync.mjs", import.meta.url);
@@ -21,25 +21,16 @@ test("AI news CLI defers work and lets SIGTERM finish sync finalizers", async ()
     }).pipe(Effect.ensuring(Effect.sync(() => { finalized = true; }))),
   };
   const adapters = new Map([
-    ["@site/public-data/ai-news/sync.mjs", "syncAiNews"],
-    ["../../../scripts/lib/load-local-env.mjs", "loadLocalEnv"],
+    ["@site/public-data/ai-news/sync.mjs", ["syncAiNews"]],
+    ["../../../scripts/lib/load-local-env.mjs", ["loadLocalEnv"]],
   ]);
   const originalExitCode = process.exitCode;
   globalThis[key] = state;
-  const hooks = registerHooks({
-    resolve(specifier, context, nextResolve) {
-      if (context.parentURL === cliUrl.href && adapters.has(specifier)) {
-        return { url: `ai-news-test:${adapters.get(specifier)}`, shortCircuit: true };
-      }
-      return nextResolve(specifier, context);
-    },
-    load(url, context, nextLoad) {
-      if (url.startsWith("ai-news-test:")) {
-        const name = url.slice("ai-news-test:".length);
-        return { format: "module", source: `export const ${name} = globalThis.${key}.${name};`, shortCircuit: true };
-      }
-      return nextLoad(url, context);
-    },
+  const hooks = registerCliMocks({
+    key,
+    scheme: "ai-news-test",
+    matches: (parentURL) => parentURL === cliUrl.href,
+    mockExports: adapters,
   });
   try {
     const { main } = await import(cliUrl.href);

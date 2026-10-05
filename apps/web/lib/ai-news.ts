@@ -2,10 +2,10 @@ import { Effect } from "effect";
 import { attempt, io } from "@site/effect";
 import "server-only";
 
-import { cache } from "react";
-import { Schema, Struct } from "effect";
+import { Schema } from "effect";
 
-import { aiNewsItemContentSchema } from "@/lib/ai-news-types";
+import { aiNewsItemContentSchema, aiNewsListRowSchema } from "@/lib/ai-news-types";
+import { cachedRequest } from "@/lib/cached-request";
 import { getPublicSupabaseClient } from "@/lib/supabase.server";
 import { getAiNewsArchive } from "@/lib/ai-news-archive.server";
 import {
@@ -24,26 +24,18 @@ function getPublicAiNewsClient() {
 }
 
 const aiNewsRowSchema = Schema.Struct({ content: aiNewsItemContentSchema, selected: Schema.Boolean });
-const aiNewsListRowSchema = Schema.Struct({
-  ...aiNewsItemContentSchema.mapFields(Struct.omit(["reason", "score", "url"])).fields,
-  selected: Schema.Boolean,
-});
 const listSelect =
   "category:content->>category,id,publishedAt:content->>publishedAt,selected,sourceName:content->>sourceName,summary:content->>summary,title:content->>title";
 
 // Read changes since this deployment's snapshot, including late arrivals and corrections to old items.
 // ponytail: merge the small live window in memory; use a server-side cursor if its volume becomes large.
-const readLiveList = cache(() =>
-  Effect.runSync(
-    Effect.cached(
-      Effect.gen(function* () {
-        const client = yield* attempt("ai-news.client", getPublicAiNewsClient);
-        const metadata = yield* attempt("ai-news.archive", () => archiveMetadata(getAiNewsArchive()));
-        const rows = yield* readPublicRows(client, { select: listSelect, changedSince: metadata });
-        return yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(rows);
-      }),
-    ),
-  ),
+const readLiveList = cachedRequest(() =>
+  Effect.gen(function* () {
+    const client = yield* attempt("ai-news.client", getPublicAiNewsClient);
+    const metadata = yield* attempt("ai-news.archive", () => archiveMetadata(getAiNewsArchive()));
+    const rows = yield* readPublicRows(client, { select: listSelect, changedSince: metadata });
+    return yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(rows);
+  }),
 );
 
 export function getAiNewsPage(offset = 0, limit = AI_NEWS_LIST_LIMIT) {
@@ -68,24 +60,20 @@ export function getAiNewsPage(offset = 0, limit = AI_NEWS_LIST_LIMIT) {
   });
 }
 
-export const getAiNewsItem = cache((id: string) =>
-  Effect.runSync(
-    Effect.cached(
-      Effect.gen(function* () {
-        const archive = yield* attempt("ai-news.archive", getAiNewsArchive);
-        const archived = yield* attempt("ai-news.item", () => readArchivedItem(archive, id));
-        const metadata = yield* attempt("ai-news.metadata", () => archiveMetadata(archive));
-        const client = yield* attempt("ai-news.client", getPublicAiNewsClient);
-        let query = client.from("ai_news_public_items").select("content,selected").eq("id", id);
-        if (archived && metadata) query = query.gte("synced_at", metadata.capturedAt);
-        const { data, error } = yield* io("ai-news.detail", () => query.maybeSingle());
-        if (error) return yield* Effect.fail(new Error(`读取 Supabase 每日动态详情失败：${error.message}`));
-        if (!data) return archived;
-        const row = yield* Schema.decodeUnknownEffect(aiNewsRowSchema)(data);
-        return { ...row.content, selected: row.selected };
-      }),
-    ),
-  ),
+export const getAiNewsItem = cachedRequest((id: string) =>
+  Effect.gen(function* () {
+    const archive = yield* attempt("ai-news.archive", getAiNewsArchive);
+    const archived = yield* attempt("ai-news.item", () => readArchivedItem(archive, id));
+    const metadata = yield* attempt("ai-news.metadata", () => archiveMetadata(archive));
+    const client = yield* attempt("ai-news.client", getPublicAiNewsClient);
+    let query = client.from("ai_news_public_items").select("content,selected").eq("id", id);
+    if (archived && metadata) query = query.gte("synced_at", metadata.capturedAt);
+    const { data, error } = yield* io("ai-news.detail", () => query.maybeSingle());
+    if (error) return yield* Effect.fail(new Error(`读取 Supabase 每日动态详情失败：${error.message}`));
+    if (!data) return archived;
+    const row = yield* Schema.decodeUnknownEffect(aiNewsRowSchema)(data);
+    return { ...row.content, selected: row.selected };
+  }),
 );
 
 const aiNewsSearchRowSchema = Schema.Struct({

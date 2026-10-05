@@ -5,8 +5,8 @@ import { Effect } from "effect";
 import { readFile } from "node:fs/promises";
 
 import { readJsonOr } from "./lib/json-file.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { toPublicDouyinItem } from "../modules/douyin-sync/curation-projection.mjs";
 import { PUBLIC_DATABASE_PATH } from "@site/public-data/sqlite.mjs";
@@ -15,7 +15,6 @@ import { summarizeDesignClassifications } from "../modules/x-sync/design-classif
 import { isReadyForPublication, toPublicCurationItem } from "../modules/x-sync/curation-projection.mjs";
 import { rebuildDefaultIndex } from "../modules/local-vectors/indexer.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));
 const queue = JSON.parse(await readFile(path.join(repoRoot, config.queueFile), "utf8"));
 const douyinConfig = JSON.parse(await readFile(path.join(repoRoot, "config/douyin-curation.json"), "utf8"));

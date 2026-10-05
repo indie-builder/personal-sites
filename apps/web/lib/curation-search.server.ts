@@ -100,17 +100,8 @@ function searchLocalAskFts(query: string, scope: LocalAskDocument["scope"], limi
 }
 
 function toAskDocument(entry: DailySearchCorpusEntry, score: number): LocalAskDocument {
-  return {
-    content: entry.content,
-    id: entry.id,
-    publishedAt: entry.publishedAt,
-    score,
-    scope: entry.scope,
-    section: entry.section,
-    sourceId: entry.sourceId,
-    sourceUrl: entry.sourceUrl,
-    title: entry.title,
-  };
+  const { lowercaseContent: _content, lowercaseSearchText: _searchText, lowercaseTitle: _title, ...document } = entry;
+  return { ...document, score };
 }
 
 export function searchLocalAskDocuments(

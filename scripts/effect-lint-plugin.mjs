@@ -14,7 +14,7 @@ export default {
           runtime: "Return the Effect from business code; execute it at the CLI, framework or test boundary.",
           cliRuntime: "Use runCli so cancellation waits for scoped cleanup.",
           exit: "Return or fail the Effect and set process.exitCode at the boundary; process.exit skips cleanup.",
-          missingCli: "This CLI must import runCli from @site/effect/cli.",
+          missingCli: "This CLI must import runCli from @site/effect/cli, or runCliScript from ./lib/run-cli.mjs.",
           retry: "Use explicit retry options with a bounded times value, schedule and while predicate.",
           expectedFailure: "Use Effect.fail or attempt for expected failures; throwing inside Effect.gen/sync produces a defect.",
         },
@@ -33,6 +33,9 @@ export default {
           ImportDeclaration(node) {
             if (node.source.value === "@site/effect/cli") {
               hasRunCli ||= node.specifiers.some((item) => item.imported?.name === "runCli");
+            }
+            if (node.source.value === "./lib/run-cli.mjs") {
+              hasRunCli ||= node.specifiers.some((item) => item.imported?.name === "runCliScript");
             }
             if (node.source.value === "effect") {
               for (const item of node.specifiers) {

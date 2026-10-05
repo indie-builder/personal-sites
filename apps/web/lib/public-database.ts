@@ -3,8 +3,11 @@ import "server-only";
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { Schema } from "effect";
 
 export const PUBLIC_DATABASE_PATH = path.join(process.cwd(), "data/curation.sqlite");
+
+export const contentJsonRowSchema = Schema.Struct({ content_json: Schema.String.check(Schema.isMinLength(1)) });
 
 let database: Database.Database | undefined;
 

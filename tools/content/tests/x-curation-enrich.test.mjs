@@ -4,11 +4,11 @@ import { isTransientModelError, withModelRetry } from "../modules/analysis/retry
 import { TestClock } from "effect/testing";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { registerHooks } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
+import { registerCliMocks } from "./helpers/cli-mock.mjs";
 
 const cliUrl = new URL("../scripts/x-curation-enrich.mjs", import.meta.url);
 const repoRoot = path.resolve(path.dirname(cliUrl.pathname), "../../..");
@@ -26,24 +26,12 @@ function mockCliAdapters(key, state) {
     ["./lib/atomic-file.mjs", ["writeTextAtomically"]],
   ]);
   if (state.runCli) mockExports.set("@site/effect/cli", ["runCli"]);
-  const sources = new Map();
-  for (const [specifier, names] of mockExports) {
-    const url = `site-enrich-test:${key}/${encodeURIComponent(specifier)}`;
-    sources.set(url, names.map((name) =>
-      `export const ${name} = globalThis[${JSON.stringify(key)}].${Object.hasOwn(state, name) ? name : `forbidden(${JSON.stringify(name)})`};`,
-    ).join("\n"));
-  }
-  return registerHooks({
-    resolve(specifier, context, nextResolve) {
-      if (context.parentURL?.startsWith(cliUrl.href) && mockExports.has(specifier)) {
-        return { url: `site-enrich-test:${key}/${encodeURIComponent(specifier)}`, shortCircuit: true };
-      }
-      return nextResolve(specifier, context);
-    },
-    load(url, context, nextLoad) {
-      if (sources.has(url)) return { format: "module", source: sources.get(url), shortCircuit: true };
-      return nextLoad(url, context);
-    },
+  return registerCliMocks({
+    key,
+    scheme: "site-enrich-test",
+    matches: (parentURL) => parentURL?.startsWith(cliUrl.href),
+    mockExports,
+    missingName: (name) => (Object.hasOwn(state, name) ? name : `forbidden(${JSON.stringify(name)})`),
   });
 }
 

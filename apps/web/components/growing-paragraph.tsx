@@ -19,12 +19,10 @@ export function GrowingParagraph({ children, reduceMotion }: { children: ReactNo
       outer.style.height = `${nextHeight}px`;
       previousHeight = nextHeight;
       // Animate only actual line-height changes, not every typed character.
-      if (!reduceMotion) {
-        animation = outer.animate([{ height: `${fromHeight}px` }, { height: `${nextHeight}px` }], {
-          duration: 220,
-          easing: "cubic-bezier(.23,1,.32,1)",
-        });
-      }
+      animation = outer.animate([{ height: `${fromHeight}px` }, { height: `${nextHeight}px` }], {
+        duration: 220,
+        easing: "cubic-bezier(.23,1,.32,1)",
+      });
     });
     observer.observe(inner);
     return () => {

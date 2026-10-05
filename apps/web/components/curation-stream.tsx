@@ -13,8 +13,6 @@
 import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import Link from "next/link";
-import { CheckIcon, ChevronDown } from "lucide-react";
-import { DropdownMenu } from "radix-ui";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
@@ -26,6 +24,8 @@ import { STREAM_EASE } from "./motion-tokens";
 import { curationStreamSnapshot } from "./stream-snapshot";
 import { useStreamFeed } from "./use-stream-feed";
 import { getCurationScrollTarget } from "./curation-scroll";
+import { StreamFilterMenu } from "./stream-filter-menu";
+import { StreamSkeletonLines } from "./stream-skeleton";
 
 const TAG_STORAGE_KEY = "curation-active-tag";
 
@@ -57,24 +57,14 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
     if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: "auto", top: 0 });
   };
   const selected = tags.find(({ tag }) => tag === activeTag);
-  const filter = <DropdownMenu.Root modal={false}>
-    <DropdownMenu.Trigger asChild>
-      <button aria-label={`筛选每日关注：${activeTag ?? "全部主题"}`} className="ai-news__category-select" type="button">
-        <span>{activeTag ?? "全部主题"}</span><ChevronDown aria-hidden="true" />
-      </button>
-    </DropdownMenu.Trigger>
-    <DropdownMenu.Portal>
-      <DropdownMenu.Content align="end" sideOffset={4} collisionPadding={16} className="ai-news__category-menu curation-category-menu">
-        <DropdownMenu.RadioGroup value={activeTag ?? "all"} onValueChange={selectTag}>
-          {[{ tag: "all", label: "全部主题" }, ...tags.map(({ tag, count }) => ({ tag, label: `${tag} · ${count}` }))].map(({ tag, label }) =>
-            <DropdownMenu.RadioItem data-slot="dropdown-menu-radio-item" key={tag} value={tag}>
-              {label}
-              <span data-slot="dropdown-menu-radio-item-indicator"><DropdownMenu.ItemIndicator><CheckIcon aria-hidden="true" /></DropdownMenu.ItemIndicator></span>
-            </DropdownMenu.RadioItem>)}
-        </DropdownMenu.RadioGroup>
-      </DropdownMenu.Content>
-    </DropdownMenu.Portal>
-  </DropdownMenu.Root>;
+  const filter = <StreamFilterMenu
+    ariaLabel={`筛选每日关注：${activeTag ?? "全部主题"}`}
+    triggerLabel={activeTag ?? "全部主题"}
+    value={activeTag ?? "all"}
+    options={[{ value: "all", label: "全部主题" }, ...tags.map(({ tag, count }) => ({ value: tag, label: `${tag} · ${count}` }))]}
+    onSelect={selectTag}
+    menuClassName="curation-category-menu"
+  />;
 
   return <div ref={wrapperRef}>
     <CurationStream
@@ -222,11 +212,7 @@ export function CurationStream({
         {isLoading ? (
           <>
             <span className="sr-only">正在加载更多内容</span>
-            <div aria-hidden="true" className="curation-home__stream-skeleton">
-              <span />
-              <span className="is-medium" />
-              <span className="is-short" />
-            </div>
+            <div aria-hidden="true" className="curation-home__stream-skeleton"><StreamSkeletonLines /></div>
           </>
         ) : null}
         {loadError ? (

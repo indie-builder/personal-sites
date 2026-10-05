@@ -7,6 +7,7 @@ import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import { ContentSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
 import { SiteProfile } from "@/components/site-profile";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { StreamSkeletonLines } from "@/components/stream-skeleton";
 import styles from "@/components/open-source.module.css";
 
 /** 列表页流式骨架：与列表加载更多的骨架共用同一套样式。 */
@@ -14,9 +15,7 @@ export function FeedSkeleton({ label }: { label?: string }) {
   return (
     <div aria-atomic={label ? "true" : undefined} aria-busy="true" aria-live="polite" className="curation-home__stream-skeleton" role={label ? "status" : undefined}>
       {label ? <p className="curation-home__stream-loading">正在读取{label}…</p> : null}
-      <span />
-      <span className="is-medium" />
-      <span className="is-short" />
+      <StreamSkeletonLines />
     </div>
   );
 }

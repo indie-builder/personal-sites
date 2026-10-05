@@ -36,3 +36,13 @@ export function mergeXMedia(existing = [], incoming = []) {
   const existingKeys = new Set(existing.map(mediaKey));
   return [...merged, ...normalizedIncoming.filter((media) => !existingKeys.has(mediaKey(media)))];
 }
+
+/** 从推文正文提取去重后的 t.co 短链（保持未展开）；入参须为字符串，可为空文本。 */
+export function extractShortLinks(text) {
+  const urls = text.match(/https?:\/\/t\.co\/\w+/gu) ?? [];
+  return [...new Set(urls)].map((url) => ({
+    original: url,
+    expanded: null,
+    type: "unexpanded",
+  }));
+}

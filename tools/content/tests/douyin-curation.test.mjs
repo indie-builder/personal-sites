@@ -1,10 +1,11 @@
 import { attempt } from "@site/effect";
 import { Cause, Effect, Exit, Fiber } from "effect";
 import assert from "node:assert/strict";
-import { registerHooks } from "node:module";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
+
+import { registerCliMocks } from "./helpers/cli-mock.mjs";
 
 import { toPublicDouyinItem } from "../modules/douyin-sync/curation-projection.mjs";
 import {
@@ -171,6 +172,7 @@ for (const scenario of [
 ]) {
   test(`Douyin CLI settles ${scenario.name} input and persists later successes`, async () => {
     const cliUrl = new URL("../scripts/douyin-curation.mjs", import.meta.url);
+    const runnerUrl = new URL("../scripts/lib/run-cli.mjs", import.meta.url);
     const repoRoot = path.resolve(path.dirname(cliUrl.pathname), "../../..");
     const key = `douyinCli_${scenario.name}`;
     const queuePath = path.join(repoRoot, "synthetic-douyin/queue.json");
@@ -240,10 +242,6 @@ for (const scenario of [
       ["./lib/atomic-file.mjs", ["writeTextAtomically", "writeJsonAtomically"]],
       ["@site/effect/cli", ["runCli"]],
     ]);
-    const sources = new Map([...adapters].map(([specifier, names]) => [
-      `douyin-test:${key}/${encodeURIComponent(specifier)}`,
-      names.map((name) => `export const ${name} = globalThis[${JSON.stringify(key)}].${name};`).join("\n"),
-    ]));
     const originalArgs = process.argv;
     const originalExitCode = process.exitCode;
     const originalConsole = { log: console.log, error: console.error };
@@ -253,17 +251,18 @@ for (const scenario of [
       process.argv = [process.execPath, `${cliUrl.pathname}?${key}`, "sync", "--manifest", manifestPath, "--concurrency", "1"];
       process.exitCode = 0;
       console.log = console.error = (...values) => logs.push(values.join(" "));
-      hooks = registerHooks({
-        resolve(specifier, context, nextResolve) {
-          if (context.parentURL === `${cliUrl.href}?${key}` && adapters.has(specifier)) {
-            return { url: `douyin-test:${key}/${encodeURIComponent(specifier)}`, shortCircuit: true };
-          }
-          return nextResolve(specifier, context);
-        },
-        load(url, context, nextLoad) {
-          if (sources.has(url)) return { format: "module", source: sources.get(url), shortCircuit: true };
-          return nextLoad(url, context);
-        },
+      // runCli 调用收敛在 lib/run-cli.mjs；按场景加查询串隔离实例，其 runCli mock 才能逐场景生效。
+      hooks = registerCliMocks({
+        key,
+        scheme: "douyin-test",
+        matches: (parentURL, specifier) =>
+          (parentURL === `${cliUrl.href}?${key}` && adapters.has(specifier)) ||
+          (parentURL === `${runnerUrl.href}?${key}` && specifier === "@site/effect/cli"),
+        mockExports: adapters,
+        rewrite: (specifier, parentURL) =>
+          parentURL === `${cliUrl.href}?${key}` && specifier === "./lib/run-cli.mjs"
+            ? `${runnerUrl.href}?${key}`
+            : null,
       });
       await import(`${cliUrl.href}?${key}`);
       assert.ok(running, "execute the real CLI entry point");
