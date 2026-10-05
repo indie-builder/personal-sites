@@ -23,8 +23,7 @@ nonisolated struct SiteAPI: Sendable {
 
     /// 栏目分页：{path}?offset=&limit=。
     func feed<T: Decodable>(_ section: Section, offset: Int) async throws -> FeedPage<T> {
-        let page: FeedPage<T> = try await get(url: Self.url(section.path, ["offset": "\(offset)", "limit": "\(section.pageSize)"]))
-        return page
+        try await get(url: Self.url(section.path, ["offset": "\(offset)", "limit": "\(section.pageSize)"]))
     }
 
     func aiNewsDetail(id: String) async throws -> AiNewsItem {

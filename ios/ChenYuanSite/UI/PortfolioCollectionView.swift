@@ -39,42 +39,42 @@ struct PortfolioCollectionView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
             if !showsShelf {
-            HStack {
-                if collection == "layouts" {
-                    Button {
-                        query = ""; category = ""; topic = ""; browsingAll = false
-                    } label: {
-                        Label("书架", systemImage: "books.vertical").font(SiteText.label).frame(minHeight: 48)
+                HStack {
+                    if collection == "layouts" {
+                        Button {
+                            query = ""; category = ""; topic = ""; browsingAll = false
+                        } label: {
+                            Label("书架", systemImage: "books.vertical").font(SiteText.label).frame(minHeight: 48)
+                        }
                     }
-                }
-                Menu {
-                    Button("全部分类") { category = ""; topic = ""; browsingAll = true }
-                    ForEach(categories) { value in
-                        Button(value.name) { category = value.id; topic = "" }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(categories.first(where: { $0.id == category })?.name ?? "全部分类")
-                        Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
-                    }
-                    .font(SiteText.label).frame(minHeight: 48)
-                }
-                if collection == "layouts" {
                     Menu {
-                        Button("全部主题") { topic = "" }
-                        ForEach(topics) { value in Button(value.name) { topic = value.id } }
+                        Button("全部分类") { category = ""; topic = ""; browsingAll = true }
+                        ForEach(categories) { value in
+                            Button(value.name) { category = value.id; topic = "" }
+                        }
                     } label: {
                         HStack(spacing: 6) {
-                            Text(topics.first(where: { $0.id == topic })?.name ?? "全部主题")
+                            Text(categories.first(where: { $0.id == category })?.name ?? "全部分类")
                             Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
                         }
                         .font(SiteText.label).frame(minHeight: 48)
                     }
+                    if collection == "layouts" {
+                        Menu {
+                            Button("全部主题") { topic = "" }
+                            ForEach(topics) { value in Button(value.name) { topic = value.id } }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(topics.first(where: { $0.id == topic })?.name ?? "全部主题")
+                                Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+                            }
+                            .font(SiteText.label).frame(minHeight: 48)
+                        }
+                    }
+                    Spacer()
+                    Text("\(total) 件").siteMetaStyle().monospacedDigit()
                 }
-                Spacer()
-                Text("\(total) 件").siteMetaStyle().monospacedDigit()
-            }
-            .foregroundStyle(SiteTheme.ink).padding(.horizontal, 20)
+                .foregroundStyle(SiteTheme.ink).padding(.horizontal, 20)
             }
             ScrollView {
                 if showsShelf {
@@ -98,52 +98,52 @@ struct PortfolioCollectionView: View {
                         .buttonStyle(.plain).padding(.horizontal, 24).padding(.bottom, 24)
                     }
                 } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 14)], spacing: 24) {
-                    ForEach(items) { item in
-                        Button { selectedItem = item } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                GeometryReader { geometry in
-                                    ZStack(alignment: .bottomTrailing) {
-                                        if item.thumbnail.isEmpty {
-                                            SiteTheme.line.opacity(0.45)
-                                                .overlay { Image(systemName: "photo").foregroundStyle(SiteTheme.muted) }
-                                        } else if collection == "layouts" {
-                                            RemoteImage(url: URL(string: item.thumbnail), contentMode: .fit)
-                                                .frame(width: geometry.size.width, height: geometry.size.height)
-                                        } else {
-                                            DownsampledThumbnail(urlString: item.thumbnail, targetSize: CGSize(width: 200, height: 160))
-                                                .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 14)], spacing: 24) {
+                        ForEach(items) { item in
+                            Button { selectedItem = item } label: {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    GeometryReader { geometry in
+                                        ZStack(alignment: .bottomTrailing) {
+                                            if item.thumbnail.isEmpty {
+                                                SiteTheme.line.opacity(0.45)
+                                                    .overlay { Image(systemName: "photo").foregroundStyle(SiteTheme.muted) }
+                                            } else if collection == "layouts" {
+                                                RemoteImage(url: URL(string: item.thumbnail), contentMode: .fit)
+                                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                            } else {
+                                                DownsampledThumbnail(urlString: item.thumbnail, targetSize: CGSize(width: 200, height: 160))
+                                                    .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                                            }
+                                            if item.media.first?.kind == "video" {
+                                                Image(systemName: "play.fill").font(.system(size: 10, weight: .semibold))
+                                                    .foregroundStyle(.white)
+                                                    .frame(width: 26, height: 26)
+                                                    .background(.black.opacity(0.65), in: Circle()).padding(8)
+                                            }
                                         }
-                                        if item.media.first?.kind == "video" {
-                                            Image(systemName: "play.fill").font(.system(size: 10, weight: .semibold))
-                                                .foregroundStyle(.white)
-                                                .frame(width: 26, height: 26)
-                                                .background(.black.opacity(0.65), in: Circle()).padding(8)
-                                        }
+                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                        .background(SiteTheme.line.opacity(0.35)).clipped()
                                     }
-                                    .frame(width: geometry.size.width, height: geometry.size.height)
-                                    .background(SiteTheme.line.opacity(0.35)).clipped()
+                                    .aspectRatio(collection == "layouts" ? 0.72 : 1.25, contentMode: .fit)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    Text(item.title).font(SiteText.listTitle).lineLimit(2).multilineTextAlignment(.leading)
+                                    Text(item.author.isEmpty ? item.category : item.author).siteMetaStyle().lineLimit(1)
                                 }
-                                .aspectRatio(collection == "layouts" ? 0.72 : 1.25, contentMode: .fit)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                Text(item.title).font(SiteText.listTitle).lineLimit(2).multilineTextAlignment(.leading)
-                                Text(item.author.isEmpty ? item.category : item.author).siteMetaStyle().lineLimit(1)
+                                .foregroundStyle(SiteTheme.ink).frame(maxWidth: .infinity, alignment: .topLeading)
+                                .contentShape(Rectangle())
                             }
-                            .foregroundStyle(SiteTheme.ink).frame(maxWidth: .infinity, alignment: .topLeading)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("portfolio-item-\(item.id)")
-                        .onAppear {
-                            if item.id == items.last?.id, hasMore, !loading, !error {
-                                Task { await load(reset: false) }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("portfolio-item-\(item.id)")
+                            .onAppear {
+                                if item.id == items.last?.id, hasMore, !loading, !error {
+                                    Task { await load(reset: false) }
+                                }
                             }
                         }
                     }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
-                }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
+                    }
                 if loading { ProgressView().padding(24) }
                 else if error {
                     ErrorRetry(message: "暂时无法读取内容，请重试。") { Task { await load(reset: items.isEmpty) } }
