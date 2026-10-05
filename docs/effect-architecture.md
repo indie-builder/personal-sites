@@ -1,6 +1,6 @@
 # Effect 开发规则
 
-本项目的 TypeScript/JavaScript 业务 I/O 和异步流程默认使用 Effect。当前统一固定 `effect@4.0.0`（稳定版），升级时一起更新所有工作区与 lockfile。
+本项目的 TypeScript/JavaScript 业务 I/O 和异步流程默认使用 Effect。当前统一固定 `effect@4.0.1`（稳定版），升级时一起更新所有工作区与 lockfile。
 
 ## 边界
 

@@ -42,7 +42,7 @@
     "@site/public-data": "workspace:*",
     "@supabase/supabase-js": "2.117.2",
     "better-sqlite3": "^13.0.3",
-    "effect": "4.0.0",
+    "effect": "4.0.1",
     "sqlite-vec": "0.1.9"
   },
   "devDependencies": {
