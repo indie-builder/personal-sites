@@ -1,6 +1,5 @@
 import { Effect } from "effect";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { copyFileSync, renameSync, rmSync } from "node:fs";
 import {
   archiveCutoff,
@@ -12,9 +11,9 @@ import {
   saveArchive,
 } from "@site/public-data/ai-news/archive.mjs";
 import { createSupabaseServiceClient } from "@site/public-data/supabase.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 loadLocalEnv(repoRoot);
 const archivePath = path.join(repoRoot, ARCHIVE_PATH);
 const client = createSupabaseServiceClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);

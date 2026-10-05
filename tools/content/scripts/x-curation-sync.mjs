@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { runCli } from "@site/effect/cli";
 import { Effect } from "effect";
 import { io } from "@site/effect";
 /**
@@ -12,9 +11,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { parseCliOptions } from "./lib/cli.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
+import { runCliScript } from "./lib/run-cli.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 import {
@@ -24,7 +24,6 @@ import {
 } from "../modules/analysis/runtime.mjs";
 import { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const execFileAsync = promisify(execFile);
 
 export function parseSyncArgs(args) {
@@ -191,8 +190,5 @@ function main() {
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  runCli(main()).catch((error) => {
-    console.error(`X 策展同步失败：${error.message}`);
-    process.exitCode = 1;
-  });
+  runCliScript(main(), "X 策展同步");
 }

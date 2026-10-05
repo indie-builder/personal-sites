@@ -9,7 +9,6 @@ import { io } from "@site/effect";
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { openSourceEntries } from "../../../config/open-source-curation.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
@@ -22,9 +21,9 @@ import {
 import { publishStarredRecords } from "../modules/github-starred/publish-to-sqlite.mjs";
 import { readLocalSourceRecords, syncStarredRepositories } from "../modules/github-starred/source.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/github-sync.json"), "utf8"));
 loadLocalEnv(repoRoot);
 

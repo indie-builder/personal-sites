@@ -15,16 +15,15 @@ import { io } from "@site/effect";
  */
 
 import { mkdir, readFile, readdir, stat } from "node:fs/promises";
+import path from "node:path";
 
 import { readJsonOr } from "./lib/json-file.mjs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { extractShortLinks, mergeXMedia, normalizeXMedia } from "../modules/x-sync/media.mjs";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 import { writeJsonAtomically } from "./lib/atomic-file.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const config = JSON.parse(await readFile(path.join(repoRoot, "config/x-curation.json"), "utf8"));
 
 const rawDir = path.join(repoRoot, config.rawDir);

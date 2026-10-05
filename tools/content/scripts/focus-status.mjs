@@ -3,16 +3,15 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import Database from "better-sqlite3";
 
 import { readPublicDataHealth } from "@site/public-data/data-health/sqlite.mjs";
 import { buildDataHealth } from "@site/public-data/data-health/status.mjs";
 import { createSupabaseServiceClient } from "@site/public-data/supabase.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 import { loadLocalEnv } from "../../../scripts/lib/load-local-env.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 loadLocalEnv(repoRoot);
 
 function requiredEnvironment(key) {

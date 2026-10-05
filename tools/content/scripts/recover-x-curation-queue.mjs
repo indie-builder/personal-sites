@@ -3,13 +3,12 @@ import { Effect } from "effect";
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
 import { extractShortLinks } from "../modules/x-sync/media.mjs";
 import { writeJsonAtomically } from "./lib/atomic-file.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const root = path.join(repoRoot, "data/sensitive/x-curation");
 const queuePath = path.join(root, "curation-queue.json");
 const generatedPath = path.join(root, "generated/curation.json");

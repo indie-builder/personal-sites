@@ -1,17 +1,16 @@
 #!/usr/bin/env node
-import { runCli } from "@site/effect/cli";
 import { Effect } from "effect";
 
 import { runCommand } from "../modules/x-sync/pipeline.mjs";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { DEFAULT_ANALYSIS_ENGINE, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
 import { readJsonOr } from "./lib/json-file.mjs";
+import { repoRoot } from "./lib/repo-root.mjs";
+import { runCliScript } from "./lib/run-cli.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const dataRoot = path.join(repoRoot, "data/sensitive/douyin-curation");
 const sidecar = path.join(dataRoot, "sidecar");
 const manifest = path.join(dataRoot, "downloads/download_manifest.jsonl");
@@ -110,8 +109,5 @@ function main() {
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  runCli(main()).catch((error) => {
-    console.error(`抖音全量/增量同步失败：${error.message}`);
-    process.exitCode = 1;
-  });
+  runCliScript(main(), "抖音全量/增量同步");
 }

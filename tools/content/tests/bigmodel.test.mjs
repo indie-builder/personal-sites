@@ -2,7 +2,6 @@ import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
-import { registerHooks } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { BIGMODEL_BASE_URL, BIGMODEL_PROVIDER, resolveBigModel } from "../../../config/bigmodel.mjs";
 import { resolvePiModelConfig, configureBigModelRuntime } from "../lib/pi-runtime.mjs";
+import { registerCliMocks } from "./helpers/cli-mock.mjs";
 
 test("analysis registers BigModel before resolving credentials, including images", async () => {
   assert.equal(resolveBigModel(), "glm-5.3-flash");
@@ -94,23 +94,13 @@ test("installed Pi SDK accepts model-runner images in an isolated session with n
       createAgentSession: async () => ({ session }),
       getAgentDir: () => directory,
     };
-    hooks = registerHooks({
-      resolve(specifier, context, nextResolve) {
-        if (context.parentURL?.startsWith(runnerUrl.href) && specifier === "@earendil-works/pi-coding-agent") {
-          return { url: "site-pi-image-contract:sdk", shortCircuit: true };
-        }
-        return nextResolve(specifier, context);
-      },
-      load(url, context, nextLoad) {
-        if (url === "site-pi-image-contract:sdk") {
-          return {
-            format: "module",
-            source: `export const { DefaultResourceLoader, SessionManager, createAgentSession, getAgentDir } = globalThis.${key};`,
-            shortCircuit: true,
-          };
-        }
-        return nextLoad(url, context);
-      },
+    hooks = registerCliMocks({
+      key,
+      scheme: "site-pi-image-contract",
+      matches: (parentURL) => parentURL?.startsWith(runnerUrl.href),
+      mockExports: new Map([
+        ["@earendil-works/pi-coding-agent", ["DefaultResourceLoader", "SessionManager", "createAgentSession", "getAgentDir"]],
+      ]),
     });
     const { runPiPrompt } = await import(`${runnerUrl.href}?image-contract`);
     await Effect.runPromise(runPiPrompt({
