@@ -22,7 +22,7 @@
 
 ```bash
 cd android
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
+export JAVA_HOME=/Users/xbjt/Library/Java/JavaVirtualMachines/jdk-17.0.20.1+1/Contents/Home
 ./gradlew :app:assembleDebug        # 构建 APK：app/build/outputs/apk/debug/
 ./gradlew :app:installDebug         # 安装到已连接设备/模拟器
 ```
