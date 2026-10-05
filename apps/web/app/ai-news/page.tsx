@@ -6,8 +6,8 @@ import { FeedPage } from "@/components/page-shell";
 import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
 import { withCanonical } from "@/lib/metadata";
 
-// 动态渲染、每请求直读 Supabase 公开投影，打开即最新。
-export const dynamic = "force-dynamic";
+// 缓存 60 秒，过期后由下一次请求触发后台合并 SQLite 历史与 Supabase 增量。
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   alternates: withCanonical("/ai-news"),
@@ -21,7 +21,7 @@ async function AiNewsFeed() {
 }
 
 export default function AiNewsPage() {
-  // 壳（个人信息栏、版块导航）立即渲染，动态数据经 Suspense 流式补进。
+  // 复用身份轨与版块导航，数据组件保留 Suspense 边界。
   return (
     <FeedPage label="每日动态" section="ai-news">
       <AiNewsFeed />

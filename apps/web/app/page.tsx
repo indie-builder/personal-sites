@@ -14,9 +14,8 @@ export const metadata: Metadata = {
   alternates: withCanonical("/"),
 };
 
-// 动态渲染、每请求合并 SQLite 历史与 Supabase 增量：每日动态 5 分钟一变，不用 ISR
-// 时间缓存——否则缓存过期后的首次访问仍先拿到旧页面。
-export const dynamic = "force-dynamic";
+// 缓存 60 秒，过期后由下一次请求触发后台合并 SQLite 历史与 Supabase 增量。
+export const revalidate = 60;
 
 async function HomeNews() {
   const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_LIST_LIMIT));
