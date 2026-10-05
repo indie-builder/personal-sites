@@ -1,10 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
-
-const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript((key) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
-});
+import { expect, test, type Page } from "./helpers/loader-key";
 
 async function expectNativeDocumentScroll(page: Page, key: "ArrowDown" | "PageDown" | "Space") {
   await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 0 }));

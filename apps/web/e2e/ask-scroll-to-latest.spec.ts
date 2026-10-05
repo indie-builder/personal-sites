@@ -1,11 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { openAssistant } from "./helpers/assistant";
-
-const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript((key) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
-});
+import { expect, test } from "./helpers/loader-key";
 
 test("Ask gives the scroll-to-latest control a mobile touch target without enlarging desktop", async ({ page }) => {
   await page.setViewportSize({ height: 844, width: 390 });

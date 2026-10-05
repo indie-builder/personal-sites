@@ -1,8 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/loader-key";
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   await page.goto("/curation");
   await expect(page.locator("[data-profile-line]").first()).toBeVisible();
 });

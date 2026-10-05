@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/loader-key";
 
 test("retired works routes return 404 and have no navigation", async ({ page, request }) => {
-  await page.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   for (const path of ["/works", "/works/personal-site", "/works/waker"]) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(404);

@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/loader-key";
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
