@@ -3,7 +3,9 @@
 import { Renderer, type ActionEvent, type OpenUIError, type ParseResult } from "@openuidev/react-lang";
 import { ThemeProvider, safeOpenUrl, type Theme } from "@openuidev/react-ui";
 import { openuiLibrary } from "@openuidev/react-ui/genui-lib";
-import { memo, useCallback, useState, useSyncExternalStore } from "react";
+
+import { useSiteThemeDark } from "@/components/use-mounted";
+import { memo, useCallback, useState } from "react";
 
 const theme: Theme = {
   fontBody: "var(--font-sans)",
@@ -15,18 +17,12 @@ const theme: Theme = {
   textHeadingMd: "610 14px/1.45 var(--font-sans)",
 };
 
-function subscribeToTheme(onChange: () => void) {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-curation-theme"] });
-  return () => observer.disconnect();
-}
-
 export const AskAnswer = memo(function AskAnswer({ source, isStreaming, onContinue }: {
   source: string;
   isStreaming: boolean;
   onContinue?: (question: string) => void;
 }) {
-  const dark = useSyncExternalStore(subscribeToTheme, () => document.documentElement.dataset.curationTheme === "dark", () => false);
+  const dark = useSiteThemeDark();
   const [invalid, setInvalid] = useState(false);
   const [hasRoot, setHasRoot] = useState(true);
   const onError = useCallback((errors: OpenUIError[]) => setInvalid(errors.length > 0), []);

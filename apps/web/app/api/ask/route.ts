@@ -4,11 +4,11 @@ import { Result, Schema } from "effect";
 import { checkAskRateLimit } from "@/lib/ask-limiter.server";
 import { searchAskDocuments } from "@/lib/ask-search.server";
 import { streamAskAnswer } from "@/lib/ask-session.server";
-import { askScopes } from "@/lib/ask-types";
+import { askIdPattern, askScopes } from "@/lib/ask-types";
 
 const sessionSchema = Schema.Struct({
-  conversationId: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{16,128}$/)),
-  visitorId: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{16,128}$/)),
+  conversationId: Schema.String.check(Schema.isPattern(askIdPattern)),
+  visitorId: Schema.String.check(Schema.isPattern(askIdPattern)),
 });
 
 const requestSchema = Schema.Struct({

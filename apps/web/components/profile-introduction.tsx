@@ -86,17 +86,13 @@ export function ProfileIntroduction({
 
   useEffect(() => {
     let cancelled = false;
-    const showChinese = () => {
-      setGreetingIndex(0);
-      setTitleVisibleCount(CHINESE_TITLE.length);
-      setTitleIsTyping(false);
-    };
 
     if (phase !== "complete") {
       return undefined;
     }
     if (!isVisible || reduceMotion) {
-      showChinese();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 离场/减少动效时同步落回中文标题终态
+      resetTitleToChinese();
       return undefined;
     }
 
