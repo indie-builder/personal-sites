@@ -71,7 +71,7 @@ struct AboutView: View {
                 .frame(minHeight: 56)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.row)
             .accessibilityLabel("查看个人经历")
         }
     }
@@ -88,7 +88,7 @@ struct AboutView: View {
             .frame(minHeight: SiteSpace.touch)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel("在浏览器打开\(label)")
     }
 

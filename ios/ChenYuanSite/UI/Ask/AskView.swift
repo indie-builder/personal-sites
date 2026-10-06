@@ -66,7 +66,7 @@ struct AskView: View {
             .font(SiteText.meta).foregroundStyle(SiteTheme.ink)
             .frame(minWidth: 48, minHeight: 48)
             .contentShape(Rectangle())
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.compact)
             .disabled(controller.messages.isEmpty && controller.draft.isEmpty)
         }
         .padding(.horizontal, SiteSpace.compact)
@@ -102,22 +102,26 @@ struct AskView: View {
                 if isScrolling { followLatest = !canScrollForward }
             }
             .overlay(alignment: .bottom) {
-                if !followLatest {
-                    Button {
-                        followLatest = true
-                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { proxy.scrollTo("conversation-end", anchor: .bottom) }
-                    } label: {
-                        Image(systemName: "arrow.down")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(SiteTheme.ink)
-                            .frame(width: 48, height: 48)
-                            .background(SiteTheme.background)
-                            .clipShape(Circle())
+                Group {
+                    if !followLatest {
+                        Button {
+                            followLatest = true
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { proxy.scrollTo("conversation-end", anchor: .bottom) }
+                        } label: {
+                            Image(systemName: "arrow.down")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(SiteTheme.ink)
+                                .frame(width: 48, height: 48)
+                                .background(SiteTheme.background)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(SitePressStyle.compact)
+                        .accessibilityLabel("回到最新回复")
+                        .padding(.bottom, SiteSpace.compact)
+                        .transition(.scale(scale: 0.9).combined(with: .opacity))
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("回到最新回复")
-                    .padding(.bottom, SiteSpace.compact)
                 }
+                .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: followLatest)
             }
             .onChange(of: controller.messages.count) { _, _ in scrollToLatest(proxy) }
             .onChange(of: controller.messages.last?.text) { _, _ in scrollToLatest(proxy) }
@@ -202,7 +206,7 @@ struct AskView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.row)
             .frame(minHeight: SiteSpace.touch - SiteSpace.compact)
             .padding(.vertical, SiteSpace.compact / 2)
         }
@@ -272,10 +276,13 @@ struct AskView: View {
             Image(systemName: controller.streaming ? "stop.fill" : "arrow.up")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(active ? SiteTheme.background : SiteTheme.muted)
+                .contentTransition(reduceMotion ? .identity : .opacity)
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .background(Circle().fill(active ? SiteTheme.ink : SiteTheme.line))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: controller.streaming)
+                .animation(.easeOut(duration: 0.16), value: active)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .disabled(!active)
         .accessibilityLabel(controller.streaming ? "停止生成" : "发送")
         .accessibilityIdentifier("ask-send")

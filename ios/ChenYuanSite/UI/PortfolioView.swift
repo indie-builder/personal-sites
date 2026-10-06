@@ -3,10 +3,18 @@ import SwiftUI
 
 /// Four actual products from the portfolio service. Navigation stays in the app.
 struct PortfolioView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var products: [PortfolioProduct] = []
     @State private var error = false
     @State private var attempt = 0
     let bottomPadding: CGFloat
+
+    /// 内容/失败/加载三相位；相位切换交叉淡入，条目刷新不参与动画。
+    private enum Phase { case content, failed, loading }
+
+    private var phase: Phase {
+        products.isEmpty ? (error ? .failed : .loading) : .content
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,9 +36,11 @@ struct PortfolioView: View {
                         // 不紧贴页头。
                         ErrorRetry(message: "暂时无法读取作品集。") { attempt += 1 }
                             .frame(minHeight: 420)
+                            .transition(.opacity)
                     } else {
                         ProgressView("正在读取作品…")
                             .frame(minWidth: 0, maxWidth: .infinity, minHeight: 420)
+                            .transition(.opacity)
                     }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
@@ -66,7 +76,7 @@ struct PortfolioView: View {
                                 .padding(.vertical, 20)
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SitePressStyle.row)
                             .accessibilityIdentifier("portfolio-\(product.id)")
                             Divider().overlay(SiteTheme.line)
                         }
@@ -77,9 +87,11 @@ struct PortfolioView: View {
                     }
                     .padding(.horizontal, SiteSpace.page)
                     .padding(.bottom, bottomPadding + 16)
+                    .transition(.opacity)
                 }
             }
             .refreshable { await load() }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: phase)
         }
         .background(SiteTheme.background)
         .toolbar(.hidden, for: .navigationBar)
@@ -154,7 +166,7 @@ struct PortfolioToolsView: View {
                                         }
                                         .foregroundStyle(SiteTheme.ink).frame(minHeight: 52).contentShape(Rectangle())
                                     }
-                                    .buttonStyle(.plain).accessibilityHint("在浏览器打开工具官网")
+                                    .buttonStyle(SitePressStyle.row).accessibilityHint("在浏览器打开工具官网")
                                 }
                             }
                             }
@@ -225,7 +237,7 @@ struct PortfolioVideo: View {
                         .foregroundStyle(SiteTheme.ink).frame(width: 52, height: 52)
                         .background(SiteTheme.background, in: Circle())
                 }
-                .buttonStyle(.plain).accessibilityLabel("播放视频")
+                .buttonStyle(SitePressStyle.compact).accessibilityLabel("播放视频")
             case .playing(let player):
                 VideoPlayer(player: player)
             case .failed:

@@ -2,6 +2,31 @@ import SwiftUI
 
 // MARK: - 共享小部件
 
+/// 全站统一按压反馈：长文行用背景高亮（对应站点行按压），紧凑控件用 0.98 微缩。
+/// 减弱动态时不位移，按压状态即时切换。
+struct SitePressStyle: ButtonStyle {
+    enum Variant { case row, compact }
+
+    private let variant: Variant
+    private init(_ variant: Variant) { self.variant = variant }
+
+    static let row = SitePressStyle(.row)
+    static let compact = SitePressStyle(.compact)
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                if variant == .row, configuration.isPressed {
+                    Rectangle().fill(SiteTheme.ink.opacity(0.06))
+                }
+            }
+            .scaleEffect(configuration.isPressed && !reduceMotion && variant == .compact ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: configuration.isPressed ? 0.12 : 0.10), value: configuration.isPressed)
+    }
+}
+
 /// 固定身份入口：头像与姓名作为整体，不随栏目横向滚动。
 struct ProfileLink: View {
     var body: some View {
@@ -37,7 +62,7 @@ struct BackButton: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel(label)
     }
 }
@@ -56,7 +81,7 @@ struct IconButton: View {
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel(accessibilityLabel)
     }
 }
@@ -74,16 +99,22 @@ struct RemoteImage: View {
     var retryAlignment: Alignment = .center
 
     @State private var attempt = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         AsyncImage(url: url) { phase in
-            if let image = phase.image {
-                image.resizable().aspectRatio(nil, contentMode: contentMode)
-            } else if phase.error != nil {
-                if showsRetry { retryView } else { placeholderGlyph }
-            } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            Group {
+                if let image = phase.image {
+                    image.resizable().aspectRatio(nil, contentMode: contentMode)
+                        .transition(.opacity)
+                } else if phase.error != nil {
+                    if showsRetry { retryView.transition(.opacity) } else { placeholderGlyph.transition(.opacity) }
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity)
+                }
             }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: phase.image != nil ? 2 : phase.error != nil ? 1 : 0)
         }
         .id(attempt)
     }
@@ -102,7 +133,7 @@ struct RemoteImage: View {
             .frame(minWidth: SiteSpace.touch, minHeight: SiteSpace.touch)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel("图片加载失败，点击重试")
         .accessibilityIdentifier("image-retry")
     }
@@ -129,7 +160,7 @@ struct ErrorRetry: View {
                     .padding(.vertical, SiteSpace.compact)
                     .frame(minHeight: SiteSpace.touch)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.compact)
             .frame(minHeight: SiteSpace.touch)
             .accessibilityLabel("重新加载内容")
             .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -164,7 +195,7 @@ struct SourceCta: View {
                 .background(SiteTheme.ink)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.compact)
             Text(host).siteMetaStyle().frame(maxWidth: .infinity)
         }
     }

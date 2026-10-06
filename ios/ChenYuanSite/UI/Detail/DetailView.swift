@@ -65,30 +65,46 @@ private struct DetailSection: View {
 /// 每日动态详情：远程取数，失败可重试（attempt 计数与安卓一致）。
 private struct AiNewsDetailScreen: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let id: String
 
     @State private var item: AiNewsItem?
     @State private var error: String?
     @State private var attempt = 0
 
+    /// 内容/失败/加载三相位；相位切换交叉淡入。
+    private enum Phase { case content, failed, loading }
+
+    private var phase: Phase {
+        if item != nil { return .content }
+        if error != nil { return .failed }
+        return .loading
+    }
+
     var body: some View {
         DetailScaffold(label: "每日动态") {
-            if let item {
-                AiNewsDetailBody(item: item).padding(.bottom, SiteSpace.section)
-            } else if let error {
-                ErrorRetry(message: error) {
-                    self.error = nil
-                    attempt += 1
+            Group {
+                if let item {
+                    AiNewsDetailBody(item: item).padding(.bottom, SiteSpace.section)
+                        .transition(.opacity)
+                } else if let error {
+                    ErrorRetry(message: error) {
+                        self.error = nil
+                        attempt += 1
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity)
+                } else {
+                    VStack {
+                        Spacer()
+                        ProgressView().tint(SiteTheme.muted).controlSize(.small)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                VStack {
-                    Spacer()
-                    ProgressView().tint(SiteTheme.muted).controlSize(.small)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: phase)
         }
         .task(id: attempt) {
             error = nil

@@ -13,12 +13,17 @@ struct DownsampledThumbnail: View {
     let targetSize: CGSize
 
     @State private var image: UIImage?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            if let image { Image(uiImage: image).resizable().scaledToFill() }
-            else { SiteTheme.line }
+            SiteTheme.line
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+                    .transition(.opacity)
+            }
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: image != nil)
         .task(id: urlString) {
             image = await Self.decodedImage(urlString: urlString, targetSize: targetSize)
         }

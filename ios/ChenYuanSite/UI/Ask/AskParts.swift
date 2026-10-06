@@ -27,7 +27,7 @@ struct AskEmptyState: View {
                         .frame(minHeight: 48)
                         .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(SiteTheme.line, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SitePressStyle.compact)
             }
         }
     }
@@ -37,6 +37,7 @@ struct AskEmptyState: View {
 struct CopyButton: View {
     let text: String
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var copied = false
 
     var body: some View {
@@ -47,10 +48,12 @@ struct CopyButton: View {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 15))
                 .foregroundStyle(SiteTheme.muted)
+                .contentTransition(reduceMotion ? .identity : .opacity)
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .contentShape(Rectangle())
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: copied)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel(copied ? "已复制" : "复制回答")
         .task(id: copied) {
             guard copied else { return }

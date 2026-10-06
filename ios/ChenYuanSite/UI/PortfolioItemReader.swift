@@ -7,6 +7,7 @@ struct PortfolioItemReader: View {
     let siblings: [PortfolioItem]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var currentID = ""
     @State private var detail: PortfolioItem?
     @State private var failed = false
@@ -66,7 +67,7 @@ struct PortfolioItemReader: View {
                                 }
                                 .foregroundStyle(SiteTheme.ink).frame(minHeight: 52).contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SitePressStyle.row)
                         }
                         if collection == "layouts" {
                             Text("nevertoday / 350-layout-compositions · CC BY 4.0")
@@ -75,12 +76,17 @@ struct PortfolioItemReader: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 24)
-                    .id(currentID)
+                    .id(item.id)
+                    .transition(.opacity)
                 } else if failed {
                     ErrorRetry(message: "暂时无法读取详情。") { attempt += 1 }
-                } else { ProgressView("正在读取详情…").padding(40) }
+                        .transition(.opacity)
+                } else { ProgressView("正在读取详情…").padding(40).transition(.opacity) }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 切换上一件/下一件按条目身份交叉淡入，不经过加载转圈闪切。
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: detail?.id)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: failed)
             Divider()
             HStack {
                 Button { move(-1) } label: {
@@ -93,7 +99,7 @@ struct PortfolioItemReader: View {
                     HStack(spacing: 6) { Text("下一件"); Image(systemName: "chevron.right") }.frame(minHeight: 48)
                 }.disabled(index + 1 >= siblings.count)
             }
-            .font(SiteText.label).buttonStyle(.plain).foregroundStyle(SiteTheme.ink)
+            .font(SiteText.label).buttonStyle(SitePressStyle.compact).foregroundStyle(SiteTheme.ink)
             .padding(.horizontal, 20)
         }
         .background(SiteTheme.background)
@@ -101,13 +107,17 @@ struct PortfolioItemReader: View {
             .task(id: "\(currentID)-\(attempt)") {
                 let id = currentID.isEmpty ? initialItem.id : currentID
                 if currentID.isEmpty { currentID = id; return }
-                detail = nil
+                // 取新详情期间保留旧内容，落地后交叉淡入；失败才切错误态。
                 failed = false
                 do {
                     let response: PortfolioDetail = try await PortfolioAPI().get([collection, id])
                     guard !Task.isCancelled else { return }
                     detail = response.item
-                } catch { if !Task.isCancelled { failed = true } }
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    detail = nil
+                    failed = true
+                }
             }
     }
 

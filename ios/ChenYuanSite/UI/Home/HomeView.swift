@@ -118,9 +118,23 @@ private struct FeedPageUI<Value: Identifiable, Row: View>: View {
     let onScrollDelta: (CGFloat) -> Void
     @ViewBuilder let row: (Value) -> Row
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// 加载/失败/空态/内容四相位；相位切换交叉淡入，条目追加不参与动画。
+    private enum Phase { case loading, failed, empty, content }
+
+    private var phase: Phase {
+        if feed.state.initial { return .loading }
+        if feed.state.error != nil, feed.state.items.isEmpty { return .failed }
+        if feed.state.items.isEmpty { return .empty }
+        return .content
+    }
+
     @ViewBuilder
     var body: some View {
-        if feed.state.initial {
+        Group {
+            switch phase {
+            case .loading:
                 VStack {
                     Spacer()
                     ProgressView().tint(SiteTheme.muted).controlSize(.small)
@@ -128,25 +142,30 @@ private struct FeedPageUI<Value: Identifiable, Row: View>: View {
                 }
                 .frame(maxWidth: .infinity)
                 .task { feed.loadInitial() }
-            } else if let error = feed.state.error, feed.state.items.isEmpty {
-                ScrollView { ErrorRetry(message: error) { feed.retry() }.frame(minHeight: 420) }
-        } else if feed.state.items.isEmpty {
-            ScrollView {
-                ContentUnavailableView {
-                    Label("暂无内容", systemImage: "text.page")
-                } description: {
-                    Text("这里还没有\(section.label)内容，稍后再来看看。")
-                } actions: {
-                    Button(feed.state.refreshing ? "刷新中…" : "刷新") { feed.refresh() }
-                        .disabled(feed.state.refreshing)
-                        .frame(minHeight: SiteSpace.touch)
+                .transition(.opacity)
+            case .failed:
+                ScrollView { ErrorRetry(message: feed.state.error ?? "") { feed.retry() }.frame(minHeight: 420) }
+                    .transition(.opacity)
+            case .empty:
+                ScrollView {
+                    ContentUnavailableView {
+                        Label("暂无内容", systemImage: "text.page")
+                    } description: {
+                        Text("这里还没有\(section.label)内容，稍后再来看看。")
+                    } actions: {
+                        Button(feed.state.refreshing ? "刷新中…" : "刷新") { feed.refresh() }
+                            .disabled(feed.state.refreshing)
+                            .frame(minHeight: SiteSpace.touch)
+                    }
+                    .padding(.top, SiteSpace.section)
                 }
-                .padding(.top, SiteSpace.section)
+                .refreshable { await feed.refreshAndWait() }
+                .transition(.opacity)
+            case .content:
+                feedList.transition(.opacity)
             }
-            .refreshable { await feed.refreshAndWait() }
-        } else {
-            feedList
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: phase)
     }
 
     private var feedList: some View {
