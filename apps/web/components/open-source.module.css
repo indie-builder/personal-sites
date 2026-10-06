@@ -121,9 +121,18 @@
 .loadingTitle,
 .loadingLine {
   display: block;
+  position: relative;
+  overflow: hidden;
   border-radius: .2rem;
-  background: linear-gradient(90deg, #eeeeef 20%, #f7f7f8 44%, #eeeeef 68%);
-  background-size: 220% 100%;
+  background: #eeeeef;
+}
+
+.loadingTitle::after,
+.loadingLine::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(90deg, transparent 22%, #f7f7f8 50%, transparent 78%);
   animation: document-loading-shimmer 1.3s ease-in-out infinite;
 }
 
@@ -134,7 +143,11 @@
 .loadingLineMedium { width: 78%; }
 .loadingLineShort { width: 48%; }
 
-@keyframes document-loading-shimmer { to { background-position: -220% 0; } }
+/* shimmer 用 transform 扫过伪元素渐变层，替代 background-position 逐帧重绘。 */
+@keyframes document-loading-shimmer {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: translate3d(100%, 0, 0); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .stream li {
@@ -142,8 +155,8 @@
     transition: none;
   }
 
-  .loadingTitle,
-  .loadingLine {
+  .loadingTitle::after,
+  .loadingLine::after {
     animation: none;
   }
 
@@ -308,8 +321,12 @@
 
 :global(html[data-curation-theme="dark"]) .loadingTitle,
 :global(html[data-curation-theme="dark"]) .loadingLine {
-  background: linear-gradient(90deg, #262626 20%, #303030 44%, #262626 68%);
-  background-size: 220% 100%;
+  background: #242424;
+}
+
+:global(html[data-curation-theme="dark"]) .loadingTitle::after,
+:global(html[data-curation-theme="dark"]) .loadingLine::after {
+  background: linear-gradient(90deg, transparent 22%, #303030 50%, transparent 78%);
 }
 
 :global(html[data-curation-theme="dark"]) .repositoryBrowser,

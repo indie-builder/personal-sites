@@ -2,6 +2,21 @@ import { expect, test, type Page } from "./helpers/loader-key";
 
 const LONG_MEDIA_DETAIL_PATH = "/curation/2093968800316293400";
 
+test.describe("touch media", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  test("tapping detail media keeps the image unscaled", async ({ page }) => {
+    await page.goto(LONG_MEDIA_DETAIL_PATH);
+    const media = page.locator(".curation-detail__media a").first();
+    const image = media.locator("img");
+    await media.evaluate((element) => element.addEventListener("click", (event) => event.preventDefault()));
+    expect(await page.evaluate(() => matchMedia("(hover: none) and (pointer: coarse)").matches)).toBe(true);
+    await media.tap();
+    await page.waitForTimeout(250);
+    await expect(image).toHaveCSS("transform", "none");
+  });
+});
+
 async function readSpreadLayout(page: Page) {
   return page.evaluate(() => {
     const body = document.querySelector<HTMLElement>(".curation-detail__body")!;
