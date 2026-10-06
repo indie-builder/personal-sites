@@ -33,10 +33,25 @@ test("ai-news detail fades in when the painted-skeleton marker armed it and stay
   const detailPath = href as string;
 
   // 客户端冷导航（骨架屏绘制过 → detail-entrance 已落下新鲜标记）：正文淡入。
-  await page.evaluate(({ key, path }) => window.sessionStorage.setItem(
-    key,
-    JSON.stringify({ at: Date.now(), path }),
-  ), { key: FALLBACK_PAINTED_KEY, path: detailPath });
+  // 标记须带目的历史条目的 entryId（消费侧按条目身份比对）。本机无法稳定制造
+  // “骨架屏绘制过”的服务端窗口，改为包一层 pushState：在目的条目铸造的同一刻
+  // 读取 navigation.currentEntry.id 落下完整标记，必然早于正文挂载后的消费
+  // effect。一次性还原，返回与再次进入的导航不再播种。
+  await page.evaluate(({ key, path }) => {
+    const next = window.history.pushState.bind(window.history);
+    window.history.pushState = (...args: Parameters<typeof next>) => {
+      window.history.pushState = next;
+      next(...args);
+      try {
+        window.sessionStorage.setItem(
+          key,
+          JSON.stringify({ at: Date.now(), path, entryId: window.navigation?.currentEntry?.id ?? null }),
+        );
+      } catch {
+        // 与生产者同款容错：存储受限则按未绘制处理。
+      }
+    };
+  }, { key: FALLBACK_PAINTED_KEY, path: detailPath });
   await firstLink.click();
   await expect(page).toHaveURL(new RegExp(`${detailPath}$`, "u"));
   await expect(article).toHaveAttribute("data-content-id", /.+/u);

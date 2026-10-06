@@ -9,6 +9,9 @@ import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 // 3 秒内回来也不淡入（TTL 仅兜底返回键、切走等无条目变化的路径）。无 Navigation API
 // 的浏览器条目 id 记为 null，两侧同为 null 时退回仅按路径加时效判定。与开机揭幕共用
 // 同一套 sessionStorage 成本模型（每会话、读写都容错）。
+// 已知残留：骨架屏绘制后立刻返回、又在 TTL 内前进恢复同一条目时，前进复用原条目
+// id，放弃时未消费的标记仍判为同一次导航，正文照常淡入；这一窄残留随 TTL 过期自愈，
+// 作为装饰性入场在此明确接受。
 //
 // 入场只覆盖客户端导航：标记由客户端 effect 写入，而硬导航（直连 URL）的流式
 // fallback 在服务端流完成前不会挂载任何客户端生产者，无从写下标记；硬导航因此
