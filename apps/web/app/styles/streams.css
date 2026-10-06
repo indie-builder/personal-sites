@@ -1,7 +1,8 @@
 
 /* 每日动态列表：分类筛选 + 按日分组的连续信息流，与每日关注流同一语言（1px 分隔线、hover 只动文字与箭头）。 */
 .ai-news__stream { position:relative; padding-top:.75rem; }
-.ai-news__category-select { position:absolute; top:.75rem; right:0; width:7rem; min-height:2.75rem; border:0; border-radius:0; background:transparent; color:var(--muted); font:inherit; font-size:.875rem; cursor:pointer; padding:.5rem .25rem; }
+.ai-news__category-select { position:absolute; top:.75rem; right:0; width:7rem; min-height:2.75rem; border:0; border-radius:0; background:transparent; color:var(--muted); font:inherit; font-size:.875rem; cursor:pointer; padding:.5rem .25rem; transition:transform 120ms var(--ease-out); }
+.ai-news__category-select:active:not(:focus-visible) { transform:scale(.97); }
 .ai-news__category-select:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
 
 .ai-news__groups > .ai-news__day:first-child { margin-top:0; }
@@ -27,7 +28,8 @@ html[data-curation-theme="dark"] .ai-news__category-select,html[data-curation-th
 @media (max-width:900px) { .ai-news__entry { grid-template-columns:minmax(0,1fr); }.ai-news__entry-meta { flex-direction:row; flex-wrap:wrap; gap:.25rem .55rem; margin-bottom:.55rem; padding-top:0; }.ai-news__entry-meta :where(span,time):has(+ :where(span,time))::after { margin-left:.55rem; content:"·"; } }
 .ai-news__status { min-height:3.5rem; border-top:1px solid var(--line); color:#6f6f72; font-size:.75rem; text-align:center; }
 .ai-news__status>span,.ai-news__status button { display:inline-block; margin-top:1rem; }
-.ai-news__status button { border:0; background:transparent; color:#6f6f72; cursor:pointer; font:inherit; text-decoration:underline; text-underline-offset:.22em; }
+.ai-news__status button { border:0; background:transparent; color:#6f6f72; cursor:pointer; font:inherit; text-decoration:underline; text-underline-offset:.22em; transition:transform 120ms var(--ease-out); }
+.ai-news__status button:active:not(:focus-visible) { transform:scale(.97); }
 html[data-curation-theme="dark"] .ai-news__timeline li,html[data-curation-theme="dark"] .ai-news__status { border-color:#333; }
 html[data-curation-theme="dark"] .ai-news__entry h3 { color:#f4f4f4; }
 html[data-curation-theme="dark"] .ai-news__entry:hover h3,html[data-curation-theme="dark"] .ai-news__entry:focus-visible h3 { color:#b8b8bb; }
@@ -65,12 +67,17 @@ html[data-curation-theme="dark"] .curation-detail__neighbors a:hover strong,html
 .ai-news-detail__lead p { margin:0; max-width:38rem; color:#303033; font-size:.96rem; letter-spacing:-.01em; line-height:1.75; text-wrap:pretty; }
 .ai-news-detail__reason p { margin:0; max-width:38rem; border-left:1px solid var(--line); color:#6f6f72; font-size:.85rem; line-height:1.7; padding-left:.8rem; text-wrap:pretty; }
 .ai-news-detail__source { display:flex; align-items:center; margin-top:3rem; border-top:1px solid var(--line); gap:.7rem; padding-top:1.6rem; }
-.ai-news-detail__cta { display:inline-flex; align-items:center; border-radius:999px; background:var(--ink); color:#fff; font-size:.76rem; font-weight:560; gap:.4rem; line-height:1; padding:.57rem .82rem; text-decoration:none; transition:opacity 180ms ease,transform 180ms ease; }
+.ai-news-detail__cta { display:inline-flex; align-items:center; border-radius:999px; background:var(--ink); color:#fff; font-size:.76rem; font-weight:560; gap:.4rem; line-height:1; padding:.57rem .82rem; text-decoration:none; transition:opacity 180ms ease,transform 120ms var(--ease-out); }
 .ai-news-detail__cta:hover,.ai-news-detail__cta:focus-visible { opacity:.78; transform:translateX(.1rem); }
+.ai-news-detail__cta:active:not(:focus-visible) { transform:translateX(0) scale(.97); }
 .ai-news-detail__cta-host { color:#767676; font-size:.76rem; }
 .ai-news-detail__cta svg { width:.8rem; height:.8rem; stroke-width:1.7; }
 button.ai-news-detail__cta { border:0; cursor:pointer; }
 .ai-news-detail__kicker--error { color:#994545; }
+@media (prefers-reduced-motion:reduce) {
+  .ai-news__category-select,.ai-news__status button,.ai-news-detail__cta { transition:none; }
+  .ai-news__category-select:active:not(:focus-visible),.ai-news__status button:active:not(:focus-visible),.ai-news-detail__cta:active:not(:focus-visible) { transform:none; }
+}
 html[data-curation-theme="dark"] .ai-news-detail__topbar,html[data-curation-theme="dark"] .ai-news-detail__source { border-color:#333; }
 html[data-curation-theme="dark"] .ai-news-detail__header h1,html[data-curation-theme="dark"] .ai-news-detail__lead p { color:#f4f4f4; }
 html[data-curation-theme="dark"] .ai-news-detail__eyebrow { color:#d4d4d6; }

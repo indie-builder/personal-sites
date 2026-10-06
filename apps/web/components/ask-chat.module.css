@@ -338,8 +338,9 @@
 .drawerInput::placeholder { color:#8d8d8d; }
 .drawerInput:focus-visible { outline:none; }
 .drawerActions { display:flex; justify-content:flex-end; height:30px; }
-.drawerSend { position:relative; display:grid; place-items:center; width:30px; height:30px; min-height:0; border:0; border-radius:50%; padding:0; background:#111; color:#fff; cursor:pointer; }
+.drawerSend { position:relative; display:grid; place-items:center; width:30px; height:30px; min-height:0; border:0; border-radius:50%; padding:0; background:#111; color:#fff; cursor:pointer; transition:opacity 160ms ease,transform 120ms var(--ease-out); }
 .drawerSend::before { content:""; position:absolute; inset:-7px; }
+.drawerSend:active:not(:focus-visible) { transform:scale(.97); }
 .drawerSend:disabled { opacity:.5; cursor:default; }
 .drawerSend:focus-visible { outline:2px solid #767676; outline-offset:3px; }
 .userBubble { max-width: 270px; border-radius: 12px 12px 4px; background: #171717; color: #fff; padding: 8px 12px; font-size: 13px; line-height: 20px; }
@@ -351,4 +352,8 @@
 :global(html[data-curation-theme="dark"]) .welcomeWalker { color:#f4f4f4; }
 :global(html[data-curation-theme="dark"]) .welcomeHeader p { color:#b8b8bb; }
 @media (max-width: 900px) { .suggestions :global([data-slot="button"]) { min-height: 44px; } .drawerInput { font-size:16px; line-height:22px; } }
-@media (prefers-reduced-motion: reduce) { .welcomeRise { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .welcomeRise { animation: none; }
+  .drawerSend { transition: none; }
+  .drawerSend:active:not(:focus-visible) { transform: none; }
+}
