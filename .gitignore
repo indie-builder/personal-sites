@@ -31,11 +31,16 @@ test-results/
 /.tmp/
 /.scratch/
 /video-promo/
-# Third-party video-shotcraft skill install (50M of demo/gallery assets) and its
-# symlinked entry points; other skills under .agents/skills stay tracked.
+# Third-party skill installs stay on disk but out of git (vendor tooling, not
+# authored code); restore path documented in docs/agents/skills.md.
+# video-shotcraft: 50M of demo/gallery assets.
 /.agents/skills/video-shotcraft/
 /.claude/skills/video-shotcraft
 /.pi/skills/video-shotcraft
+# impeccable: ~67k lines of vendored design/detector tooling (v4.1.1).
+/.agents/skills/impeccable/
+/.claude/skills/impeccable
+/.pi/skills/impeccable
 # Generated design review screenshots; other .impeccable review artifacts stay tracked.
 /.impeccable/review/design-*.png
 
