@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-// 键盘切换策展标签即时回顶（behavior auto），指针切换保持平滑滚动（smooth）。
-test("curation tag switch scrolls with behavior auto from the keyboard and smooth from the mouse", async ({ page }) => {
+// 键盘切换策展标签即时回顶：html 全局 scroll-behavior:smooth 会接管 behavior:"auto"，
+// 只有显式 "instant" 才真正立即到位（在已滚动的位置上断言真实 scrollY）；指针切换保持平滑。
+test("curation tag keyboard switch lands instantly at top while pointer selection stays smooth", async ({ page }) => {
   await page.addInitScript(() => {
     // /curation 桌面视口的滚动目标是 window（feed 不滚）；只记录调用参数，不改行为。
     // 不补 Element.prototype.scrollTo：补丁会干扰 Radix 菜单的选中路径。
@@ -24,6 +25,10 @@ test("curation tag switch scrolls with behavior auto from the keyboard and smoot
   const trigger = page.getByRole("button", { name: "筛选每日关注：全部主题" });
   await expect(trigger).toBeVisible();
 
+  // 从已滚动的位置出发：设置初值也用 instant，避免全局 smooth 把准备工作变成动画。
+  await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 1200 }));
+  expect(await page.evaluate(() => window.scrollY)).toBe(1200);
+
   await trigger.focus();
   await page.keyboard.press("Enter");
   const menu = page.getByRole("menu");
@@ -34,10 +39,17 @@ test("curation tag switch scrolls with behavior auto from the keyboard and smoot
   await firstTag.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: /^筛选每日关注：(?!全部主题)/u })).toBeVisible();
-  expect(await readBehaviors()).toContain("auto");
-  expect(await readBehaviors()).not.toContain("smooth");
+  // 真实位置断言：键盘切换后 scrollY 立即为 0。无头环境下标签流重挂载会把文档折叠到
+  // 视口高度、auto 也不播动画，位置本身区分不了 auto 与 instant——机制区分由下面的
+  // 调用参数精确匹配保证（参数断言已在回归到 "auto" 时验证会失败）；有头浏览器里
+  // smooth 接管 "auto" 的真实动画差异由 ego 实检覆盖。
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await readBehaviors()).toEqual(["instant"]);
 
-  // 指针路径保持平滑：菜单里选另一个标签。
+  // 指针路径保持平滑：等标签内容加载撑开文档后，滚回非零位置再在菜单里点选另一个标签。
+  await expect.poll(() => page.locator("ol.curation-home__stream > li").count()).toBeGreaterThan(4);
+  await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 1200 }));
+  expect(await page.evaluate(() => window.scrollY)).toBe(1200);
   await page.getByRole("button", { name: /^筛选每日关注：/u }).click();
   await expect(menu).toBeVisible();
   await page.getByRole("menuitemradio").nth(2).click();

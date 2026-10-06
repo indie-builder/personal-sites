@@ -32,7 +32,7 @@ type RepositoryFileResponse = {
 };
 
 type OpenSourceRepositoryBrowserProps = {
-  /** 面板当前是否可见；不可见时清掉入场武装，hidden 往返回到已渲染内容即时呈现。 */
+  /** 面板当前是否可见；不可见时清掉入场武装，隐藏期间提交的响应不再武装，hidden 往返即时呈现。 */
   active: boolean;
   repository: string;
   repositoryUrl: string;
@@ -155,14 +155,18 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
   const [file, setFile] = useState<RepositoryFileResponse | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [loadingFile, setLoadingFile] = useState(false);
-  // @starting-style 入场只武装在新响应提交的同一次渲染；面板隐藏即解除，hidden 往返不重播。
-  const [entranceArmed, setEntranceArmed] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(active);
-  if (panelVisible !== active) {
-    setPanelVisible(active);
-    if (!active) setEntranceArmed(false);
+  // @starting-style 入场只武装在新响应提交的同一次渲染，且提交时面板可见；隐藏即解除，
+  // 隐藏期间到达的响应丢弃入场资格，hidden 往返不重播。visible 与 armed 放同一份状态：
+  // 提交回调用函数式更新读最新可见性，避开闭包里请求发起时的旧 active。
+  const [entrance, setEntrance] = useState({ armed: false, visible: active });
+  if (entrance.visible !== active) {
+    setEntrance(active ? { armed: entrance.armed, visible: true } : { armed: false, visible: false });
   }
   const requestVersion = useRef(0);
+
+  const armEntranceIfVisible = () => {
+    setEntrance((current) => (current.visible ? { ...current, armed: true } : current));
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -176,12 +180,12 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
     )
       .then((result) => {
         setTree(result);
-        setEntranceArmed(true);
+        armEntranceIfVisible();
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setTreeError(error instanceof Error ? error.message : "暂时无法读取原始仓库结构。");
-        setEntranceArmed(true);
+        armEntranceIfVisible();
       });
     return () => controller.abort();
   }, [slug]);
@@ -212,12 +216,12 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
       );
       if (requestVersion.current === currentVersion) {
         setFile(result);
-        setEntranceArmed(true);
+        armEntranceIfVisible();
       }
     } catch (error) {
       if (requestVersion.current === currentVersion) {
         setFileError(error instanceof Error ? error.message : "暂时无法读取原始文件。");
-        setEntranceArmed(true);
+        armEntranceIfVisible();
       }
     } finally {
       if (requestVersion.current === currentVersion) setLoadingFile(false);
@@ -227,7 +231,7 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
   const nodes = tree ? buildGitHubRepositoryTree(tree.entries) : [];
 
   return (
-    <div className={styles.repositoryBrowser} data-entrance={entranceArmed ? "" : undefined}>
+    <div className={styles.repositoryBrowser} data-entrance={entrance.armed ? "" : undefined}>
       <div className={styles.repositoryBrowserToolbar}>
         <div>
           <strong>{repository}</strong>

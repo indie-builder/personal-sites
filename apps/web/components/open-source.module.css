@@ -249,7 +249,8 @@
 .repositoryFileEmpty { display: grid; min-height: 14rem; place-items: center; text-align: center; }
 
 /* 文件树首载与文件面板状态块（错误/空态/文件头+正文）都是换场：只淡入，离场即时。
-   入场只在新数据提交时武装（data-entrance）：面板 hidden 往返不重播，回到已渲染内容即时呈现。 */
+   入场只在新数据提交且面板可见时武装（data-entrance）：隐藏期间提交的响应不武装，
+   面板 hidden 往返不重播，回到已渲染内容即时呈现。 */
 .repositoryBrowser[data-entrance] :is(.repositoryBrowserContent,.repositoryFileHeader,.repositoryFileContent,.repositoryBrowserError,.repositoryFileEmpty) { transition: opacity 180ms ease; }
 @starting-style {
   .repositoryBrowser[data-entrance] :is(.repositoryBrowserContent,.repositoryFileHeader,.repositoryFileContent,.repositoryBrowserError,.repositoryFileEmpty) { opacity: 0; }
