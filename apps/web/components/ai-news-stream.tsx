@@ -9,16 +9,12 @@ import { formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNews
 import type { AiNewsListItem } from "@/lib/ai-news-types";
 
 import { aiNewsStreamSnapshot } from "./stream-snapshot";
-import { STREAM_EASE } from "./motion-tokens";
+import { FILTER_REVEAL_COUNT, STREAM_EASE, staggerDelay } from "./motion-tokens";
 import { useStreamDate } from "@/components/use-stream-date";
 import { useStreamFeed } from "./use-stream-feed";
 import { getCurationScrollTarget } from "./curation-scroll";
 import { StreamFilterMenu } from "./stream-filter-menu";
-import { StreamSkeletonLines } from "./stream-skeleton";
-
-// 筛选切换时从头揭示的行数：与滚动追加共用 0.45rem 上浮 + 32ms 阶梯的语言，
-// 只揭示首屏可见的前几行，其余行直接呈现，避免长列表整体延迟。
-const FILTER_REVEAL_COUNT = 8;
+import { StreamLoadStatus } from "./stream-skeleton";
 
 export function AiNewsStream({ initialHasMore, initialItems }: {
   initialHasMore: boolean;
@@ -144,8 +140,8 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
               const isFilterReveal = filterVersion > 0 && revealIndex < FILTER_REVEAL_COUNT;
               const animateMount = !reduceMotion && (isAppended || isFilterReveal);
               const mountDelay = isAppended
-                ? Math.min(index - appendStart, 9) * 0.032
-                : revealIndex * 0.032;
+                ? staggerDelay(index - appendStart)
+                : staggerDelay(revealIndex);
               // 首屏 SSR 与筛选重挂载的非揭示行保持静态；追加行与筛选揭示行播放入场阶梯。
               return (
                 <motion.li
@@ -193,18 +189,7 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
 
       <div aria-live="polite" className="ai-news__status">
         <span className="sr-only">{activeFilterLabel ? `正在显示${activeFilterLabel}动态` : "正在显示全部动态"}</span>
-        {isLoading ? (
-          <>
-            <span className="sr-only">正在加载更多内容</span>
-            <div aria-hidden="true" className="curation-home__stream-skeleton"><StreamSkeletonLines /></div>
-          </>
-        ) : null}
-        {loadError ? (
-          <>
-            <span>{loadError}</span>
-            <button onClick={() => void loadMore()} type="button">重试</button>
-          </>
-        ) : null}
+        <StreamLoadStatus isLoading={isLoading} loadError={loadError} loadMore={loadMore} />
         {!hasMore && !loadError ? (
           <span>{activeFilterLabel ? `已加载全部${activeFilterLabel}动态` : "已加载最近 7 天的全部动态"}</span>
         ) : null}

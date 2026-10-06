@@ -7,13 +7,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
+import { askIdPattern } from "@/lib/ask-types";
 
 function readOrCreateId(storageName: "localStorage" | "sessionStorage", key: string) {
   const id = crypto.randomUUID();
   try {
     const storage = window[storageName];
     const stored = storage.getItem(key);
-    if (stored && /^[A-Za-z0-9_-]{16,128}$/.test(stored)) return stored;
+    if (stored && askIdPattern.test(stored)) return stored;
     storage.setItem(key, id);
   } catch {} // 存储被禁用时，当前抽屉仍使用内存中的随机标识。
   return id;

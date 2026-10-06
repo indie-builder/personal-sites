@@ -36,12 +36,13 @@ class GitHubRepositoryBrowserError extends Data.TaggedError("GitHubRepositoryBro
 }
 
 export function repositoryResponse(
-  read: () => Effect.Effect<unknown, Error>,
+  params: Promise<{ slug: string }>,
+  read: (slug: string) => Effect.Effect<unknown, Error>,
   noun: "原始仓库" | "原始文件",
   signal?: AbortSignal,
 ) {
   return Effect.runPromise(
-    Effect.suspend(read).pipe(
+    io("route.params", () => params).pipe(Effect.flatMap(({ slug }) => read(slug))).pipe(
       Effect.map((data) =>
         Response.json(data, { headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600" } }),
       ),

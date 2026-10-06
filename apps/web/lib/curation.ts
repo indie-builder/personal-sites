@@ -21,6 +21,7 @@ const CURATION_ORDER =
   "collected_at DESC NULLS LAST, collected_order ASC NULLS LAST, published_at DESC NULLS LAST, id DESC";
 const DOUYIN_CURATION_ORDER =
   "collected_order ASC NULLS LAST, collected_at DESC NULLS LAST, published_at DESC NULLS LAST, id DESC";
+const ORDER_BY_PLATFORM: Record<CurationPlatform, string> = { douyin: DOUYIN_CURATION_ORDER, x: CURATION_ORDER };
 const CURATION_PLATFORM = "json_extract(content_json, '$.source.platform')";
 const CURATION_DESIGN_INCLUDE = "json_extract(content_json, '$.design.status') = 'include'";
 
@@ -68,7 +69,7 @@ function getCurationPageByPlatform(
 ) {
   return attempt("curation.page", () => {
     const where = designOnly ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_DESIGN_INCLUDE}` : `${CURATION_PLATFORM} = ?`;
-    const order = platform === "douyin" ? DOUYIN_CURATION_ORDER : CURATION_ORDER;
+    const order = ORDER_BY_PLATFORM[platform];
     const items = selectCurationRows(
       `${where}${tag ? " AND EXISTS (SELECT 1 FROM json_each(content_json, '$.tags') WHERE value = ?)" : ""} ORDER BY ${order}`,
       [...(designOnly ? [] : [platform]), ...(tag ? [tag] : [])],
@@ -139,7 +140,7 @@ export function getCurationNeighbors(id: string, designOnly = false) {
       .get(id);
     if (!platformRow) return { newer: null, older: null };
     const { platform } = Schema.decodeUnknownSync(curationPlatformRowSchema)(platformRow);
-    const order = platform === "douyin" ? DOUYIN_CURATION_ORDER : CURATION_ORDER;
+    const order = ORDER_BY_PLATFORM[platform];
     const rows = getPublicDatabase()
       .prepare(
         `SELECT id, title FROM curation_items

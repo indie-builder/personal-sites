@@ -9,3 +9,18 @@ export const subscribeToNothing = () => () => {};
 export function useHasMounted() {
   return useSyncExternalStore(subscribeToNothing, () => true, () => false);
 }
+
+function subscribeToSiteTheme(onStoreChange: () => void) {
+  const observer = new MutationObserver(onStoreChange);
+  observer.observe(document.documentElement, { attributeFilter: ["data-curation-theme"], attributes: true });
+  return () => observer.disconnect();
+}
+
+/** 站点主题（documentElement 上的 data-curation-theme）是否为深色；主题切换与深色适配组件共用。 */
+export function useSiteThemeDark() {
+  return useSyncExternalStore(
+    subscribeToSiteTheme,
+    () => document.documentElement.dataset.curationTheme === "dark",
+    () => false,
+  );
+}

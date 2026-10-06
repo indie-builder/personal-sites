@@ -2,19 +2,15 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-function createSupabaseClient(key: "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_SERVICE_ROLE_KEY", purpose: string): SupabaseClient {
-  return createClient(requiredEnv("SUPABASE_URL", purpose), requiredEnv(key, purpose), {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
 const clientCache = new Map<"admin" | "public", SupabaseClient>();
 
 function getCachedSupabaseClient(key: "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_SERVICE_ROLE_KEY", purpose: string): SupabaseClient {
   const slot = key === "SUPABASE_SERVICE_ROLE_KEY" ? "admin" : "public";
   let client = clientCache.get(slot);
   if (!client) {
-    client = createSupabaseClient(key, purpose);
+    client = createClient(requiredEnv("SUPABASE_URL", purpose), requiredEnv(key, purpose), {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
     clientCache.set(slot, client);
   }
   return client;

@@ -20,12 +20,12 @@ import type { CurationListItem } from "@/lib/curation-types";
 import { XVideoPlayer } from "@/components/x-video-player";
 import { useStreamDate } from "@/components/use-stream-date";
 
-import { STREAM_EASE } from "./motion-tokens";
+import { STREAM_EASE, staggerDelay } from "./motion-tokens";
 import { curationStreamSnapshot } from "./stream-snapshot";
 import { useStreamFeed } from "./use-stream-feed";
 import { getCurationScrollTarget } from "./curation-scroll";
 import { StreamFilterMenu } from "./stream-filter-menu";
-import { StreamSkeletonLines } from "./stream-skeleton";
+import { StreamLoadStatus } from "./stream-skeleton";
 
 const TAG_STORAGE_KEY = "curation-active-tag";
 
@@ -81,7 +81,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
 }
 
 export function CurationStream({
-  apiPath = "/api/curation",
+  apiPath,
   emptyLabel = "暂无已发布的策展条目。",
   initialHasMore,
   initialItems,
@@ -95,7 +95,7 @@ export function CurationStream({
   /** 设计收藏在列表内直接呈现可播放视频，详情入口缩为标题链接以避免嵌套交互。 */
   variant = "default",
 }: {
-  apiPath?: string;
+  apiPath: string;
   emptyLabel?: string;
   initialHasMore: boolean;
   initialItems: CurationListItem[];
@@ -144,7 +144,7 @@ export function CurationStream({
           data-stream-date={formatCurationDate(item)}
           key={item.id}
           transition={{
-            delay: isAppended ? Math.min(index - appendStart, 9) * 0.032 : 0,
+            delay: isAppended ? staggerDelay(index - appendStart) : 0,
             duration: 0.3,
             ease: STREAM_EASE,
           }}
@@ -176,12 +176,7 @@ export function CurationStream({
                     ))}
                   </div>
                 ) : null}
-                {item.text.trim() ? (
-                  <blockquote className="curation-home__stream-clip">
-                    <p>{formatCurationClip(item.text)}</p>
-                  </blockquote>
-                ) : null}
-                {item.tags.length > 0 ? <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p> : null}
+                <StreamClipAndTags item={item} />
               </div>
             </article>
           ) : (
@@ -194,14 +189,7 @@ export function CurationStream({
             <div className="curation-home__stream-copy">
               <h3>{item.title}</h3>
               <p>{item.summary}</p>
-              {item.text.trim() ? (
-                <blockquote className="curation-home__stream-clip">
-                  <p>{formatCurationClip(item.text)}</p>
-                </blockquote>
-              ) : null}
-              {item.tags.length > 0 ? (
-                <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p>
-              ) : null}
+              <StreamClipAndTags item={item} />
             </div>
           </Link>
           )}
@@ -209,21 +197,22 @@ export function CurationStream({
         );
       })}
       <li aria-live="polite" className="curation-home__stream-status">
-        {isLoading ? (
-          <>
-            <span className="sr-only">正在加载更多内容</span>
-            <div aria-hidden="true" className="curation-home__stream-skeleton"><StreamSkeletonLines /></div>
-          </>
-        ) : null}
-        {loadError ? (
-          <>
-            <span>{loadError}</span>
-            <button onClick={() => void loadMore()} type="button">重试</button>
-          </>
-        ) : null}
+        <StreamLoadStatus isLoading={isLoading} loadError={loadError} loadMore={loadMore} />
         {!hasMore && !loadError ? <span>{items.length === 0 ? emptyLabel : loadedAllLabel}</span> : null}
       </li>
     </ol>
     </div>
   );
+}
+
+/** 两种列表变体共用的剪报摘录 + 标签行；判断正文之外的原声音登记。 */
+function StreamClipAndTags({ item }: { item: CurationListItem }) {
+  return <>
+    {item.text.trim() ? (
+      <blockquote className="curation-home__stream-clip">
+        <p>{formatCurationClip(item.text)}</p>
+      </blockquote>
+    ) : null}
+    {item.tags.length > 0 ? <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p> : null}
+  </>;
 }

@@ -2,23 +2,12 @@
 
 import { Moon, Sun } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 
-function getThemeSnapshot() {
-  return document.documentElement.dataset.curationTheme === "dark";
-}
-
-function subscribeToTheme(onStoreChange: () => void) {
-  const observer = new MutationObserver(onStoreChange);
-  observer.observe(document.documentElement, {
-    attributeFilter: ["data-curation-theme"],
-    attributes: true,
-  });
-  return () => observer.disconnect();
-}
+import { useSiteThemeDark } from "@/components/use-mounted";
 
 export function ThemeToggle() {
-  const dark = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, () => false);
+  const dark = useSiteThemeDark();
   const reduceMotion = useReducedMotion();
 
   const [keyboardAction, setKeyboardAction] = useState(false);
