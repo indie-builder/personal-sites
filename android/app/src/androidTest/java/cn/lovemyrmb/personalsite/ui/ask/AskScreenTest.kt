@@ -18,6 +18,7 @@ import org.junit.Assert.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.text.TextLayoutResult
 
 @RunWith(AndroidJUnit4::class)
@@ -70,7 +71,8 @@ class AskScreenTest {
         client.connectionPool.evictAll()
     }
 
-    @Test fun sourceOpensNativeContentAndReturnsToDraft() {
+    /** 一个源引用的 SSE 应答固定器：返回 (controller, client)，用毕关闭 client。 */
+    private fun answeringController(): Pair<AskController, OkHttpClient> {
         val sse = """
             event: sources
             data: {"sources":[{"id":"fixture:1","sourceId":"1","title":"引用测试资料","content":"这是本次回答的具体依据，仅用于自动化测试。","scope":"daily","section":null,"sourceUrl":"https://example.invalid/never-open"}]}
@@ -86,7 +88,16 @@ class AskScreenTest {
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
                 .body(sse.toResponseBody("text/event-stream".toMediaType())).build()
         }.build()
-        val controller = AskController(AskClient(client, Json { ignoreUnknownKeys = true }), "1234567890123456")
+        return AskController(AskClient(client, Json { ignoreUnknownKeys = true }), "1234567890123456") to client
+    }
+
+    private fun shutdown(client: OkHttpClient) {
+        client.dispatcher.executorService.shutdown()
+        client.connectionPool.evictAll()
+    }
+
+    @Test fun sourceOpensNativeContentAndReturnsToDraft() {
+        val (controller, client) = answeringController()
         compose.setContent { PersonalSiteTheme { AskScreen(controller, onDismiss = {}) } }
         compose.onNodeWithTag("ask-input").performTextInput("问")
         compose.onNodeWithContentDescription("发送").assertIsNotEnabled()
@@ -106,7 +117,42 @@ class AskScreenTest {
         compose.onNodeWithTag("ask-input").assertTextContains("下一问草稿")
         compose.onNodeWithText("引用测试资料").assertExists()
         compose.runOnIdle { controller.cancel() }
-        client.dispatcher.executorService.shutdown()
-        client.connectionPool.evictAll()
+        shutdown(client)
+    }
+
+    /** 阅读器在场时下层会话必须惰性（指针、语义、焦点、快捷发送），关闭后全部恢复。 */
+    @Test fun readerShieldsConversationUntilClosed() {
+        val (controller, client) = answeringController()
+        compose.setContent { PersonalSiteTheme { AskScreen(controller, onDismiss = {}) } }
+        compose.onNodeWithText("介绍一下陈远").performClick()
+        compose.onNodeWithContentDescription("发送").performClick()
+        compose.waitUntil(5000) { !controller.state.value.streaming && controller.state.value.messages.size == 2 }
+        compose.onNodeWithTag("ask-input").performTextInput("下一问草稿")
+        val coveredNewChat = compose.onNodeWithText("新对话").fetchSemanticsNode().positionInRoot
+
+        compose.onNodeWithText("引用测试资料").performClick()
+        compose.onNodeWithText("引用 1").assertIsDisplayed()
+        compose.onNodeWithText("新对话").assertDoesNotExist()
+        compose.onNodeWithTag("ask-input").assertDoesNotExist()
+        compose.onRoot().performTouchInput { click(coveredNewChat) }
+        compose.onNodeWithText("开始新对话？").assertDoesNotExist()
+        compose.onNodeWithText("引用 1").assertIsDisplayed()
+        // 阅读器在场时 ask-input 已随会话语义整体移出语义树，按键交互可能先于投递
+        // 抛出；无论走哪条路径，阅读器打开期间都不允许追加消息。
+        runCatching {
+            compose.onNodeWithTag("ask-input").performKeyInput { withKeysDown(listOf(Key.CtrlLeft)) { pressKey(Key.Enter) } }
+        }
+        compose.runOnIdle { assertEquals(2, controller.state.value.messages.size) }
+
+        compose.onNodeWithContentDescription("返回对话").performClick()
+        compose.onNodeWithText("引用 1").assertDoesNotExist()
+        compose.onNodeWithTag("ask-input").assertTextContains("下一问草稿")
+        compose.onNodeWithText("新对话").assertExists()
+        compose.onNodeWithTag("ask-input").assertIsNotFocused()
+        compose.onNodeWithTag("ask-input").performClick()
+        compose.onNodeWithTag("ask-input").performKeyInput { withKeysDown(listOf(Key.CtrlLeft)) { pressKey(Key.Enter) } }
+        compose.waitUntil(5000) { controller.state.value.messages.size == 4 }
+        compose.runOnIdle { controller.cancel() }
+        shutdown(client)
     }
 }

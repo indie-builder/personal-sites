@@ -119,7 +119,14 @@ fun PersonalSiteApp(container: AppContainer) {
     // 同回合设置，重组读取时不早于本次导航；退出过渡不读它，改读离场条目持久化
     // 的意图，避免被后续导航覆盖（恢复的集合被下钻覆盖后会错误横滑退出）。
     var navMotion by remember { mutableStateOf(NavMotion.Tab) }
+    // 页签操作产生的弹出（Navigation 2.10.2 对 popUpTo 恢复页签记 isPop）与真实
+    // Back 无法从路由形态区分：记录该操作实际完成的（离场条目, 目标条目）对，
+    // popExit 命中即强制淡出。记录在每次 navigate 开头清空；真实 Back 不经
+    // navigate，要再次成为离场方必须先经一次 navigate 回到栈顶，因此真实 Back
+    // 命不中残留记录，仍走离场条目持久化的意图。
+    var tabPop by remember { mutableStateOf<Pair<String, String>?>(null) }
     fun navigate(route: String, motion: NavMotion, options: NavOptionsBuilder.() -> Unit = {}) {
+        tabPop = null
         navMotion = motion
         navController.navigate(route, options)
         // 同一主线程回合写入目标条目（页签恢复时目标是恢复栈顶条目，其意图刷新为
@@ -127,11 +134,14 @@ fun PersonalSiteApp(container: AppContainer) {
         navController.currentBackStackEntry?.savedStateHandle?.set(NAV_MOTION_KEY, motion)
     }
     fun openTab(route: String) {
+        val fromId = navController.currentBackStackEntry?.id
         navigate(route, NavMotion.Tab) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true
             restoreState = true
         }
+        val toId = navController.currentBackStackEntry?.id
+        if (fromId != null && toId != null && fromId != toId) tabPop = fromId to toId
     }
     var barVisible by remember { mutableStateOf(true) }
     val threshold = with(LocalDensity.current) { 16.dp.toPx() }
@@ -179,8 +189,12 @@ fun PersonalSiteApp(container: AppContainer) {
             exitTransition = { fadeOut(tween(150)) },
             popEnterTransition = { fadeIn(tween(200)) },
             popExitTransition = {
+                // 页签弹出按记录的（离场, 目标）条目对识别，其余弹出（真实 Back）读离场条目持久化的意图。
+                val tabPopFade = tabPop?.let { (fromId, toId) ->
+                    initialState.id == fromId && targetState.id == toId
+                } == true
                 val outgoing = initialState.savedStateHandle.get<NavMotion>(NAV_MOTION_KEY)
-                if (outgoing != NavMotion.Detail || initialState.destination.route !in detailRoutes) {
+                if (tabPopFade || outgoing != NavMotion.Detail || initialState.destination.route !in detailRoutes) {
                     fadeOut(tween(150))
                 } else {
                     slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200))

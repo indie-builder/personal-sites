@@ -10,6 +10,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -33,12 +34,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -128,8 +132,17 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     var closingSource by remember { mutableStateOf<AskSource?>(null) }
     LaunchedEffect(selectedSource) { if (selectedSource != null) closingSource = selectedSource }
     val readerSource = selectedSource ?: closingSource
+    // 阅读器在场（升起或滑出中）时下层会话必须惰性：整层消费指针、隐藏会话语义、
+    // 清除编辑器焦点并停用其快捷发送，关闭后四项全部自然恢复（不自动回焦）。
+    val readerInFlight = readerOpen || readerSlide > 0f || readerAlpha > 0f
+    val readerVisible = readerSource != null && readerInFlight
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(readerOpen) { if (readerOpen) focusManager.clearFocus() }
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().imePadding().navigationBarsPadding()) {
+        Column(
+            Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().imePadding().navigationBarsPadding()
+                .then(if (readerVisible) Modifier.clearAndSetSemantics { } else Modifier)
+        ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = SiteSpace.compact), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDismiss) { Icon(SiteIcons.ArrowBack, "返回") }
                 Column(Modifier.weight(1f)) {
@@ -229,7 +242,8 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                         colors = TextFieldDefaults.colors(focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
                             focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent),
                         modifier = Modifier.fillMaxWidth().testTag("ask-input").focusRequester(focus).onPreviewKeyEvent {
-                            if (it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)) { if (it.type == KeyEventType.KeyUp) send(); true } else false
+                            if (readerVisible) false
+                            else if (it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)) { if (it.type == KeyEventType.KeyUp) send(); true } else false
                         },
                     )
                     Row(Modifier.fillMaxWidth().padding(start = SiteSpace.compact), verticalAlignment = Alignment.CenterVertically) {
@@ -253,8 +267,10 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
             }
         }
         // 打开或滑出进行中才组合阅读器层；滑出结束（进度与透明度归零）即拆除。
-        if (readerSource != null && (readerOpen || readerSlide > 0f || readerAlpha > 0f)) {
-            Box(Modifier.fillMaxSize().graphicsLayer {
+        // Box 整层消费指针：阅读器自有子项（返回、选择正文）先命中，空窗位（如页
+        // 首空白页眉）不再穿透到下层会话的按钮与输入区。
+        if (readerSource != null && readerInFlight) {
+            Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } }.graphicsLayer {
                 alpha = readerAlpha
                 translationY = size.height * (1f - readerSlide)
             }) {
