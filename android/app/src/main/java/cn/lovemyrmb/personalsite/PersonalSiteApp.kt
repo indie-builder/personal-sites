@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -64,7 +65,6 @@ import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.data.Section
-import kotlinx.coroutines.launch
 import cn.lovemyrmb.personalsite.ui.ask.AskScreen
 import cn.lovemyrmb.personalsite.ui.about.AboutScreen
 import cn.lovemyrmb.personalsite.ui.components.openExternally
@@ -81,6 +81,8 @@ import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private const val BAR_HEIGHT = 72
 
@@ -104,6 +106,13 @@ private const val NAV_MOTION_KEY = "nav:motion"
 
 private enum class NavMotion { Tab, Detail }
 
+// 待评估的页签弹出。Navigation 2.10.2 在组合后的 LaunchedEffect 里才推进过渡
+// 目标，弹出离场规格的读取可晚于其后的下一次点击，记录必须比单次 navigate 活得
+// 久，因此持有离场条目本身（而非仅 id）：条目恰在其弹出过渡完成时销毁、并同刻
+// 离开 visibleEntries，以此做到期；恢复栈复用条目 id，销毁后残留的记录会把之后
+// 真实 Back 误判成页签淡出。
+private data class TabPop(val outgoing: NavBackStackEntry, val targetId: String)
+
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
     val navController = rememberNavController()
@@ -121,27 +130,38 @@ fun PersonalSiteApp(container: AppContainer) {
     var navMotion by remember { mutableStateOf(NavMotion.Tab) }
     // 页签操作产生的弹出（Navigation 2.10.2 对 popUpTo 恢复页签记 isPop）与真实
     // Back 无法从路由形态区分：记录该操作实际完成的（离场条目, 目标条目）对，
-    // popExit 命中即强制淡出。记录在每次 navigate 开头清空；真实 Back 不经
-    // navigate，要再次成为离场方必须先经一次 navigate 回到栈顶，因此真实 Back
-    // 命不中残留记录，仍走离场条目持久化的意图。
-    var tabPop by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // popExit 命中即强制淡出。记录生命周期：新页签操作换上自己的对；同条目导航
+    // （fromId == toId）与其他导航都不动它，迟到的弹出评估仍要读它；把记录的
+    // 离场条目重新顶回栈顶的导航使其失效清空（该弹出不再评估，且恢复条目复用
+    // id，残留会让之后的真实 Back 误判）；离场条目销毁（弹出过渡完成）即到期。
+    // 真实 Back 不经 navigate，要误命中记录只能先经导航把离场条目复用回栈顶，
+    // 该路径已被失效规则封死，其余 Back 读离场条目持久化的意图。
+    var tabPop by remember { mutableStateOf<TabPop?>(null) }
     fun navigate(route: String, motion: NavMotion, options: NavOptionsBuilder.() -> Unit = {}) {
-        tabPop = null
         navMotion = motion
         navController.navigate(route, options)
+        if (tabPop?.outgoing?.id == navController.currentBackStackEntry?.id) tabPop = null
         // 同一主线程回合写入目标条目（页签恢复时目标是恢复栈顶条目，其意图刷新为
         // Tab，Back 便按淡入镜像淡出），重组里的过渡读取不早于本次导航。
         navController.currentBackStackEntry?.savedStateHandle?.set(NAV_MOTION_KEY, motion)
     }
     fun openTab(route: String) {
-        val fromId = navController.currentBackStackEntry?.id
+        val from = navController.currentBackStackEntry ?: return
         navigate(route, NavMotion.Tab) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true
             restoreState = true
         }
         val toId = navController.currentBackStackEntry?.id
-        if (fromId != null && toId != null && fromId != toId) tabPop = fromId to toId
+        if (toId != null && toId != from.id) tabPop = TabPop(from, toId)
+    }
+    // 记录到期清理：等到离场条目离开可见栈——它恰在弹出过渡完成（或被后续导航
+    // 取代）的 markTransitionComplete 里销毁并移出 visibleEntries，同刻早于它的
+    // 清空都会让迟到的弹出评估读不到记录（正是本轮缺陷）。
+    LaunchedEffect(tabPop) {
+        val record = tabPop ?: return@LaunchedEffect
+        navController.visibleEntries.first { record.outgoing !in it }
+        if (tabPop == record) tabPop = null
     }
     var barVisible by remember { mutableStateOf(true) }
     val threshold = with(LocalDensity.current) { 16.dp.toPx() }
@@ -189,10 +209,10 @@ fun PersonalSiteApp(container: AppContainer) {
             exitTransition = { fadeOut(tween(150)) },
             popEnterTransition = { fadeIn(tween(200)) },
             popExitTransition = {
-                // 页签弹出按记录的（离场, 目标）条目对识别，其余弹出（真实 Back）读离场条目持久化的意图。
-                val tabPopFade = tabPop?.let { (fromId, toId) ->
-                    initialState.id == fromId && targetState.id == toId
-                } == true
+                // 页签弹出按存活记录的（离场, 目标）条目对识别，其余弹出（真实 Back）读离场条目持久化的意图。
+                val record = tabPop
+                val tabPopFade = record != null &&
+                    initialState.id == record.outgoing.id && targetState.id == record.targetId
                 val outgoing = initialState.savedStateHandle.get<NavMotion>(NAV_MOTION_KEY)
                 if (tabPopFade || outgoing != NavMotion.Detail || initialState.destination.route !in detailRoutes) {
                     fadeOut(tween(150))

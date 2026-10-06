@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.*
@@ -62,8 +63,8 @@ private val recommendedQuestions = listOf(
 
 /** 推荐问题芯片：点击填入草稿并选对应范围（行为契约见 docs/ask-experience.md）。 */
 @Composable
-private fun RecommendedChip(question: String, onSelect: () -> Unit) {
-    OutlinedButton(onClick = onSelect) { Text(question) }
+private fun RecommendedChip(question: String, enabled: Boolean, onSelect: () -> Unit) {
+    OutlinedButton(onClick = onSelect, enabled = enabled) { Text(question) }
 }
 
 /** Full-screen native conversation. References open the returned source content in-app. */
@@ -133,7 +134,10 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     LaunchedEffect(selectedSource) { if (selectedSource != null) closingSource = selectedSource }
     val readerSource = selectedSource ?: closingSource
     // 阅读器在场（升起或滑出中）时下层会话必须惰性：整层消费指针、隐藏会话语义、
-    // 清除编辑器焦点并停用其快捷发送，关闭后四项全部自然恢复（不自动回焦）。
+    // 封锁会话子树焦点（canFocus 随子树级联，Tab 遍历进不来）、清除编辑器焦点并
+    // 停用其快捷发送，会话内可交互控件（返回、新对话、推荐问题、范围与发送）同步
+    // 停用。readerVisible 在滑出动画归零后才为 false，恢复即以它为准；关闭后上
+    // 述全部自然恢复（不自动回焦）。
     val readerInFlight = readerOpen || readerSlide > 0f || readerAlpha > 0f
     val readerVisible = readerSource != null && readerInFlight
     val focusManager = LocalFocusManager.current
@@ -141,15 +145,16 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().imePadding().navigationBarsPadding()
+                .focusProperties { canFocus = !readerVisible }
                 .then(if (readerVisible) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = SiteSpace.compact), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onDismiss) { Icon(SiteIcons.ArrowBack, "返回") }
+                IconButton(onClick = onDismiss, enabled = !readerVisible) { Icon(SiteIcons.ArrowBack, "返回") }
                 Column(Modifier.weight(1f)) {
                     Text("问一问", style = SiteText.title, color = SiteTheme.colors.ink)
                     Text("基于站内资料 · 引用可在应用内阅读", style = SiteText.meta, color = SiteTheme.colors.muted)
                 }
-                TextButton(onClick = { if (state.messages.isNotEmpty() || input.isNotBlank()) confirmReset = true }) { Text("新对话") }
+                TextButton(onClick = { if (state.messages.isNotEmpty() || input.isNotBlank()) confirmReset = true }, enabled = !readerVisible) { Text("新对话") }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph), verticalArrangement = Arrangement.spacedBy(SiteSpace.section)) {
@@ -162,7 +167,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                             // 横竖屏只换容器(横向滚动 vs 纵向堆叠),推荐问题芯片共用一份渲染。
                             val questionChips: @Composable () -> Unit = {
                                 recommendedQuestions.forEach { (question, questionScope) ->
-                                    RecommendedChip(question) {
+                                    RecommendedChip(question, !readerVisible) {
                                         input = question
                                         searchScope = questionScope
                                         focus.requestFocus(); keyboard?.show()
@@ -248,7 +253,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                     )
                     Row(Modifier.fillMaxWidth().padding(start = SiteSpace.compact), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) {
-                            TextButton(onClick = { scopeMenu = true }, enabled = !state.streaming) {
+                            TextButton(onClick = { scopeMenu = true }, enabled = !state.streaming && !readerVisible) {
                                 Text(searchScope.label, style = SiteText.meta)
                                 Icon(SiteIcons.ArrowDropDown, "选择资料范围", modifier = Modifier.size(18.dp))
                             }
@@ -259,7 +264,7 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                         if (input.trim().length > 1000 || (input.isNotEmpty() && input.trim().length < 2)) Text(
                             if (input.trim().length > 1000) "最多 1000 字" else "至少 2 个字", style = SiteText.meta, color = MaterialTheme.colorScheme.error,
                         )
-                        FilledIconButton(onClick = { if (state.streaming) controller.cancel() else send() }, enabled = state.streaming || validInput, shape = CircleShape, modifier = Modifier.size(SiteSpace.touch)) {
+                        FilledIconButton(onClick = { if (state.streaming) controller.cancel() else send() }, enabled = !readerVisible && (state.streaming || validInput), shape = CircleShape, modifier = Modifier.size(SiteSpace.touch)) {
                             Icon(if (state.streaming) SiteIcons.Stop else SiteIcons.ArrowUpward, if (state.streaming) "停止生成" else "发送")
                         }
                     }

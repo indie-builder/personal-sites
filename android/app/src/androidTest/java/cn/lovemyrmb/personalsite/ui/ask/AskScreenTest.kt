@@ -123,7 +123,8 @@ class AskScreenTest {
     /** 阅读器在场时下层会话必须惰性（指针、语义、焦点、快捷发送），关闭后全部恢复。 */
     @Test fun readerShieldsConversationUntilClosed() {
         val (controller, client) = answeringController()
-        compose.setContent { PersonalSiteTheme { AskScreen(controller, onDismiss = {}) } }
+        var dismissed = false
+        compose.setContent { PersonalSiteTheme { AskScreen(controller, onDismiss = { dismissed = true }) } }
         compose.onNodeWithText("介绍一下陈远").performClick()
         compose.onNodeWithContentDescription("发送").performClick()
         compose.waitUntil(5000) { !controller.state.value.streaming && controller.state.value.messages.size == 2 }
@@ -137,16 +138,33 @@ class AskScreenTest {
         compose.onRoot().performTouchInput { click(coveredNewChat) }
         compose.onNodeWithText("开始新对话？").assertDoesNotExist()
         compose.onNodeWithText("引用 1").assertIsDisplayed()
-        // 阅读器在场时 ask-input 已随会话语义整体移出语义树，按键交互可能先于投递
-        // 抛出；无论走哪条路径，阅读器打开期间都不允许追加消息。
-        runCatching {
-            compose.onNodeWithTag("ask-input").performKeyInput { withKeysDown(listOf(Key.CtrlLeft)) { pressKey(Key.Enter) } }
-        }
+        // 硬件键路径。按键一律真实注入：onRoot().performKeyInput 最终走
+        // View.dispatchKeyEvent（对已随会话语义移除的 ask-input 注入会在注入前抛
+        // 错，故必须从 onRoot 注入且不得捕获异常）；先经 sendKeyDownUpSync 注入
+        // 一次真实 DPAD（走 ViewRootImpl，非触摸导航键使窗口离开触摸模式，onRoot
+        // 注入不经过 ViewRootImpl、无此效果），使后续按键能参与焦点遍历。此后
+        // DPAD/Tab/Enter 连击不得激活会话侧任何控件：canFocus=false 让遍历在会话
+        // 子树前一无所获（焦点无法落进被封锁的子树，会话控件已被语义移除、其焦
+        // 点态不可见，故以行为断言代替焦点位置断言）——不得弹新对话确认、不得
+        // 触发 onDismiss、不得追加或改动草稿、不得追加消息，阅读器保持在场。
+        compose.onRoot().performKeyInput { pressKey(Key.Enter) }
+        compose.onNodeWithText("开始新对话？").assertDoesNotExist()
+        compose.onNodeWithText("引用 1").assertIsDisplayed()
         compose.runOnIdle { assertEquals(2, controller.state.value.messages.size) }
+
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            .sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onRoot().performKeyInput {
+            pressKey(Key.Tab); pressKey(Key.Tab); pressKey(Key.Enter); pressKey(Key.Enter)
+        }
+        compose.onNodeWithText("开始新对话？").assertDoesNotExist()
+        compose.onNodeWithText("引用 1").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(2, controller.state.value.messages.size) }
+        compose.runOnIdle { assertEquals(false, dismissed) }
 
         compose.onNodeWithContentDescription("返回对话").performClick()
         compose.onNodeWithText("引用 1").assertDoesNotExist()
-        compose.onNodeWithTag("ask-input").assertTextContains("下一问草稿")
+        compose.onNodeWithTag("ask-input").assertTextEquals("下一问草稿")
         compose.onNodeWithText("新对话").assertExists()
         compose.onNodeWithTag("ask-input").assertIsNotFocused()
         compose.onNodeWithTag("ask-input").performClick()
