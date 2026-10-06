@@ -47,7 +47,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
     } catch { /* 隐私模式下仍可正常筛选。 */ }
   }, [tags]);
 
-  const selectTag = (value: string) => {
+  const selectTag = (value: string, viaKeyboard = false) => {
     const next = value === "all" ? null : value;
     if (next === activeTag) return;
     setActiveTag(next);
@@ -55,7 +55,8 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
       if (next) window.sessionStorage.setItem(TAG_STORAGE_KEY, next);
       else window.sessionStorage.removeItem(TAG_STORAGE_KEY);
     } catch { /* 会话存储只用于返回时恢复选择。 */ }
-    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: reduceMotion ? "auto" : "smooth", top: 0 });
+    // 键盘切换（event.detail === 0 约定）与 reduced-motion 一样即时回顶，不播平滑滚动。
+    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: reduceMotion || viaKeyboard ? "auto" : "smooth", top: 0 });
   };
   const selected = tags.find(({ tag }) => tag === activeTag);
   const filter = <StreamFilterMenu

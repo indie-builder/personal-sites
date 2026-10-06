@@ -192,13 +192,15 @@ html[data-curation-theme="dark"] .curation-home__stream-skeleton .curation-home_
 html[data-curation-theme="dark"] .curation-home__stream-skeleton span::after { background:linear-gradient(90deg,transparent 22%,#303030 50%,transparent 78%); }
 @media (prefers-reduced-motion:reduce) { .curation-home__stream-skeleton span::after { animation:none; } }
 @media (prefers-reduced-motion:reduce) {
-  .about-modal__close,.curation-home__stream-status button,.curation-home__stream-error { transition:none; }
+  .about-modal__close,.curation-home__stream-status button { transition:none; }
   .curation-home__about-trigger:active:not(:focus-visible),
   .about-modal__close:active:not(:focus-visible),
   .curation-home__stream-status button:active:not(:focus-visible) { transform:none; }
 }
 .curation-home__stream-error { display:grid; max-width:38rem; justify-items:start; gap:.42rem; border-bottom:1px solid var(--line); padding:2.25rem 0; transition:opacity 200ms ease-out; }
 @starting-style { .curation-home__stream-error { opacity:0; } }
+/* 同特异性下源顺序取胜：stream-error 的降级必须排在正常声明之后才真正生效。 */
+@media (prefers-reduced-motion:reduce) { .curation-home__stream-error { transition:none; } }
 .curation-home__stream-error p { margin:0; color:#656568; font-size:.78rem; line-height:1.55; }
 .curation-home__stream-error .curation-home__stream-error-title { color:#994545; font-size:.82rem; font-weight:620; }
 .curation-home__stream-error button { display:inline-flex; min-height:2.75rem; align-items:center; border:0; background:transparent; color:var(--ink); cursor:pointer; font-size:.76rem; font-weight:620; padding:0 .1rem; text-decoration:underline; text-underline-offset:.23em; }

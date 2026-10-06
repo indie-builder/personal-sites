@@ -2,6 +2,68 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openAssistant } from "./helpers/assistant";
 
+// 键盘激活（Enter，合成 click detail 为 0）直接到达开合终态：本次切换零过渡事件；
+// 指针开合仍走 chevron 旋转与引用淡入过渡。
+test("sources disclosure toggles instantly from the keyboard and transitions from the mouse", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    const controls = window as typeof window & { emitAsk: (event: string, data: unknown) => void };
+    window.fetch = (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.endsWith("/api/ask")) return originalFetch(input, init);
+      return Promise.resolve(new Response(new ReadableStream({
+        start(controller) {
+          controls.emitAsk = (event, data) => {
+            controller.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+            if (event === "done") controller.close();
+          };
+        },
+      }), { headers: { "Content-Type": "text/event-stream" } }));
+    };
+  });
+  const emit = (event: string, data: unknown) => page.evaluate(({ event, data }) => {
+    (window as typeof window & { emitAsk: (event: string, data: unknown) => void }).emitAsk(event, data);
+  }, { event, data });
+
+  const dialog = await openAssistant(page);
+  await dialog.getByRole("textbox", { name: "输入问题" }).fill("请整理公开资料");
+  await dialog.getByRole("button", { name: "发送问题" }).click();
+  await emit("text", { delta: "root = TextContent(\"结论已整理\")" });
+  await emit("sources", { sources: [{ id: "source-1", title: "测试公开来源", sourceUrl: "/curation/source" }] });
+  await emit("done", {});
+  const summary = dialog.locator("summary").filter({ hasText: "参考资料 · 1 篇" });
+  await expect(summary).toBeVisible();
+  const details = summary.locator("xpath=ancestor::details[1]");
+  const citations = dialog.getByRole("list", { name: "回答来源" });
+  const chevron = summary.locator("svg");
+  await page.evaluate(() => {
+    const w = window as typeof window & { __sourceTransitions: string[] };
+    w.__sourceTransitions = [];
+    document.addEventListener("transitionstart", (event) => {
+      const target = event.target as Element | null;
+      if (target?.closest?.("details")) w.__sourceTransitions.push((event as TransitionEvent).propertyName);
+    });
+  });
+  const readTransitions = () => page.evaluate(() => (
+    window as typeof window & { __sourceTransitions?: string[] }
+  ).__sourceTransitions ?? []);
+
+  await summary.click();
+  await expect(citations).toBeVisible();
+  await expect.poll(readTransitions).toContain("transform");
+  expect(await details.getAttribute("data-instant")).toBeNull();
+  const transitionsAfterMouseOpen = await readTransitions();
+
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(citations).toBeHidden();
+  expect(await details.evaluate((element) => (element as HTMLDetailsElement).open)).toBe(false);
+  expect(await details.getAttribute("data-instant")).toBe("");
+  expect(await chevron.evaluate((element) => getComputedStyle(element).transitionProperty)).toBe("none");
+  await page.waitForTimeout(300);
+  expect(await readTransitions()).toEqual(transitionsAfterMouseOpen);
+});
+
 test("Ask retrieval status uses Motion with a static reduced state", async ({ page }) => {
   let releaseResponse!: () => void;
   let responseGate = new Promise<void>((resolve) => {

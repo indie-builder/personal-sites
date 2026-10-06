@@ -215,6 +215,12 @@
   }
 }
 
+/* 键盘激活（Enter/Space 合成 click 的 detail 为 0）落下 data-instant：本次开合跳过过渡，直接到达终态。 */
+.sources[data-instant] .sourcesSummary svg,
+.sources[data-instant] .citations {
+  transition: none;
+}
+
 .citation {
   display: flex;
   align-items: baseline;
