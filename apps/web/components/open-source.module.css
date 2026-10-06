@@ -151,7 +151,8 @@
   .repositoryFileHeader,
   .repositoryFileContent,
   .repositoryBrowserError,
-  .repositoryFileEmpty {
+  .repositoryFileEmpty,
+  .repositoryTreeItem {
     transition: none;
   }
 }
@@ -244,7 +245,7 @@
 .repositoryBrowserContent { display: grid; min-height: 28rem; grid-template-columns: minmax(13rem, .68fr) minmax(0, 1.45fr); border: 1px solid var(--line); }
 .repositoryTreePane { overflow: auto; max-height: 38rem; border-right: 1px solid var(--line); padding: .45rem 0; }
 .repositoryTree { margin: 0; padding: 0; list-style: none; }
-.repositoryTreeItem { display: flex; width: 100%; min-width: max-content; align-items: center; border: 0; background: transparent; color: #5f5f63; cursor: pointer; gap: .32rem; padding-top: .27rem; padding-right: .7rem; padding-bottom: .27rem; text-align: left; }
+.repositoryTreeItem { display: flex; width: 100%; min-width: max-content; align-items: center; border: 0; background: transparent; color: #5f5f63; cursor: pointer; gap: .32rem; padding-top: .27rem; padding-right: .7rem; padding-bottom: .27rem; text-align: left; transition: background-color 160ms ease, color 160ms ease; }
 .repositoryTreeItem:hover,.repositoryTreeItem:focus-visible,.repositoryTreeItem[aria-current="true"] { background: #f3f3f4; color: var(--ink); outline: 0; }
 .repositoryTreeItem svg { width: .82rem; height: .82rem; flex: 0 0 auto; color: #6f6f72; stroke-width: 1.55; }
 .repositoryTreeItem span { white-space: nowrap; }

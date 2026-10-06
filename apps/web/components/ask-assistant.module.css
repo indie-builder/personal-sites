@@ -26,7 +26,7 @@
 .panel { position: fixed; top: 0; right: 0; z-index: 80; display: flex; flex-direction: column; width: 420px; max-width: 100vw; height: 100dvh; padding-top: 60px; background: #f9f9f9; color: #111; font-family: var(--font-sans); transform: translateX(0); transition: transform 450ms cubic-bezier(.22,1,.36,1); }
 @starting-style { .panel { transform: translateX(100%); } }
 .panel[data-phase="closing"] { transform: translateX(100%); }
-.close { position: absolute; top: 8px; left: 10px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #8d8d8d; cursor: pointer; transition: background 180ms ease, color 180ms ease, transform 120ms var(--ease-out); }
+.close { position: absolute; top: 8px; left: 10px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #8d8d8d; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, transform 120ms var(--ease-out); }
 .close:hover { background: #f0f0f0; }
 .close:active:not(:focus-visible) { transform: scale(.97); }
 .mobileClose { display: none; }

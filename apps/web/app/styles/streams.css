@@ -1,7 +1,7 @@
 
 /* 每日动态列表：分类筛选 + 按日分组的连续信息流，与每日关注流同一语言（1px 分隔线、hover 只动文字与箭头）。 */
 .ai-news__stream { position:relative; padding-top:.75rem; }
-.ai-news__category-select { position:absolute; top:.75rem; right:0; width:7rem; min-height:2.75rem; border:0; border-radius:0; background:transparent; color:var(--muted); font:inherit; font-size:.875rem; cursor:pointer; padding:.5rem .25rem; transition:transform 120ms var(--ease-out); }
+.ai-news__category-select { position:absolute; top:.75rem; right:0; width:7rem; min-height:2.75rem; border:0; border-radius:0; background:transparent; color:var(--muted); font:inherit; font-size:.875rem; cursor:pointer; padding:.5rem .25rem; transition:color 160ms ease,transform 120ms var(--ease-out); }
 .ai-news__category-select:active:not(:focus-visible) { transform:scale(.97); }
 .ai-news__category-select:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
 
