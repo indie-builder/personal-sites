@@ -80,7 +80,16 @@ export const AskMessageItem = memo(function AskMessageItem({ isStreamingPlacehol
           ) : null}
           {message.role === "assistant" && message.isComplete && message.citations.length > 0 ? (
             <details className={styles.sources} data-slot="message-footer">
-              <summary className={styles.sourcesSummary}>
+              <summary
+                className={styles.sourcesSummary}
+                onClick={(event) => {
+                  // 键盘激活（event.detail === 0，全站约定）在默认开合动作前落下 data-instant，本次切换跳过过渡。
+                  const details = event.currentTarget.parentElement;
+                  if (!(details instanceof HTMLElement)) return;
+                  if (event.detail === 0) details.dataset.instant = "";
+                  else delete details.dataset.instant;
+                }}
+              >
                 <span>参考资料 · {message.citations.length} 篇</span>
                 <ChevronDown aria-hidden="true" />
               </summary>

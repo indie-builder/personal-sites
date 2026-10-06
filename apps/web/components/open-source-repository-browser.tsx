@@ -32,6 +32,8 @@ type RepositoryFileResponse = {
 };
 
 type OpenSourceRepositoryBrowserProps = {
+  /** 面板当前是否可见；不可见时清掉入场武装，隐藏期间提交的响应不再武装，hidden 往返即时呈现。 */
+  active: boolean;
   repository: string;
   repositoryUrl: string;
   slug: string;
@@ -145,7 +147,7 @@ function RepositoryTreeRows({
   );
 }
 
-export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }: OpenSourceRepositoryBrowserProps) {
+export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl, slug }: OpenSourceRepositoryBrowserProps) {
   const [tree, setTree] = useState<RepositoryTreeResponse | null>(null);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -153,7 +155,18 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
   const [file, setFile] = useState<RepositoryFileResponse | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [loadingFile, setLoadingFile] = useState(false);
+  // @starting-style 入场只武装在新响应提交的同一次渲染，且提交时面板可见；隐藏即解除，
+  // 隐藏期间到达的响应丢弃入场资格，hidden 往返不重播。visible 与 armed 放同一份状态：
+  // 提交回调用函数式更新读最新可见性，避开闭包里请求发起时的旧 active。
+  const [entrance, setEntrance] = useState({ armed: false, visible: active });
+  if (entrance.visible !== active) {
+    setEntrance(active ? { armed: entrance.armed, visible: true } : { armed: false, visible: false });
+  }
   const requestVersion = useRef(0);
+
+  const armEntranceIfVisible = () => {
+    setEntrance((current) => (current.visible ? { ...current, armed: true } : current));
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -165,10 +178,14 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
       ),
       { signal: controller.signal },
     )
-      .then(setTree)
+      .then((result) => {
+        setTree(result);
+        armEntranceIfVisible();
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setTreeError(error instanceof Error ? error.message : "暂时无法读取原始仓库结构。");
+        armEntranceIfVisible();
       });
     return () => controller.abort();
   }, [slug]);
@@ -197,10 +214,14 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
           "暂时无法读取原始文件。",
         ),
       );
-      if (requestVersion.current === currentVersion) setFile(result);
+      if (requestVersion.current === currentVersion) {
+        setFile(result);
+        armEntranceIfVisible();
+      }
     } catch (error) {
       if (requestVersion.current === currentVersion) {
         setFileError(error instanceof Error ? error.message : "暂时无法读取原始文件。");
+        armEntranceIfVisible();
       }
     } finally {
       if (requestVersion.current === currentVersion) setLoadingFile(false);
@@ -210,7 +231,7 @@ export function OpenSourceRepositoryBrowser({ repository, repositoryUrl, slug }:
   const nodes = tree ? buildGitHubRepositoryTree(tree.entries) : [];
 
   return (
-    <div className={styles.repositoryBrowser}>
+    <div className={styles.repositoryBrowser} data-entrance={entrance.armed ? "" : undefined}>
       <div className={styles.repositoryBrowserToolbar}>
         <div>
           <strong>{repository}</strong>
