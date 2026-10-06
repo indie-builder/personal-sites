@@ -66,7 +66,7 @@ struct PortfolioView: View {
                                 .padding(.vertical, 20)
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SitePressStyle.row)
                             .accessibilityIdentifier("portfolio-\(product.id)")
                             Divider().overlay(SiteTheme.line)
                         }
@@ -154,7 +154,7 @@ struct PortfolioToolsView: View {
                                         }
                                         .foregroundStyle(SiteTheme.ink).frame(minHeight: 52).contentShape(Rectangle())
                                     }
-                                    .buttonStyle(.plain).accessibilityHint("在浏览器打开工具官网")
+                                    .buttonStyle(SitePressStyle.row).accessibilityHint("在浏览器打开工具官网")
                                 }
                             }
                             }
@@ -225,7 +225,7 @@ struct PortfolioVideo: View {
                         .foregroundStyle(SiteTheme.ink).frame(width: 52, height: 52)
                         .background(SiteTheme.background, in: Circle())
                 }
-                .buttonStyle(.plain).accessibilityLabel("播放视频")
+                .buttonStyle(SitePressStyle.compact).accessibilityLabel("播放视频")
             case .playing(let player):
                 VideoPlayer(player: player)
             case .failed:

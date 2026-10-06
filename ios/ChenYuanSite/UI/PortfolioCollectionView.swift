@@ -95,7 +95,7 @@ struct PortfolioCollectionView: View {
                             .font(SiteText.label).foregroundStyle(SiteTheme.ink)
                             .frame(minHeight: 48).contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain).padding(.horizontal, 24).padding(.bottom, 24)
+                        .buttonStyle(SitePressStyle.row).padding(.horizontal, 24).padding(.bottom, 24)
                     }
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 14)], spacing: 24) {

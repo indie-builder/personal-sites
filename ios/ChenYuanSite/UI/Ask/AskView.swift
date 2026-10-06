@@ -66,7 +66,7 @@ struct AskView: View {
             .font(SiteText.meta).foregroundStyle(SiteTheme.ink)
             .frame(minWidth: 48, minHeight: 48)
             .contentShape(Rectangle())
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.compact)
             .disabled(controller.messages.isEmpty && controller.draft.isEmpty)
         }
         .padding(.horizontal, SiteSpace.compact)
@@ -114,7 +114,7 @@ struct AskView: View {
                             .background(SiteTheme.background)
                             .clipShape(Circle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SitePressStyle.compact)
                     .accessibilityLabel("回到最新回复")
                     .padding(.bottom, SiteSpace.compact)
                 }
@@ -202,7 +202,7 @@ struct AskView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SitePressStyle.row)
             .frame(minHeight: SiteSpace.touch - SiteSpace.compact)
             .padding(.vertical, SiteSpace.compact / 2)
         }
@@ -275,7 +275,7 @@ struct AskView: View {
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .background(Circle().fill(active ? SiteTheme.ink : SiteTheme.line))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .disabled(!active)
         .accessibilityLabel(controller.streaming ? "停止生成" : "发送")
         .accessibilityIdentifier("ask-send")

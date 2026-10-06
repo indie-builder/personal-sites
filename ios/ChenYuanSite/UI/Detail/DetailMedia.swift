@@ -85,7 +85,7 @@ private struct VideoCard: View {
                     }
                     .frame(width: 52, height: 52)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SitePressStyle.compact)
                 .accessibilityLabel("播放视频")
             case .playing(let player):
                 VideoPlayer(player: player).clipShape(RoundedRectangle(cornerRadius: 8))

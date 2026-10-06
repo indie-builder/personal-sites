@@ -66,7 +66,7 @@ struct PortfolioItemReader: View {
                                 }
                                 .foregroundStyle(SiteTheme.ink).frame(minHeight: 52).contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SitePressStyle.row)
                         }
                         if collection == "layouts" {
                             Text("nevertoday / 350-layout-compositions · CC BY 4.0")
@@ -93,7 +93,7 @@ struct PortfolioItemReader: View {
                     HStack(spacing: 6) { Text("下一件"); Image(systemName: "chevron.right") }.frame(minHeight: 48)
                 }.disabled(index + 1 >= siblings.count)
             }
-            .font(SiteText.label).buttonStyle(.plain).foregroundStyle(SiteTheme.ink)
+            .font(SiteText.label).buttonStyle(SitePressStyle.compact).foregroundStyle(SiteTheme.ink)
             .padding(.horizontal, 20)
         }
         .background(SiteTheme.background)

@@ -107,7 +107,7 @@ struct RootView: View {
             }
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("bar-\(label)")
     }

@@ -28,7 +28,7 @@ struct AiNewsRow: View {
             }
             .listRow(vertical: SiteSpace.item)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.row)
     }
 
     private var preview: String { aiNewsSummaryPreview(title: item.title, summary: item.summary) }
@@ -60,7 +60,7 @@ struct CurationRow: View {
             }
             .listRow(vertical: SiteSpace.paragraph)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.row)
     }
 
     /// 行标题：优先 title，回退正文首行（策展条目常无独立标题）。
@@ -99,7 +99,7 @@ struct OpenSourceRow: View {
             }
             .listRow(vertical: SiteSpace.paragraph)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.row)
     }
 
     private var meta: String {

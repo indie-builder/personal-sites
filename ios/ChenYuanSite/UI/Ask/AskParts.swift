@@ -27,7 +27,7 @@ struct AskEmptyState: View {
                         .frame(minHeight: 48)
                         .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(SiteTheme.line, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SitePressStyle.compact)
             }
         }
     }
@@ -50,7 +50,7 @@ struct CopyButton: View {
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel(copied ? "已复制" : "复制回答")
         .task(id: copied) {
             guard copied else { return }
