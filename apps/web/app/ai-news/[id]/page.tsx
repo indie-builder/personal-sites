@@ -16,6 +16,7 @@ import {
 import { entryShareMetadata, withCanonical } from "@/lib/metadata";
 
 import { AiNewsDetailSkeleton } from "./loading";
+import { AiNewsDetailArticle } from "./detail-entrance";
 
 type AiNewsDetailPageProps = { params: Promise<{ id: string }> };
 
@@ -60,7 +61,7 @@ async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
   if (!item) notFound();
 
   return (
-    <article className="ai-news-detail__article" data-content-id={item.id}>
+    <AiNewsDetailArticle contentId={item.id}>
       <DetailTopbar
         backClassName="ai-news-detail__back"
         backHref="/ai-news"
@@ -102,6 +103,6 @@ async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
         </a>
         <span className="ai-news-detail__cta-host">{getAiNewsUrlHost(item.url)}</span>
       </footer>
-    </article>
+    </AiNewsDetailArticle>
   );
 }

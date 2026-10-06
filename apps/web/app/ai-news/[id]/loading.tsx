@@ -5,10 +5,13 @@ import styles from "@/components/open-source.module.css";
 import { SiteProfile } from "@/components/site-profile";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+import { AiNewsDetailFallbackPainted } from "./detail-entrance";
+
 // 文章骨架同时用作整页 loading 与页内 Suspense 边界的 fallback。
 export function AiNewsDetailSkeleton() {
   return (
     <article aria-busy="true" aria-live="polite" className="ai-news-detail__article">
+      <AiNewsDetailFallbackPainted />
       <div className="ai-news-detail__topbar">
         <span className={styles.loadingBack}>
           <ArrowLeft aria-hidden="true" />

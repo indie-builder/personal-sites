@@ -106,7 +106,7 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
           id="repository-document-panel"
           role="tabpanel"
         >
-          <OpenSourceRepositoryBrowser repository={repository} repositoryUrl={repositoryUrl} slug={slug} />
+          <OpenSourceRepositoryBrowser active={isRepository} repository={repository} repositoryUrl={repositoryUrl} slug={slug} />
         </div>
       ) : null}
     </section>

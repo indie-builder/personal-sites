@@ -34,6 +34,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
   initialItems: CurationListItem[];
   tags: { tag: string; count: number; headId: string }[];
 }) {
+  const reduceMotion = useReducedMotion();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -46,7 +47,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
     } catch { /* 隐私模式下仍可正常筛选。 */ }
   }, [tags]);
 
-  const selectTag = (value: string) => {
+  const selectTag = (value: string, viaKeyboard = false) => {
     const next = value === "all" ? null : value;
     if (next === activeTag) return;
     setActiveTag(next);
@@ -54,7 +55,9 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
       if (next) window.sessionStorage.setItem(TAG_STORAGE_KEY, next);
       else window.sessionStorage.removeItem(TAG_STORAGE_KEY);
     } catch { /* 会话存储只用于返回时恢复选择。 */ }
-    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: "auto", top: 0 });
+    // 键盘切换（event.detail === 0 约定）与 reduced-motion 一样即时回顶：html 的全局
+    // scroll-behavior:smooth 会接管 behavior:"auto"，必须显式 "instant" 才真正立即到位。
+    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: reduceMotion || viaKeyboard ? "instant" : "smooth", top: 0 });
   };
   const selected = tags.find(({ tag }) => tag === activeTag);
   const filter = <StreamFilterMenu
