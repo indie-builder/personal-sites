@@ -1,11 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./helpers/loader-key";
 
-const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
 const LONG_MEDIA_DETAIL_PATH = "/curation/2093968800316293400";
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript((key) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
-});
 
 async function readSpreadLayout(page: Page) {
   return page.evaluate(() => {

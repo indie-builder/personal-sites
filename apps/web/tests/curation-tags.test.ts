@@ -20,7 +20,10 @@ describe("curation topic filters", () => {
       "助手提示词",
       "技能",
     ]);
-    for (const { tag, count, headId } of tags.slice(0, 9)) {
+    // 每个标签一次全量读很贵；取父类、两个子类、非提示词类各一作代表,
+    // 完整 9 标签分类学已在 tools/content x-curation-analysis 测试逐条覆盖。
+    const representative = new Set(["提示词", "视频提示词", "助手提示词", "技能"]);
+    for (const { tag, count, headId } of tags.filter(({ tag }) => representative.has(tag))) {
       const full = await Effect.runPromise(getCurationPage(0, 10_000, tag));
       expect(full.items).toHaveLength(count);
       expect(full.items[0].id).toBe(headId);

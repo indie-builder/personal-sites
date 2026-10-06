@@ -1,12 +1,7 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./helpers/loader-key";
 
-const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
 const MOBILE_VIEWPORT = { height: 844, width: 390 };
 const DESKTOP_VIEWPORT = { height: 900, width: 1_440 };
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript((key) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
-});
 
 async function expectTouchTargets(controls: Locator) {
   await expect(controls.first()).toBeVisible();
