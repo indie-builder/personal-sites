@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 
+import { STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, staggerDelay } from "@/components/motion-tokens";
 import {
   hasOpeningPlayedThisSession,
   onOpeningReveal,
@@ -13,7 +14,6 @@ import { animate } from "motion/react";
 const revealUnitSelector =
   ":scope .ai-news__day-heading, :scope ol > li:not(.curation-home__stream-status)";
 const REVEAL_MAX_UNITS = 6;
-const REVEAL_STAGGER = 0.032;
 
 function getSectionRevealTargets() {
   const container = document.querySelector<HTMLElement>(".site-section-motion");
@@ -32,8 +32,8 @@ function playSectionReveal(targets: HTMLElement[]) {
   return targets.map((element, index) =>
     animate(
       element,
-      { opacity: [0, 1], y: ["0.45rem", "0rem"] },
-      { delay: index * REVEAL_STAGGER, duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+      { opacity: [0, 1], y: [`${STREAM_REVEAL_Y}rem`, "0rem"] },
+      { delay: staggerDelay(index), duration: STREAM_REVEAL_DURATION, ease: STREAM_EASE },
     ),
   );
 }

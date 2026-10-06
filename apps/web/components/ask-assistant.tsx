@@ -5,6 +5,7 @@ import { PanelRightClose, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AssistantSprite, SpriteWalker } from "./assistant-sprite";
+import { STREAM_EASE_CSS } from "./motion-tokens";
 import styles from "./ask-assistant.module.css";
 
 const AskChat = dynamic(() => import("./ask-chat").then((module) => module.AskChat), {
@@ -49,7 +50,7 @@ export function AskAssistant() {
       animation = element.animate([
         { transform: "translateY(calc(100% + 1px))" },
         { transform: "translateY(0)" },
-      ], { duration: 480, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" });
+      ], { duration: 480, easing: STREAM_EASE_CSS, fill: "forwards" });
       // 动画被中断或失败时也要落到最终状态，否则触发按钮会永久禁用。
       animation.finished.then(settle).catch(() => settle());
     }
@@ -107,7 +108,7 @@ export function AskAssistant() {
     const play = (element: HTMLElement, frames: Keyframe[], duration: number, delay = 0) => {
       element.style.willChange = "transform, opacity";
       const animation = element.animate(frames, {
-        duration, delay, easing: "cubic-bezier(.22,1,.36,1)", fill: "backwards",
+        duration, delay, easing: STREAM_EASE_CSS, fill: "backwards",
       });
       const motion = { element, animation };
       pageMotions.current.push(motion);

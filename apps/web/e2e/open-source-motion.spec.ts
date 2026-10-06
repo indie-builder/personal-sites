@@ -25,7 +25,7 @@ test("open-source filters cap Motion stagger and honor reduced motion", async ({
   await page.getByRole("menuitemradio", { name: /^Skills 与工作流 · /u }).click();
   await expect(page.getByRole("button", { name: "筛选开源关注：Skills 与工作流" })).toBeVisible();
   const filteredRows = await page.locator('[aria-label="已判读的开源项目"] ol > li').count();
-  await expect.poll(readDurations).toEqual(Array(Math.min(filteredRows, 8)).fill(280));
+  await expect.poll(readDurations).toEqual(Array(Math.min(filteredRows, 8)).fill(300));
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();

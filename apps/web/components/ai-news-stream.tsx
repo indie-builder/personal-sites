@@ -9,7 +9,7 @@ import { formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNews
 import type { AiNewsListItem } from "@/lib/ai-news-types";
 
 import { aiNewsStreamSnapshot } from "./stream-snapshot";
-import { FILTER_REVEAL_COUNT, STREAM_EASE, staggerDelay } from "./motion-tokens";
+import { FILTER_REVEAL_COUNT, STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, staggerDelay } from "./motion-tokens";
 import { useStreamDate } from "@/components/use-stream-date";
 import { useStreamFeed } from "./use-stream-feed";
 import { getCurationScrollTarget } from "./curation-scroll";
@@ -146,11 +146,11 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
               return (
                 <motion.li
                   animate={{ opacity: 1, y: 0 }}
-                  initial={animateMount ? { opacity: 0, y: "0.45rem" } : false}
+                  initial={animateMount ? { opacity: 0, y: `${STREAM_REVEAL_Y}rem` } : false}
                   key={item.id}
                   transition={{
                     delay: animateMount ? mountDelay : 0,
-                    duration: 0.3,
+                    duration: STREAM_REVEAL_DURATION,
                     ease: STREAM_EASE,
                   }}
                 >
@@ -181,7 +181,7 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
           animate={{ opacity: 1 }}
           className="ai-news__empty"
           initial={reduceMotion ? false : { opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: STREAM_REVEAL_DURATION, ease: STREAM_EASE }}
         >
           这个分类下暂时没有每日动态。
         </motion.p>
