@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -94,10 +95,13 @@ private val glassBarActions = listOf(
 )
 
 // 详情级路由：下钻进入时自右滑入 1/4 屏宽，返回时镜像滑出。页签切换（含恢复的
-// 保存栈）不产生内容位移，只允许淡切，路由形态不足以区分两者，见 NavMotion。
+// 保存栈）不产生内容位移，只允许淡切，路由形态不足以区分两者，见 NAV_MOTION_KEY。
 private val detailRoutes = setOf("detail", "portfolio/{collection}", "portfolio-reader")
 
-// 本次导航的动效意图：页签操作无内容位移，下钻导航才允许详情路由横滑。
+// 过渡意图随导航写进目标栈条目的 SavedStateHandle：条目按自己进入时持久化的意图
+// 退出（淡入的淡出、滑入的滑出），进程重建后意图仍在。
+private const val NAV_MOTION_KEY = "nav:motion"
+
 private enum class NavMotion { Tab, Detail }
 
 @Composable
@@ -111,12 +115,19 @@ fun PersonalSiteApp(container: AppContainer) {
     val pagerState = rememberPagerState(pageCount = { Section.entries.size })
     val scope = rememberCoroutineScope()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    // 过渡选择读取最近一次导航的意图；返回（含系统返回）继承进入时的意图，
-    // 因此被页签恢复的详情也按淡切退出，与其淡切进入互为镜像。
+    // 进入过渡读内存信号：页签操作（含恢复栈顶是详情路由）一律淡入。信号与导航
+    // 同回合设置，重组读取时不早于本次导航；退出过渡不读它，改读离场条目持久化
+    // 的意图，避免被后续导航覆盖（恢复的集合被下钻覆盖后会错误横滑退出）。
     var navMotion by remember { mutableStateOf(NavMotion.Tab) }
+    fun navigate(route: String, motion: NavMotion, options: NavOptionsBuilder.() -> Unit = {}) {
+        navMotion = motion
+        navController.navigate(route, options)
+        // 同一主线程回合写入目标条目（页签恢复时目标是恢复栈顶条目，其意图刷新为
+        // Tab，Back 便按淡入镜像淡出），重组里的过渡读取不早于本次导航。
+        navController.currentBackStackEntry?.savedStateHandle?.set(NAV_MOTION_KEY, motion)
+    }
     fun openTab(route: String) {
-        navMotion = NavMotion.Tab
-        navController.navigate(route) {
+        navigate(route, NavMotion.Tab) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true
             restoreState = true
@@ -168,7 +179,8 @@ fun PersonalSiteApp(container: AppContainer) {
             exitTransition = { fadeOut(tween(150)) },
             popEnterTransition = { fadeIn(tween(200)) },
             popExitTransition = {
-                if (navMotion == NavMotion.Tab || initialState.destination.route !in detailRoutes) {
+                val outgoing = initialState.savedStateHandle.get<NavMotion>(NAV_MOTION_KEY)
+                if (outgoing != NavMotion.Detail || initialState.destination.route !in detailRoutes) {
                     fadeOut(tween(150))
                 } else {
                     slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200))
@@ -182,8 +194,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     bottomBarPadding = bottomBarTotal + 24.dp,
                     onOpenDetail = { entry ->
                         container.pendingDetail = entry
-                        navMotion = NavMotion.Detail
-                        navController.navigate("detail")
+                        navigate("detail", NavMotion.Detail)
                     },
                 )
             }
@@ -205,8 +216,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     viewModel = portfolioViewModel,
                     bottomPadding = bottomBarTotal,
                     onOpenCollection = {
-                        navMotion = NavMotion.Detail
-                        navController.navigate("portfolio/$it")
+                        navigate("portfolio/$it", NavMotion.Detail)
                     },
                     onOpenLink = { openExternally(context, it) },
                 )
@@ -220,8 +230,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     onBack = { navController.popBackStack() },
                     onOpenItem = { items, index ->
                         container.pendingPortfolioReader = ReaderPayload(collection, items, index)
-                        navMotion = NavMotion.Detail
-                        navController.navigate("portfolio-reader")
+                        navigate("portfolio-reader", NavMotion.Detail)
                     },
                 )
             }
@@ -293,10 +302,7 @@ fun PersonalSiteApp(container: AppContainer) {
                                         scope.launch { pagerState.scrollToPage(0) }
                                         barVisible = true
                                     }
-                                    "ask" -> {
-                                        navMotion = NavMotion.Detail
-                                        navController.navigate("ask") { launchSingleTop = true }
-                                    }
+                                    "ask" -> navigate("ask", NavMotion.Detail) { launchSingleTop = true }
                                     else -> openTab(action.route)
                                 }
                             },
