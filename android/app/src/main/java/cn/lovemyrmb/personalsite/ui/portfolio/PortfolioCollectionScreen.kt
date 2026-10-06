@@ -41,6 +41,7 @@ import cn.lovemyrmb.personalsite.data.PortfolioItem
 import cn.lovemyrmb.personalsite.data.PortfolioMeta
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
+import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
@@ -165,9 +166,7 @@ fun PortfolioCollectionScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
-                feed == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
-                }
+                feed == null -> SiteSpinner()
                 // 首屏失败（含书架态）必须可重试：PagedFeed 的 started 守卫会让缓存实例
                 // 的 loadInitial 静默跳过，错误分支优先于书架，避免永久转圈。
                 state.error != null && state.items.isEmpty() -> ErrorRetry(

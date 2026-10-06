@@ -118,29 +118,23 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                     Column(Modifier.padding(top = if (landscape) SiteSpace.compact else 40.dp), verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
                         Text("有什么想了解的？", style = SiteText.pageTitle, color = SiteTheme.colors.ink)
                         Text("关于陈远、每日关注或开源内容，都可以从这里开始。", style = SiteText.body, color = SiteTheme.colors.muted)
+                        // 横竖屏只换容器(横向滚动 vs 纵向堆叠),推荐问题芯片共用一份渲染。
+                        val questionChips: @Composable () -> Unit = {
+                            recommendedQuestions.forEach { (question, questionScope) ->
+                                RecommendedChip(question) {
+                                    input = question
+                                    searchScope = questionScope
+                                    focus.requestFocus(); keyboard?.show()
+                                }
+                            }
+                        }
                         if (landscape) {
                             Row(
                                 Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(SiteSpace.compact),
-                            ) {
-                                recommendedQuestions.forEach { (question, questionScope) ->
-                                    RecommendedChip(question) {
-                                        input = question
-                                        searchScope = questionScope
-                                        focus.requestFocus(); keyboard?.show()
-                                    }
-                                }
-                            }
+                            ) { questionChips() }
                         } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
-                                recommendedQuestions.forEach { (question, questionScope) ->
-                                    RecommendedChip(question) {
-                                        input = question
-                                        searchScope = questionScope
-                                        focus.requestFocus(); keyboard?.show()
-                                    }
-                                }
-                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) { questionChips() }
                         }
                     }
                 }
