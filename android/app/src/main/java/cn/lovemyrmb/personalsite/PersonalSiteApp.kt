@@ -81,6 +81,7 @@ import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -106,12 +107,11 @@ private const val NAV_MOTION_KEY = "nav:motion"
 
 private enum class NavMotion { Tab, Detail }
 
-// 待评估的页签弹出。Navigation 2.10.2 在组合后的 LaunchedEffect 里才推进过渡
-// 目标，弹出离场规格的读取可晚于其后的下一次点击，记录必须比单次 navigate 活得
-// 久，因此持有离场条目本身（而非仅 id）：条目恰在其弹出过渡完成时销毁、并同刻
-// 离开 visibleEntries，以此做到期；恢复栈复用条目 id，销毁后残留的记录会把之后
-// 真实 Back 误判成页签淡出。
-private data class TabPop(val outgoing: NavBackStackEntry, val targetId: String)
+// 页签操作产生的弹出（Navigation 2.10.2 对 popUpTo 恢复页签记 isPop）与真实
+// Back 无法从路由形态区分：为每个待评估的弹出挂起其离场条目，popExit 命中
+// 离场条目即强制淡出。Navigation 2.10.2 在组合后的 LaunchedEffect 里才推进
+// 过渡目标，快速连点页签会赶在评估前再换目标，因此只按离场条目匹配、不比对
+// 目标条目。
 
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
@@ -128,19 +128,22 @@ fun PersonalSiteApp(container: AppContainer) {
     // 同回合设置，重组读取时不早于本次导航；退出过渡不读它，改读离场条目持久化
     // 的意图，避免被后续导航覆盖（恢复的集合被下钻覆盖后会错误横滑退出）。
     var navMotion by remember { mutableStateOf(NavMotion.Tab) }
-    // 页签操作产生的弹出（Navigation 2.10.2 对 popUpTo 恢复页签记 isPop）与真实
-    // Back 无法从路由形态区分：记录该操作实际完成的（离场条目, 目标条目）对，
-    // popExit 命中即强制淡出。记录生命周期：新页签操作换上自己的对；同条目导航
-    // （fromId == toId）与其他导航都不动它，迟到的弹出评估仍要读它；把记录的
-    // 离场条目重新顶回栈顶的导航使其失效清空（该弹出不再评估，且恢复条目复用
-    // id，残留会让之后的真实 Back 误判）；离场条目销毁（弹出过渡完成）即到期。
-    // 真实 Back 不经 navigate，要误命中记录只能先经导航把离场条目复用回栈顶，
+    // 待评估页签弹出的离场条目集合，标记按条目独立存活：新页签操作追加自己的
+    // 离场条目（同 id 去重），不覆盖先前标记；同条目导航（fromId == toId）与其
+    // 他导航都不动它们，迟到的弹出评估仍要读到；把任一标记的离场条目重新顶回
+    // 栈顶的导航使该标记失效移除（其弹出不再评估，且恢复条目复用 id，残留会让
+    // 之后的真实 Back 误判）；各标记等到自己的离场条目离开 visibleEntries（恰在
+    // 其弹出过渡完成或被后续导航取代的 markTransitionComplete 里销毁）即到期。
+    // 真实 Back 不经 navigate，要误命中标记只能先经导航把离场条目复用回栈顶，
     // 该路径已被失效规则封死，其余 Back 读离场条目持久化的意图。
-    var tabPop by remember { mutableStateOf<TabPop?>(null) }
+    var tabPopOutgoing by remember { mutableStateOf<List<NavBackStackEntry>>(emptyList()) }
     fun navigate(route: String, motion: NavMotion, options: NavOptionsBuilder.() -> Unit = {}) {
         navMotion = motion
         navController.navigate(route, options)
-        if (tabPop?.outgoing?.id == navController.currentBackStackEntry?.id) tabPop = null
+        val topId = navController.currentBackStackEntry?.id
+        if (topId != null && tabPopOutgoing.any { it.id == topId }) {
+            tabPopOutgoing = tabPopOutgoing.filterNot { it.id == topId }
+        }
         // 同一主线程回合写入目标条目（页签恢复时目标是恢复栈顶条目，其意图刷新为
         // Tab，Back 便按淡入镜像淡出），重组里的过渡读取不早于本次导航。
         navController.currentBackStackEntry?.savedStateHandle?.set(NAV_MOTION_KEY, motion)
@@ -153,15 +156,25 @@ fun PersonalSiteApp(container: AppContainer) {
             restoreState = true
         }
         val toId = navController.currentBackStackEntry?.id
-        if (toId != null && toId != from.id) tabPop = TabPop(from, toId)
+        if (toId != null && toId != from.id && tabPopOutgoing.none { it.id == from.id }) {
+            tabPopOutgoing = tabPopOutgoing + from
+        }
     }
-    // 记录到期清理：等到离场条目离开可见栈——它恰在弹出过渡完成（或被后续导航
-    // 取代）的 markTransitionComplete 里销毁并移出 visibleEntries，同刻早于它的
-    // 清空都会让迟到的弹出评估读不到记录（正是本轮缺陷）。
-    LaunchedEffect(tabPop) {
-        val record = tabPop ?: return@LaunchedEffect
-        navController.visibleEntries.first { record.outgoing !in it }
-        if (tabPop == record) tabPop = null
+    // 标记到期清理：每条独立等到自己的离场条目离开可见栈。列表每次增删都重启
+    // 全部等待（无状态等待可安全重启）；早于条目离开的清空会让迟到的弹出评估
+    // 读不到标记（四轮缺陷）。被导航顶回栈顶的条目不会离开可见栈，由 navigate
+    // 的按 id 失效兜住。
+    LaunchedEffect(tabPopOutgoing) {
+        val pending = tabPopOutgoing
+        if (pending.isEmpty()) return@LaunchedEffect
+        coroutineScope {
+            pending.forEach { outgoing ->
+                launch {
+                    navController.visibleEntries.first { outgoing !in it }
+                    tabPopOutgoing = tabPopOutgoing.filterNot { it.id == outgoing.id }
+                }
+            }
+        }
     }
     var barVisible by remember { mutableStateOf(true) }
     val threshold = with(LocalDensity.current) { 16.dp.toPx() }
@@ -209,10 +222,10 @@ fun PersonalSiteApp(container: AppContainer) {
             exitTransition = { fadeOut(tween(150)) },
             popEnterTransition = { fadeIn(tween(200)) },
             popExitTransition = {
-                // 页签弹出按存活记录的（离场, 目标）条目对识别，其余弹出（真实 Back）读离场条目持久化的意图。
-                val record = tabPop
-                val tabPopFade = record != null &&
-                    initialState.id == record.outgoing.id && targetState.id == record.targetId
+                // 页签弹出按存活的离场条目标记识别（目标可能在延迟评估前被后续
+                // 页签操作改写，不比对目标），其余弹出（真实 Back）读离场条目
+                // 持久化的意图。
+                val tabPopFade = tabPopOutgoing.any { it.id == initialState.id }
                 val outgoing = initialState.savedStateHandle.get<NavMotion>(NAV_MOTION_KEY)
                 if (tabPopFade || outgoing != NavMotion.Detail || initialState.destination.route !in detailRoutes) {
                     fadeOut(tween(150))

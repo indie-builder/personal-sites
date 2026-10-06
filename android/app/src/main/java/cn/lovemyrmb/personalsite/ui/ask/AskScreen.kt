@@ -10,6 +10,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
@@ -134,10 +135,12 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     LaunchedEffect(selectedSource) { if (selectedSource != null) closingSource = selectedSource }
     val readerSource = selectedSource ?: closingSource
     // 阅读器在场（升起或滑出中）时下层会话必须惰性：整层消费指针、隐藏会话语义、
-    // 封锁会话子树焦点（canFocus 随子树级联，Tab 遍历进不来）、清除编辑器焦点并
-    // 停用其快捷发送，会话内可交互控件（返回、新对话、推荐问题、范围与发送）同步
-    // 停用。readerVisible 在滑出动画归零后才为 false，恢复即以它为准；关闭后上
-    // 述全部自然恢复（不自动回焦）。
+    // 以焦点组 + onEnter 拒入封锁会话子树焦点（canFocus 级联止步于 LazyColumn 的
+    // 中间焦点目标，其内条目——来源行、复制、重新生成——仍可被 Tab/Shift+Tab
+    // 遍历到，组级 cancelFocusChange 拦下包括该路径在内的全部进入）、清除编辑器
+    // 焦点并停用其快捷发送，会话内可交互控件（返回、新对话、推荐问题、范围与
+    // 发送）同步停用。readerVisible 在滑出动画归零后才为 false，恢复即以它为
+    // 准；关闭后上述全部自然恢复（不自动回焦）。
     val readerInFlight = readerOpen || readerSlide > 0f || readerAlpha > 0f
     val readerVisible = readerSource != null && readerInFlight
     val focusManager = LocalFocusManager.current
@@ -145,7 +148,11 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().imePadding().navigationBarsPadding()
-                .focusProperties { canFocus = !readerVisible }
+                .focusProperties {
+                    canFocus = !readerVisible
+                    onEnter = { if (readerVisible) cancelFocusChange() }
+                }
+                .focusGroup()
                 .then(if (readerVisible) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = SiteSpace.compact), verticalAlignment = Alignment.CenterVertically) {
