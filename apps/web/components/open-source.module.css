@@ -146,15 +146,6 @@
   .loadingLine {
     animation: none;
   }
-
-  .repositoryBrowserContent,
-  .repositoryFileHeader,
-  .repositoryFileContent,
-  .repositoryBrowserError,
-  .repositoryFileEmpty,
-  .repositoryTreeItem {
-    transition: none;
-  }
 }
 
 .documentHeader {
@@ -257,18 +248,16 @@
 .repositoryFileContent code { background: transparent; color: inherit; font-size: inherit; padding: 0; }
 .repositoryFileEmpty { display: grid; min-height: 14rem; place-items: center; text-align: center; }
 
-/* 文件树首载与文件面板状态块（错误/空态/文件头+正文）都是换场：只淡入，离场即时。 */
-.repositoryBrowserContent,
-.repositoryFileHeader,
-.repositoryFileContent,
-.repositoryBrowserError,
-.repositoryFileEmpty { transition: opacity 180ms ease; }
+/* 文件树首载与文件面板状态块（错误/空态/文件头+正文）都是换场：只淡入，离场即时。
+   入场只在新数据提交时武装（data-entrance）：面板 hidden 往返不重播，回到已渲染内容即时呈现。 */
+.repositoryBrowser[data-entrance] :is(.repositoryBrowserContent,.repositoryFileHeader,.repositoryFileContent,.repositoryBrowserError,.repositoryFileEmpty) { transition: opacity 180ms ease; }
 @starting-style {
-  .repositoryBrowserContent,
-  .repositoryFileHeader,
-  .repositoryFileContent,
-  .repositoryBrowserError,
-  .repositoryFileEmpty { opacity: 0; }
+  .repositoryBrowser[data-entrance] :is(.repositoryBrowserContent,.repositoryFileHeader,.repositoryFileContent,.repositoryBrowserError,.repositoryFileEmpty) { opacity: 0; }
+}
+/* 同特异性下源顺序取胜：降级必须排在正常声明之后才真正生效；
+   repositoryTreeItem 的纯色过渡按惯例在 reduce 下保留。 */
+@media (prefers-reduced-motion: reduce) {
+  .repositoryBrowser[data-entrance] :is(.repositoryBrowserContent,.repositoryFileHeader,.repositoryFileContent,.repositoryBrowserError,.repositoryFileEmpty) { transition: none; }
 }
 
 :global(html[data-curation-theme="dark"]) .stream a:hover h2,

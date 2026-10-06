@@ -52,7 +52,10 @@ html[data-curation-theme="dark"] .curation-detail__neighbors a:hover strong,html
 
 /* 每日动态详情：顶栏 → 分类/评分眉行 → 标题/元信息 → 导读 → 推荐理由 → 原文入口，单栏阅读流。 */
 .ai-news-detail__article { width:100%; max-width:44rem; min-width:0; padding:1.5rem 1.875rem 6rem 0; }
-/* 冷导航骨架屏换入正文时只做淡入，不位移；骨架本身保持即时出现。 */
+/* 冷导航骨架屏换入正文时只做淡入，不位移；骨架本身保持即时出现。
+   淡入只在骨架屏真实绘制过（detail-entrance 的会话标记）时武装：先 --armed 暂隐
+   并强制样式计算成为 before-change，再换 --resolved 过渡；缓存/返回导航两类都不加。 */
+.ai-news-detail__article--armed { opacity: 0; }
 .ai-news-detail__article--resolved { transition:opacity 180ms cubic-bezier(0.16,1,0.3,1); }
 @starting-style { .ai-news-detail__article--resolved { opacity:0; } }
 .ai-news-detail__topbar { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); gap:1rem; padding:.375rem 0 .9rem; }
