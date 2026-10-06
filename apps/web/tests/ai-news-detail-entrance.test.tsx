@@ -36,11 +36,18 @@ const flushFrames = () => {
 
 const readMarker = () => {
   const raw = window.sessionStorage.getItem(FALLBACK_PAINTED_KEY);
-  return raw === null ? null : (JSON.parse(raw) as { at: number; path: string });
+  return raw === null ? null : (JSON.parse(raw) as { at: number; path: string; entryId: string | null });
 };
 
 const seedMarker = (at: number, path: string) => {
   window.sessionStorage.setItem(FALLBACK_PAINTED_KEY, JSON.stringify({ at, path }));
+};
+
+let navigationEntryId = "e1";
+const navigationStub = {
+  get currentEntry() {
+    return { id: navigationEntryId };
+  },
 };
 
 describe("AiNewsDetailFallbackPainted marker", () => {
@@ -50,7 +57,7 @@ describe("AiNewsDetailFallbackPainted marker", () => {
     expect(readMarker()).toBeNull();
     now += 50;
     flushFrames();
-    expect(readMarker()).toEqual({ at: 1_000_050, path: "/ai-news/example-item" });
+    expect(readMarker()).toEqual({ at: 1_000_050, path: "/ai-news/example-item", entryId: null });
   });
 
   it("leaves no marker when content replaces the fallback before the second frame", () => {
@@ -72,7 +79,7 @@ describe("AiNewsDetailArticle entrance arming", () => {
     expect(window.sessionStorage.getItem(FALLBACK_PAINTED_KEY)).toBeNull();
   });
 
-  it("does not fade when a cached revisit consumes the stale marker of an abandoned navigation", () => {
+  it("does not fade when the marker is consumed only after the TTL expires", () => {
     render(<AiNewsDetailFallbackPainted />);
     flushFrames();
     flushFrames();
@@ -81,6 +88,31 @@ describe("AiNewsDetailArticle entrance arming", () => {
     render(<AiNewsDetailArticle contentId="example-item"><p>正文</p></AiNewsDetailArticle>);
     expect(screen.getByText("正文").closest("article")?.classList.contains("ai-news-detail__article--resolved")).toBe(false);
     expect(window.sessionStorage.getItem(FALLBACK_PAINTED_KEY)).toBeNull();
+  });
+
+  it("does not fade when an abandoned navigation is revisited within the TTL under a new entry", () => {
+    navigationEntryId = "e1";
+    vi.stubGlobal("navigation", navigationStub);
+    render(<AiNewsDetailFallbackPainted />);
+    flushFrames();
+    flushFrames();
+    expect(readMarker()).toEqual({ at: now, path: "/ai-news/example-item", entryId: "e1" });
+    navigationEntryId = "e2";
+    now += 500;
+    render(<AiNewsDetailArticle contentId="example-item"><p>正文</p></AiNewsDetailArticle>);
+    expect(screen.getByText("正文").closest("article")?.classList.contains("ai-news-detail__article--resolved")).toBe(false);
+    expect(window.sessionStorage.getItem(FALLBACK_PAINTED_KEY)).toBeNull();
+  });
+
+  it("arms within the TTL when the marker and article share one navigation entry", () => {
+    navigationEntryId = "e1";
+    vi.stubGlobal("navigation", navigationStub);
+    render(<AiNewsDetailFallbackPainted />);
+    flushFrames();
+    flushFrames();
+    now += 500;
+    render(<AiNewsDetailArticle contentId="example-item"><p>正文</p></AiNewsDetailArticle>);
+    expect(screen.getByText("正文").closest("article")?.classList.contains("ai-news-detail__article--resolved")).toBe(true);
   });
 
   it("renders instantly and still consumes a marker from another navigation", () => {
