@@ -1,5 +1,6 @@
 package cn.lovemyrmb.personalsite.ui.components
 
+import android.animation.ValueAnimator
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.delay
 
 /**
@@ -41,10 +43,14 @@ fun SiteAsyncImage(
             retry++
         }
     }
-    val request = remember(model, retry) {
+    // Coil 的 crossfade 走墙钟 TimeMark 而非 Compose 动画管线，不随系统动画时长缩放，
+    // 因此沿用 TechnicalTerms 的 areAnimatorsEnabled 门控：关闭系统动画时直接换图。
+    val animatorsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
+    val request = remember(model, retry, animatorsEnabled) {
         ImageRequest.Builder(context)
             .data(model)
             .memoryCacheKeyExtra("retry", retry.toString())
+            .apply { if (animatorsEnabled) crossfade(150) }
             .build()
     }
     AsyncImage(
