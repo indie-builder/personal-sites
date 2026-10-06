@@ -1,2 +1,2 @@
-web_src=8271 web_test=4194 tools_src=2006 tools_test=2547 packages=2211 total=19229
-target_total_for_30pct=13460
+web_src=8218 web_test=4217 tools_src=1972 tools_test=2548 packages=2222 total=19177
+target_total_for_30pct=13423

@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,12 +31,13 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.data.CurationMedia
 import cn.lovemyrmb.personalsite.data.CurationSource
 import cn.lovemyrmb.personalsite.data.MediaUrls
-import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import cn.lovemyrmb.personalsite.data.VideoPreloader
+import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
+import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 
 /**
  * 策展媒体的视频卡片：默认展示封面 + 播放圆钮，点击后换 ExoPlayer 原生播放。
@@ -130,3 +132,6 @@ fun VideoCard(
         }
     }
 }
+
+/** 由 MainActivity 在 setContent 时提供的进程级视频预加载器;预览/测试下默认 null,走独立播放器。 */
+val LocalVideoPreloader = staticCompositionLocalOf<VideoPreloader?> { null }

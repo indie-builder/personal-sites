@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { STREAM_EASE } from "@/components/motion-tokens";
+import { FILTER_REVEAL_COUNT, STREAM_EASE, staggerDelay } from "@/components/motion-tokens";
 import styles from "@/components/open-source.module.css";
 import { useStickyToolbarOffset } from "@/components/use-stream-date";
 import { StreamFilterMenu } from "@/components/stream-filter-menu";
@@ -19,8 +19,6 @@ import {
 type OpenSourceStreamProps = {
   entries: OpenSourceListEntry[];
 };
-
-const FILTER_REVEAL_COUNT = 8;
 
 export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
   const [category, setCategory] = useState<OpenSourceCategory>("all");
@@ -72,7 +70,7 @@ export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
               initial={animateEntry ? { opacity: 0, y: "0.5rem" } : false}
               key={entry.slug}
               transition={{
-                delay: animateEntry ? index * 0.032 : 0,
+                delay: animateEntry ? staggerDelay(index) : 0,
                 duration: animateEntry ? 0.28 : 0,
                 ease: STREAM_EASE,
               }}

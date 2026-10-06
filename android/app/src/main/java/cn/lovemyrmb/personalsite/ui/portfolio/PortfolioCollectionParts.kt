@@ -17,12 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,8 +51,9 @@ import androidx.compose.ui.unit.dp
 import cn.lovemyrmb.personalsite.data.PortfolioCategory
 import cn.lovemyrmb.personalsite.data.PortfolioItem
 import cn.lovemyrmb.personalsite.data.PortfolioMeta
-import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.FeedFooter
+import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
+import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
@@ -94,9 +95,7 @@ internal fun Shelf(
     bottomPadding: Dp = 0.dp,
 ) {
     if (categories.isEmpty()) {
-        Box(modifier, contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
-        }
+        SiteSpinner(modifier)
         return
     }
     LazyColumn(

@@ -1,6 +1,7 @@
 import { Effect, Result, Schema } from "effect";
 
-const PUBLIC_FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
+/** 公开信息流响应共用的 CDN 缓存头（列表与详情 JSON、RSS 一致）。 */
+export const PUBLIC_FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
 type PaginatedFeedConfig = {
   /** 每页固定档位（与客户端 PAGE_SIZE 一致）。 */

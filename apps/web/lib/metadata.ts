@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 
 import { SITE_NAME } from "@/lib/site";
 
-const RSS_TYPES = { "application/rss+xml": "/feed.xml" } as const;
+/** 布局层与页面级 canonical 共用的 RSS alternates 标注。 */
+export const RSS_TYPES = { "application/rss+xml": "/feed.xml" } as const;
 
 // app/opengraph-image.tsx 的文件约定图只在根段注入；页面级覆写 openGraph
 // 后叶段不会回注，必须显式带上，否则详情页分享卡无图。

@@ -20,8 +20,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -47,11 +47,12 @@ import cn.lovemyrmb.personalsite.data.PORTFOLIO_BASE_URL
 import cn.lovemyrmb.personalsite.data.PortfolioApi
 import cn.lovemyrmb.personalsite.data.PortfolioMedia
 import cn.lovemyrmb.personalsite.data.PortfolioProduct
-import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
+import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
-import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
+import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
+import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
 import cn.lovemyrmb.personalsite.ui.components.hostOf
 import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
@@ -103,9 +104,7 @@ fun PortfolioScreen(
                     message = "暂时无法读取作品集。",
                     modifier = Modifier.fillMaxSize(),
                 ) { viewModel.refreshProducts() }
-                products == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
-                }
+                products == null -> SiteSpinner()
                 else -> LazyColumn {
                     if (state.refreshError) {
                         item(key = "refresh-error") {

@@ -18,8 +18,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.Text
@@ -36,7 +36,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import cn.lovemyrmb.personalsite.data.AiNewsListItem
 import cn.lovemyrmb.personalsite.data.CurationItem
 import cn.lovemyrmb.personalsite.data.DetailEntry
@@ -46,12 +45,14 @@ import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.FeedFooter
-import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
+import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 
-private val sections = Section.entries.toList()
+private val sections = Section.entries
 
 @Composable
 fun HomeScreen(
@@ -171,9 +172,7 @@ private fun <T> FeedPageUi(
         modifier = Modifier.fillMaxSize(),
     ) {
         when {
-            state.initial -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = SiteTheme.colors.muted, strokeWidth = 2.dp)
-            }
+            state.initial -> SiteSpinner()
 
             state.error != null && state.items.isEmpty() -> ErrorRetry(
                 message = state.error ?: "",

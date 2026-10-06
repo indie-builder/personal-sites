@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import { getFeedItems } from "@/lib/discovery.server";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { PUBLIC_FEED_CACHE_CONTROL } from "@/lib/paginated-route";
 
 const escapeXml = (value: string) =>
   value
@@ -35,7 +36,7 @@ ${items
 </rss>`;
   return new Response(xml, {
     headers: {
-      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      "Cache-Control": PUBLIC_FEED_CACHE_CONTROL,
       "Content-Type": "application/rss+xml; charset=utf-8",
     },
   });

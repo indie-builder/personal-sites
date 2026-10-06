@@ -19,12 +19,10 @@ const CELL_CHARGE_DELAYS = [0.45, 1.4, 2.35, 3.3, 4.25];
 const CELL_COLORS = ["#ef4444", "#ef4444", "#f2c94c", "#24cb71"];
 const CELL_COLOR_TIMES = [0, 0.18, 0.52, 1];
 
-const hasPlayedThisSession = hasOpeningPlayedThisSession;
-
 export function OpeningLoader() {
   const [phase, setPhase] = useState<LoaderPhase>("preparing");
   const reduceMotion = useReducedMotion();
-  const sessionPlayed = useSyncExternalStore(subscribeToNothing, hasPlayedThisSession, () => false);
+  const sessionPlayed = useSyncExternalStore(subscribeToNothing, hasOpeningPlayedThisSession, () => false);
 
   // 角色序列图约 440KB(gzip)，水合后再渲染 <img>，避免拖慢 SSR 首帧。
   const mounted = useHasMounted();
