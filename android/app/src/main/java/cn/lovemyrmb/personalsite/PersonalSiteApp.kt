@@ -1,11 +1,14 @@
 package cn.lovemyrmb.personalsite
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.selection.selectable
@@ -52,6 +55,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -60,7 +65,6 @@ import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.data.Section
-import kotlinx.coroutines.launch
 import cn.lovemyrmb.personalsite.ui.ask.AskScreen
 import cn.lovemyrmb.personalsite.ui.about.AboutScreen
 import cn.lovemyrmb.personalsite.ui.components.openExternally
@@ -77,6 +81,9 @@ import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private const val BAR_HEIGHT = 72
 
@@ -90,6 +97,22 @@ private val glassBarActions = listOf(
     GlassBarAction("关于我", NavigationIcons.About, "about"),
 )
 
+// 详情级路由：下钻进入时自右滑入 1/4 屏宽，返回时镜像滑出。页签切换（含恢复的
+// 保存栈）不产生内容位移，只允许淡切，路由形态不足以区分两者，见 NAV_MOTION_KEY。
+private val detailRoutes = setOf("detail", "portfolio/{collection}", "portfolio-reader")
+
+// 过渡意图随导航写进目标栈条目的 SavedStateHandle：条目按自己进入时持久化的意图
+// 退出（淡入的淡出、滑入的滑出），进程重建后意图仍在。
+private const val NAV_MOTION_KEY = "nav:motion"
+
+private enum class NavMotion { Tab, Detail }
+
+// 页签操作产生的弹出（Navigation 2.10.2 对 popUpTo 恢复页签记 isPop）与真实
+// Back 无法从路由形态区分：为每个待评估的弹出挂起其离场条目，popExit 命中
+// 离场条目即强制淡出。Navigation 2.10.2 在组合后的 LaunchedEffect 里才推进
+// 过渡目标，快速连点页签会赶在评估前再换目标，因此只按离场条目匹配、不比对
+// 目标条目。
+
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
     val navController = rememberNavController()
@@ -101,11 +124,56 @@ fun PersonalSiteApp(container: AppContainer) {
     val pagerState = rememberPagerState(pageCount = { Section.entries.size })
     val scope = rememberCoroutineScope()
     val backStackEntry by navController.currentBackStackEntryAsState()
+    // 进入过渡读内存信号：页签操作（含恢复栈顶是详情路由）一律淡入。信号与导航
+    // 同回合设置，重组读取时不早于本次导航；退出过渡不读它，改读离场条目持久化
+    // 的意图，避免被后续导航覆盖（恢复的集合被下钻覆盖后会错误横滑退出）。
+    var navMotion by remember { mutableStateOf(NavMotion.Tab) }
+    // 待评估页签弹出的离场条目集合，标记按条目独立存活：新页签操作追加自己的
+    // 离场条目（同 id 去重），不覆盖先前标记；同条目导航（fromId == toId）与其
+    // 他导航都不动它们，迟到的弹出评估仍要读到；把任一标记的离场条目重新顶回
+    // 栈顶的导航使该标记失效移除（其弹出不再评估，且恢复条目复用 id，残留会让
+    // 之后的真实 Back 误判）；各标记等到自己的离场条目离开 visibleEntries（恰在
+    // 其弹出过渡完成或被后续导航取代的 markTransitionComplete 里销毁）即到期。
+    // 真实 Back 不经 navigate，要误命中标记只能先经导航把离场条目复用回栈顶，
+    // 该路径已被失效规则封死，其余 Back 读离场条目持久化的意图。
+    var tabPopOutgoing by remember { mutableStateOf<List<NavBackStackEntry>>(emptyList()) }
+    fun navigate(route: String, motion: NavMotion, options: NavOptionsBuilder.() -> Unit = {}) {
+        navMotion = motion
+        navController.navigate(route, options)
+        val topId = navController.currentBackStackEntry?.id
+        if (topId != null && tabPopOutgoing.any { it.id == topId }) {
+            tabPopOutgoing = tabPopOutgoing.filterNot { it.id == topId }
+        }
+        // 同一主线程回合写入目标条目（页签恢复时目标是恢复栈顶条目，其意图刷新为
+        // Tab，Back 便按淡入镜像淡出），重组里的过渡读取不早于本次导航。
+        navController.currentBackStackEntry?.savedStateHandle?.set(NAV_MOTION_KEY, motion)
+    }
     fun openTab(route: String) {
-        navController.navigate(route) {
+        val from = navController.currentBackStackEntry ?: return
+        navigate(route, NavMotion.Tab) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true
             restoreState = true
+        }
+        val toId = navController.currentBackStackEntry?.id
+        if (toId != null && toId != from.id && tabPopOutgoing.none { it.id == from.id }) {
+            tabPopOutgoing = tabPopOutgoing + from
+        }
+    }
+    // 标记到期清理：每条独立等到自己的离场条目离开可见栈。列表每次增删都重启
+    // 全部等待（无状态等待可安全重启）；早于条目离开的清空会让迟到的弹出评估
+    // 读不到标记（四轮缺陷）。被导航顶回栈顶的条目不会离开可见栈，由 navigate
+    // 的按 id 失效兜住。
+    LaunchedEffect(tabPopOutgoing) {
+        val pending = tabPopOutgoing
+        if (pending.isEmpty()) return@LaunchedEffect
+        coroutineScope {
+            pending.forEach { outgoing ->
+                launch {
+                    navController.visibleEntries.first { outgoing !in it }
+                    tabPopOutgoing = tabPopOutgoing.filterNot { it.id == outgoing.id }
+                }
+            }
         }
     }
     var barVisible by remember { mutableStateOf(true) }
@@ -143,6 +211,28 @@ fun PersonalSiteApp(container: AppContainer) {
                 .fillMaxSize()
                 .nestedScroll(scrollConnection)
                 .hazeSource(hazeState),
+            // Compose tween 经 MotionDurationScale 读取系统动画时长缩放，减动效路径自动生效。
+            enterTransition = {
+                if (navMotion == NavMotion.Tab || targetState.destination.route !in detailRoutes) {
+                    fadeIn(tween(200))
+                } else {
+                    slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(200))
+                }
+            },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(200)) },
+            popExitTransition = {
+                // 页签弹出按存活的离场条目标记识别（目标可能在延迟评估前被后续
+                // 页签操作改写，不比对目标），其余弹出（真实 Back）读离场条目
+                // 持久化的意图。
+                val tabPopFade = tabPopOutgoing.any { it.id == initialState.id }
+                val outgoing = initialState.savedStateHandle.get<NavMotion>(NAV_MOTION_KEY)
+                if (tabPopFade || outgoing != NavMotion.Detail || initialState.destination.route !in detailRoutes) {
+                    fadeOut(tween(150))
+                } else {
+                    slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200))
+                }
+            },
         ) {
             composable("home") {
                 HomeScreen(
@@ -151,7 +241,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     bottomBarPadding = bottomBarTotal + 24.dp,
                     onOpenDetail = { entry ->
                         container.pendingDetail = entry
-                        navController.navigate("detail")
+                        navigate("detail", NavMotion.Detail)
                     },
                 )
             }
@@ -172,7 +262,9 @@ fun PersonalSiteApp(container: AppContainer) {
                 PortfolioScreen(
                     viewModel = portfolioViewModel,
                     bottomPadding = bottomBarTotal,
-                    onOpenCollection = { navController.navigate("portfolio/$it") },
+                    onOpenCollection = {
+                        navigate("portfolio/$it", NavMotion.Detail)
+                    },
                     onOpenLink = { openExternally(context, it) },
                 )
             }
@@ -185,7 +277,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     onBack = { navController.popBackStack() },
                     onOpenItem = { items, index ->
                         container.pendingPortfolioReader = ReaderPayload(collection, items, index)
-                        navController.navigate("portfolio-reader")
+                        navigate("portfolio-reader", NavMotion.Detail)
                     },
                 )
             }
@@ -233,12 +325,23 @@ fun PersonalSiteApp(container: AppContainer) {
                     val route = backStackEntry?.destination?.route.orEmpty()
                     val selected = route == action.route ||
                         (action.route == "portfolio" && route.startsWith("portfolio"))
+                    // 选中态胶囊与文字按 Web 同位 160ms 颜色规则过渡。
+                    val pillColor by animateColorAsState(
+                        targetValue = if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent,
+                        animationSpec = tween(160, easing = FastOutSlowInEasing),
+                        label = "bar-pill",
+                    )
+                    val labelColor by animateColorAsState(
+                        targetValue = if (selected) SiteTheme.colors.ink else SiteTheme.colors.muted,
+                        animationSpec = tween(160, easing = FastOutSlowInEasing),
+                        label = "bar-label",
+                    )
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxSize()
                             .clip(CircleShape)
-                            .background(if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent)
+                            .background(pillColor)
                             .selectable(selected = selected, role = Role.Tab) {
                                 when (action.route) {
                                     "home" -> {
@@ -246,7 +349,7 @@ fun PersonalSiteApp(container: AppContainer) {
                                         scope.launch { pagerState.scrollToPage(0) }
                                         barVisible = true
                                     }
-                                    "ask" -> navController.navigate("ask") { launchSingleTop = true }
+                                    "ask" -> navigate("ask", NavMotion.Detail) { launchSingleTop = true }
                                     else -> openTab(action.route)
                                 }
                             },
@@ -260,7 +363,7 @@ fun PersonalSiteApp(container: AppContainer) {
                             modifier = Modifier.size(26.dp),
                         )
                         Spacer(Modifier.height(3.dp))
-                        Text(text = action.label, style = SiteText.meta, color = if (selected) SiteTheme.colors.ink else SiteTheme.colors.muted, maxLines = 1)
+                        Text(text = action.label, style = SiteText.meta, color = labelColor, maxLines = 1)
                     }
                 }
             }

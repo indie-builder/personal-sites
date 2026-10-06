@@ -1,5 +1,8 @@
 package cn.lovemyrmb.personalsite.ui.portfolio
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +50,9 @@ import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import kotlinx.coroutines.delay
+
+/** 集合页四态过渡键：书架态仅此页存在，单独成相位。 */
+private enum class CollectionPhase { INITIAL, ERROR, SHELF, CONTENT }
 
 /** 集合浏览页：搜索 + 分类/主题筛选（layouts 另有书架），网格触底分页。 */
 @Composable
@@ -165,34 +171,44 @@ fun PortfolioCollectionScreen(
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            when {
-                feed == null -> SiteSpinner()
-                // 首屏失败（含书架态）必须可重试：PagedFeed 的 started 守卫会让缓存实例
-                // 的 loadInitial 静默跳过，错误分支优先于书架，避免永久转圈。
-                state.error != null && state.items.isEmpty() -> ErrorRetry(
-                    message = state.error ?: "",
-                    modifier = Modifier.fillMaxSize(),
-                ) { viewModel.feed(collection, query.trim(), category, topic).retry() }
-                onShelf -> Shelf(
-                    categories = meta.categories,
-                    onPick = { category = it; browsingAll = true },
-                    onBrowseAll = { browsingAll = true },
-                    modifier = Modifier.fillMaxSize(),
-                    bottomPadding = bottomPadding,
-                )
-                else -> ItemGrid(
-                    state = state,
-                    meta = meta,
-                    collection = collection,
-                    contentPadding = PaddingValues(
-                        start = SiteSpace.paragraph,
-                        end = SiteSpace.paragraph,
-                        bottom = bottomPadding,
-                    ),
-                    onOpenItem = { index -> onOpenItem(state.items, index) },
-                    onLoadMore = { viewModel.feed(collection, query.trim(), category, topic).loadMore() },
-                    onRetry = { viewModel.feed(collection, query.trim(), category, topic).retry() },
-                )
+            // 首屏失败（含书架态）必须可重试：PagedFeed 的 started 守卫会让缓存实例
+            // 的 loadInitial 静默跳过，错误分支优先于书架，避免永久转圈。
+            // 首次加载进行中（feed 未建或 initial 未落）保持 INITIAL：相位键真正变化
+            // 才触发淡切，否则加载完成不换键、过渡不可见。
+            val phase = when {
+                feed == null || state.initial -> CollectionPhase.INITIAL
+                state.error != null && state.items.isEmpty() -> CollectionPhase.ERROR
+                onShelf -> CollectionPhase.SHELF
+                else -> CollectionPhase.CONTENT
+            }
+            Crossfade(targetState = phase, animationSpec = tween(180, easing = FastOutSlowInEasing), label = "collection-phase") { phase ->
+                when (phase) {
+                    CollectionPhase.INITIAL -> SiteSpinner()
+                    CollectionPhase.ERROR -> ErrorRetry(
+                        message = state.error ?: "",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { viewModel.feed(collection, query.trim(), category, topic).retry() }
+                    CollectionPhase.SHELF -> Shelf(
+                        categories = meta.categories,
+                        onPick = { category = it; browsingAll = true },
+                        onBrowseAll = { browsingAll = true },
+                        modifier = Modifier.fillMaxSize(),
+                        bottomPadding = bottomPadding,
+                    )
+                    CollectionPhase.CONTENT -> ItemGrid(
+                        state = state,
+                        meta = meta,
+                        collection = collection,
+                        contentPadding = PaddingValues(
+                            start = SiteSpace.paragraph,
+                            end = SiteSpace.paragraph,
+                            bottom = bottomPadding,
+                        ),
+                        onOpenItem = { index -> onOpenItem(state.items, index) },
+                        onLoadMore = { viewModel.feed(collection, query.trim(), category, topic).loadMore() },
+                        onRetry = { viewModel.feed(collection, query.trim(), category, topic).retry() },
+                    )
+                }
             }
         }
     }

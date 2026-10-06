@@ -1,9 +1,13 @@
 package cn.lovemyrmb.personalsite.ui.detail
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import cn.lovemyrmb.personalsite.data.AiNewsItem
 import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.aiNewsCategoryLabel
+import cn.lovemyrmb.personalsite.ui.components.ContentPhase
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
@@ -52,15 +57,28 @@ internal fun AiNewsDetailScreen(
     }
 
     DetailFrame("每日动态", bottomBarPadding, onBack) {
-        when {
-            item != null -> AiNewsDetailBody(item!!, onOpenLink)
-            error != null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                ErrorRetry(message = error ?: "") {
-                    error = null
-                    attempt++
+        val phase = when {
+            item != null -> ContentPhase.CONTENT
+            error != null -> ContentPhase.ERROR
+            else -> ContentPhase.INITIAL
+        }
+        // weight 放在 Crossfade 自身：加载/错误子项撑满剩余高度，正文保持原有滚动布局。
+        Crossfade(
+            targetState = phase,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            animationSpec = tween(180, easing = FastOutSlowInEasing),
+            label = "detail-phase",
+        ) { phase ->
+            when (phase) {
+                ContentPhase.CONTENT -> item?.let { AiNewsDetailBody(it, onOpenLink) }
+                ContentPhase.ERROR -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ErrorRetry(message = error ?: "") {
+                        error = null
+                        attempt++
+                    }
                 }
+                ContentPhase.INITIAL -> SiteSpinner(Modifier.fillMaxSize())
             }
-            else -> SiteSpinner(Modifier.weight(1f).fillMaxWidth())
         }
     }
 }

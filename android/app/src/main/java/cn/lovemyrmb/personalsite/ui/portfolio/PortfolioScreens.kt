@@ -1,5 +1,8 @@
 package cn.lovemyrmb.personalsite.ui.portfolio
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +52,7 @@ import cn.lovemyrmb.personalsite.data.PortfolioMedia
 import cn.lovemyrmb.personalsite.data.PortfolioProduct
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.data.ReaderPayload
+import cn.lovemyrmb.personalsite.ui.components.ContentPhase
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.SiteAsyncImage
@@ -99,62 +103,71 @@ fun PortfolioScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             val products = state.items
-            when {
-                products == null && state.refreshError -> ErrorRetry(
-                    message = "暂时无法读取作品集。",
-                    modifier = Modifier.fillMaxSize(),
-                ) { viewModel.refreshProducts() }
-                products == null -> SiteSpinner()
-                else -> LazyColumn {
-                    if (state.refreshError) {
-                        item(key = "refresh-error") {
-                            Text(
-                                text = "刷新失败，仍显示上次内容，可下拉重试。",
-                                style = SiteText.meta,
-                                color = SiteTheme.colors.quiet,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = SiteSpace.page, vertical = SiteSpace.compact),
-                            )
-                        }
-                    }
-                    itemsIndexed(products, key = { _, product -> product.id }) { _, product ->
-                        val collection = product.nativeCollection()
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(
-                                    role = Role.Button,
-                                    onClickLabel = if (collection != null) "打开${product.name}" else "在浏览器打开${product.name}",
-                                ) {
-                                    if (collection != null) onOpenCollection(collection) else onOpenLink(PORTFOLIO_BASE_URL)
+            val phase = when {
+                products == null && state.refreshError -> ContentPhase.ERROR
+                products == null -> ContentPhase.INITIAL
+                else -> ContentPhase.CONTENT
+            }
+            Crossfade(targetState = phase, animationSpec = tween(180, easing = FastOutSlowInEasing), label = "portfolio-phase") { phase ->
+                when (phase) {
+                    ContentPhase.ERROR -> ErrorRetry(
+                        message = "暂时无法读取作品集。",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { viewModel.refreshProducts() }
+                    ContentPhase.INITIAL -> SiteSpinner()
+                    ContentPhase.CONTENT -> products?.let { products ->
+                        LazyColumn {
+                            if (state.refreshError) {
+                                item(key = "refresh-error") {
+                                    Text(
+                                        text = "刷新失败，仍显示上次内容，可下拉重试。",
+                                        style = SiteText.meta,
+                                        color = SiteTheme.colors.quiet,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = SiteSpace.page, vertical = SiteSpace.compact),
+                                    )
                                 }
-                                .padding(horizontal = SiteSpace.page, vertical = SiteSpace.item),
-                            horizontalArrangement = Arrangement.spacedBy(SiteSpace.paragraph),
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SiteSpace.micro)) {
-                                Text(product.name, style = SiteText.title, color = SiteTheme.colors.ink)
-                                Text(product.summary, style = SiteText.summary, color = SiteTheme.colors.muted)
-                                Text(
-                                    product.date + " · " + product.dateLabel,
-                                    style = SiteText.meta,
-                                    color = SiteTheme.colors.quiet,
-                                )
                             }
-                            SiteAsyncImage(
-                                model = product.cover.takeIf { it.isNotBlank() },
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .width(100.dp)
-                                    .height(112.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(SiteTheme.colors.line),
-                            )
+                            itemsIndexed(products, key = { _, product -> product.id }) { _, product ->
+                                val collection = product.nativeCollection()
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            role = Role.Button,
+                                            onClickLabel = if (collection != null) "打开${product.name}" else "在浏览器打开${product.name}",
+                                        ) {
+                                            if (collection != null) onOpenCollection(collection) else onOpenLink(PORTFOLIO_BASE_URL)
+                                        }
+                                        .padding(horizontal = SiteSpace.page, vertical = SiteSpace.item),
+                                    horizontalArrangement = Arrangement.spacedBy(SiteSpace.paragraph),
+                                ) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SiteSpace.micro)) {
+                                        Text(product.name, style = SiteText.title, color = SiteTheme.colors.ink)
+                                        Text(product.summary, style = SiteText.summary, color = SiteTheme.colors.muted)
+                                        Text(
+                                            product.date + " · " + product.dateLabel,
+                                            style = SiteText.meta,
+                                            color = SiteTheme.colors.quiet,
+                                        )
+                                    }
+                                    SiteAsyncImage(
+                                        model = product.cover.takeIf { it.isNotBlank() },
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .width(100.dp)
+                                            .height(112.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(SiteTheme.colors.line),
+                                    )
+                                }
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = SiteSpace.page), thickness = Dp.Hairline, color = SiteTheme.colors.line)
+                            }
+                            item(key = "bottom") { Spacer(Modifier.height(SiteSpace.section)) }
                         }
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = SiteSpace.page), thickness = Dp.Hairline, color = SiteTheme.colors.line)
                     }
-                    item(key = "bottom") { Spacer(Modifier.height(SiteSpace.section)) }
                 }
             }
         }

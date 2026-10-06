@@ -1,18 +1,25 @@
 package cn.lovemyrmb.personalsite.ui.components
 
+import android.animation.ValueAnimator
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.delay
 
 /**
@@ -41,10 +48,15 @@ fun SiteAsyncImage(
             retry++
         }
     }
-    val request = remember(model, retry) {
+    // Coil 的 crossfade 走墙钟 TimeMark 而非 Compose 动画管线，不随系统动画时长缩放，
+    // 因此沿用 TechnicalTerms 的 areAnimatorsEnabled 门控：关闭系统动画时直接换图。
+    val animatorsEnabled = rememberAnimatorsEnabled()
+    // crossfade 显式落到请求上（0 即无过渡）：开关在会话中途翻转时请求身份随之改变。
+    val request = remember(model, retry, animatorsEnabled) {
         ImageRequest.Builder(context)
             .data(model)
             .memoryCacheKeyExtra("retry", retry.toString())
+            .crossfade(if (animatorsEnabled) 150 else 0)
             .build()
     }
     AsyncImage(
@@ -60,3 +72,18 @@ fun SiteAsyncImage(
 
 private const val MAX_RETRIES = 2
 private val RETRY_BACKOFF_MILLIS = listOf(1_000L, 3_000L)
+
+/** 系统动画开关：组合时读一次，每次回到前台重读，会话中途切换即时生效。 */
+@Composable
+private fun rememberAnimatorsEnabled(): Boolean {
+    var enabled by remember { mutableStateOf(ValueAnimator.areAnimatorsEnabled()) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) enabled = ValueAnimator.areAnimatorsEnabled()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    return enabled
+}
