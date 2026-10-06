@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 // 入场武装回归：--resolved 淡入只在骨架屏真实绘制过（会话标记，detail-entrance 落下）之后发生。
-// 这里覆盖三段真实导航：带标记的冷导航淡入；标记消费后返回不淡入；无标记的立即可用导航不淡入。
+// 这里覆盖三段客户端导航：带新鲜标记的客户端冷导航淡入；标记消费后返回不淡入；无标记的
+// 立即可用导航不淡入。硬导航（直连 URL）不在入场范围内：流式 fallback 挂载不了客户端
+// 生产者，保持即时换场（见 detail-entrance.tsx 顶部说明）。
 // （骨架屏绘制的双 rAF 判定在 tests/ai-news-detail-entrance.test.tsx 单测里覆盖：
 // 本机服务端边界窗口只有 ~20ms，浏览器侧无法稳定制造“骨架屏已绘制”的服务端延迟。）
 const FALLBACK_PAINTED_KEY = "personal-site:ai-news-fallback-painted";
@@ -30,8 +32,11 @@ test("ai-news detail fades in when the painted-skeleton marker armed it and stay
   expect(href).toMatch(/^\/ai-news\/[^/]+$/u);
   const detailPath = href as string;
 
-  // 冷导航（骨架屏绘制过 → detail-entrance 已落下会话标记）：正文淡入。
-  await page.evaluate(({ key, path }) => window.sessionStorage.setItem(key, path), { key: FALLBACK_PAINTED_KEY, path: detailPath });
+  // 客户端冷导航（骨架屏绘制过 → detail-entrance 已落下新鲜标记）：正文淡入。
+  await page.evaluate(({ key, path }) => window.sessionStorage.setItem(
+    key,
+    JSON.stringify({ at: Date.now(), path }),
+  ), { key: FALLBACK_PAINTED_KEY, path: detailPath });
   await firstLink.click();
   await expect(page).toHaveURL(new RegExp(`${detailPath}$`, "u"));
   await expect(article).toHaveAttribute("data-content-id", /.+/u);
