@@ -146,6 +146,14 @@
   .loadingLine {
     animation: none;
   }
+
+  .repositoryBrowserContent,
+  .repositoryFileHeader,
+  .repositoryFileContent,
+  .repositoryBrowserError,
+  .repositoryFileEmpty {
+    transition: none;
+  }
 }
 
 .documentHeader {
@@ -247,6 +255,20 @@
 .repositoryFileContent { overflow: auto; max-height: 35rem; margin: 0; padding: 1rem 0 0; background: transparent; color: #454548; font-size: .74rem; line-height: 1.65; }
 .repositoryFileContent code { background: transparent; color: inherit; font-size: inherit; padding: 0; }
 .repositoryFileEmpty { display: grid; min-height: 14rem; place-items: center; text-align: center; }
+
+/* 文件树首载与文件面板状态块（错误/空态/文件头+正文）都是换场：只淡入，离场即时。 */
+.repositoryBrowserContent,
+.repositoryFileHeader,
+.repositoryFileContent,
+.repositoryBrowserError,
+.repositoryFileEmpty { transition: opacity 180ms ease; }
+@starting-style {
+  .repositoryBrowserContent,
+  .repositoryFileHeader,
+  .repositoryFileContent,
+  .repositoryBrowserError,
+  .repositoryFileEmpty { opacity: 0; }
+}
 
 :global(html[data-curation-theme="dark"]) .stream a:hover h2,
 :global(html[data-curation-theme="dark"]) .stream a:focus-visible h2 {

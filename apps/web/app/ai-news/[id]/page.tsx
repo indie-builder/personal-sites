@@ -60,7 +60,7 @@ async function AiNewsDetailContent({ params }: AiNewsDetailPageProps) {
   if (!item) notFound();
 
   return (
-    <article className="ai-news-detail__article" data-content-id={item.id}>
+    <article className="ai-news-detail__article ai-news-detail__article--resolved" data-content-id={item.id}>
       <DetailTopbar
         backClassName="ai-news-detail__back"
         backHref="/ai-news"
