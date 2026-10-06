@@ -34,6 +34,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
   initialItems: CurationListItem[];
   tags: { tag: string; count: number; headId: string }[];
 }) {
+  const reduceMotion = useReducedMotion();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -54,7 +55,7 @@ export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
       if (next) window.sessionStorage.setItem(TAG_STORAGE_KEY, next);
       else window.sessionStorage.removeItem(TAG_STORAGE_KEY);
     } catch { /* 会话存储只用于返回时恢复选择。 */ }
-    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: "auto", top: 0 });
+    if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: reduceMotion ? "auto" : "smooth", top: 0 });
   };
   const selected = tags.find(({ tag }) => tag === activeTag);
   const filter = <StreamFilterMenu
