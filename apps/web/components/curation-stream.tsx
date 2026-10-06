@@ -20,7 +20,7 @@ import type { CurationListItem } from "@/lib/curation-types";
 import { XVideoPlayer } from "@/components/x-video-player";
 import { useStreamDate } from "@/components/use-stream-date";
 
-import { STREAM_EASE, staggerDelay } from "./motion-tokens";
+import { STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, staggerDelay } from "./motion-tokens";
 import { curationStreamSnapshot } from "./stream-snapshot";
 import { useStreamFeed } from "./use-stream-feed";
 import { getCurationScrollTarget } from "./curation-scroll";
@@ -141,12 +141,12 @@ export function CurationStream({
         return (
         <motion.li
           animate={isAppended ? { opacity: 1, y: 0 } : undefined}
-          initial={isAppended && !reduceMotion ? { opacity: 0, y: "0.45rem" } : false}
+          initial={isAppended && !reduceMotion ? { opacity: 0, y: `${STREAM_REVEAL_Y}rem` } : false}
           data-stream-date={formatCurationDate(item)}
           key={item.id}
           transition={{
             delay: isAppended ? staggerDelay(index - appendStart) : 0,
-            duration: 0.3,
+            duration: STREAM_REVEAL_DURATION,
             ease: STREAM_EASE,
           }}
         >

@@ -196,7 +196,6 @@ html[data-curation-theme="dark"], html[data-curation-theme="dark"] body { backgr
 html[data-curation-theme="dark"] .opening-loader { background:#181818; }
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }
-  ::view-transition-old(root),::view-transition-new(root) { animation:none; }
   .curation-home__external-links a,
   .curation-home__about-trigger,
   .curation-detail__back a,
@@ -229,7 +228,7 @@ html[data-curation-theme="dark"] .opening-loader { background:#181818; }
 
 @media (max-width:900px) {
   .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile {
-    transition:top 240ms cubic-bezier(.16,1,.3,1);
+    transition:top 240ms var(--ease-stream);
   }
   .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile[data-mobile-collapsed] {
     top:calc(-1 * var(--mobile-profile-offset, 0px));
