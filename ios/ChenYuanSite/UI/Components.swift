@@ -99,16 +99,22 @@ struct RemoteImage: View {
     var retryAlignment: Alignment = .center
 
     @State private var attempt = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         AsyncImage(url: url) { phase in
-            if let image = phase.image {
-                image.resizable().aspectRatio(nil, contentMode: contentMode)
-            } else if phase.error != nil {
-                if showsRetry { retryView } else { placeholderGlyph }
-            } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            Group {
+                if let image = phase.image {
+                    image.resizable().aspectRatio(nil, contentMode: contentMode)
+                        .transition(.opacity)
+                } else if phase.error != nil {
+                    if showsRetry { retryView.transition(.opacity) } else { placeholderGlyph.transition(.opacity) }
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity)
+                }
             }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: phase.image != nil)
         }
         .id(attempt)
     }
