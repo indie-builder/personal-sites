@@ -149,7 +149,6 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
         Column(
             Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().imePadding().navigationBarsPadding()
                 .focusProperties {
-                    canFocus = !readerVisible
                     onEnter = { if (readerVisible) cancelFocusChange() }
                 }
                 .focusGroup()
