@@ -1,5 +1,8 @@
 package cn.lovemyrmb.personalsite.ui.home
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +46,7 @@ import cn.lovemyrmb.personalsite.data.HomeViewModel
 import cn.lovemyrmb.personalsite.data.OpenSourceListEntry
 import cn.lovemyrmb.personalsite.data.PagedFeed
 import cn.lovemyrmb.personalsite.data.Section
+import cn.lovemyrmb.personalsite.ui.components.ContentPhase
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.FeedFooter
 import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
@@ -171,27 +175,35 @@ private fun <T> FeedPageUi(
         onRefresh = { feed.refresh() },
         modifier = Modifier.fillMaxSize(),
     ) {
-        when {
-            state.initial -> SiteSpinner()
+        // 只在首载/失败/内容相位间切换时淡切；分页追加与下拉刷新保持同相位，不动画。
+        val phase = when {
+            state.initial -> ContentPhase.INITIAL
+            state.error != null && state.items.isEmpty() -> ContentPhase.ERROR
+            else -> ContentPhase.CONTENT
+        }
+        Crossfade(targetState = phase, animationSpec = tween(180, easing = FastOutSlowInEasing), label = "feed-phase") { phase ->
+            when (phase) {
+                ContentPhase.INITIAL -> SiteSpinner()
 
-            state.error != null && state.items.isEmpty() -> ErrorRetry(
-                message = state.error ?: "",
-                modifier = Modifier.fillMaxSize(),
-            ) { feed.retry() }
+                ContentPhase.ERROR -> ErrorRetry(
+                    message = state.error ?: "",
+                    modifier = Modifier.fillMaxSize(),
+                ) { feed.retry() }
 
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = contentPadding,
-            ) {
-                itemsIndexed(state.items, key = { _, item -> keyOf(item) }) { _, item ->
-                    Box { row(item) }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = SiteSpace.page), thickness = Dp.Hairline, color = SiteTheme.colors.line)
-                }
-                item(key = "footer") {
-                    LaunchedEffect(state.items.size, state.hasMore) {
-                        if (state.hasMore) feed.loadMore()
+                ContentPhase.CONTENT -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding,
+                ) {
+                    itemsIndexed(state.items, key = { _, item -> keyOf(item) }) { _, item ->
+                        Box { row(item) }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = SiteSpace.page), thickness = Dp.Hairline, color = SiteTheme.colors.line)
                     }
-                    FeedFooter(state) { feed.retry() }
+                    item(key = "footer") {
+                        LaunchedEffect(state.items.size, state.hasMore) {
+                            if (state.hasMore) feed.loadMore()
+                        }
+                        FeedFooter(state) { feed.retry() }
+                    }
                 }
             }
         }

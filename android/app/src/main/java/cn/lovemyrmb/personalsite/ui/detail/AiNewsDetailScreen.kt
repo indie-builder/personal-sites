@@ -1,5 +1,8 @@
 package cn.lovemyrmb.personalsite.ui.detail
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import cn.lovemyrmb.personalsite.data.AiNewsItem
 import cn.lovemyrmb.personalsite.data.SiteApi
 import cn.lovemyrmb.personalsite.data.aiNewsCategoryLabel
+import cn.lovemyrmb.personalsite.ui.components.ContentPhase
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
 import cn.lovemyrmb.personalsite.ui.components.SourceCta
@@ -52,15 +56,24 @@ internal fun AiNewsDetailScreen(
     }
 
     DetailFrame("每日动态", bottomBarPadding, onBack) {
-        when {
-            item != null -> AiNewsDetailBody(item!!, onOpenLink)
-            error != null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                ErrorRetry(message = error ?: "") {
-                    error = null
-                    attempt++
+        // weight 依赖 ColumnScope，在 Crossfade 外求值后传入。
+        val centered = Modifier.weight(1f).fillMaxWidth()
+        val phase = when {
+            item != null -> ContentPhase.CONTENT
+            error != null -> ContentPhase.ERROR
+            else -> ContentPhase.INITIAL
+        }
+        Crossfade(targetState = phase, animationSpec = tween(180, easing = FastOutSlowInEasing), label = "detail-phase") { phase ->
+            when (phase) {
+                ContentPhase.CONTENT -> item?.let { AiNewsDetailBody(it, onOpenLink) }
+                ContentPhase.ERROR -> Box(centered, contentAlignment = Alignment.Center) {
+                    ErrorRetry(message = error ?: "") {
+                        error = null
+                        attempt++
+                    }
                 }
+                ContentPhase.INITIAL -> SiteSpinner(centered)
             }
-            else -> SiteSpinner(Modifier.weight(1f).fillMaxWidth())
         }
     }
 }
