@@ -93,8 +93,12 @@ private val glassBarActions = listOf(
     GlassBarAction("关于我", NavigationIcons.About, "about"),
 )
 
-// 详情级路由：进入时自右滑入 1/4 屏宽，返回时镜像滑出；同级栏目路由只做淡入淡出。
+// 详情级路由：下钻进入时自右滑入 1/4 屏宽，返回时镜像滑出。页签切换（含恢复的
+// 保存栈）不产生内容位移，只允许淡切，路由形态不足以区分两者，见 NavMotion。
 private val detailRoutes = setOf("detail", "portfolio/{collection}", "portfolio-reader")
+
+// 本次导航的动效意图：页签操作无内容位移，下钻导航才允许详情路由横滑。
+private enum class NavMotion { Tab, Detail }
 
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
@@ -107,7 +111,11 @@ fun PersonalSiteApp(container: AppContainer) {
     val pagerState = rememberPagerState(pageCount = { Section.entries.size })
     val scope = rememberCoroutineScope()
     val backStackEntry by navController.currentBackStackEntryAsState()
+    // 过渡选择读取最近一次导航的意图；返回（含系统返回）继承进入时的意图，
+    // 因此被页签恢复的详情也按淡切退出，与其淡切进入互为镜像。
+    var navMotion by remember { mutableStateOf(NavMotion.Tab) }
     fun openTab(route: String) {
+        navMotion = NavMotion.Tab
         navController.navigate(route) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true
@@ -151,19 +159,19 @@ fun PersonalSiteApp(container: AppContainer) {
                 .hazeSource(hazeState),
             // Compose tween 经 MotionDurationScale 读取系统动画时长缩放，减动效路径自动生效。
             enterTransition = {
-                if (targetState.destination.route in detailRoutes) {
-                    slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(200))
-                } else {
+                if (navMotion == NavMotion.Tab || targetState.destination.route !in detailRoutes) {
                     fadeIn(tween(200))
+                } else {
+                    slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(200))
                 }
             },
             exitTransition = { fadeOut(tween(150)) },
             popEnterTransition = { fadeIn(tween(200)) },
             popExitTransition = {
-                if (initialState.destination.route in detailRoutes) {
-                    slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200))
-                } else {
+                if (navMotion == NavMotion.Tab || initialState.destination.route !in detailRoutes) {
                     fadeOut(tween(150))
+                } else {
+                    slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200))
                 }
             },
         ) {
@@ -174,6 +182,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     bottomBarPadding = bottomBarTotal + 24.dp,
                     onOpenDetail = { entry ->
                         container.pendingDetail = entry
+                        navMotion = NavMotion.Detail
                         navController.navigate("detail")
                     },
                 )
@@ -195,7 +204,10 @@ fun PersonalSiteApp(container: AppContainer) {
                 PortfolioScreen(
                     viewModel = portfolioViewModel,
                     bottomPadding = bottomBarTotal,
-                    onOpenCollection = { navController.navigate("portfolio/$it") },
+                    onOpenCollection = {
+                        navMotion = NavMotion.Detail
+                        navController.navigate("portfolio/$it")
+                    },
                     onOpenLink = { openExternally(context, it) },
                 )
             }
@@ -208,6 +220,7 @@ fun PersonalSiteApp(container: AppContainer) {
                     onBack = { navController.popBackStack() },
                     onOpenItem = { items, index ->
                         container.pendingPortfolioReader = ReaderPayload(collection, items, index)
+                        navMotion = NavMotion.Detail
                         navController.navigate("portfolio-reader")
                     },
                 )
@@ -280,7 +293,10 @@ fun PersonalSiteApp(container: AppContainer) {
                                         scope.launch { pagerState.scrollToPage(0) }
                                         barVisible = true
                                     }
-                                    "ask" -> navController.navigate("ask") { launchSingleTop = true }
+                                    "ask" -> {
+                                        navMotion = NavMotion.Detail
+                                        navController.navigate("ask") { launchSingleTop = true }
+                                    }
                                     else -> openTab(action.route)
                                 }
                             },

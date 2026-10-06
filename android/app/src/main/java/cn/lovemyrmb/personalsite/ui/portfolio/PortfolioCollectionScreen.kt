@@ -173,8 +173,10 @@ fun PortfolioCollectionScreen(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             // 首屏失败（含书架态）必须可重试：PagedFeed 的 started 守卫会让缓存实例
             // 的 loadInitial 静默跳过，错误分支优先于书架，避免永久转圈。
+            // 首次加载进行中（feed 未建或 initial 未落）保持 INITIAL：相位键真正变化
+            // 才触发淡切，否则加载完成不换键、过渡不可见。
             val phase = when {
-                feed == null -> CollectionPhase.INITIAL
+                feed == null || state.initial -> CollectionPhase.INITIAL
                 state.error != null && state.items.isEmpty() -> CollectionPhase.ERROR
                 onShelf -> CollectionPhase.SHELF
                 else -> CollectionPhase.CONTENT

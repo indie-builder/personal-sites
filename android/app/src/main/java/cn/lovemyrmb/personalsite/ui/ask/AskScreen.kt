@@ -109,14 +109,25 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     }
     // 引用阅读器以垂直滑动开合（iOS 同位为 sheet）；关闭系统动画时直接换页。
     val animatorsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
+    // 返回键提升到 AnimatedContent 外：阅读器关闭动画期间再次返回应退出问答，
+    // 而不是被离场内容里仍启用的 BackHandler 再次置空来源。
+    BackHandler(enabled = selectedSource != null) { sourceMessageId = null }
     AnimatedContent(
         targetState = selectedSource,
         transitionSpec = {
-            if (animatorsEnabled) {
-                (slideInVertically(tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(200))) togetherWith
-                    (slideOutVertically(tween(220)) { it } + fadeOut(tween(140)))
-            } else {
+            if (!animatorsEnabled) {
                 EnterTransition.None togetherWith ExitTransition.None
+            } else if (targetState != null) {
+                // 打开：只有阅读器从底部升起并压在上层；对话零位移退出只作保留计时，
+                // 让对话组合存活到进入结束（ExitTransition.None 会立即拆除离场内容）。
+                ((slideInVertically(tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(200))) togetherWith
+                    slideOutVertically(tween(300)) { 0 })
+                    .apply { targetContentZIndex = 1f }
+            } else {
+                // 关闭：阅读器在对话上方下滑退出；对话在下层原地即刻显现，不位移。
+                (EnterTransition.None togetherWith
+                    (slideOutVertically(tween(220)) { it } + fadeOut(tween(140))))
+                    .apply { targetContentZIndex = -1f }
             }
         },
         label = "source-reader",
@@ -246,7 +257,6 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
                 }
             }
         } else {
-            BackHandler { sourceMessageId = null }
             SourceReader(source, sourceIndex + 1) { sourceMessageId = null }
         }
     }

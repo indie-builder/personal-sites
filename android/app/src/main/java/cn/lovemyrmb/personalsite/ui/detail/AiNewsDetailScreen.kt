@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,23 +57,27 @@ internal fun AiNewsDetailScreen(
     }
 
     DetailFrame("每日动态", bottomBarPadding, onBack) {
-        // weight 依赖 ColumnScope，在 Crossfade 外求值后传入。
-        val centered = Modifier.weight(1f).fillMaxWidth()
         val phase = when {
             item != null -> ContentPhase.CONTENT
             error != null -> ContentPhase.ERROR
             else -> ContentPhase.INITIAL
         }
-        Crossfade(targetState = phase, animationSpec = tween(180, easing = FastOutSlowInEasing), label = "detail-phase") { phase ->
+        // weight 放在 Crossfade 自身：加载/错误子项撑满剩余高度，正文保持原有滚动布局。
+        Crossfade(
+            targetState = phase,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            animationSpec = tween(180, easing = FastOutSlowInEasing),
+            label = "detail-phase",
+        ) { phase ->
             when (phase) {
                 ContentPhase.CONTENT -> item?.let { AiNewsDetailBody(it, onOpenLink) }
-                ContentPhase.ERROR -> Box(centered, contentAlignment = Alignment.Center) {
+                ContentPhase.ERROR -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     ErrorRetry(message = error ?: "") {
                         error = null
                         attempt++
                     }
                 }
-                ContentPhase.INITIAL -> SiteSpinner(centered)
+                ContentPhase.INITIAL -> SiteSpinner(Modifier.fillMaxSize())
             }
         }
     }
