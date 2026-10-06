@@ -1,11 +1,14 @@
 package cn.lovemyrmb.personalsite
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.selection.selectable
@@ -90,6 +93,9 @@ private val glassBarActions = listOf(
     GlassBarAction("关于我", NavigationIcons.About, "about"),
 )
 
+// 详情级路由：进入时自右滑入 1/4 屏宽，返回时镜像滑出；同级栏目路由只做淡入淡出。
+private val detailRoutes = setOf("detail", "portfolio/{collection}", "portfolio-reader")
+
 @Composable
 fun PersonalSiteApp(container: AppContainer) {
     val navController = rememberNavController()
@@ -143,6 +149,23 @@ fun PersonalSiteApp(container: AppContainer) {
                 .fillMaxSize()
                 .nestedScroll(scrollConnection)
                 .hazeSource(hazeState),
+            // Compose tween 经 MotionDurationScale 读取系统动画时长缩放，减动效路径自动生效。
+            enterTransition = {
+                if (targetState.destination.route in detailRoutes) {
+                    slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(200))
+                } else {
+                    fadeIn(tween(200))
+                }
+            },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(200)) },
+            popExitTransition = {
+                if (initialState.destination.route in detailRoutes) {
+                    slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200))
+                } else {
+                    fadeOut(tween(150))
+                }
+            },
         ) {
             composable("home") {
                 HomeScreen(
@@ -233,12 +256,23 @@ fun PersonalSiteApp(container: AppContainer) {
                     val route = backStackEntry?.destination?.route.orEmpty()
                     val selected = route == action.route ||
                         (action.route == "portfolio" && route.startsWith("portfolio"))
+                    // 选中态胶囊与文字按 Web 同位 160ms 颜色规则过渡。
+                    val pillColor by animateColorAsState(
+                        targetValue = if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent,
+                        animationSpec = tween(160, easing = FastOutSlowInEasing),
+                        label = "bar-pill",
+                    )
+                    val labelColor by animateColorAsState(
+                        targetValue = if (selected) SiteTheme.colors.ink else SiteTheme.colors.muted,
+                        animationSpec = tween(160, easing = FastOutSlowInEasing),
+                        label = "bar-label",
+                    )
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxSize()
                             .clip(CircleShape)
-                            .background(if (selected) SiteTheme.colors.ink.copy(alpha = 0.09f) else Color.Transparent)
+                            .background(pillColor)
                             .selectable(selected = selected, role = Role.Tab) {
                                 when (action.route) {
                                     "home" -> {
@@ -260,7 +294,7 @@ fun PersonalSiteApp(container: AppContainer) {
                             modifier = Modifier.size(26.dp),
                         )
                         Spacer(Modifier.height(3.dp))
-                        Text(text = action.label, style = SiteText.meta, color = if (selected) SiteTheme.colors.ink else SiteTheme.colors.muted, maxLines = 1)
+                        Text(text = action.label, style = SiteText.meta, color = labelColor, maxLines = 1)
                     }
                 }
             }
