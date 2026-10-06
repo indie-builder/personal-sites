@@ -276,10 +276,10 @@ struct AskView: View {
             Image(systemName: controller.streaming ? "stop.fill" : "arrow.up")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(active ? SiteTheme.background : SiteTheme.muted)
-                .contentTransition(.symbolEffect(.replace))
+                .contentTransition(reduceMotion ? .identity : .opacity)
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .background(Circle().fill(active ? SiteTheme.ink : SiteTheme.line))
-                .animation(reduceMotion ? nil : .snappy(duration: 0.18), value: controller.streaming)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: controller.streaming)
                 .animation(.easeOut(duration: 0.16), value: active)
         }
         .buttonStyle(SitePressStyle.compact)

@@ -48,10 +48,10 @@ struct CopyButton: View {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 15))
                 .foregroundStyle(SiteTheme.muted)
-                .contentTransition(.symbolEffect(.replace))
+                .contentTransition(reduceMotion ? .identity : .opacity)
                 .frame(width: SiteSpace.touch, height: SiteSpace.touch)
                 .contentShape(Rectangle())
-                .animation(reduceMotion ? nil : .snappy(duration: 0.18), value: copied)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: copied)
         }
         .buttonStyle(SitePressStyle.compact)
         .accessibilityLabel(copied ? "已复制" : "复制回答")

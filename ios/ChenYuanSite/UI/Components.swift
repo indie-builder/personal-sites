@@ -23,7 +23,7 @@ struct SitePressStyle: ButtonStyle {
                 }
             }
             .scaleEffect(configuration.isPressed && !reduceMotion && variant == .compact ? 0.98 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: configuration.isPressed ? 0.12 : 0.10), value: configuration.isPressed)
     }
 }
 
@@ -114,7 +114,7 @@ struct RemoteImage: View {
                         .transition(.opacity)
                 }
             }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: phase.image != nil)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: phase.image != nil ? 2 : phase.error != nil ? 1 : 0)
         }
         .id(attempt)
     }
