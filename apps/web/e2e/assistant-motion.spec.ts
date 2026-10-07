@@ -57,7 +57,7 @@ test("first downward jump survives greeting changes and lands before text recoil
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     const cancelled = jump.playState === "idle";
     const after = element.getBoundingClientRect().top;
-    const line = document.querySelectorAll<HTMLElement>("[data-profile-line]")[1];
+    const line = document.querySelectorAll<HTMLElement>(".curation-home__bio p")[1].querySelector<HTMLElement>("[data-profile-line]")!;
     const earlyRecoil = line.getAnimations().length;
     if (!cancelled) jump.finish();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -89,7 +89,7 @@ test("the sprite actually descends on its first jump without inserting text line
   await page.locator("#profile-introduction").evaluate((element) => { element.textContent = "こんにちは、"; });
   await expect(walker).toHaveAttribute("data-lane", "1");
   await expect.poll(() => walker.evaluate((element) => Math.abs(
-    document.querySelectorAll("[data-profile-line]")[1].getBoundingClientRect().top - element.getBoundingClientRect().bottom,
+    document.querySelectorAll(".curation-home__bio p")[1].querySelector("[data-profile-line]")!.getBoundingClientRect().top - element.getBoundingClientRect().bottom,
   ))).toBeLessThan(3);
   expect(await walker.evaluate((element) => element.getBoundingClientRect().top) - initial.top).toBeGreaterThan(15);
   await expect(page.locator("[data-profile-line]")).toHaveCount(initial.lines);

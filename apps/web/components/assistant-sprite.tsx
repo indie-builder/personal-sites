@@ -51,7 +51,10 @@ export function SpriteWalker({ children, paused = false }: { children?: ReactNod
       const rows = interactive
         ? [...(rail!.closest(".curation-home__bio")?.querySelectorAll<HTMLElement>("[data-profile-line]") ?? [])]
         : [];
-      if (rows.length) return rows.map((node) => {
+      if (rows.length) return rows
+        // Jump landings need a blank line above: connected line boxes touch at gap 0, paragraph starts leave the margin gap.
+        .filter((row, index) => index === 0 || row.getBoundingClientRect().top - rows[index - 1].getBoundingClientRect().bottom >= 8)
+        .map((node) => {
           const rect = node.getBoundingClientRect();
           const range = document.createRange();
           range.selectNodeContents(node);
