@@ -21,7 +21,7 @@ export function createSupabaseAiNewsStateStore(client) {
       return Effect.gen(function* () {
         const startedAt = now.toISOString();
         const leaseUntil = new Date(now.getTime() + LEASE_MS).toISOString();
-        const { data, error } = yield* io("ai-news.acquire", () =>
+        const { data, error } = yield* io("ai-news.acquire", (signal) =>
           client
             .from("ai_news_sync_state")
             .update({
@@ -32,16 +32,37 @@ export function createSupabaseAiNewsStateStore(client) {
             .eq("id", STATE_ID)
             .or(`lease_until.is.null,lease_until.lt.${startedAt}`)
             .select("etags")
-            .maybeSingle(),
+            .maybeSingle()
+            .abortSignal(signal),
         );
         if (error) return yield* Effect.fail(new Error(`获取每日动态同步租约失败：${error.message}`));
-        return data ? { acquired: true, etags: data.etags ?? {} } : { acquired: false, etags: {} };
+        return data
+          ? { acquired: true, etags: data.etags ?? {}, token: { startedAt, leaseUntil } }
+          : { acquired: false, etags: {} };
       });
     },
 
-    succeed({ completedAt = new Date(), etags, stats }) {
+    assertOwned({ token, now }) {
       return Effect.gen(function* () {
-        const { error } = yield* io("ai-news.succeed", () =>
+        const { data, error } = yield* io("ai-news.owner", (signal) =>
+          client
+            .from("ai_news_sync_state")
+            .select("id")
+            .eq("id", STATE_ID)
+            .eq("last_started_at", token.startedAt)
+            .eq("lease_until", token.leaseUntil)
+            .gt("lease_until", now.toISOString())
+            .maybeSingle()
+            .abortSignal(signal),
+        );
+        if (error) return yield* Effect.fail(new Error(`读取每日动态同步租约失败：${error.message}`));
+        if (!data) return yield* Effect.fail(new Error("每日动态同步租约已失效。"));
+      });
+    },
+
+    succeed({ token, completedAt = new Date(), etags, stats }) {
+      return Effect.gen(function* () {
+        const { data, error } = yield* io("ai-news.succeed", (signal) =>
           client
             .from("ai_news_sync_state")
             .update({
@@ -51,15 +72,20 @@ export function createSupabaseAiNewsStateStore(client) {
               last_succeeded_at: completedAt.toISOString(),
               lease_until: null,
             })
-            .eq("id", STATE_ID),
+            .eq("id", STATE_ID)
+            .eq("last_started_at", token.startedAt)
+            .eq("lease_until", token.leaseUntil)
+            .select("id")
+            .abortSignal(signal),
         );
         if (error) return yield* Effect.fail(new Error(`记录每日动态同步成功状态失败：${error.message}`));
+        if (!data?.length) return yield* Effect.fail(new Error("每日动态同步租约已失效。"));
       });
     },
 
-    fail(error) {
+    fail({ token, error }) {
       return Effect.gen(function* () {
-        const { error: stateError } = yield* io("ai-news.fail", () =>
+        const { error: stateError } = yield* io("ai-news.fail", (signal) =>
           client
             .from("ai_news_sync_state")
             .update({
@@ -67,7 +93,11 @@ export function createSupabaseAiNewsStateStore(client) {
               last_stats: {},
               lease_until: null,
             })
-            .eq("id", STATE_ID),
+            .eq("id", STATE_ID)
+            .eq("last_started_at", token.startedAt)
+            .eq("lease_until", token.leaseUntil)
+            .select("id")
+            .abortSignal(signal),
         );
         if (stateError) return yield* Effect.fail(new Error(`记录每日动态同步失败状态失败：${stateError.message}`));
       });
@@ -76,8 +106,9 @@ export function createSupabaseAiNewsStateStore(client) {
     isAuthorized(secret) {
       return Effect.gen(function* () {
         if (!secret) return false;
-        const { data, error } = yield* io("ai-news.isAuthorized", () =>
-          client.from("ai_news_sync_state").select("cron_secret_hash").eq("id", STATE_ID).maybeSingle(),
+        const { data, error } = yield* io("ai-news.isAuthorized", (signal) =>
+          client.from("ai_news_sync_state").select("cron_secret_hash").eq("id", STATE_ID).maybeSingle()
+            .abortSignal(signal),
         );
         if (error) return yield* Effect.fail(new Error(`读取每日动态 Cron 密钥摘要失败：${error.message}`));
         return Boolean(data?.cron_secret_hash && sameHash(hashSecret(secret), data.cron_secret_hash));
@@ -86,12 +117,13 @@ export function createSupabaseAiNewsStateStore(client) {
 
     health({ now = new Date(), staleAfterMinutes = 20 } = {}) {
       return Effect.gen(function* () {
-        const { data, error } = yield* io("ai-news.health", () =>
+        const { data, error } = yield* io("ai-news.health", (signal) =>
           client
             .from("ai_news_sync_state")
             .select("last_error,last_succeeded_at,last_started_at,lease_until")
             .eq("id", STATE_ID)
-            .maybeSingle(),
+            .maybeSingle()
+            .abortSignal(signal),
         );
         if (error) return yield* Effect.fail(new Error(`读取每日动态同步健康状态失败：${error.message}`));
         const ageMinutes = data?.last_succeeded_at

@@ -45,6 +45,9 @@
 - 上游原生时间窗只有 24h 和 7d：增量同步用 24h 窗口（便宜），回填用 7d 窗口（全量分页，上限 60 页）；更早的历史上游不提供。
 - 两个 feed：`mode=all`（全部动态）与 `mode=selected`（精选），按 all → selected 顺序处理，同 id 条目的 `selected` 标记以精选为准；selected feed 条件请求命中 304 时，同步会先读出当前精选 id 并在 upsert 后还原，避免被 all feed 的覆盖语义清掉。
 - 增量同步带 `If-None-Match` 条件请求（ETag 存于私有状态表），无变化时跳过重写；回填不改写增量 ETag。
+- 同步工作从租约获取开始执行 3 分钟 Effect deadline，覆盖抓取、响应体消费、所有数据写入与成功状态写入，早于 4 分钟租期。超时和取消通过 AbortSignal 传到 fetch 与 Supabase SDK。失败清理在中断后运行，清理耗时不属于工作期限。
+- `last_started_at` 与 `lease_until` 组成 owner token，成功与失败释放均按 token 条件更新，旧任务不能释放已被新任务取得的租约。每次数据写入前检查 token 和租约有效期。生产起始时间在 Effect 执行时取值，测试传入的历史时间按运行时已用时推进。
+- 这些是租约 owner 修复与 deadline/abort 防护，不提供数据库强事务 fencing。所有权检查和数据写入仍是不同事务，HTTP abort 不保证回滚已到达服务器的写入；租约获取已提交但响应丢失时，也只能等租期到期。严格阻止旧 owner 的延迟提交需要数据库 RPC，在同一事务中锁定状态行、验证 token 与租期并执行写入；本轮未实施该迁移。
 - 原始备份仍按内容时间保留 8 天。公开投影不再按年龄直接删除；只有已上线 SQLite 包含完全相同的公开内容，且记录超过 3 天，才可清理。
 - 网站服务端通过 `apps/web/lib/ai-news.ts` 合并 SQLite 与 Supabase 增量：列表分页、详情、Ask 检索及 Sitemap 使用同一归档。Supabase 同 id 的新版本覆盖归档版本；详情确认无更新后使用 SQLite。
 

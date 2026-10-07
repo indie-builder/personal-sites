@@ -1,14 +1,14 @@
-import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Effect } from "effect";
+import { Deferred, Effect } from "effect";
 import { attempt, io, OperationError } from "@site/effect";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
 import { withModelTimeout, runPiPrompt } from "./model-runner.mjs";
 import { resolvePiModelConfig, configureBigModelRuntime } from "../../lib/pi-runtime.mjs";
 import { resolveAnalysisEngine } from "./runtime.mjs";
+import { acquireSubprocess } from "../../lib/subprocess.mjs";
 
 function createBigModelReader({
   config = {},
@@ -54,37 +54,39 @@ export function createAnalysisReader({ engine, config = {}, repoRoot, env = proc
   );
 }
 
-/** Native process events enter Effect once; interruption kills the child. */
 export function runCodexCli(command, args, { cwd, input, maxBuffer = 8 * 1024 * 1024, timeoutMilliseconds } = {}) {
-  const request = Effect.callback((resume) => {
-    const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+  const request = Effect.scoped(Effect.gen(function* () {
+    const { child, closed } = yield* acquireSubprocess(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] }, "analysis.process");
     const output = { value: "" };
     const errors = { value: "" };
-    const collect = (target) => (chunk) => {
-      target.value += chunk.toString();
-      if (Buffer.byteLength(target.value, "utf8") > maxBuffer)
-        resume(Effect.fail(new Error("Codex CLI 输出超过安全缓冲上限。")));
-    };
-    child.stdout.on("data", collect(output));
-    child.stderr.on("data", collect(errors));
-    child.once("error", (error) => resume(Effect.fail(new OperationError("analysis.process", error))));
-    child.once("close", (code) =>
-      resume(
-        code === 0
-          ? Effect.succeed({ stderr: errors.value, stdout: output.value })
-          : Effect.fail(
-              new Error(
-                `Codex CLI 退出码 ${code ?? "未知"}：${errors.value.trim() || output.value.trim() || "未返回错误详情"}`,
-              ),
-            ),
-      ),
-    );
-    child.stdin.on("error", (error) => resume(Effect.fail(new OperationError("analysis.stdin", error))));
-    child.stdin.end(input);
-    return Effect.sync(() => {
-      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    const collectFailure = Effect.callback((resume) => {
+      let completed = false;
+      const finish = (result) => {
+        if (completed) return;
+        completed = true;
+        resume(result);
+      };
+      const collect = (target) => (chunk) => {
+        if (completed) return;
+        target.value += chunk.toString();
+        if (Buffer.byteLength(target.value, "utf8") > maxBuffer)
+          finish(Effect.fail(new Error("Codex CLI 输出超过安全缓冲上限。")));
+      };
+      child.stdout.on("data", collect(output));
+      child.stderr.on("data", collect(errors));
+      child.stdin.on("error", (error) => finish(Effect.fail(new OperationError("analysis.stdin", error))));
+      child.stdin.end(input);
+      return Effect.sync(() => { completed = true; });
     });
-  });
+    return yield* Effect.raceFirst(collectFailure, Deferred.await(closed)).pipe(
+      Effect.flatMap(({ code }) => code === 0
+        ? Effect.succeed({ stderr: errors.value, stdout: output.value })
+        : Effect.fail(new Error(
+          `Codex CLI 退出码 ${code ?? "未知"}：${errors.value.trim() || output.value.trim() || "未返回错误详情"}`,
+        ))),
+    );
+  }));
+
   return Number.isInteger(timeoutMilliseconds)
     ? request.pipe(
         Effect.timeoutOrElse({

@@ -8,11 +8,19 @@ export type AiNewsSyncStats = {
   skipped: boolean;
 };
 
+export type AiNewsLeaseToken = {
+  startedAt: string;
+  leaseUntil: string;
+};
+
 export type AiNewsStateStore = {
-  acquire(options: {
-    now: Date;
-  }): Effect.Effect<{ acquired: boolean; etags: Record<string, string | null> }, Error>;
-  fail(error: unknown): Effect.Effect<void, Error>;
+  acquire(options: { now: Date }): Effect.Effect<
+    | { acquired: true; etags: Record<string, string | null>; token: AiNewsLeaseToken }
+    | { acquired: false; etags: Record<string, string | null> },
+    Error
+  >;
+  assertOwned(options: { token: AiNewsLeaseToken; now: Date }): Effect.Effect<void, Error>;
+  fail(options: { token: AiNewsLeaseToken; error: unknown }): Effect.Effect<void, Error>;
   health(options?: { now?: Date; staleAfterMinutes?: number }): Effect.Effect<
     {
       ageMinutes: number | null;
@@ -26,6 +34,7 @@ export type AiNewsStateStore = {
   >;
   isAuthorized(secret: string | null): Effect.Effect<boolean, Error>;
   succeed(options: {
+    token: AiNewsLeaseToken;
     completedAt?: Date;
     etags: Record<string, string | null>;
     stats: AiNewsSyncStats;

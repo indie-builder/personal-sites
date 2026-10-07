@@ -1,4 +1,4 @@
-import { Cause, Effect } from "effect";
+import { Cause, Clock, Effect, Exit } from "effect";
 import { attempt, io } from "@site/effect";
 import { createClient } from "@supabase/supabase-js";
 
@@ -92,12 +92,15 @@ export function fetchFeed(mode, { etag = null, fetchImpl = fetch, maxPages = MAX
       if (cursor) params.set("cursor", cursor);
       const headers = { accept: "application/json" };
       if (page === 0 && etag) headers["if-none-match"] = etag;
-      const response = yield* io("fetchFeed", (signal) => fetchImpl(`${ENDPOINT_BASE}?${params}`, { headers, signal }));
+      const { response, payload } = yield* io("fetchFeed", async (signal) => {
+        const response = await fetchImpl(`${ENDPOINT_BASE}?${params}`, { headers, signal });
+        const payload = response.ok && response.status !== 304 ? await response.json() : null;
+        return { response, payload };
+      });
       if (page === 0 && response.status === 304) return { changed: false, items: [] };
       if (!response.ok) return yield* Effect.fail(new Error(`抓取上游 ${mode} 动态失败：HTTP ${response.status}`));
       if (page === 0) nextEtag = response.headers.get("etag") ?? etag;
-      const payload = yield* io("fetchFeed", () => response.json());
-      if (!Array.isArray(payload.items)) return yield* Effect.fail(new Error(`上游 ${mode} 动态响应缺少 items 数组。`));
+      if (!Array.isArray(payload?.items)) return yield* Effect.fail(new Error(`上游 ${mode} 动态响应缺少 items 数组。`));
       items.push(...payload.items);
       cursor = payload.page?.hasMore ? (payload.page?.nextCursor ?? null) : null;
       if (!cursor) break;
@@ -116,108 +119,126 @@ export function syncAiNews({
   env = process.env,
   clientFactory = createClient,
   fetchImpl = fetch,
-  now = new Date(),
+  now,
   stateStore: providedStateStore,
 } = {}) {
-  return Effect.gen(function* () {
-    const client = yield* attempt("ai-news.client", () =>
-      createSupabaseServiceClient(
-        requireEnvironment(env, "SUPABASE_URL"),
-        requireEnvironment(env, "SUPABASE_SERVICE_ROLE_KEY"),
-        clientFactory,
-      ),
-    );
-    const stateStore = providedStateStore ?? createSupabaseAiNewsStateStore(client);
-    const lease = yield* stateStore.acquire({ now });
-    if (!lease.acquired) return { backfill, modes: {}, publicCount: 0, skipped: true };
-
-    const state = { etags: backfill ? {} : { ...lease.etags } };
-    const window = backfill ? "7d" : "24h";
-    const maxPages = backfill ? BACKFILL_MAX_PAGES : MAX_PAGES;
-
-    const fetchedAt = now.toISOString();
-    const stats = { backfill, modes: {}, publicCount: 0, skipped: false };
-    const program = Effect.gen(function* () {
-      // all feed 的 upsert 会把同 id 行的 selected 覆盖为 false：先记下当前精选 id，
-      // 待全部 upsert 结束后统一先清后设（清掉已掉出精选的旧行，再点亮本轮精选）；
-      // selected feed 本轮有更新时以它的条目为准。
-      const { data: previousSelected, error: selectedReadError } = yield* io("ai-news.supabase", () =>
-        client.from("ai_news_public_items").select("id").eq("selected", true),
+  return Effect.scoped(
+    Effect.uninterruptibleMask((restore) => Effect.gen(function* () {
+      const started = yield* Clock.currentTimeMillis;
+      const syncNow = now ?? new Date(started);
+      const client = yield* attempt("ai-news.client", () =>
+        createSupabaseServiceClient(
+          requireEnvironment(env, "SUPABASE_URL"),
+          requireEnvironment(env, "SUPABASE_SERVICE_ROLE_KEY"),
+          clientFactory,
+        ),
       );
-      if (selectedReadError)
-        return yield* Effect.fail(new Error(`读取每日动态精选标记失败：${selectedReadError.message}`));
-      let selectedIds = new Set((previousSelected ?? []).map((row) => row.id));
+      const stateStore = providedStateStore ?? createSupabaseAiNewsStateStore(client);
+      const lease = yield* restore(stateStore.acquire({ now: syncNow }));
+      if (!lease.acquired) return { backfill, modes: {}, publicCount: 0, skipped: true };
 
-      for (const mode of FEED_MODES) {
-        const feed = yield* fetchFeed(mode, {
-          etag: state.etags[mode],
-          fetchImpl,
-          maxPages,
-          window,
-        });
-        if (!feed.changed) {
-          stats.modes[mode] = { changed: false, count: null };
-          continue;
-        }
-        state.etags[mode] = feed.etag;
-        const { privateRows, publicRows } = buildSyncRows(feed.items, mode, fetchedAt);
-
-        for (const [table, rows, label] of [
-          ["ai_news_items", privateRows, "原始数据"],
-          ["ai_news_public_items", publicRows, "公开投影"],
-        ]) {
-          if (rows.length === 0) continue;
-          const { error } = yield* io("ai-news.supabase", () => client.from(table).upsert(rows, { onConflict: "id" }));
-          if (error) return yield* Effect.fail(new Error(`写入 Supabase 每日动态${label}失败：${error.message}`));
-        }
-        if (mode === "selected") selectedIds = new Set(publicRows.map((row) => row.id));
-        stats.publicCount += publicRows.length;
-        stats.modes[mode] = { changed: true, count: feed.items.length };
-      }
-
-      // 精选标记先清后设：掉出精选 feed 的旧条目必须复位为 false，
-      // 否则它们会一直挂着 selected=true，直到下一次归档仍保留旧标记。
-      let clearSelectedQuery = client
-        .from("ai_news_public_items")
-        .update({ selected: false, synced_at: fetchedAt })
-        .eq("selected", true);
-      if (selectedIds.size > 0) {
-        clearSelectedQuery = clearSelectedQuery.not("id", "in", `(${[...selectedIds].join(",")})`);
-      }
-      const { error: clearSelectedError } = yield* io("ai-news.selected", () => clearSelectedQuery);
-      if (clearSelectedError)
-        return yield* Effect.fail(new Error(`复位每日动态精选标记失败：${clearSelectedError.message}`));
-
-      if (selectedIds.size > 0) {
-        const { error } = yield* io("ai-news.supabase", () =>
-          client
-            .from("ai_news_public_items")
-            .update({ selected: true, synced_at: fetchedAt })
-            .in("id", [...selectedIds]),
-        );
-        if (error) return yield* Effect.fail(new Error(`还原每日动态精选标记失败：${error.message}`));
-      }
-
-      // 公开数据只能在已部署归档验证后清理；原始备份维持原有 8 天保留期。
-      const cutoff = new Date(now.getTime() - RETENTION_MS).toISOString();
-      const stale = `published_at.lt.${cutoff},and(published_at.is.null,synced_at.lt.${cutoff})`;
-      const { error: cleanupError } = yield* io("ai-news.supabase", () =>
-        client.from("ai_news_items").delete().or(stale),
-      );
-      if (cleanupError) return yield* Effect.fail(new Error(`清理每日动态原始数据失败：${cleanupError.message}`));
-
-      yield* stateStore.succeed({
-        etags: backfill ? lease.etags : state.etags,
-        stats,
+      yield* Effect.addFinalizer((exit) => Exit.isFailure(exit)
+        ? stateStore.fail({ token: lease.token, error: Cause.squash(exit.cause) }).pipe(
+            Effect.interruptible,
+            Effect.timeoutOrElse({ duration: "10 seconds", orElse: () => Effect.fail(new Error("记录同步失败状态超时。")) }),
+            Effect.catch((error) => Effect.sync(() => console.error("记录每日动态失败状态时出错", error))),
+          )
+        : Effect.void);
+      const assertOwned = Effect.gen(function* () {
+        const elapsed = (yield* Clock.currentTimeMillis) - started;
+        yield* stateStore.assertOwned({ token: lease.token, now: new Date(syncNow.getTime() + elapsed) });
       });
-      return stats;
-    });
-    return yield* program.pipe(
-      Effect.onError((cause) =>
-        stateStore
-          .fail(Cause.squash(cause))
-          .pipe(Effect.catch((error) => Effect.sync(() => console.error("记录每日动态失败状态时出错", error)))),
-      ),
-    );
-  });
+      const state = { etags: backfill ? {} : { ...lease.etags } };
+      const window = backfill ? "7d" : "24h";
+      const maxPages = backfill ? BACKFILL_MAX_PAGES : MAX_PAGES;
+
+      const fetchedAt = syncNow.toISOString();
+      const stats = { backfill, modes: {}, publicCount: 0, skipped: false };
+      const program = Effect.gen(function* () {
+        // all feed 的 upsert 会把同 id 行的 selected 覆盖为 false：先记下当前精选 id，
+        // 待全部 upsert 结束后统一先清后设（清掉已掉出精选的旧行，再点亮本轮精选）；
+        // selected feed 本轮有更新时以它的条目为准。
+        const { data: previousSelected, error: selectedReadError } = yield* io("ai-news.supabase", (signal) =>
+          client.from("ai_news_public_items").select("id").eq("selected", true).abortSignal(signal),
+        );
+        if (selectedReadError)
+          return yield* Effect.fail(new Error(`读取每日动态精选标记失败：${selectedReadError.message}`));
+        let selectedIds = new Set((previousSelected ?? []).map((row) => row.id));
+
+        for (const mode of FEED_MODES) {
+          const feed = yield* fetchFeed(mode, {
+            etag: state.etags[mode],
+            fetchImpl,
+            maxPages,
+            window,
+          });
+          if (!feed.changed) {
+            stats.modes[mode] = { changed: false, count: null };
+            continue;
+          }
+          state.etags[mode] = feed.etag;
+          const { privateRows, publicRows } = buildSyncRows(feed.items, mode, fetchedAt);
+
+          for (const [table, rows, label] of [
+            ["ai_news_items", privateRows, "原始数据"],
+            ["ai_news_public_items", publicRows, "公开投影"],
+          ]) {
+            if (rows.length === 0) continue;
+            yield* assertOwned;
+            const { error } = yield* io("ai-news.supabase", (signal) => client.from(table).upsert(rows, { onConflict: "id" }).abortSignal(signal));
+            if (error) return yield* Effect.fail(new Error(`写入 Supabase 每日动态${label}失败：${error.message}`));
+          }
+          if (mode === "selected") selectedIds = new Set(publicRows.map((row) => row.id));
+          stats.publicCount += publicRows.length;
+          stats.modes[mode] = { changed: true, count: feed.items.length };
+        }
+
+        // 精选标记先清后设：掉出精选 feed 的旧条目必须复位为 false，
+        // 否则它们会一直挂着 selected=true，直到下一次归档仍保留旧标记。
+        let clearSelectedQuery = client
+          .from("ai_news_public_items")
+          .update({ selected: false, synced_at: fetchedAt })
+          .eq("selected", true);
+        if (selectedIds.size > 0) {
+          clearSelectedQuery = clearSelectedQuery.not("id", "in", `(${[...selectedIds].join(",")})`);
+        }
+        yield* assertOwned;
+        const { error: clearSelectedError } = yield* io("ai-news.selected", (signal) => clearSelectedQuery.abortSignal(signal));
+        if (clearSelectedError)
+          return yield* Effect.fail(new Error(`复位每日动态精选标记失败：${clearSelectedError.message}`));
+
+        if (selectedIds.size > 0) {
+          yield* assertOwned;
+          const { error } = yield* io("ai-news.supabase", (signal) =>
+            client
+              .from("ai_news_public_items")
+              .update({ selected: true, synced_at: fetchedAt })
+              .in("id", [...selectedIds]).abortSignal(signal),
+          );
+          if (error) return yield* Effect.fail(new Error(`还原每日动态精选标记失败：${error.message}`));
+        }
+
+        // 公开数据只能在已部署归档验证后清理；原始备份维持原有 8 天保留期。
+        const cutoff = new Date(syncNow.getTime() - RETENTION_MS).toISOString();
+        const stale = `published_at.lt.${cutoff},and(published_at.is.null,synced_at.lt.${cutoff})`;
+        yield* assertOwned;
+        const { error: cleanupError } = yield* io("ai-news.supabase", (signal) =>
+          client.from("ai_news_items").delete().or(stale).abortSignal(signal),
+        );
+        if (cleanupError) return yield* Effect.fail(new Error(`清理每日动态原始数据失败：${cleanupError.message}`));
+
+        yield* assertOwned;
+        yield* stateStore.succeed({
+          token: lease.token,
+          etags: backfill ? lease.etags : state.etags,
+          stats,
+        });
+        return stats;
+      });
+      return yield* restore(program);
+    })),
+  ).pipe(Effect.timeoutOrElse({
+    duration: "3 minutes",
+    orElse: () => Effect.fail(new Error("每日动态同步超过 3 分钟期限。")),
+  }));
 }

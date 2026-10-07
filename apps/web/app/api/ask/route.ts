@@ -50,12 +50,14 @@ export async function POST(request: Request) {
   if (Result.isFailure(parsed)) return Response.json({ error: "问题、范围或浏览器会话标识无效。" }, { status: 400 });
 
   const encoder = new TextEncoder();
+  const cancellation = new AbortController();
+  const signal = AbortSignal.any([request.signal, cancellation.signal]);
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const write = (event: string, data: unknown) => controller.enqueue(encoder.encode(sseEvent(event, data)));
       try {
         const sources = await Effect.runPromise(searchAskDocuments(parsed.success.question, parsed.success.scope), {
-          signal: request.signal,
+          signal,
         });
         if (sources.length === 0) {
           const message = parsed.success.format === "openui"
@@ -76,21 +78,24 @@ export async function POST(request: Request) {
             onText: (delta) => write("text", { delta }),
             question: parsed.success.question,
             // 客户端断连即中止生成，不再为已离开的访客烧 token。
-            signal: request.signal,
+            signal,
             sources,
             visitorId: parsed.success.visitorId,
           }),
-          { signal: request.signal },
+          { signal },
         );
         write("sources", { sources });
         write("done", {});
       } catch (error) {
-        if (request.signal.aborted) return;
+        if (signal.aborted) return;
         console.error("Public ask request failed", error);
         write("error", { message: "回答暂时不可用，请稍后重试。" });
       } finally {
-        controller.close();
+        if (!cancellation.signal.aborted) controller.close();
       }
+    },
+    cancel(reason) {
+      cancellation.abort(reason);
     },
   });
 
