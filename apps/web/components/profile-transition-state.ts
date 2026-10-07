@@ -90,6 +90,8 @@ export function beginProfileTransition(from: string, to: string): boolean {
     ghost.classList.add("profile-transition-ghost", `profile-transition-ghost--${variant}`);
     ghost.setAttribute("aria-hidden", "true");
     ghost.querySelectorAll("[id]").forEach((child) => child.removeAttribute("id"));
+    // ghost 根自身可能是可聚焦元素（头像是 button 克隆）：aria-hidden 克隆必须一并移出 Tab 序。
+    if (ghost.matches("a, button")) ghost.setAttribute("tabindex", "-1");
     ghost.querySelectorAll("a, button").forEach((child) => child.setAttribute("tabindex", "-1"));
 
     Object.assign(ghost.style, {

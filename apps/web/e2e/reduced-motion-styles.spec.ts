@@ -50,49 +50,142 @@ test("repository panel transitions are neutralized under reduced motion once dat
   await expect.poll(() => fileEmpty.evaluate((element) => getComputedStyle(element).transitionProperty)).toBe("none");
 });
 
-// 头像点描层的三条契约：桌面 fine-pointer hover 淡出/移开恢复、reduce 瞬时切换、
-// 触屏设备不进入 hover 态保持点描。e2e 运行器无 emulateMedia 与 hasTouch 设备仿真，留 Playwright。
+// 头像粒子的契约：粒子接管后静态点描只在 ghost 克隆兜底、reduce 下（含会话中途
+// 开启）瞬时落到终态、触屏点按切换聚散。e2e 运行器无 emulateMedia 与 hasTouch
+// 设备仿真，留 Playwright。
 const skipOpeningLoader = (page: Page) => page.addInitScript(() => window.sessionStorage.setItem("personal-site:opening-loader-played", "true"));
 
-test("avatar stipple fades out on fine-pointer hover and restores on leave", async ({ page }) => {
-  await skipOpeningLoader(page);
-  await page.goto("/curation");
-  const stipple = page.locator(".curation-home__avatar-stipple");
-  await expect(stipple).toHaveCSS("opacity", "1");
-  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0.18s");
-
-  await page.locator(".curation-home__avatar").hover();
-  await expect(stipple).toHaveCSS("opacity", "0");
-
-  await page.mouse.move(0, 0);
-  await expect(stipple).toHaveCSS("opacity", "1");
+// 成像态脸占据中心，散开态中心清空：中心 40% 方框的墨点像素占比。
+const readCenterDensity = (page: Page) => page.evaluate(() => {
+  const canvas = document.querySelector<HTMLCanvasElement>(".curation-home__avatar-particles");
+  if (!canvas) throw new Error("avatar canvas missing");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("avatar canvas context missing");
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const x0 = Math.floor(width * 0.3);
+  const x1 = Math.ceil(width * 0.7);
+  const y0 = Math.floor(height * 0.3);
+  const y1 = Math.ceil(height * 0.7);
+  let ink = 0;
+  let total = 0;
+  for (let y = y0; y < y1; y += 1) {
+    for (let x = x0; x < x1; x += 1) {
+      if (data[(y * width + x) * 4 + 3] > 0) ink += 1;
+      total += 1;
+    }
+  }
+  return ink / total;
 });
 
-test("avatar stipple switches instantly under reduced motion and keeps its fade otherwise", async ({ page }) => {
+test("avatar particle canvas takes over and the ghost clone keeps the static stipple", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.goto("/curation");
+  const avatar = page.locator(".curation-home__avatar");
+  await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+  await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "0");
+
+  // 移动端飞行 ghost 是画布克隆（无位图），静态点描必须在 ghost 里保持可见兜底。
+  const ghostOpacity = await page.evaluate(() => {
+    const source = document.querySelector(".curation-home__avatar")!;
+    const ghost = source.cloneNode(true) as HTMLElement;
+    ghost.classList.add("profile-transition-ghost");
+    document.body.append(ghost);
+    const stipple = ghost.querySelector(".curation-home__avatar-stipple")!;
+    const opacity = getComputedStyle(stipple).opacity;
+    ghost.remove();
+    return opacity;
+  });
+  expect(ghostOpacity).toBe("1");
+});
+
+test("avatar assembles instantly when reduced motion is on from the start", async ({ page }) => {
   await skipOpeningLoader(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/curation");
-  const stipple = page.locator(".curation-home__avatar-stipple");
-  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionProperty)).toBe("none");
-  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0s");
+  const avatar = page.locator(".curation-home__avatar");
+  await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+  await expect(avatar).toHaveAttribute("aria-label", "分散陈远的点描头像");
+  // 无进站飞行：武装后首次读取即成像终态。
+  expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 
-  await page.locator(".curation-home__avatar").hover();
-  await expect(stipple).toHaveCSS("opacity", "0");
+  await avatar.click();
+  await expect(avatar).toHaveAttribute("aria-label", "聚拢陈远的点描头像");
+  expect(await readCenterDensity(page)).toBeLessThan(0.005);
+});
 
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0.18s");
+test("avatar animation lands on its current target when reduced motion turns on mid-flight", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.goto("/curation");
+  const avatar = page.locator(".curation-home__avatar");
+  await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+
+  await avatar.click();
+  // 散开飞行（720ms+110ms stagger）未完时开启 reduce：必须立即落到散开终态并静止。
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => readCenterDensity(page), { timeout: 1_000 }).toBeLessThan(0.005);
+  await page.waitForTimeout(300);
+  expect(await readCenterDensity(page)).toBeLessThan(0.005);
+});
+
+test("avatar animation freezes while hidden and resumes on visibility return", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.goto("/curation");
+  const avatar = page.locator(".curation-home__avatar");
+  await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+
+  await avatar.click();
+  // 散开飞行中途页面隐藏：暂停时长折算后动画冻结，不再推进到终态。
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.waitForTimeout(1_500);
+  const frozen = await readCenterDensity(page);
+  expect(frozen).toBeGreaterThan(0.005);
+
+  // 回到可见：从暂停处续播并到达散开终态，而不是永久冻结。
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => readCenterDensity(page), { timeout: 3_000 }).toBeLessThan(0.005);
+});
+
+test("avatar keeps the static stipple when the canvas context is unavailable", async ({ page }) => {
+  await skipOpeningLoader(page);
+  // 只让挂进 DOM 的展示画布拿不到 2d 上下文；离线采样画布不受影响。
+  await page.addInitScript(`
+    const native = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, options) {
+      if (this.isConnected) return null;
+      return native.call(this, type, options);
+    };
+  `);
+  await page.goto("/curation");
+  const avatar = page.locator(".curation-home__avatar");
+  // 采样照常完成，但首绘失败：粒子不接管，静态点描保持可见兜底。
+  await page.waitForTimeout(2_000);
+  await expect(avatar).toHaveAttribute("data-particles", "off");
+  await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "1");
+  await expect(avatar).toBeVisible();
 });
 
 test.describe("touch media", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 
-  test("tapping the avatar keeps the stipple layer fully opaque", async ({ page }) => {
+  test("tapping the avatar toggles scatter and never reveals the static face", async ({ page }) => {
     await skipOpeningLoader(page);
     await page.goto("/curation");
     expect(await page.evaluate(() => matchMedia("(hover: none) and (pointer: coarse)").matches)).toBe(true);
     const avatar = page.locator(".curation-home__avatar");
-    await expect(avatar).not.toHaveAttribute("tabindex");
+    await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+
     await avatar.tap();
-    await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "1");
+    await expect(avatar).toHaveAttribute("aria-label", "聚拢陈远的点描头像");
+    // 点按不恢复静态点描，粒子态持续接管。
+    await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "0");
+
+    await avatar.tap();
+    await expect(avatar).toHaveAttribute("aria-label", "分散陈远的点描头像");
   });
 });

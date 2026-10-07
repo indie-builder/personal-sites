@@ -1,10 +1,10 @@
 import { BookOpen, BriefcaseBusiness, GitBranch } from "lucide-react";
-import Image from "next/image";
 
 import { MobileProfileCollapse } from "@/components/mobile-profile-collapse";
 import { AboutPrint } from "@/components/about-print";
 import { AskAssistant } from "@/components/ask-assistant";
 import { InteractiveDotField } from "@/components/interactive-dot-field";
+import { ParticleAvatar } from "@/components/particle-avatar";
 import { ProfileIntroduction } from "@/components/profile-introduction";
 import { ProfileTransitionBridge } from "@/components/profile-transition-bridge";
 import { MobileSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
@@ -23,24 +23,7 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
       <ProfileTransitionBridge section={mobileSection ?? "profile"} />
       <ThemeToggle />
       <div className="curation-home__profile-header">
-        <span className="curation-home__avatar">
-          <Image
-            alt={`${siteProfile.name}的头像插画`}
-            className="curation-home__avatar-photo"
-            height={105}
-            loading="eager"
-            src="/images/ample-avatar.png"
-            width={105}
-          />
-          <Image
-            alt=""
-            className="curation-home__avatar-stipple"
-            height={105}
-            preload
-            src="/images/ample-avatar-stipple.png"
-            width={105}
-          />
-        </span>
+        <ParticleAvatar name={siteProfile.name} />
 
         <div className="curation-home__profile-summary">
           <div className="curation-home__identity">

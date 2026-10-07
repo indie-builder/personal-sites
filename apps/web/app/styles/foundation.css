@@ -100,12 +100,16 @@ html[data-profile-transition] {
 
 .curation-home { display:grid; min-height:100dvh; grid-template-columns:minmax(28rem,38vw) minmax(0,1fr); gap:clamp(2rem,4.8vw,4.5rem); background:#fff; color:var(--ink); }
 .curation-home__profile { position:sticky; top:0; display:flex; height:100dvh; flex-direction:column; align-items:flex-start; background:#fff; padding:1.875rem; }
-.curation-home__profile-header { display:flex; width:100%; align-items:flex-start; gap:1.5rem; }.curation-home__profile-summary { display:flex; min-width:0; flex-direction:column; align-items:flex-start; }.curation-home__avatar { display:block; width:6.5625rem; height:6.5625rem; flex:0 0 auto; border-radius:.75rem; overflow:hidden; }
+.curation-home__profile-header { display:flex; width:100%; align-items:flex-start; gap:1.5rem; }.curation-home__profile-summary { display:flex; min-width:0; flex-direction:column; align-items:flex-start; }.curation-home__avatar { display:block; width:6.5625rem; height:6.5625rem; flex:0 0 auto; border:0; border-radius:.75rem; background:transparent; cursor:pointer; overflow:hidden; padding:0; }
 .curation-home__avatar:not(.profile-transition-ghost) { position:relative; }
-.curation-home__avatar-photo,.curation-home__avatar-stipple { width:100%; height:100%; object-fit:cover; }
-.curation-home__avatar-stipple { position:absolute; inset:0; transition:opacity 180ms ease; }
-@media (hover:hover) and (pointer:fine) { .curation-home__avatar:hover .curation-home__avatar-stipple { opacity:0; } }
-@media (prefers-reduced-motion:reduce) { .curation-home__avatar-stipple { transition:none; } }
+.curation-home__avatar:hover { outline:.125rem solid var(--line); outline-offset:.1875rem; }
+.curation-home__avatar:focus-visible { outline:.125rem solid currentColor; outline-offset:.1875rem; }
+.curation-home__avatar-stipple { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+/* 粒子画布接管后收起静态点描图；ghost 克隆仍靠它兜底（cloneNode 不复制画布内容）。 */
+.curation-home__avatar[data-particles="on"]:not(.profile-transition-ghost) .curation-home__avatar-stipple { opacity:0; }
+html[data-curation-theme="dark"] .curation-home__avatar-stipple { filter:invert(1); }
+html[data-curation-theme="dark"] .curation-home__avatar:hover { outline-color:#404040; }
+.curation-home__avatar-particles { position:absolute; inset:0; width:100%; height:100%; }
 .curation-theme-toggle { position:absolute; top:1.875rem; right:1.875rem; display:grid; width:1.5rem; height:1.5rem; place-items:center; border:0; border-radius:999px; background:transparent; color:var(--ink); cursor:pointer; }
 .curation-theme-toggle:hover,.curation-theme-toggle:focus-visible { background:#f2f2f2; }.curation-theme-toggle svg { width:.9rem; height:.9rem; stroke-width:1.8; }
 html[data-curation-theme="dark"] { color-scheme:dark; }
