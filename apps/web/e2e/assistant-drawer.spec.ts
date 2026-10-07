@@ -1,4 +1,4 @@
-import { expect, test } from "./helpers/loader-key";
+import { expect, test } from "./helpers/loader-key.playwright";
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });

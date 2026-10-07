@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "./helpers/loader-key";
+import { expect, test, type Page } from "./helpers/loader-key.playwright";
 
 async function expectNativeDocumentScroll(page: Page, key: "ArrowDown" | "PageDown" | "Space") {
   await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 0 }));

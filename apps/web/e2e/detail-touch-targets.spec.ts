@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "./helpers/loader-key";
+import { expect, test, type Locator, type Page } from "./helpers/loader-key.playwright";
 
 const MOBILE_VIEWPORT = { height: 844, width: 390 };
 const DESKTOP_VIEWPORT = { height: 900, width: 1_440 };
