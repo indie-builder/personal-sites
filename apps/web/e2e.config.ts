@@ -22,7 +22,7 @@ export default {
         command: {
           executable: "pnpm",
           args: ["start", "--port", "7100"],
-          reuseExisting: true,
+          // 不复用 7100 上已在跑的服务器：冒烟必须验证当前构建，端口被占就以 APP_ALREADY_RUNNING 显式失败。
           log: ".e2e/logs/app.log",
         },
       },
