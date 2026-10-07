@@ -129,13 +129,15 @@ test("assistant enters only after the English-to-Chinese introduction finishes",
   // 正是为此）。框架没有 commit 等价物：init script 在文档最早期装记录器，全程录下阶段与助手存在性，
   // 再导航、再断言录制到的完整序列。
   await browser.addInitScript(() => {
-    const log: Array<{ assistants: number; phase: string }> = [];
+    const log: Array<{ assistants: number; phase: string; t: number }> = [];
     const record = () => {
       const phase = document.querySelector(".curation-home__bio")?.getAttribute("data-introduction-phase");
       if (!phase) return;
       const assistants = document.querySelectorAll('[aria-label="和像素助手聊聊"]').length;
       const last = log[log.length - 1];
-      if (!last || last.phase !== phase || last.assistants !== assistants) log.push({ assistants, phase });
+      if (!last || last.phase !== phase || last.assistants !== assistants) {
+        log.push({ assistants, phase, t: performance.now() });
+      }
     };
     new MutationObserver(record).observe(document, {
       attributes: true, attributeFilter: ["data-introduction-phase"], childList: true, subtree: true,
@@ -143,13 +145,14 @@ test("assistant enters only after the English-to-Chinese introduction finishes",
     (window as typeof window & { __introPhases: typeof log }).__introPhases = log;
   });
   await browser.goto("/");
+  // 完成等待沿用旧整条用例 30s 预算；阶段间隔预算在下方按录制时间戳断言。
   await expect.poll(() => browser.evaluate(() => {
-    const log = (window as typeof window & { __introPhases?: Array<{ assistants: number; phase: string }> }).__introPhases;
+    const log = (window as typeof window & { __introPhases?: Array<{ assistants: number; phase: string; t: number }> }).__introPhases;
     const last = log?.[log.length - 1];
     return last ? last.phase === "complete" && last.assistants > 0 : false;
-  }), { timeout: 90_000 }).toBe(true);
+  }), { timeout: 30_000 }).toBe(true);
   const log = await browser.evaluate(() => (
-    (window as typeof window & { __introPhases: Array<{ assistants: number; phase: string }> }).__introPhases
+    (window as typeof window & { __introPhases: Array<{ assistants: number; phase: string; t: number }> }).__introPhases
   ));
   const phases = log.map((entry) => entry.phase);
   const englishAt = phases.indexOf("english");
@@ -162,7 +165,12 @@ test("assistant enters only after the English-to-Chinese introduction finishes",
   expect(enteredAt).toBeGreaterThan(chineseAt);
   expect(phases[enteredAt]).toBe("complete");
   expect(log.slice(0, enteredAt).every((entry) => entry.assistants === 0)).toBe(true);
-  expect(log[log.length - 1]).toEqual({ assistants: 1, phase: "complete" });
+  expect(log[log.length - 1]).toMatchObject({ assistants: 1, phase: "complete" });
+  // 旧用例的时间约束：整条序列 30s 内完成，每个阶段等待不超过 20s（按录制时间戳等价复现）。
+  expect(log[log.length - 1].t).toBeLessThanOrEqual(30_000);
+  for (let index = 1; index < log.length; index += 1) {
+    expect(log[index].t - log[index - 1].t).toBeLessThanOrEqual(20_000);
+  }
   const assistant = screen.getByRole("button", "和像素助手聊聊", { exact: false });
   await expect(assistant).toBeEnabled();
   const state = await browser.evaluate(() => {
