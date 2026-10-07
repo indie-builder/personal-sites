@@ -3,26 +3,28 @@ import type { Browser } from "@e2e-dev/web";
 
 const LONG_MEDIA_DETAIL_PATH = "/curation/2093968800316293400";
 
-// 框架 locator 无 evaluate：布局读取走 browser.evaluate，页内自带单匹配校验，
-// 与旧 locator 的严格单元素解析同语义。
+// 框架 locator 无 evaluate：布局读取走 browser.evaluate。严格单匹配为加强，
+// 旧 spec 同点位只查存在（querySelector 非空即用），这里对齐页内单匹配校验。
 async function readSpreadLayout(browser: Browser) {
   return browser.evaluate(() => {
-    const body = document.querySelector<HTMLElement>(".curation-detail__body")!;
-    const evidence = document.querySelector<HTMLElement>(".curation-detail__evidence")!;
-    const reading = document.querySelector<HTMLElement>(".curation-detail__reading")!;
-    if (!body || !evidence || !reading) throw new Error("spread layout nodes missing");
-    const evidenceBox = evidence.getBoundingClientRect();
-    const readingBox = reading.getBoundingClientRect();
-    const evidenceStyle = getComputedStyle(evidence);
+    const body = document.querySelectorAll<HTMLElement>(".curation-detail__body");
+    const evidence = document.querySelectorAll<HTMLElement>(".curation-detail__evidence");
+    const reading = document.querySelectorAll<HTMLElement>(".curation-detail__reading");
+    if (body.length !== 1 || evidence.length !== 1 || reading.length !== 1) {
+      throw new Error(`spread layout expects one each, found body=${body.length} evidence=${evidence.length} reading=${reading.length}`);
+    }
+    const evidenceBox = evidence[0].getBoundingClientRect();
+    const readingBox = reading[0].getBoundingClientRect();
+    const evidenceStyle = getComputedStyle(evidence[0]);
 
     return {
-      bodyColumns: getComputedStyle(body).gridTemplateColumns,
+      bodyColumns: getComputedStyle(body[0]).gridTemplateColumns,
       evidence: {
         bottom: evidenceBox.bottom,
-        clientHeight: evidence.clientHeight,
+        clientHeight: evidence[0].clientHeight,
         overflowY: evidenceStyle.overflowY,
         position: evidenceStyle.position,
-        scrollHeight: evidence.scrollHeight,
+        scrollHeight: evidence[0].scrollHeight,
         width: evidenceBox.width,
         x: evidenceBox.x,
         y: evidenceBox.y,

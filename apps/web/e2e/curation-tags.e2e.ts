@@ -8,7 +8,14 @@ for (const width of [1440, 390, 320, 844]) {
     await emulateReducedMotion(browser);
     await app.open("/curation");
     // 旧 emulateMedia 连带禁用了菜单开合 CSS 动画（profile.css 的 reduce 块）；框架改不了
-    // CSS 媒体特性，注入同款规则保住菜单几何断言的确定性。
+    // CSS 媒体特性，注入同款规则保住菜单几何断言的确定性——菜单 animation 是唯一直接
+    // 参与断言几何的 reduce 规则。其余文档级 reduce 效应不再被禁用（按钮图标 svg 的
+    // transition、reading.css:185 词条弹幕转静态网格等），探针实证不达成本用例断言：
+    // Playwright 真开关 prefers-reduced-motion 对比四尺寸，菜单右缘（1386/374/304/812）
+    // 与 scrollWidth（恒等于 innerWidth）逐像素不变。机制：svg transition 只改旋转插值
+    // 时序；弹幕容器 width:100% 加 overflow:hidden 不外溢横向，且 ≤900px 的本列表页
+    // 随非 home 收缩头部整体 display:none（reading.css:81），1440 下 reduce 的
+    // min-height 又把高度钉回同值。
     await browser.evaluate(() => {
       const style = document.createElement("style");
       style.textContent = ".ai-news__category-menu { animation: none; }";

@@ -7,18 +7,23 @@ const DESIGN_DETAIL = "/design/2093968955950150059";
 const DOUYIN_DETAIL = "/curation/douyin-7685693822096985385";
 
 test("curation, design and douyin detail paths keep ISR without request-time query state", async ({ app }) => {
-  // 旧 request fixture 直打接口：同样不经页面，fetch 直取响应头，revalidate 语义逐字平移。
+  // 旧 request fixture 直打接口：同样不经页面。request.get 等响应体结束才返回，
+  // fetch 响应头即返回；每处先 arrayBuffer() 消费完响应体再断言与发起下一次请求，
+  // 补回旧的响应完成边界，避免第二次请求追进第一次响应未完的窗口。
   for (const path of [CURATION_DETAIL, DESIGN_DETAIL, DOUYIN_DETAIL]) {
     const first = await fetch(new URL(path, app.baseUrl));
+    await first.arrayBuffer();
     expect(first.ok, path).toBe(true);
     expect(["HIT", "MISS"], path).toContain(first.headers.get("x-nextjs-cache"));
 
     const second = await fetch(new URL(path, app.baseUrl));
+    await second.arrayBuffer();
     expect(second.ok, path).toBe(true);
     expect(second.headers.get("x-nextjs-cache"), path).toBe("HIT");
   }
 
   const excluded = await fetch(new URL("/design/2093695923801210893", app.baseUrl));
+  await excluded.arrayBuffer();
   expect(excluded.status).toBe(404);
 });
 
