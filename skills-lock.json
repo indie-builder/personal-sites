@@ -91,6 +91,13 @@
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "b3eb40152b81f0c98fd2095a023c019452dbdce56f7540cc67fece2972db8369"
     },
+    "e2e": {
+      "source": "tester-army/e2e",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/e2e/SKILL.md",
+      "computedHash": "0ff4dfa69e58f911fc25df0ae9d8d367e3a0c44543cef7787724e718a06a9845"
+    },
     "emil-design-eng": {
       "source": "emilkowalski/skills",
       "sourceType": "github",

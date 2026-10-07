@@ -39,11 +39,27 @@ test("design list and detail navigation stay in the design path", async ({ app, 
   await expect(browser).toHaveURL(new RegExp(`${detailPath}$`, "u"));
   await expect(screen.getByRole("link", "返回设计收藏", { exact: false })).toBeVisible();
   await expect(browser.locator('nav[aria-label="相邻剪报"] a').first()).toHaveAttribute("href", /\/design\//u);
+
+  // 同板块邻接切换真实可达：点击相邻链接落在另一条 /design 详情，标题随目标切换，
+  // 再经返回链接回到 /design 列表（相邻剪报是必备结构，缺位即失败，不条件跳过）。
+  const neighbor = browser.locator('nav[aria-label="相邻剪报"] a').first();
+  const neighborHref = await neighbor.getAttribute("href");
+  // 框架 Locator 无 .locator 子查询：strong 标题用同源选择器直取首条链接内唯一 strong。
+  const neighborTitle = await browser.locator('nav[aria-label="相邻剪报"] a strong').first().textContent();
+  expect(neighborHref, "相邻链接必须有 href").toMatch(/^\/design\//u);
+  expect(neighborTitle?.trim() ?? "", "相邻链接必须带标题").not.toBe("");
+  await neighbor.click();
+  await expect(browser).toHaveURL(new RegExp(`${neighborHref}$`, "u"));
+  await expect(browser.locator("article h1")).toHaveText(neighborTitle?.trim() ?? "");
+  const back = screen.getByRole("link", "返回设计收藏", { exact: false });
+  await expect(back).toBeVisible();
+  await back.click();
+  await expect(browser).toHaveURL(/\/design$/u);
+  await expect(browser.locator('a[href^="/design/"]').first()).toBeVisible();
 });
 
 test("douyin list navigation lands on the shared detail path with a section back link", async ({ app, browser, screen }) => {
   await app.open("/douyin");
-  // 抖音条目复用 /curation/[id] 详情路由，从实际列表动态取目标。
   const detailLink = browser.locator('a[href^="/curation/douyin-"]').first();
   await expect(detailLink).toBeVisible();
   await expect(detailLink).toHaveAttribute("href", /.+/u);
@@ -54,4 +70,19 @@ test("douyin list navigation lands on the shared detail path with a section back
   const back = screen.getByRole("link", "返回抖音收藏", { exact: false });
   await expect(back).toBeVisible();
   await expect(back).toHaveAttribute("href", "/douyin");
+
+  const neighbor = browser.locator('nav[aria-label="相邻剪报"] a').first();
+  const neighborHref = await neighbor.getAttribute("href");
+  const neighborTitle = await browser.locator('nav[aria-label="相邻剪报"] a strong').first().textContent();
+  expect(neighborHref, "相邻链接必须有 href").toMatch(/^\/curation\/douyin-/u);
+  expect(neighborHref, "相邻目标必须不同于当前详情").not.toBe(detailPath);
+  expect(neighborTitle?.trim() ?? "", "相邻链接必须带标题").not.toBe("");
+  await neighbor.click();
+  await expect(browser).toHaveURL(new RegExp(`${neighborHref}$`, "u"));
+  await expect(browser.locator("article h1")).toHaveText(neighborTitle?.trim() ?? "");
+  const backToList = screen.getByRole("link", "返回抖音收藏", { exact: false });
+  await expect(backToList).toBeVisible();
+  await backToList.click();
+  await expect(browser).toHaveURL(/\/douyin$/u);
+  await expect(browser.locator('a[href^="/curation/douyin-"]').first()).toBeVisible();
 });

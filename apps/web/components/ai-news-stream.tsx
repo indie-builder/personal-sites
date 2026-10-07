@@ -191,7 +191,7 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
         <span className="sr-only">{activeFilterLabel ? `正在显示${activeFilterLabel}动态` : "正在显示全部动态"}</span>
         <StreamLoadStatus isLoading={isLoading} loadError={loadError} loadMore={loadMore} />
         {!hasMore && !loadError ? (
-          <span>{activeFilterLabel ? `已加载全部${activeFilterLabel}动态` : "已加载最近 7 天的全部动态"}</span>
+          <span>{activeFilterLabel ? `已加载全部${activeFilterLabel}动态` : "已加载全部动态"}</span>
         ) : null}
       </div>
     </div>

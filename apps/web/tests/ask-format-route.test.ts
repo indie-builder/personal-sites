@@ -23,6 +23,13 @@ it.each([undefined, "openui"])("formats the no-results response for %s without c
   const text = await response.text();
   expect(text.includes("root = Stack")).toBe(format === "openui");
   expect(text).toContain("现有公开资料不足以确认");
+  if (format === "openui") {
+    expect(text).toContain("补充相关背景");
+    expect(text).not.toContain("检索范围");
+  } else {
+    expect(text).toContain("切换检索范围");
+    expect(text).not.toContain("补充相关背景");
+  }
   expect(text.indexOf("event: text")).toBeLessThan(text.indexOf("event: sources"));
   expect(text.indexOf("event: sources")).toBeLessThan(text.indexOf("event: done"));
   expect(mocks.answer).not.toHaveBeenCalled();
