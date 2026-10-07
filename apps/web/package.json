@@ -10,7 +10,7 @@
     "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
     "test": "node scripts/prepare-data.mjs && vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:agent": "pnpm build && E2E_TELEMETRY_DISABLED=1 e2e run --pass-with-no-tests"
+    "test:e2e:agent": "pnpm build && node scripts/e2e-agent-run.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.71",
