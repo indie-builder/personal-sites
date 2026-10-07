@@ -4,7 +4,21 @@ import { expect } from "e2e";
 // 注册期跳过：agent fixture 在用例体之前获取，无模型时体内 test.skip 来不及生效。
 const skipNoKey = !process.env.BIGMODEL_API_KEY?.trim();
 
-test("开源仓库详情切换文档标签", { skip: skipNoKey ? "缺少 BIGMODEL_API_KEY，跳过 agent 冒烟" : false }, async ({ app, agent, screen }) => {
+test("开源仓库详情切换文档标签", { skip: skipNoKey ? "缺少 BIGMODEL_API_KEY，跳过 agent 冒烟" : false }, async ({ app, agent, screen, browser }) => {
+  // 仓库结构面板按需经 /api/open-source/*/repository/tree 取 GitHub，回放终态会随远端成败漂移；
+  // 冒烟只验 tab 切换，钉一棵固定文件树让录制与回放的终态都确定。
+  await browser.route("**/api/open-source/*/repository/tree", async (route) => {
+    await route.fulfill({
+      json: {
+        branch: "main",
+        entries: [{ path: "README.md", type: "blob", size: 12 }],
+        repository: "smoke/smoke",
+        repositoryUrl: "https://github.com/smoke/smoke",
+        truncated: false,
+      },
+    });
+  });
+
   await app.open("/open-source");
   await agent.act("打开开源关注列表里任意一个仓库的文档详情");
   await expect(screen.getByRole("tablist", "切换仓库文档版本")).toBeVisible();
