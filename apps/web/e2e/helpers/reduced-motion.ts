@@ -1,10 +1,10 @@
 import type { Browser } from "@e2e-dev/web";
 
 // e2e 框架没有 emulateMedia({ reducedMotion })（文档列为 missing），web 引擎也不模拟
-// prefers-reduced-motion。站内所有动效门控（开屏仪式、档案摊开入场、桌面刊头跳转、
-// 问答弹层）都经 window.matchMedia 判定，改写 matchMedia 即等价复现 reduce；
-// CSS @media (prefers-reduced-motion) 规则不受影响——它们只关停 hover/骨架屏等
-// 瞬态过渡，不产生 axe 会测到的入场中途态。
+// prefers-reduced-motion。改写 matchMedia 只让此后的调用读到 reduce：不改变 CSS
+// @media (prefers-reduced-motion) 规则，也不更新已创建的 MediaQueryList 或派发
+// change 事件。站内所有动效门控（开屏仪式、档案摊开入场、桌面刊头跳转、问答弹层）
+// 都在事件处理里现读 matchMedia，故对本站与 emulateMedia 等价。
 function patchMatchMediaForReducedMotion() {
   const nativeMatchMedia = window.matchMedia.bind(window);
   window.matchMedia = (query: string) => {

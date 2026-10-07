@@ -50,13 +50,23 @@ test("mobile section navigation stays readable and reveals the current section",
   const current = navigation.getByRole("link", "开源关注", { exact: false });
 
   await expect(current).toHaveAttribute("aria-current", "page");
-  // 框架没有 toBeInViewport：以 boundingBox（视口相对）与视口尺寸的相交判定等价复现。
-  await expect.poll(async () => {
-    const box = await current.boundingBox();
-    if (!box || box.width <= 0 || box.height <= 0) return false;
-    const viewport = await browser.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
-    return box.x < viewport.width && box.x + box.width > 0 && box.y < viewport.height && box.y + box.height > 0;
-  }).toBe(true);
+  // 框架没有 toBeInViewport：用 IntersectionObserver 的交叉比例等价复现，含祖先容器裁剪（移动导航是 overflow 容器），与 Playwright 同源语义。
+  await expect.poll(() => browser.evaluate(() => {
+    const navs = Array.from(document.querySelectorAll<HTMLElement>('nav[aria-label="内容导航"]'))
+      .filter((nav) => nav.getClientRects().length > 0 && getComputedStyle(nav).visibility !== "hidden");
+    const targets = navs.flatMap((nav) => Array.from(nav.querySelectorAll('a[aria-current="page"]')));
+    if (targets.length !== 1) throw new Error(`expected exactly one current link, found ${targets.length}`);
+    return new Promise<number>((resolve) => {
+      const settle = (ratio: number) => {
+        clearTimeout(timer);
+        observer.disconnect();
+        resolve(ratio);
+      };
+      const observer = new IntersectionObserver((entries) => settle(entries[0]?.intersectionRatio ?? 0));
+      const timer = window.setTimeout(() => settle(0), 500);
+      observer.observe(targets[0]);
+    });
+  })).toBeGreaterThan(0);
   // 框架没有 locator.evaluateAll：在页面内等价复现「可见导航内全部链接」的遍历。
   const linksReadable = await browser.evaluate(() => {
     const navs = Array.from(document.querySelectorAll<HTMLElement>('nav[aria-label="内容导航"]'))
