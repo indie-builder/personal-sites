@@ -145,7 +145,7 @@ test("assistant enters only after the English-to-Chinese introduction finishes",
     (window as typeof window & { __introPhases: typeof log }).__introPhases = log;
   });
   await browser.goto("/");
-  // 完成等待沿用旧整条用例 30s 预算；阶段间隔预算在下方按录制时间戳断言。
+  // 完成轮询 30s；阶段耗时约束按下述时间戳断言执行。
   await expect.poll(() => browser.evaluate(() => {
     const log = (window as typeof window & { __introPhases?: Array<{ assistants: number; phase: string; t: number }> }).__introPhases;
     const last = log?.[log.length - 1];
@@ -166,7 +166,8 @@ test("assistant enters only after the English-to-Chinese introduction finishes",
   expect(phases[enteredAt]).toBe("complete");
   expect(log.slice(0, enteredAt).every((entry) => entry.assistants === 0)).toBe(true);
   expect(log[log.length - 1]).toMatchObject({ assistants: 1, phase: "complete" });
-  // 旧用例的时间约束：整条序列 30s 内完成，每个阶段等待不超过 20s（按录制时间戳等价复现）。
+  // 介绍序列在文档导航起 30s 内完成，相邻记录间隔不超过 20s（旧用例每阶段 20s、
+  // 整条 30s 预算的等价约束；计时起点为文档而非用例，含 beforeEach 与终态检查的差异）。
   expect(log[log.length - 1].t).toBeLessThanOrEqual(30_000);
   for (let index = 1; index < log.length; index += 1) {
     expect(log[index].t - log[index - 1].t).toBeLessThanOrEqual(20_000);
