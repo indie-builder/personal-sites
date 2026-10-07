@@ -41,8 +41,9 @@ test("curation stream surfaces a Chinese fallback when load more fails and recov
     return null;
   });
   await browser.evaluate((selector) => {
-    const element = document.querySelector<HTMLElement>(selector);
-    if (element && ["auto", "scroll"].includes(getComputedStyle(element).overflowY)) element.scrollTop = 0;
+    const matches = document.querySelectorAll<HTMLElement>(selector);
+    if (matches.length !== 1) throw new Error(`expected exactly one ${selector}, found ${matches.length}`);
+    if (["auto", "scroll"].includes(getComputedStyle(matches[0]).overflowY)) matches[0].scrollTop = 0;
     return null;
   }, ".curation-home__feed");
 
