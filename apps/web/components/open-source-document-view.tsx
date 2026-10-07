@@ -24,11 +24,14 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
   );
   const [selection, setSelection] = useState<"parsed" | "repository" | null>(null);
   const [repositoryOpened, setRepositoryOpened] = useState(false);
+  // 换场入场只给鼠标点击；键盘切换（moveTab 的方向键/Home/End 与 detail === 0 的键盘 click，全站约定）落 data-instant 直接呈现。
+  const [instantEntrance, setInstantEntrance] = useState(false);
   const view = selection ?? (deepLinkedRepository ? "repository" : "parsed");
   const isRepository = view === "repository";
   const showRepository = repositoryOpened || isRepository;
 
-  const selectView = (nextView: "parsed" | "repository") => {
+  const selectView = (nextView: "parsed" | "repository", instant: boolean) => {
+    setInstantEntrance(instant);
     setSelection(nextView);
     if (nextView === "repository") setRepositoryOpened(true);
     window.history.replaceState(
@@ -47,7 +50,7 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
     if (!nextView) return;
 
     event.preventDefault();
-    selectView(nextView);
+    selectView(nextView, true);
     document.getElementById(`${nextView}-document-tab`)?.focus();
   };
 
@@ -62,7 +65,7 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
             className={styles.documentTab}
             id="parsed-document-tab"
             onKeyDown={(event) => moveTab(event, "parsed")}
-            onClick={() => selectView("parsed")}
+            onClick={(event) => selectView("parsed", event.detail === 0)}
             role="tab"
             tabIndex={isRepository ? -1 : 0}
             type="button"
@@ -75,7 +78,7 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
             className={styles.documentTab}
             id="repository-document-tab"
             onKeyDown={(event) => moveTab(event, "repository")}
-            onClick={() => selectView("repository")}
+            onClick={(event) => selectView("repository", event.detail === 0)}
             role="tab"
             tabIndex={isRepository ? 0 : -1}
             type="button"
@@ -92,6 +95,7 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
       <div
         aria-labelledby="parsed-document-tab"
         className={`article-markdown ${styles.documentPanel}`}
+        data-instant={instantEntrance ? "" : undefined}
         hidden={isRepository}
         id="parsed-document-panel"
         role="tabpanel"
@@ -102,6 +106,7 @@ export function OpenSourceDocumentView({ parsedHint, parsedPanel, repository, re
         <div
           aria-labelledby="repository-document-tab"
           className={styles.documentPanel}
+          data-instant={instantEntrance ? "" : undefined}
           hidden={!isRepository}
           id="repository-document-panel"
           role="tabpanel"

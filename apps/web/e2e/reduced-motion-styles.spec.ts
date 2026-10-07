@@ -22,16 +22,16 @@ test("stream error fade is neutralized under reduced motion and intact otherwise
 
 test("repository panel transitions are neutralized under reduced motion once data arms the entrance", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.route("**/api/open-source/jakubkrehel-skills/repository/tree", (route) => route.fulfill({
+  await page.route("**/api/open-source/herdr/repository/tree", (route) => route.fulfill({
     json: {
       branch: "main",
       entries: [{ path: "README.md", size: 12, type: "blob" }],
-      repository: "jakubkrehel/skills",
-      repositoryUrl: "https://github.com/jakubkrehel/skills",
+      repository: "herdrdev/herdr",
+      repositoryUrl: "https://github.com/herdrdev/herdr",
       truncated: false,
     },
   }));
-  await page.goto("/open-source/jakubkrehel-skills");
+  await page.goto("/open-source/herdr");
   await page.getByRole("tab", { name: "仓库结构" }).click();
   const treePane = page.locator('[aria-label="原始仓库文件树"]');
   await expect(treePane).toBeVisible();
