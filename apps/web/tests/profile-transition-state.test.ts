@@ -164,7 +164,6 @@ describe("beginProfileTransition", () => {
     expect(inlineBox(".profile-transition-ghost--links")).toEqual({ height: "72px", left: "16px", top: "16px", width: "72px" });
 
     expect(document.querySelectorAll(".profile-transition-ghost")).toHaveLength(3);
-    // avatar ghost 是真实结构的克隆：唯一原图 img、aria-hidden 点描容器与六条切片。
     expect(
       Array.from(
         document.querySelectorAll(".profile-transition-ghost--avatar img"),

@@ -83,8 +83,6 @@ test("avatar stipple switches instantly under reduced motion and keeps its fade 
   await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0.18s");
 });
 
-// 常态波浪与 reduce 停波的回归：波浪不依赖 hover（触屏/无指针也要动），
-// reduce 必须停掉容器呼吸与全部切片循环。计算样式断言与上面的留守件同理。
 test("avatar stipple waves by default without any hover", async ({ page }) => {
   await skipOpeningLoader(page);
   await page.goto("/curation");
@@ -105,10 +103,10 @@ test("reduced motion stops every stipple band and the container breathing", asyn
   await page.goto("/curation");
   const bands = page.locator(".curation-home__avatar-stipple-band");
   await expect(bands).toHaveCount(6);
-  await expect(await bands.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).animationName))).toEqual(
+  expect(await bands.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).animationName))).toEqual(
     Array<string>(6).fill("none"),
   );
-  await expect(await bands.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).transform))).toEqual(
+  expect(await bands.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).transform))).toEqual(
     Array<string>(6).fill("none"),
   );
   await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("animation-name", "none");
@@ -127,7 +125,6 @@ test.describe("touch media", () => {
     await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "1");
   });
 
-  // 触屏同样默认常态波浪：无 hover 能力下切片动画仍在运行且实际位移。
   test("stipple bands keep waving under touch media without hover", async ({ page }) => {
     await skipOpeningLoader(page);
     await page.goto("/curation");
