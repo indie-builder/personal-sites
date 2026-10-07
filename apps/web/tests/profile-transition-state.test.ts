@@ -34,7 +34,7 @@ function expectEveryDriftStopped() {
 describe("beginProfileTransition", () => {
   beforeEach(() => {
     document.body.innerHTML = `
-      <div class="curation-home__avatar"></div>
+      <div class="curation-home__avatar"><img class="curation-home__avatar-photo" src="/images/ample-avatar.png" alt=""><img class="curation-home__avatar-stipple" src="/images/ample-avatar-stipple.png" alt=""></div>
       <div class="curation-home__identity"></div>
       <div class="curation-home__external-links"><a href="https://github.com">GitHub</a><a href="https://www.yuque.com">语雀</a><button>关于我</button></div>
     `;
@@ -164,6 +164,12 @@ describe("beginProfileTransition", () => {
     expect(inlineBox(".profile-transition-ghost--links")).toEqual({ height: "72px", left: "16px", top: "16px", width: "72px" });
 
     expect(document.querySelectorAll(".profile-transition-ghost")).toHaveLength(3);
+    expect(
+      Array.from(
+        document.querySelectorAll(".profile-transition-ghost--avatar img"),
+        (img) => img.className,
+      ),
+    ).toEqual(["curation-home__avatar-photo", "curation-home__avatar-stipple"]);
     ["avatar", "summary", "links"].forEach((variant) => {
       expect(document.querySelectorAll(`.profile-transition-ghost--${variant}`)).toHaveLength(1);
     });

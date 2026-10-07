@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // 留守件（与 curation-detail-responsive.spec.ts 同类）：两条用例断言的均是
 // prefers-reduced-motion CSS @media 规则生效后的计算样式（降级声明源顺序的回归）。
@@ -48,4 +48,51 @@ test("repository panel transitions are neutralized under reduced motion once dat
   await expect.poll(() => browserContent.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0s");
   const fileEmpty = page.getByText("从左侧文件树选择一个文本文件查看原始内容。");
   await expect.poll(() => fileEmpty.evaluate((element) => getComputedStyle(element).transitionProperty)).toBe("none");
+});
+
+// 头像点描层的三条契约：桌面 fine-pointer hover 淡出/移开恢复、reduce 瞬时切换、
+// 触屏设备不进入 hover 态保持点描。e2e 运行器无 emulateMedia 与 hasTouch 设备仿真，留 Playwright。
+const skipOpeningLoader = (page: Page) => page.addInitScript(() => window.sessionStorage.setItem("personal-site:opening-loader-played", "true"));
+
+test("avatar stipple fades out on fine-pointer hover and restores on leave", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.goto("/curation");
+  const stipple = page.locator(".curation-home__avatar-stipple");
+  await expect(stipple).toHaveCSS("opacity", "1");
+  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0.18s");
+
+  await page.locator(".curation-home__avatar").hover();
+  await expect(stipple).toHaveCSS("opacity", "0");
+
+  await page.mouse.move(0, 0);
+  await expect(stipple).toHaveCSS("opacity", "1");
+});
+
+test("avatar stipple switches instantly under reduced motion and keeps its fade otherwise", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/curation");
+  const stipple = page.locator(".curation-home__avatar-stipple");
+  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionProperty)).toBe("none");
+  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0s");
+
+  await page.locator(".curation-home__avatar").hover();
+  await expect(stipple).toHaveCSS("opacity", "0");
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect.poll(() => stipple.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe("0.18s");
+});
+
+test.describe("touch media", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  test("tapping the avatar keeps the stipple layer fully opaque", async ({ page }) => {
+    await skipOpeningLoader(page);
+    await page.goto("/curation");
+    expect(await page.evaluate(() => matchMedia("(hover: none) and (pointer: coarse)").matches)).toBe(true);
+    const avatar = page.locator(".curation-home__avatar");
+    await expect(avatar).not.toHaveAttribute("tabindex");
+    await avatar.tap();
+    await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "1");
+  });
 });

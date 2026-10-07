@@ -43,7 +43,6 @@ img { display:block; }
 
 .profile-transition-ghost--avatar {
   display: block;
-  object-fit: cover;
 }
 
 .profile-transition-ghost--summary {
@@ -101,7 +100,12 @@ html[data-profile-transition] {
 
 .curation-home { display:grid; min-height:100dvh; grid-template-columns:minmax(28rem,38vw) minmax(0,1fr); gap:clamp(2rem,4.8vw,4.5rem); background:#fff; color:var(--ink); }
 .curation-home__profile { position:sticky; top:0; display:flex; height:100dvh; flex-direction:column; align-items:flex-start; background:#fff; padding:1.875rem; }
-.curation-home__profile-header { display:flex; width:100%; align-items:flex-start; gap:1.5rem; }.curation-home__profile-summary { display:flex; min-width:0; flex-direction:column; align-items:flex-start; }.curation-home__avatar { width:6.5625rem; height:6.5625rem; flex:0 0 auto; border-radius:.75rem; object-fit:cover; }
+.curation-home__profile-header { display:flex; width:100%; align-items:flex-start; gap:1.5rem; }.curation-home__profile-summary { display:flex; min-width:0; flex-direction:column; align-items:flex-start; }.curation-home__avatar { display:block; width:6.5625rem; height:6.5625rem; flex:0 0 auto; border-radius:.75rem; overflow:hidden; }
+.curation-home__avatar:not(.profile-transition-ghost) { position:relative; }
+.curation-home__avatar-photo,.curation-home__avatar-stipple { width:100%; height:100%; object-fit:cover; }
+.curation-home__avatar-stipple { position:absolute; inset:0; transition:opacity 180ms ease; }
+@media (hover:hover) and (pointer:fine) { .curation-home__avatar:hover .curation-home__avatar-stipple { opacity:0; } }
+@media (prefers-reduced-motion:reduce) { .curation-home__avatar-stipple { transition:none; } }
 .curation-theme-toggle { position:absolute; top:1.875rem; right:1.875rem; display:grid; width:1.5rem; height:1.5rem; place-items:center; border:0; border-radius:999px; background:transparent; color:var(--ink); cursor:pointer; }
 .curation-theme-toggle:hover,.curation-theme-toggle:focus-visible { background:#f2f2f2; }.curation-theme-toggle svg { width:.9rem; height:.9rem; stroke-width:1.8; }
 html[data-curation-theme="dark"] { color-scheme:dark; }
