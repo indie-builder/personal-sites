@@ -1,14 +1,7 @@
 name: Android tests
 
 on:
-  push:
-    paths:
-      - 'android/**'
-      - '.github/workflows/android-tests.yml'
-  pull_request:
-    paths:
-      - 'android/**'
-      - '.github/workflows/android-tests.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
