@@ -38,16 +38,23 @@ test("assistant starts at the first biography line instead of the greeting", asy
 });
 
 test("first downward jump survives greeting changes and lands before text recoil", async ({ browser }) => {
-  await expect.poll(() => browser.evaluate(() =>
-    document.querySelector('[aria-label="和像素助手聊聊"]')!.parentElement!.getAnimations().length,
-  )).toBeGreaterThan(0);
+  // 旧 locator.evaluate 是严格单匹配；querySelector 会静默取第一个，重复节点漏检，不唯一即 throw。
+  await expect.poll(() => browser.evaluate(() => {
+    const matches = document.querySelectorAll('[aria-label="和像素助手聊聊"]');
+    if (matches.length !== 1) throw new Error(`expected exactly one assistant button, found ${matches.length}`);
+    return matches[0].parentElement!.getAnimations().length;
+  })).toBeGreaterThan(0);
   await browser.evaluate(() => {
-    const element = document.querySelector('[aria-label="和像素助手聊聊"]')!.parentElement!;
+    const matches = document.querySelectorAll('[aria-label="和像素助手聊聊"]');
+    if (matches.length !== 1) throw new Error(`expected exactly one assistant button, found ${matches.length}`);
+    const element = matches[0].parentElement!;
     element.getAnimations().forEach((animation) => animation.finish());
     return null;
   });
   const result = await browser.evaluate(async () => {
-    const element = document.querySelector('[aria-label="和像素助手聊聊"]')!.parentElement!;
+    const matches = document.querySelectorAll('[aria-label="和像素助手聊聊"]');
+    if (matches.length !== 1) throw new Error(`expected exactly one assistant button, found ${matches.length}`);
+    const element = matches[0].parentElement!;
     const jump = await new Promise<Animation>((resolve, reject) => {
       const deadline = performance.now() + 3000;
       const check = () => {
@@ -118,17 +125,45 @@ test("the sprite actually descends on its first jump without inserting text line
 });
 
 test("assistant enters only after the English-to-Chinese introduction finishes", async ({ screen, browser }) => {
-  // 框架 goto 没有 waitUntil: "commit"：domcontentloaded 是最早挂载点，英文阶段持续数秒，
-  // 20s 断言窗足够从 DCL 起接住它（旧用例担心的「等消息流结束」远晚于 DCL）。
-  await browser.goto("/", { waitUntil: "domcontentloaded" });
-  const introduction = browser.locator(".curation-home__bio");
+  // 文档流式响应未完时 DCL 晚于壳层 hydration，goto 返回后英文阶段可能已播完（旧 waitUntil:"commit"
+  // 正是为此）。框架没有 commit 等价物：init script 在文档最早期装记录器，全程录下阶段与助手存在性，
+  // 再导航、再断言录制到的完整序列。
+  await browser.addInitScript(() => {
+    const log: Array<{ assistants: number; phase: string }> = [];
+    const record = () => {
+      const phase = document.querySelector(".curation-home__bio")?.getAttribute("data-introduction-phase");
+      if (!phase) return;
+      const assistants = document.querySelectorAll('[aria-label="和像素助手聊聊"]').length;
+      const last = log[log.length - 1];
+      if (!last || last.phase !== phase || last.assistants !== assistants) log.push({ assistants, phase });
+    };
+    new MutationObserver(record).observe(document, {
+      attributes: true, attributeFilter: ["data-introduction-phase"], childList: true, subtree: true,
+    });
+    (window as typeof window & { __introPhases: typeof log }).__introPhases = log;
+  });
+  await browser.goto("/");
+  await expect.poll(() => browser.evaluate(() => {
+    const log = (window as typeof window & { __introPhases?: Array<{ assistants: number; phase: string }> }).__introPhases;
+    const last = log?.[log.length - 1];
+    return last ? last.phase === "complete" && last.assistants > 0 : false;
+  }), { timeout: 90_000 }).toBe(true);
+  const log = await browser.evaluate(() => (
+    (window as typeof window & { __introPhases: Array<{ assistants: number; phase: string }> }).__introPhases
+  ));
+  const phases = log.map((entry) => entry.phase);
+  const englishAt = phases.indexOf("english");
+  const erasingAt = phases.indexOf("erasing");
+  const chineseAt = phases.indexOf("chinese");
+  const enteredAt = log.findIndex((entry) => entry.assistants > 0);
+  expect(englishAt).toBeGreaterThanOrEqual(0);
+  expect(erasingAt).toBeGreaterThan(englishAt);
+  expect(chineseAt).toBeGreaterThan(erasingAt);
+  expect(enteredAt).toBeGreaterThan(chineseAt);
+  expect(phases[enteredAt]).toBe("complete");
+  expect(log.slice(0, enteredAt).every((entry) => entry.assistants === 0)).toBe(true);
+  expect(log[log.length - 1]).toEqual({ assistants: 1, phase: "complete" });
   const assistant = screen.getByRole("button", "和像素助手聊聊", { exact: false });
-  for (const phase of ["english", "erasing", "chinese"]) {
-    await expect(introduction).toHaveAttribute("data-introduction-phase", phase, { timeout: 20_000 });
-    await expect(assistant).toHaveCount(0);
-  }
-  await expect(introduction).toHaveAttribute("data-introduction-phase", "complete", { timeout: 20_000 });
-  await expect(assistant).toHaveCount(1);
   await expect(assistant).toBeEnabled();
   const state = await browser.evaluate(() => {
     const button = document.querySelector('[aria-label="和像素助手聊聊"]')!;

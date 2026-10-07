@@ -8,9 +8,15 @@ test("drawer matches reference composer and greeting alignment", async ({ app, s
   await screen.getByRole("button", "和像素助手聊聊", { exact: false }).tap();
   const dialog = screen.getByRole("dialog", "问一问", { exact: false });
   await expect(dialog.getByRole("textbox", "输入问题", { exact: false })).toBeFocused();
-  // 框架无 locator.evaluate：页面内唯一的 [role="dialog"] 即旧 dialog 定位，测量代码逐字保留。
+  // 框架无 locator.evaluate：页面内等价复现旧 getByRole("dialog", "问一问")——
+  // 名称经 aria-labelledby 指向 sr-only 的 Dialog.Title「问一问」，不唯一即 throw。
   const layout = await browser.evaluate(() => {
-    const root = document.querySelector('[role="dialog"]')!;
+    const named = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).filter((dialog) => {
+      const labelId = dialog.getAttribute("aria-labelledby");
+      return labelId?.split(/\s+/).some((id) => document.getElementById(id)?.textContent?.trim() === "问一问") ?? false;
+    });
+    if (named.length !== 1) throw new Error(`expected exactly one dialog named 问一问, found ${named.length}`);
+    const root = named[0];
     const composer = root.querySelector("[data-ask-composer]")!;
     const send = root.querySelector('[aria-label="发送问题"]')!;
     const greeting = root.querySelector('[data-slot="empty"] p')!;
@@ -58,7 +64,17 @@ test("drawer keeps mobile input readable, restores drafts and renders replies", 
   const dialog = screen.getByRole("dialog", "问一问", { exact: false });
   const input = dialog.getByRole("textbox", "输入问题", { exact: false });
   await input.fill("你的工程经历是什么？");
-  expect(await browser.evaluate(() => getComputedStyle(document.querySelector("[data-ask-composer] textarea")!).fontSize)).toBe("16px");
+  // 框架无 locator.evaluate：等价复现旧 dialog.getByRole("textbox", "输入问题") 的 dialog+名称双限定。
+  expect(await browser.evaluate(() => {
+    const named = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).filter((dialog) => {
+      const labelId = dialog.getAttribute("aria-labelledby");
+      return labelId?.split(/\s+/).some((id) => document.getElementById(id)?.textContent?.trim() === "问一问") ?? false;
+    });
+    if (named.length !== 1) throw new Error(`expected exactly one dialog named 问一问, found ${named.length}`);
+    const inputs = named[0].querySelectorAll('textarea[aria-label="输入问题"]');
+    if (inputs.length !== 1) throw new Error(`expected exactly one 输入问题 textarea in dialog, found ${inputs.length}`);
+    return getComputedStyle(inputs[0]).fontSize;
+  })).toBe("16px");
   await browser.keyboard.press("Escape");
   await screen.getByRole("button", "和像素助手聊聊", { exact: false }).tap();
   await expect(input).toHaveValue("你的工程经历是什么？");
