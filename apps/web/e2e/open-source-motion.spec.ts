@@ -244,14 +244,20 @@ test("document panels bridge click switches, keyboard and reduce stay instant", 
   expect(await readPanelTransitions()).toEqual([]);
   await expect(page.locator("#repository-document-panel")).toHaveAttribute("data-instant");
 
-  // reduce 下点击也直接呈现；纯颜色过渡按站内惯例保留。
-  await page.emulateMedia({ reducedMotion: "reduce" });
+  // 键盘置位后鼠标切换必须复位入场：回到中文阅读版仍有过渡，旧面板即时隐藏。
   await resetPanelTransitions();
   await parsedTab.click();
-  await expect(page.locator("#parsed-document-panel")).toBeVisible();
+  await expect(page.locator("#repository-document-panel")).toBeHidden();
+  await expect.poll(readPanelTransitions).toContain("parsed-document-panel:opacity");
+
+  // reduce 下真实换场也直接呈现；纯颜色过渡按站内惯例保留。
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await resetPanelTransitions();
+  await repositoryTab.click();
+  await expect(page.locator("#repository-document-panel")).toBeVisible();
   await page.waitForTimeout(300);
   expect(await readPanelTransitions()).toEqual([]);
-  await expect(page.locator("#parsed-document-panel")).toHaveCSS("transition-property", "none");
-  await expect(parsedTab).toHaveCSS("transition-property", "color");
-  await expect(parsedTab).toHaveCSS("transition-duration", "0.2s");
+  await expect(page.locator("#repository-document-panel")).toHaveCSS("transition-property", "none");
+  await expect(repositoryTab).toHaveCSS("transition-property", "color");
+  await expect(repositoryTab).toHaveCSS("transition-duration", "0.2s");
 });
