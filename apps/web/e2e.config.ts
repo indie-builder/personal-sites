@@ -23,6 +23,12 @@ export default {
           executable: "pnpm",
           args: ["start", "--port", "7100"],
           // 不复用 7100 上已在跑的服务器：冒烟必须验证当前构建，端口被占就以 APP_ALREADY_RUNNING 显式失败。
+          // 运行器给自起进程的只有 INHERITED_ENV 白名单环境；feed.xml 的每日动态增量请求期要读
+          // Supabase 公开投影，SUPABASE_* 必须显式透传（本地来自 .env.local，CI 来自 step 环境）。
+          env: {
+            ...(process.env.SUPABASE_URL ? { SUPABASE_URL: process.env.SUPABASE_URL } : {}),
+            ...(process.env.SUPABASE_PUBLISHABLE_KEY ? { SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY } : {}),
+          },
           log: ".e2e/logs/app.log",
         },
       },
