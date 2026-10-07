@@ -50,8 +50,9 @@ jobs:
           PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch --pass-with-no-tests
           # e2e 运行器自起 7100 生产服务器，复用上面的构建；CI 无 BigModel key，locator 用例
           # 全量收集，agent 冒烟在注册期跳过（缺 key 时 wrapper 的 --pass-with-no-tests 对
-          # 全量收集恒有用例，不改变结果）。
-          E2E_TELEMETRY_DISABLED=1 pnpm --filter @site/web exec e2e run
+          # 全量收集恒有用例，不改变结果）。admin 标签用例（public-discovery 的管理端健康
+          # 断言）依赖 SUPABASE_SERVICE_ROLE_KEY，CI 按设计无此凭据，排除（本地全量）。
+          E2E_TELEMETRY_DISABLED=1 pnpm --filter @site/web exec e2e run --exclude-tag admin
       - name: Upload Web E2E failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
