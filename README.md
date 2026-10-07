@@ -24,7 +24,7 @@
 ## 技术栈
 
 - **Web**：Next.js 16.3.8（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.1 / `@shadcn/react` 0.3.1、Radix UI 1.6.7、Motion 14.0.0、Lucide 1.51.0；部署在 Vercel。
-- **运行时与工程工具**：Node.js 24.21.0（最新 LTS；Vercel 支持 24.x）、pnpm 12.9.1、TypeScript 7.0.2、Effect 4.0.0、Turbo 2.11.7、oxlint 1.86.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.2 与 Playwright 1.63.0。
+- **运行时与工程工具**：Node.js 24.21.0+（`>=24.21.0 <25`；LTS，Vercel 支持上限 24.x）、pnpm 12.9.1、TypeScript 7.0.2、Effect 4.0.0、Turbo 2.11.7、oxlint 1.86.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.2 与 Playwright 1.63.0。
 - **数据与 AI**：Supabase JS 2.117.2、better-sqlite3 13.0.3、AI SDK 7.0.127 / Anthropic 4.0.71、Pi 1.0.2、Transformers.js 4.3.0、sqlite-vec 0.1.9。
 - **原生客户端**：Android 使用 AGP 9.4.1、Gradle 9.8.0、Kotlin 2.4.20、Compose BOM 2026.09.00（compileSdk 37.1）；iOS 使用 Xcode 27 / Swift 6.4 工具链、Swift 6 语言模式与 SwiftUI（iOS 26+），无第三方依赖。
 - **公开数据**：每日动态从只读 `data/ai-news.sqlite` 历史归档与 Supabase 公开增量合并读取；X、抖音、开源关注与本地问答全文索引从随 Git 部署的只读 `data/curation.sqlite` 读取。
@@ -51,7 +51,7 @@ X / 抖音 / GitHub Star 的抓取与模型结果留在本机忽略目录；只�
 ## 本地开发
 
 ```bash
-pnpm install          # Node.js >= 24.21.0；pnpm@12.9.1
+pnpm install          # Node.js >= 24.21.0 < 25；pnpm@12.9.1
 pnpm dev:domain       # https://personal-site.localhost（Turbopack）
 pnpm dev              # 不使用域名时的本地端口入口
 pnpm typecheck        # TypeScript 7（scripts/tsc7.mjs）
