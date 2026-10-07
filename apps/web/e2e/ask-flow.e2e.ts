@@ -44,7 +44,7 @@ test("sources disclosure toggles instantly from the keyboard and transitions fro
   await emit("done", {});
   const summary = browser.locator('[role="dialog"] summary').filter({ hasText: "参考资料 · 1 篇" });
   await expect(summary).toBeVisible();
-  const details = browser.locator('xpath=//summary[contains(normalize-space(.), "参考资料 · 1 篇")]/ancestor::details[1]');
+  const details = browser.locator('xpath=//*[@role="dialog"]//summary[contains(normalize-space(.), "参考资料 · 1 篇")]/ancestor::details[1]');
   const citations = dialog.getByRole("list", "回答来源", { exact: false });
   await browser.evaluate(() => {
     const w = window as typeof window & { __sourceTransitions: string[] };
@@ -69,17 +69,21 @@ test("sources disclosure toggles instantly from the keyboard and transitions fro
   await browser.keyboard.press("Enter");
   await expect(citations).toBeHidden();
   expect(await browser.evaluate(() => {
-    const summaryElement = Array.from(document.querySelectorAll('[role="dialog"] summary'))
-      .find((element) => element.textContent?.includes("参考资料 · 1 篇"));
-    const detailsElement = summaryElement?.closest("details");
-    return detailsElement ? (detailsElement as HTMLDetailsElement).open : null;
+    const summaries = Array.from(document.querySelectorAll('[role="dialog"] summary'))
+      .filter((element) => element.textContent?.includes("参考资料 · 1 篇"));
+    if (summaries.length !== 1) throw new Error(`expected exactly one sources summary, found ${summaries.length}`);
+    const detailsElement = summaries[0].closest("details");
+    if (!detailsElement) throw new Error("sources summary has no details ancestor");
+    return (detailsElement as HTMLDetailsElement).open;
   })).toBe(false);
   expect(await details.getAttribute("data-instant")).toBe("");
   expect(await browser.evaluate(() => {
-    const summaryElement = Array.from(document.querySelectorAll('[role="dialog"] summary'))
-      .find((element) => element.textContent?.includes("参考资料 · 1 篇"));
-    const chevron = summaryElement?.querySelector("svg");
-    return chevron ? getComputedStyle(chevron).transitionProperty : null;
+    const summaries = Array.from(document.querySelectorAll('[role="dialog"] summary'))
+      .filter((element) => element.textContent?.includes("参考资料 · 1 篇"));
+    if (summaries.length !== 1) throw new Error(`expected exactly one sources summary, found ${summaries.length}`);
+    const chevrons = summaries[0].querySelectorAll("svg");
+    if (chevrons.length !== 1) throw new Error(`expected exactly one summary chevron svg, found ${chevrons.length}`);
+    return getComputedStyle(chevrons[0]).transitionProperty;
   })).toBe("none");
   await settle(browser, 300);
   expect(await readTransitions()).toEqual(transitionsAfterMouseOpen);
@@ -99,8 +103,12 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ ap
     });
   });
 
-  // 框架没有 waitForLoadState：networkidle 只能挂在导航本身，所以此处内联 openAssistant
-  // 的开抽屉步骤（等价旧用例 goto 后再等 networkidle 的语义），helper 走的是 app.open。
+  // 前置条件调整（非等价）：旧用例在「打开抽屉、确认输入框、聚焦」之后 waitForLoadState("networkidle")；
+  // 框架没有 waitForLoadState，networkidle 只能挂在 browser.goto 导航本身（migration 文档标 missing），
+  // 所以开抽屉步骤内联在此（openAssistant helper 走 app.open，挂不上 networkidle）。AskChat 经
+  // next/dynamic 动态导入（ask-assistant.tsx:11），开抽屉才发起 chunk 请求：旧等的是抽屉打开后的
+  // 网络静置，新等的只是导航期静置；发送时 chunk 未落地的话，状态图标 animationName/opacity
+  // 现读断言不再有「网络已静置」这一前置。
   await browser.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   await browser.goto("/curation", { waitUntil: "networkidle" });
   await screen.getByRole("button", "和像素助手聊聊", { exact: false }).tap();
@@ -113,9 +121,11 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ ap
   await dialog.getByRole("button", "发送问题", { exact: false }).tap();
   const statusIcon = browser.locator('[role="dialog"] [role="status"] svg');
   await expect(statusIcon).toBeVisible();
+  // 旧版链是 page.getByRole("status").locator("svg")（页面作用域 + 单匹配），页内读取同语义复现。
   expect(await browser.evaluate(() => {
-    const icon = document.querySelector('[role="dialog"] [role="status"] svg');
-    return icon ? getComputedStyle(icon).animationName : null;
+    const icons = document.querySelectorAll('[role="status"] svg');
+    if (icons.length !== 1) throw new Error(`expected exactly one status icon, found ${icons.length}`);
+    return getComputedStyle(icons[0]).animationName;
   })).toBe("none");
   releaseResponse();
   await expect(statusIcon).toBeHidden();
@@ -131,9 +141,11 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ ap
   await expect(reducedSend).toBeEnabled();
   await reducedSend.tap();
   // 框架没有 toHaveCSS：opacity 轮询读 computed style（reduce 下 framer-motion 静态置 1）。
+  // 单匹配校验抛错在 expect.poll 里按失败读重试，marker 未渲染前的零匹配不会立即失败。
   const readStatusOpacity = () => browser.evaluate(() => {
-    const icon = document.querySelector('[role="dialog"] [role="status"] svg');
-    return icon ? getComputedStyle(icon).opacity : null;
+    const icons = document.querySelectorAll('[role="status"] svg');
+    if (icons.length !== 1) throw new Error(`expected exactly one status icon, found ${icons.length}`);
+    return getComputedStyle(icons[0]).opacity;
   });
   await expect.poll(readStatusOpacity).toBe("1");
   await settle(browser, 300);
@@ -150,7 +162,10 @@ test("assistant drawer sends without delaying the request", async ({ screen, bro
     });
   });
 
-  // 同上一例：networkidle 挂在导航上，内联开抽屉步骤。
+  // 前置条件调整（同上一例）：旧用例在抽屉打开、输入框聚焦后再 waitForLoadState("networkidle")，
+  // 然后才注入计时钩子；框架只能在 browser.goto 导航期等 networkidle，开抽屉在其后。AskChat
+  // 动态导入使两段静置不同：计时的 click→fetch 间隔可能落在 chunk 加载与入场动画仍在进行的
+  // 窗口里，该用例证的正是这些进行中的动效不把 fetch 推迟过 300ms。
   await browser.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   await browser.goto("/curation", { waitUntil: "networkidle" });
   await screen.getByRole("button", "和像素助手聊聊", { exact: false }).tap();
@@ -198,29 +213,39 @@ test("Ask can return to the latest message after reading earlier messages", asyn
     question: "",
   })));
   const dialog = await openAssistant(app, screen, browser);
-  // 问答记录 region（[aria-label="问答记录"]）即滚动容器，旧用例对它的三处 element.evaluate
-  // 框架没有 locator.evaluate，改在页面内取同一元素。
+  // 滚动容器复现旧版 dialog.getByRole("region", { name: "问答记录" }) 的契约：dialog 作用域 +
+  // region 语义（Viewport 渲染显式 role="region"）+ 单匹配；框架没有 locator.evaluate，
+  // 三处读取在页面内 querySelectorAll 恰好一个、不唯一即 throw。
   const button = dialog.getByRole("button", "回到最新消息", { exact: false });
   await expect.poll(() => browser.evaluate(() => {
-    const viewport = document.querySelector('[aria-label="问答记录"]');
-    return viewport ? viewport.scrollHeight > viewport.clientHeight : false;
+    const regions = Array.from(document.querySelectorAll('[role="region"][aria-label="问答记录"]'))
+      .filter((element) => element.closest('[role="dialog"]'));
+    if (regions.length !== 1) throw new Error(`expected exactly one 问答记录 region, found ${regions.length}`);
+    return regions[0].scrollHeight > regions[0].clientHeight;
   })).toBe(true);
   await browser.evaluate(() => {
-    const viewport = document.querySelector('[aria-label="问答记录"]');
-    if (viewport) viewport.scrollTop = 0;
+    const regions = Array.from(document.querySelectorAll('[role="region"][aria-label="问答记录"]'))
+      .filter((element) => element.closest('[role="dialog"]'));
+    if (regions.length !== 1) throw new Error(`expected exactly one 问答记录 region, found ${regions.length}`);
+    regions[0].scrollTop = 0;
     return null;
   });
   await expect(button).toHaveAttribute("data-active", "true");
   await button.tap();
   await expect.poll(() => browser.evaluate(() => {
-    const viewport = document.querySelector('[aria-label="问答记录"]');
-    return viewport ? viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop : 1e9;
+    const regions = Array.from(document.querySelectorAll('[role="region"][aria-label="问答记录"]'))
+      .filter((element) => element.closest('[role="dialog"]'));
+    if (regions.length !== 1) throw new Error(`expected exactly one 问答记录 region, found ${regions.length}`);
+    return regions[0].scrollHeight - regions[0].clientHeight - regions[0].scrollTop;
   })).toBeLessThan(2);
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 812 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
   test(`Ask streams default OpenUI components before citations at ${viewport.width}px`, async ({ app, screen, browser }) => {
     await browser.setViewport({ width: viewport.width, height: viewport.height });
+    // reduce 补丁只改 matchMedia 现读，不模拟 CSS 媒体查询：ask-chat.module.css 的 reduce 块
+    // 还关闭引用 chevron、citations 等过渡。本组用例保留的已核对依赖是状态现读与引用开合的
+    // 最终显隐断言，不声称完整 prefers-reduced-motion 等价。
     await emulateReducedMotion(browser);
     await browser.addInitScript(() => {
       const originalFetch = window.fetch.bind(window);
@@ -249,10 +274,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 812 
     await emit("text", { delta: `root = Stack([TextContent(${JSON.stringify("## 资料概览\n\n先看**工程实践**。\n\n- 连续阅读\n- 来源可追溯\n\n```ts\nconst ready = true;\n```")}), Tabs([TabItem("overview", "摘要", [TextContent("先看概览")]), TabItem("details", "详细内容", [TextContent("这里是详细说明")])])` });
     await expect(dialog.getByRole("heading", "资料概览", { exact: false })).toBeVisible();
     await expect(browser.locator("[role=\"dialog\"] strong")).toHaveText("工程实践");
-    // 框架没有 toHaveCSS：两处样式断言轮询读 computed style。
+    // 框架没有 toHaveCSS：两处样式断言轮询读 computed style。列表断言复现旧版
+    // dialog.locator(".ask-openui ul") 的严格单匹配；段落旧版即 .first()，保持首个。
     await expect.poll(() => browser.evaluate(() => {
-      const list = document.querySelector('[role="dialog"] .ask-openui ul');
-      return list ? getComputedStyle(list).listStyleType : null;
+      const lists = document.querySelectorAll('[role="dialog"] .ask-openui ul');
+      if (lists.length !== 1) throw new Error(`expected exactly one openui list, found ${lists.length}`);
+      return getComputedStyle(lists[0]).listStyleType;
     })).toBe("disc");
     await expect.poll(() => browser.evaluate(() => {
       const paragraph = document.querySelector('[role="dialog"] .ask-openui p');
