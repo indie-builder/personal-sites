@@ -104,11 +104,9 @@ test("Ask retrieval status uses Motion with a static reduced state", async ({ ap
   });
 
   // 前置条件调整（非等价）：旧用例在「打开抽屉、确认输入框、聚焦」之后 waitForLoadState("networkidle")；
-  // 框架没有 waitForLoadState，networkidle 只能挂在 browser.goto 导航本身（migration 文档标 missing），
-  // 所以开抽屉步骤内联在此（openAssistant helper 走 app.open，挂不上 networkidle）。AskChat 经
-  // next/dynamic 动态导入（ask-assistant.tsx:11），开抽屉才发起 chunk 请求：旧等的是抽屉打开后的
-  // 网络静置，新等的只是导航期静置；发送时 chunk 未落地的话，状态图标 animationName/opacity
-  // 现读断言不再有「网络已静置」这一前置。
+  // 框架没有 waitForLoadState（迁移文档标 missing），networkidle 只能挂在 browser.goto 导航本身。
+  // 旧等的是抽屉打开后的网络静置，新等的只是导航期静置：发送阶段不再有「网络已静置」这一前置，
+  // 可能与后续网络活动或入场动画重叠，状态图标 animationName/opacity 现读断言在此前提下成立。
   await browser.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   await browser.goto("/curation", { waitUntil: "networkidle" });
   await screen.getByRole("button", "和像素助手聊聊", { exact: false }).tap();
@@ -163,9 +161,9 @@ test("assistant drawer sends without delaying the request", async ({ screen, bro
   });
 
   // 前置条件调整（同上一例）：旧用例在抽屉打开、输入框聚焦后再 waitForLoadState("networkidle")，
-  // 然后才注入计时钩子；框架只能在 browser.goto 导航期等 networkidle，开抽屉在其后。AskChat
-  // 动态导入使两段静置不同：计时的 click→fetch 间隔可能落在 chunk 加载与入场动画仍在进行的
-  // 窗口里，该用例证的正是这些进行中的动效不把 fetch 推迟过 300ms。
+  // 然后才注入计时钩子；框架只能在 browser.goto 导航期等 networkidle，开抽屉在其后。未保留打开
+  // 抽屉后的网络静置窗口，click→fetch 计时可能与后续网络活动或入场动画重叠；该用例证的正是
+  // 这些进行中的活动不把 fetch 推迟过 300ms。
   await browser.addInitScript(() => sessionStorage.setItem("personal-site:opening-loader-played", "true"));
   await browser.goto("/curation", { waitUntil: "networkidle" });
   await screen.getByRole("button", "和像素助手聊聊", { exact: false }).tap();
