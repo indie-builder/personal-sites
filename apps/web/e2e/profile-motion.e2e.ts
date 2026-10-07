@@ -103,12 +103,15 @@ test("mobile profile bridge uses Motion and clears transition state", async ({ a
 });
 
 test("mobile navigation shows destination content when profile storage writes fail", async ({ app, screen, browser }) => {
-  // 框架无 page.on("pageerror")：init script 在页面记录未捕获 error 事件（元素资源错误不冒泡到
-  // window），与 pageerror 同为未捕获异常面。
+  // 框架无 page.on("pageerror")：init script 在页面记录未捕获 error 与 unhandledrejection
+  // 事件（元素资源错误不冒泡到 window），与 pageerror 同为未捕获异常面。
   await browser.addInitScript(() => {
     const testWindow = window as typeof window & { __pageErrors: string[] };
     testWindow.__pageErrors = [];
     window.addEventListener("error", (event) => testWindow.__pageErrors.push(event.message));
+    window.addEventListener("unhandledrejection", (event) => {
+      testWindow.__pageErrors.push(String(event.reason?.message ?? event.reason));
+    });
   });
   await browser.setViewport({ height: 844, width: 390 });
   // 旧版 emulateMedia no-preference：引擎默认即 no-preference，无需补丁。

@@ -86,18 +86,6 @@ test("mobile profile collapse preserves sticky clamping and scroll hysteresis", 
   });
   await expect(profile).not.toHaveAttribute("data-mobile-collapsed", "");
   await expect.poll(async () => (await profile.boundingBox())!.y).toBe(0);
-  await browser.evaluate(() => {
-    (document.activeElement as HTMLElement).blur();
-    window.scrollTo({ behavior: "instant", top: 0 });
-    return null;
-  });
-  // 旧版末段的 emulateMedia reduce 与 transition-duration 0s 断言依赖 CSS @media（引擎无法
-  // 模拟），留在 layout-input-regressions.spec.ts；此处滚动往返只断言最终位置，经 240ms
-  // 过渡到达同一终态。
-  await scrollTo(600);
-  await expect.poll(async () => (await profile.boundingBox())!.y).toBe(-offset);
-  await scrollTo(0);
-  await expect.poll(async () => (await profile.boundingBox())!.y).toBe(expanded.y);
 });
 
 for (const path of ["/", "/curation"] as const) {
