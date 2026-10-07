@@ -102,10 +102,23 @@ html[data-profile-transition] {
 .curation-home__profile { position:sticky; top:0; display:flex; height:100dvh; flex-direction:column; align-items:flex-start; background:#fff; padding:1.875rem; }
 .curation-home__profile-header { display:flex; width:100%; align-items:flex-start; gap:1.5rem; }.curation-home__profile-summary { display:flex; min-width:0; flex-direction:column; align-items:flex-start; }.curation-home__avatar { display:block; width:6.5625rem; height:6.5625rem; flex:0 0 auto; border-radius:.75rem; overflow:hidden; }
 .curation-home__avatar:not(.profile-transition-ghost) { position:relative; }
-.curation-home__avatar-photo,.curation-home__avatar-stipple { width:100%; height:100%; object-fit:cover; }
-.curation-home__avatar-stipple { position:absolute; inset:0; transition:opacity 180ms ease; }
+.curation-home__avatar-photo { width:100%; height:100%; object-fit:cover; }
+/* 容器铺点描纸底色：切片位移的亚像素缝隙露的是纸色而非底层原图。 */
+.curation-home__avatar-stipple { position:absolute; inset:0; background:#fcfbf6; transition:opacity 180ms ease; animation:curation-avatar-breathe 8.8s ease-in-out infinite; }
+.curation-home__avatar-stipple-band { position:absolute; top:-4%; bottom:-4%; width:16.6667%; background-image:url("/images/ample-avatar-stipple.png"); background-position-y:50%; background-repeat:no-repeat; background-size:600% calc(100% / 1.08); animation:curation-avatar-wave 6.4s ease-in-out infinite; will-change:transform; }
+.curation-home__avatar-stipple-band:nth-child(1) { left:0; background-position-x:0%; animation-delay:0s; }
+.curation-home__avatar-stipple-band:nth-child(2) { left:16.6667%; background-position-x:20%; animation-delay:-1.0667s; }
+.curation-home__avatar-stipple-band:nth-child(3) { left:33.3333%; background-position-x:40%; animation-delay:-2.1333s; }
+.curation-home__avatar-stipple-band:nth-child(4) { left:50%; background-position-x:60%; animation-delay:-3.2s; }
+.curation-home__avatar-stipple-band:nth-child(5) { left:66.6667%; background-position-x:80%; animation-delay:-4.2667s; }
+.curation-home__avatar-stipple-band:nth-child(6) { left:83.3333%; background-position-x:100%; animation-delay:-5.3333s; }
+@keyframes curation-avatar-wave { 0%,100% { transform:translateY(-1.8%) scaleY(1.028); } 50% { transform:translateY(1.8%) scaleY(0.985); } }
+@keyframes curation-avatar-breathe { 0%,100% { transform:scale(1); } 50% { transform:scale(1.014); } }
 @media (hover:hover) and (pointer:fine) { .curation-home__avatar:hover .curation-home__avatar-stipple { opacity:0; } }
-@media (prefers-reduced-motion:reduce) { .curation-home__avatar-stipple { transition:none; } }
+@media (prefers-reduced-motion:reduce) {
+  .curation-home__avatar-stipple { transition:none; animation:none; }
+  .curation-home__avatar-stipple-band { animation:none; }
+}
 .curation-theme-toggle { position:absolute; top:1.875rem; right:1.875rem; display:grid; width:1.5rem; height:1.5rem; place-items:center; border:0; border-radius:999px; background:transparent; color:var(--ink); cursor:pointer; }
 .curation-theme-toggle:hover,.curation-theme-toggle:focus-visible { background:#f2f2f2; }.curation-theme-toggle svg { width:.9rem; height:.9rem; stroke-width:1.8; }
 html[data-curation-theme="dark"] { color-scheme:dark; }

@@ -32,14 +32,14 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
             src="/images/ample-avatar.png"
             width={105}
           />
-          <Image
-            alt=""
-            className="curation-home__avatar-stipple"
-            height={105}
-            preload
-            src="/images/ample-avatar-stipple.png"
-            width={105}
-          />
+          <span aria-hidden="true" className="curation-home__avatar-stipple">
+            <span className="curation-home__avatar-stipple-band" />
+            <span className="curation-home__avatar-stipple-band" />
+            <span className="curation-home__avatar-stipple-band" />
+            <span className="curation-home__avatar-stipple-band" />
+            <span className="curation-home__avatar-stipple-band" />
+            <span className="curation-home__avatar-stipple-band" />
+          </span>
         </span>
 
         <div className="curation-home__profile-summary">
