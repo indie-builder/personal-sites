@@ -6,7 +6,7 @@ import { Schema } from "effect";
 
 import { cachedRequest } from "@/lib/cached-request";
 import { openSourceEntrySchema } from "@/lib/open-source-schema";
-import { toOpenSourceListEntry } from "@/lib/open-source-types";
+import { OPEN_SOURCE_PAGE_SIZE, toOpenSourceListEntry } from "@/lib/open-source-types";
 import type { OpenSourceEntry } from "@/lib/open-source-types";
 import { contentJsonRowSchema, getPublicDatabase } from "@/lib/public-database";
 
@@ -26,7 +26,7 @@ export function getOpenSourceListEntries() {
 
 // /api/open-source 的分页读取：策展集合小（当前 10 条），直接整表切片，
 // 响应契约与其余信息流接口一致（{ hasMore, items }）。
-export function getOpenSourcePage(offset = 0, limit = 20) {
+export function getOpenSourcePage(offset = 0, limit = OPEN_SOURCE_PAGE_SIZE) {
   return Effect.gen(function* () {
     const entries = yield* getOpenSourceListEntries();
     return {

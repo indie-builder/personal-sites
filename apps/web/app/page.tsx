@@ -5,7 +5,8 @@ import { FeedSkeleton } from "@/components/page-shell";
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import { ContentSectionNavigation } from "@/components/site-section-navigation";
 import { SiteProfile } from "@/components/site-profile";
-import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
+import { getAiNewsPage } from "@/lib/ai-news";
+import { AI_NEWS_PAGE_SIZE } from "@/lib/ai-news-types";
 import { withCanonical } from "@/lib/metadata";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 async function HomeNews() {
-  const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_LIST_LIMIT));
+  const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_PAGE_SIZE));
   return <AiNewsStream initialHasMore={aiNewsPage.hasMore} initialItems={aiNewsPage.items} />;
 }
 

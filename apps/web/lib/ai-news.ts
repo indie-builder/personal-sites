@@ -4,7 +4,7 @@ import "server-only";
 
 import { Schema } from "effect";
 
-import { aiNewsItemContentSchema, aiNewsListRowSchema } from "@/lib/ai-news-types";
+import { AI_NEWS_PAGE_SIZE, aiNewsItemContentSchema, aiNewsListRowSchema } from "@/lib/ai-news-types";
 import { cachedRequest } from "@/lib/cached-request";
 import { getPublicSupabaseClient } from "@/lib/supabase.server";
 import { getAiNewsArchive } from "@/lib/ai-news-archive.server";
@@ -16,8 +16,6 @@ import {
   readPublicRows,
   searchArchivedItems,
 } from "@site/public-data/ai-news/archive.mjs";
-
-export const AI_NEWS_LIST_LIMIT = 50;
 
 function getPublicAiNewsClient() {
   return getPublicSupabaseClient("每日动态增量需要 Supabase 公开投影。");
@@ -38,7 +36,7 @@ const readLiveList = cachedRequest(() =>
   }),
 );
 
-export function getAiNewsPage(offset = 0, limit = AI_NEWS_LIST_LIMIT) {
+export function getAiNewsPage(offset = 0, limit = AI_NEWS_PAGE_SIZE) {
   return Effect.gen(function* () {
     const live = yield* readLiveList();
     // At most live.length rows can precede an archived row; skip the guaranteed prefix in SQLite.

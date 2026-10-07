@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { CurationStream } from "@/components/curation-stream";
 import { FeedPage } from "@/components/page-shell";
 import { getDesignCurationPage } from "@/lib/curation";
+import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import { withCanonical } from "@/lib/metadata";
 
 export const revalidate = 300;
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 async function DesignFeed() {
-  const designPage = await Effect.runPromise(getDesignCurationPage(0, 20));
+  const designPage = await Effect.runPromise(getDesignCurationPage(0, CURATION_PAGE_SIZE));
   return (
     <CurationStream
       apiPath="/api/design"

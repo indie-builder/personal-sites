@@ -2,6 +2,7 @@ package cn.lovemyrmb.personalsite.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -74,13 +75,67 @@ class PortfolioViewModelTest {
         val feed = viewModel.feed("layouts", "", "", "")
         feed.loadInitial()
         advanceUntilIdle()
-        val meta = viewModel.meta.value[viewModel.feedKey("layouts", "", "", "")]!!
+        val meta = viewModel.meta.value.forFilter("layouts", "", "", "")
         assertEquals(350, meta.total)
         assertEquals("构图", meta.categories.single().name)
         assertEquals("CC BY 4.0", meta.attribution)
         assertEquals(listOf("layouts-0"), feed.state.value.items.map(PortfolioItem::id))
         assertTrue(feed.state.value.hasMore)
         assertEquals(1, api.requests)
+    }
+
+    @Test
+    fun metadataKeepsExactMatchAndFallsBackOnlyWithinCollection() = runTest(dispatcher) {
+        val api = object : PortfolioApi by FakeApi() {
+            override suspend fun collection(collection: String, q: String, cat: String, theme: String, offset: Long, limit: Int) =
+                PortfolioPage(total = when (q) { "first" -> 10; "second" -> 20; else -> 30 })
+        }
+        val viewModel = PortfolioViewModel(api)
+        assertEquals(PortfolioMeta(), viewModel.meta.value.forFilter("layouts", "", "", ""))
+        viewModel.feed("layouts", "first", "", "").loadInitial()
+        advanceUntilIdle()
+        val beforeSwitch = viewModel.meta.value
+        assertEquals(10, beforeSwitch.forFilter("layouts", "second", "", "").total)
+        assertEquals(PortfolioMeta(), beforeSwitch.forFilter("muse", "", "", ""))
+        viewModel.feed("layouts", "second", "", "").loadInitial()
+        viewModel.feed("muse", "", "", "").loadInitial()
+        advanceUntilIdle()
+        assertEquals(10, viewModel.meta.value.forFilter("layouts", "first", "", "").total)
+        assertEquals(20, viewModel.meta.value.forFilter("layouts", "missing", "category", "topic").total)
+        assertEquals(30, viewModel.meta.value.forFilter("muse", "", "", "").total)
+        viewModel.feed("layouts", "first", "", "").refresh()
+        advanceUntilIdle()
+        assertEquals(20, viewModel.meta.value.forFilter("layouts", "missing", "", "").total)
+        assertEquals(10, beforeSwitch.forFilter("layouts", "second", "", "").total)
+    }
+
+    @Test
+    fun switchingFiltersPublishesMetadataWithoutChangingPreviousFeed() = runTest(dispatcher) {
+        val api = object : PortfolioApi by FakeApi() {
+            override suspend fun collection(collection: String, q: String, cat: String, theme: String, offset: Long, limit: Int) =
+                PortfolioPage(
+                    items = listOf(PortfolioItem(id = if (cat.isEmpty()) "all" else "$q-$cat-$theme")),
+                    total = if (cat.isEmpty()) 40 else 1,
+                )
+        }
+        val viewModel = PortfolioViewModel(api)
+        val observedTotals = mutableListOf<Int>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.meta.collect { observedTotals += it.forFilter("layouts", "search", "category", "topic").total }
+        }
+        val previous = viewModel.feed("layouts", "", "", "")
+        previous.loadInitial()
+        advanceUntilIdle()
+        val next = viewModel.feed("layouts", "search", "category", "topic")
+        assertEquals(40, viewModel.meta.value.forFilter("layouts", "search", "category", "topic").total)
+        assertTrue(next.state.value.initial)
+        assertEquals(listOf("all"), previous.state.value.items.map(PortfolioItem::id))
+        next.loadInitial()
+        advanceUntilIdle()
+        assertEquals(listOf(0, 40, 1), observedTotals)
+        assertEquals(listOf("search-category-topic"), next.state.value.items.map(PortfolioItem::id))
+        assertEquals(listOf("all"), previous.state.value.items.map(PortfolioItem::id))
+        assertSame(previous, viewModel.feed("layouts", "", "", ""))
     }
 
     @Test

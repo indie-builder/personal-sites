@@ -1,3 +1,4 @@
+import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import { getDouyinCurationPage } from "@/lib/curation";
 import { createPaginatedFeedRoute } from "@/lib/paginated-route";
 
@@ -5,6 +6,6 @@ import { createPaginatedFeedRoute } from "@/lib/paginated-route";
 export const GET = createPaginatedFeedRoute({
   label: "抖音收藏",
   maxLimit: 50,
-  pageStep: 20,
+  pageStep: CURATION_PAGE_SIZE,
   readPage: getDouyinCurationPage,
 });

@@ -4,7 +4,7 @@ import "server-only";
 import { Schema } from "effect";
 
 import { cachedRequest } from "@/lib/cached-request";
-import { curationItemSchema } from "@/lib/curation-types";
+import { CURATION_PAGE_SIZE, curationItemSchema } from "@/lib/curation-types";
 import type { CurationItem, CurationListItem } from "@/lib/curation-types";
 import { contentJsonRowSchema, getPublicDatabase } from "@/lib/public-database";
 
@@ -81,7 +81,7 @@ function getCurationPageByPlatform(
 }
 
 /** 每日关注：来源拆分后只呈现 X 条目；抖音条目由 /douyin 板块承载。 */
-export function getCurationPage(offset = 0, limit = 20, tag: string | null = null) {
+export function getCurationPage(offset = 0, limit = CURATION_PAGE_SIZE, tag: string | null = null) {
   return getCurationPageByPlatform("x", offset, limit, false, tag);
 }
 
@@ -120,12 +120,12 @@ export function getCurationTags() {
 }
 
 /** 抖音收藏板块：只呈现公开投影中已发布的抖音来源条目。 */
-export function getDouyinCurationPage(offset = 0, limit = 20) {
+export function getDouyinCurationPage(offset = 0, limit = CURATION_PAGE_SIZE) {
   return getCurationPageByPlatform("douyin", offset, limit);
 }
 
 /** 设计收藏：呈现模型判断为设计相关的 X 条目。 */
-export function getDesignCurationPage(offset = 0, limit = 20) {
+export function getDesignCurationPage(offset = 0, limit = CURATION_PAGE_SIZE) {
   return getCurationPageByPlatform("x", offset, limit, true);
 }
 

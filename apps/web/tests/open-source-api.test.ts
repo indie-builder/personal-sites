@@ -49,7 +49,7 @@ describe("open-source public API", () => {
   it("slices the curated list into { hasMore, items } pages", async () => {
     const { getOpenSourcePage } = await import("../lib/open-source");
 
-    const firstPage = await Effect.runPromise(getOpenSourcePage(0, 20));
+    const firstPage = await Effect.runPromise(getOpenSourcePage());
     expect(firstPage.items).toHaveLength(20);
     expect(firstPage.hasMore).toBe(true);
 

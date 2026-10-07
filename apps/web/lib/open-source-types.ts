@@ -1,5 +1,7 @@
 import type { openSourceEntrySchema } from "@/lib/open-source-schema";
 
+export const OPEN_SOURCE_PAGE_SIZE = 20;
+
 export const openSourceCategories = [
   { id: "all", label: "全部" },
   { id: "skills", label: "Skills 与工作流" },
@@ -8,7 +10,7 @@ export const openSourceCategories = [
   { id: "tools", label: "AI 开发工具" },
 ] as const;
 
-const openSourceDimensions = [
+export const openSourceDimensions = [
   { id: "agent-skills", label: "Agent Skills" },
   { id: "coding-agent", label: "Coding Agent" },
   { id: "agent-runtime", label: "Agent 运行时" },

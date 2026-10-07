@@ -30,3 +30,15 @@ export function readPublicRows(
 ): Effect.Effect<unknown[], Error>;
 
 export function newsSearchScore(item: AiNewsItem, query: string): number;
+
+export function saveArchive(
+  db: Database.Database,
+  rows: readonly { id: string; content: unknown; selected: boolean; synced_at: string }[],
+  snapshot: Pick<ArchiveMetadata, "cutoff" | "capturedAt">,
+): ArchiveMetadata;
+export function pruneArchivedRows(
+  client: SupabaseClient,
+  db: Database.Database,
+  deployed: Pick<ArchiveMetadata, "digest" | "cutoff"> | null | undefined,
+  options?: { now?: Date; dryRun?: boolean },
+): Effect.Effect<{ dryRun: boolean; eligible: number }, Error>;
