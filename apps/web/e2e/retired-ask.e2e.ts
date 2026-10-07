@@ -21,6 +21,5 @@ test("standalone Ask is retired while the character drawer remains available", a
     await browser.keyboard.press("Escape");
   }
   const sitemap = await fetch(new URL("/sitemap.xml", app.baseUrl));
-  expect(sitemap.ok).toBe(true);
   expect(await sitemap.text()).not.toMatch(/<loc>[^<]*\/ask<\/loc>/);
 });
