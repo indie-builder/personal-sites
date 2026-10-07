@@ -5,6 +5,8 @@ import type { AiNewsItem } from "@site/public-data/ai-news/content.ts";
 export { aiNewsItemContentSchema } from "@site/public-data/ai-news/content.ts";
 export type { AiNewsItem, AiNewsListItem } from "@site/public-data/ai-news/content.ts";
 
+export const AI_NEWS_PAGE_SIZE = 50;
+
 // 列表行结构：详情条目剔除仅详情页使用的 reason/score/url 后附 selected；
 // /api/ai-news 列表与列表页会话快照共用同一份。
 export const aiNewsListRowSchema = Schema.Struct({

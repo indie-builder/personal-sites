@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 
 import { AiNewsStream } from "@/components/ai-news-stream";
 import { FeedPage } from "@/components/page-shell";
-import { getAiNewsPage, AI_NEWS_LIST_LIMIT } from "@/lib/ai-news";
+import { getAiNewsPage } from "@/lib/ai-news";
+import { AI_NEWS_PAGE_SIZE } from "@/lib/ai-news-types";
 import { withCanonical } from "@/lib/metadata";
 
 // 缓存 60 秒，过期后由下一次请求触发后台合并 SQLite 历史与 Supabase 增量。
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 async function AiNewsFeed() {
-  const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_LIST_LIMIT));
+  const aiNewsPage = await Effect.runPromise(getAiNewsPage(0, AI_NEWS_PAGE_SIZE));
   return <AiNewsStream initialHasMore={aiNewsPage.hasMore} initialItems={aiNewsPage.items} />;
 }
 

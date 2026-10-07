@@ -1,23 +1,11 @@
 import { UrlString } from "@site/effect/schema";
 import { Schema } from "effect";
 
+import { openSourceCategories, openSourceDimensions } from "@/lib/open-source-types";
+
 export const openSourceEntrySchema = Schema.Struct({
-  category: Schema.Literals(["skills", "agents", "context", "tools"]),
-  dimensions: Schema.Array(
-    Schema.Literals([
-      "agent-skills",
-      "coding-agent",
-      "agent-runtime",
-      "long-running",
-      "multi-agent",
-      "agent-control",
-      "agent-infra",
-      "agent-context",
-      "local-retrieval",
-      "model-gateway",
-      "ai-ingestion",
-    ]),
-  ).pipe(Schema.mutable),
+  category: Schema.Literals(openSourceCategories.map(({ id }) => id).filter((id) => id !== "all")),
+  dimensions: Schema.Array(Schema.Literals(openSourceDimensions.map(({ id }) => id))).pipe(Schema.mutable),
   evidence: Schema.Struct({
     checkedAt: Schema.String,
     kind: Schema.Literals(["readme", "repository"]),

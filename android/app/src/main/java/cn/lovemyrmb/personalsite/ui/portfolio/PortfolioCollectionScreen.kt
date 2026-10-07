@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cn.lovemyrmb.personalsite.data.PortfolioItem
-import cn.lovemyrmb.personalsite.data.PortfolioMeta
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
 import cn.lovemyrmb.personalsite.ui.components.SiteSpinner
@@ -70,19 +69,16 @@ fun PortfolioCollectionScreen(
     var browsingAll by rememberSaveable { mutableStateOf(false) }
     var feed by remember(collection) { mutableStateOf<cn.lovemyrmb.personalsite.data.PagedFeed<PortfolioItem>?>(null) }
 
-    // 搜索逐字输入防抖后切换分页实例；feed 键与 meta 键共用同一筛选组合。
-    val filterKey = viewModel.feedKey(collection, query.trim(), category, topic)
+    fun currentFeed() = viewModel.feed(collection, query.trim(), category, topic)
+    // 搜索逐字输入防抖后切换列表订阅；窗口内操作仍使用当前筛选。
     LaunchedEffect(collection, query, category, topic) {
         delay(250)
-        val next = viewModel.feed(collection, query.trim(), category, topic)
+        val next = currentFeed()
         feed = next
         next.loadInitial()
     }
-    val metaAll by viewModel.meta.collectAsStateWithLifecycle()
-    // 防抖窗口内新筛选键尚无 meta，回退到该集合最近一次的 meta，避免筛选菜单闪空。
-    val meta = metaAll[filterKey]
-        ?: metaAll.entries.lastOrNull { it.key.startsWith("$collection|") }?.value
-        ?: PortfolioMeta()
+    val metadata by viewModel.meta.collectAsStateWithLifecycle()
+    val meta = metadata.forFilter(collection, query.trim(), category, topic)
     val emptyState = remember { kotlinx.coroutines.flow.MutableStateFlow(cn.lovemyrmb.personalsite.data.FeedState<PortfolioItem>()) }
     val state by (feed?.state ?: emptyState).collectAsStateWithLifecycle()
     val onShelf = collection == "layouts" && category.isEmpty() && topic.isEmpty() &&
@@ -187,7 +183,7 @@ fun PortfolioCollectionScreen(
                     CollectionPhase.ERROR -> ErrorRetry(
                         message = state.error ?: "",
                         modifier = Modifier.fillMaxSize(),
-                    ) { viewModel.feed(collection, query.trim(), category, topic).retry() }
+                    ) { currentFeed().retry() }
                     CollectionPhase.SHELF -> Shelf(
                         categories = meta.categories,
                         onPick = { category = it; browsingAll = true },
@@ -205,8 +201,8 @@ fun PortfolioCollectionScreen(
                             bottom = bottomPadding,
                         ),
                         onOpenItem = { index -> onOpenItem(state.items, index) },
-                        onLoadMore = { viewModel.feed(collection, query.trim(), category, topic).loadMore() },
-                        onRetry = { viewModel.feed(collection, query.trim(), category, topic).retry() },
+                        onLoadMore = { currentFeed().loadMore() },
+                        onRetry = { currentFeed().retry() },
                     )
                 }
             }

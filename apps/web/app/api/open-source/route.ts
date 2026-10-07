@@ -1,3 +1,4 @@
+import { OPEN_SOURCE_PAGE_SIZE } from "@/lib/open-source-types";
 import { getOpenSourcePage } from "@/lib/open-source";
 import { createPaginatedFeedRoute } from "@/lib/paginated-route";
 
@@ -6,6 +7,6 @@ import { createPaginatedFeedRoute } from "@/lib/paginated-route";
 export const GET = createPaginatedFeedRoute({
   label: "开源关注",
   maxLimit: 50,
-  pageStep: 20,
+  pageStep: OPEN_SOURCE_PAGE_SIZE,
   readPage: getOpenSourcePage,
 });

@@ -5,7 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNewsCategories } from "@/lib/ai-news-types";
+import { AI_NEWS_PAGE_SIZE, formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNewsCategories } from "@/lib/ai-news-types";
 import type { AiNewsListItem } from "@/lib/ai-news-types";
 
 import { aiNewsStreamSnapshot } from "./stream-snapshot";
@@ -30,7 +30,7 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
     HTMLDivElement
   >({
     apiPath: "/api/ai-news",
-    pageSize: 50,
+    pageSize: AI_NEWS_PAGE_SIZE,
     loadErrorMessage: "暂时无法加载更多每日动态。",
     initialHasMore,
     initialItems,

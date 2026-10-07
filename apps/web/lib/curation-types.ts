@@ -1,6 +1,8 @@
 import { UtcDateTimeString, UrlString } from "@site/effect/schema";
 import { Effect, Schema, Struct } from "effect";
 
+export const CURATION_PAGE_SIZE = 20;
+
 /**
  * 公开策展投影（curation.sqlite `content_json`）的唯一结构定义：
  * Effect Schema 同时承担运行时校验与静态类型推导，避免手写类型与校验规则漂移。

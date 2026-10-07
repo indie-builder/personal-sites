@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
+import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import type { CurationListItem } from "@/lib/curation-types";
 import { XVideoPlayer } from "@/components/x-video-player";
 import { useStreamDate } from "@/components/use-stream-date";
@@ -118,7 +119,7 @@ export function CurationStream({
     HTMLOListElement
   >({
     apiPath,
-    pageSize: 20,
+    pageSize: CURATION_PAGE_SIZE,
     loadErrorMessage,
     initialHasMore,
     initialItems,

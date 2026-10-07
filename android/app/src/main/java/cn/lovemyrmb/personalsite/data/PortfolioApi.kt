@@ -95,6 +95,20 @@ data class PortfolioMeta(
     val attribution: String = "",
 )
 
+private fun feedKey(collection: String, q: String, cat: String, theme: String) = "$collection|$q|$cat|$theme"
+
+class PortfolioMetadata internal constructor(private val entries: Map<String, PortfolioMeta> = emptyMap()) {
+    fun forFilter(collection: String, q: String, cat: String, theme: String): PortfolioMeta =
+        entries[feedKey(collection, q, cat, theme)]
+            ?: entries.entries.lastOrNull { it.key.startsWith("$collection|") }?.value
+            ?: PortfolioMeta()
+
+    internal fun withMeta(key: String, meta: PortfolioMeta) = PortfolioMetadata(entries + (key to meta))
+
+    override fun equals(other: Any?) = other is PortfolioMetadata && entries == other.entries
+    override fun hashCode() = entries.hashCode()
+}
+
 /** 落地页产品列表状态：items 为 null 表示尚未成功加载过。 */
 data class PortfolioProductsState(
     val items: List<PortfolioProduct>? = null,
@@ -110,8 +124,8 @@ class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
     private val _products = MutableStateFlow(PortfolioProductsState())
     val products: StateFlow<PortfolioProductsState> = _products.asStateFlow()
 
-    private val _meta = MutableStateFlow<Map<String, PortfolioMeta>>(emptyMap())
-    val meta: StateFlow<Map<String, PortfolioMeta>> = _meta.asStateFlow()
+    private val _meta = MutableStateFlow(PortfolioMetadata())
+    val meta: StateFlow<PortfolioMetadata> = _meta.asStateFlow()
 
     private val feeds = object : LinkedHashMap<String, PagedFeed<PortfolioItem>>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PagedFeed<PortfolioItem>>) = size > 8
@@ -141,8 +155,6 @@ class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
         }
     }
 
-    fun feedKey(collection: String, q: String, cat: String, theme: String) = "$collection|$q|$cat|$theme"
-
     fun feed(collection: String, q: String, cat: String, theme: String): PagedFeed<PortfolioItem> {
         val key = feedKey(collection, q, cat, theme)
         synchronized(feeds) { return feeds.getOrPut(key) { createFeed(key, collection, q, cat, theme) } }
@@ -151,7 +163,7 @@ class PortfolioViewModel(private val api: PortfolioApi) : ViewModel() {
     private fun createFeed(key: String, collection: String, q: String, cat: String, theme: String) =
         PagedFeed(viewModelScope, idOf = PortfolioItem::id) { offset ->
             val page = api.collection(collection, q, cat, theme, offset)
-            _meta.value = _meta.value + (key to PortfolioMeta(page.total, page.categories, page.topics, page.attribution))
+            _meta.value = _meta.value.withMeta(key, PortfolioMeta(page.total, page.categories, page.topics, page.attribution))
             FeedPage(page.hasMore, page.items)
         }
 }

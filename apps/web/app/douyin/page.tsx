@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { CurationStream } from "@/components/curation-stream";
 import { FeedPage } from "@/components/page-shell";
 import { getDouyinCurationPage } from "@/lib/curation";
+import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import { withCanonical } from "@/lib/metadata";
 
 // 与 /curation 一致：策展投影随部署打包进 data/curation.sqlite，本页读本地库；
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 async function DouyinFeed() {
-  const douyinPage = await Effect.runPromise(getDouyinCurationPage(0, 20));
+  const douyinPage = await Effect.runPromise(getDouyinCurationPage(0, CURATION_PAGE_SIZE));
   return (
     <CurationStream
       apiPath="/api/douyin"
