@@ -3,13 +3,18 @@ import type { Browser } from "@e2e-dev/web";
 // e2e 框架没有 emulateMedia({ reducedMotion })（文档列为 missing），web 引擎也不模拟
 // prefers-reduced-motion。改写 matchMedia 只让此后的调用读到 reduce：不改变 CSS
 // @media (prefers-reduced-motion) 规则，也不更新已创建的 MediaQueryList 或派发
-// change 事件。现有用例只依赖两处现读场景（初始化补丁、栏目点击事件内的门控判定）；
-// useReducedMotion 等既有订阅不受补丁影响，新增依赖它们的用例需另行处理。
+// change 事件。只认两种实际出现的查询形态：显式 ": reduce"（站内组件的直读）与裸
+// 特性形式 "(prefers-reduced-motion)"（motion 库模块初始化的现读）——init script 版在
+// 页面脚本前安装即可让 motion 的 useReducedMotion 初始化读到 reduce。这不是完整的
+// 媒体仿真：复合与 not 否定查询不做语义特判（子串命中两形态之一即按 reduce 返回）；
+// 已初始化的订阅（change 事件）仍不受补丁影响，依赖它们的现读场景需另行处理。
 function patchMatchMediaForReducedMotion() {
   const nativeMatchMedia = window.matchMedia.bind(window);
   window.matchMedia = (query: string) => {
     const mql = nativeMatchMedia(query);
-    if (!mql.matches && /prefers-reduced-motion:\s*reduce/.test(query)) {
+    const asksReducedMotion = /\(\s*prefers-reduced-motion\s*\)/u.test(query)
+      || /\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/u.test(query);
+    if (!mql.matches && asksReducedMotion) {
       return {
         media: mql.media,
         matches: true,

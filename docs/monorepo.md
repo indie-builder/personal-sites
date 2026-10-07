@@ -2,7 +2,7 @@
 
 | 目录 | 包名 | 所有权 |
 | --- | --- | --- |
-| `apps/web` | `@site/web` | Next.js 页面、API、组件、Web 单测与 Playwright |
+| `apps/web` | `@site/web` | Next.js 页面、API、组件、Web 单测与浏览器 e2e（e2e 运行器 + Playwright 留守件） |
 | `tools/content` | `@site/content` | 抓取、离线分析、同步、归档、向量索引与 Node 测试 |
 | `packages/effect` | `@site/effect` | Effect I/O 错误边界与公共 Schema 基础约束 |
 | `packages/public-data` | `@site/public-data` | 公开数据 schema、SQLite 工具、每日动态同步/归档、健康检查 |
@@ -22,6 +22,7 @@ pnpm lint
 pnpm test
 pnpm build
 pnpm test:e2e
+pnpm test:e2e:touch
 pnpm --filter @site/web exec vitest run tests/ai-news-hybrid.test.ts
 pnpm --filter @site/content test
 pnpm exec turbo run build test --dry=json     # 只看任务依赖，不运行任务
@@ -29,7 +30,7 @@ pnpm exec turbo run build test --dry=json     # 只看任务依赖，不运行�
 
 Web 源码直接位于 `apps/web/app/`、`apps/web/components/`、`apps/web/lib/`；内容工具位于 `tools/content/modules/`、`tools/content/lib/`、`tools/content/scripts/`。查找未知文件先从所属目录的 `rg --files` 定位；第三方依赖从实际消费它的 workspace 解析，不假定在根 `node_modules` 可见。
 
-同一 `apps/web` 目录只运行一个 Next dev 实例，实时验证复用已有服务。Playwright 独占 7100 端口，`pnpm test:e2e` 默认自己构建并启动生产服务，这次成功构建可计入交付验证。若刚对同一份未变化源码执行过 `pnpm build`，可用 `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e` 只启动该产物；源码变化后重新构建。该开关不复用其他进程、不跳过测试，也不能在缺少生产产物时使用。
+同一 `apps/web` 目录只运行一个 Next dev 实例，实时验证复用已有服务。浏览器 e2e 有两个入口，都独占 7100 端口：`pnpm test:e2e` 走 e2e 运行器，先构建再自起生产服务并全量收集 `e2e/*.e2e.ts`，这次成功构建可计入交付验证；`pnpm test:e2e:touch` 走 Playwright 只收集 `e2e/*.spec.ts` 留守件（触摸设备与 `prefers-reduced-motion` CSS 用例），默认自建自启生产服务。若刚对同一份未变化源码执行过 `pnpm build`，可用 `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch` 只启动该产物；源码变化后重新构建。该开关只作用于 Playwright 入口，不复用其他进程、不跳过测试，也不能在缺少生产产物时使用。
 
 TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版本或既有 peer exceptions。数据操作命令例如 `pnpm ai-news:archive`、`pnpm curation:sync`、`pnpm github:starred:daily` 保留在根目录，转发给内容管道；它们会访问或写入真实数据，不是验证命令，不挂到 Turbo 的 build/test 依赖中。
 

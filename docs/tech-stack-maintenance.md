@@ -78,7 +78,7 @@ JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`
 | 范围 | 额外验证 |
 | --- | --- |
 | 依赖与锁文件 | 验证冻结锁文件安装；检查实际解析版本和必要的原生构建脚本 |
-| Web UI / 缓存 | 相关 Playwright 回归；用 ego lite 检查真实页面、编译问题和浏览器错误；缓存变更验证生产路由分类及 MISS / HIT |
+| Web UI / 缓存 | 相关浏览器 e2e 回归（`pnpm test:e2e`）；用 ego lite 检查真实页面、编译问题和浏览器错误；缓存变更验证生产路由分类及 MISS / HIT |
 | Android | 按 README 构建 Debug、运行 JVM 单测和仪器测试；核对实际 Kotlin / 插件版本 |
 | iOS | 按 README 构建并运行相关测试；不把语言模式当编译器版本 |
 | Remotion | 类型检查、Remotion 子包版本一致、实际渲染；渲染器 / 媒体处理升级比较帧数、音轨、节拍同步与已验收产物 |

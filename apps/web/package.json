@@ -9,8 +9,8 @@
     "lint": "oxlint --deny-warnings app components e2e lib scripts tests '*.config.{js,mjs,ts}'",
     "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
     "test": "node scripts/prepare-data.mjs && vitest run",
-    "test:e2e": "playwright test",
-    "test:e2e:agent": "pnpm build && node scripts/e2e-agent-run.mjs"
+    "test:e2e": "pnpm build && node scripts/e2e-agent-run.mjs",
+    "test:e2e:touch": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.71",
@@ -35,7 +35,6 @@
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
     "@e2e-dev/web": "0.13.0",
     "axe-core": "4.13.0",
     "@playwright/test": "1.63.0",

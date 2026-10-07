@@ -2,7 +2,10 @@ import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
 
-test("public discovery endpoints remain machine readable", async ({ app }) => {
+// 健康断言打管理端 /api/health/*，需要 SUPABASE_SERVICE_ROLE_KEY（CI 按设计无此凭据，
+// 实测回 {"healthy":false}）。仅该用例打 admin 标签：CI e2e 行 --exclude-tag admin 排除，
+// 本地 .env.local 有凭据仍全量收集；同文件无障碍用例不依赖凭据，照常进 CI。
+test("public discovery endpoints remain machine readable", { tags: ["admin"] }, async ({ app }) => {
   for (const [path, type] of [
     ["/robots.txt", "text/plain"],
     ["/sitemap.xml", "application/xml"],

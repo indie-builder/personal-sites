@@ -38,9 +38,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Use `pnpm` with Node.js `>=24.21.0`; the package manager is pinned in `package.json`.
 - Default dev startup is domain-based via portless: `pnpm dev:domain` dispatches to `apps/web` and serves `https://personal-site.localhost` (fixed app port 3000). Plain `pnpm dev` stays available for raw-port use.
 - For app code or configuration changes, run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. For documentation-only changes, verify referenced commands/paths and run `git diff --check`; no app build is required.
-- `pnpm test` runs package tests through Turborepo (Vitest and Node); Playwright is separate (`pnpm test:e2e`). Run relevant browser regressions for changed UI flows in addition to live verification below.
+- `pnpm test` runs package tests through Turborepo (Vitest and Node); browser E2E is separate: `pnpm test:e2e` drives the e2e runner over `apps/web/e2e/*.e2e.ts`, and `pnpm test:e2e:touch` drives Playwright over the `*.spec.ts` holdouts (touch-device and `prefers-reduced-motion` CSS cases). Run relevant browser regressions for changed UI flows in addition to live verification below.
 - Keep the intentional TS7 setup in `scripts/tsc7.mjs` and the peer exceptions in `pnpm-workspace.yaml`; lint uses oxlint/oxc-parser. Do not downgrade TypeScript to satisfy the unused typescript-eslint fallback's peer cap.
-- Reuse the running Web dev server: Next allows one dev instance per app directory. Playwright owns port 7100 and builds by default; after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e` reuses it.
+- Reuse the running Web dev server: Next allows one dev instance per app directory. Browser E2E owns port 7100 and builds by default (`pnpm test:e2e` builds, then the runner starts the production server); after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch` reuses it for the Playwright holdouts.
 
 ## File-Scoped Commands
 

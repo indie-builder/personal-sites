@@ -57,7 +57,8 @@ pnpm dev              # 不使用域名时的本地端口入口
 pnpm typecheck        # TypeScript 7（scripts/tsc7.mjs）
 pnpm lint
 pnpm test             # Vitest + node:test
-pnpm test:e2e         # Playwright 浏览器回归（含无障碍检查）
+pnpm test:e2e         # 浏览器 e2e 回归（e2e 运行器，含无障碍检查）
+pnpm test:e2e:touch   # Playwright 留守件（触摸设备与 prefers-reduced-motion CSS 用例）
 pnpm build
 pnpm focus:status     # 汇总同步状态、公开 SQLite 与 Ask 索引健康度
 pnpm health:production # 连续三次探测线上统一健康端点

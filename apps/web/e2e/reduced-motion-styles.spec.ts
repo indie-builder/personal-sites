@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+// 留守件（与 curation-detail-responsive.spec.ts 同类）：两条用例断言的均是
+// prefers-reduced-motion CSS @media 规则生效后的计算样式（降级声明源顺序的回归）。
+// e2e 运行器（@e2e-dev/web）没有 emulateMedia，引擎也不模拟该媒体特性；matchMedia
+// 补丁只影响 JS 现读，改不了 CSS 级联，这些断言无法等价表达。
+
 // 降级规则的源顺序回归：reduce 覆盖必须排在同特异性的正常声明之后，
 // 这里断言的是真实页面样式表里的计算样式，而不是 CSS 文本。
 test("stream error fade is neutralized under reduced motion and intact otherwise", async ({ page }) => {
