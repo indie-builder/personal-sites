@@ -63,7 +63,7 @@ JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`
 - 安全公告同时记录依赖路径、生产或开发范围、影响条件及是否已有补丁；安装了受影响版本不等于已证明实际可利用。
 - 优先使用正常依赖更新；上游范围无法解决时才加入最小、兼容的 override，并在后续核查是否仍需要。
 - 已停止维护但无替代授权时记录风险，不破坏现有能力。运行时优先部署平台支持的 LTS。
-- Node 运行时以部署平台当前支持的最大稳定 major 为上界（Vercel 以官方版本页为准，现为 24.x），`engines.node` 保留实际所需最低版本并显式带 major 上界（如 `>=24.21.0 <25`），避免范围自动解析到新 major。上界调整按主版本升级规则单独评估，不得改成无界 `>=`、`latest` 或其他缺 major 上界的写法来自动跟进。
+- Node 运行时以部署平台当前支持的最大稳定 major 为上界（Vercel 以官方版本页为准：https://vercel.com/docs/functions/runtimes/node-js/node-js-versions ，具体版本以 manifest 与 README 记录为准），`engines.node` 保留实际所需最低版本并显式带 major 上界（如 `>=24.21.0 <25`），避免范围自动解析到新 major。上界调整按主版本升级规则单独评估，不得改成无界 `>=`、`latest` 或其他缺 major 上界的写法来自动跟进。
 
 ### 4. 最小实施
 
