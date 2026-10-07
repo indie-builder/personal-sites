@@ -42,20 +42,20 @@ test("open-source filters cap Motion stagger and honor reduced motion", async ({
 test("repository loading uses Motion and keeps a static reduced state", async ({ page }) => {
   let releaseTree = () => {};
   let treeGate = new Promise<void>((resolve) => { releaseTree = resolve; });
-  await page.route("**/api/open-source/jakubkrehel-skills/repository/tree", async (route) => {
+  await page.route("**/api/open-source/herdr/repository/tree", async (route) => {
     await treeGate;
     await route.fulfill({
       json: {
         branch: "main",
         entries: [],
-        repository: "jakubkrehel/skills",
-        repositoryUrl: "https://github.com/jakubkrehel/skills",
+        repository: "herdrdev/herdr",
+        repositoryUrl: "https://github.com/herdrdev/herdr",
         truncated: false,
       },
     });
   });
 
-  await page.goto("/open-source/jakubkrehel-skills");
+  await page.goto("/open-source/herdr");
   await page.getByRole("tab", { name: "仓库结构" }).click();
   const loading = page.getByText("正在读取原始仓库结构…");
   const icon = loading.locator("svg");
@@ -77,25 +77,25 @@ test("repository loading uses Motion and keeps a static reduced state", async ({
 });
 
 test("repository entrances fire on fresh data and skip panel hidden round-trips", async ({ page }) => {
-  await page.route("**/api/open-source/jakubkrehel-skills/repository/tree", (route) => route.fulfill({
+  await page.route("**/api/open-source/herdr/repository/tree", (route) => route.fulfill({
     json: {
       branch: "main",
       entries: [{ path: "README.md", size: 12, type: "blob" }],
-      repository: "jakubkrehel/skills",
-      repositoryUrl: "https://github.com/jakubkrehel/skills",
+      repository: "herdrdev/herdr",
+      repositoryUrl: "https://github.com/herdrdev/herdr",
       truncated: false,
     },
   }));
-  await page.route("**/api/open-source/jakubkrehel-skills/repository/file*", (route) => route.fulfill({
+  await page.route("**/api/open-source/herdr/repository/file*", (route) => route.fulfill({
     json: {
       binary: false,
       branch: "main",
       content: "# skills",
-      fileUrl: "https://github.com/jakubkrehel/skills/blob/main/README.md",
+      fileUrl: "https://github.com/herdrdev/herdr/blob/main/README.md",
       path: "README.md",
     },
   }));
-  await page.goto("/open-source/jakubkrehel-skills");
+  await page.goto("/open-source/herdr");
   await page.evaluate(() => {
     const w = window as typeof window & { __repositoryTransitions: string[] };
     w.__repositoryTransitions = [];
@@ -142,20 +142,20 @@ test("repository entrances fire on fresh data and skip panel hidden round-trips"
 test("response committed while the repository panel is hidden returns without replaying the entrance", async ({ page }) => {
   let releaseTree = () => {};
   const treeGate = new Promise<void>((resolve) => { releaseTree = resolve; });
-  await page.route("**/api/open-source/jakubkrehel-skills/repository/tree", async (route) => {
+  await page.route("**/api/open-source/herdr/repository/tree", async (route) => {
     await treeGate;
     await route.fulfill({
       json: {
         branch: "main",
         entries: [{ path: "README.md", size: 12, type: "blob" }],
-        repository: "jakubkrehel/skills",
-        repositoryUrl: "https://github.com/jakubkrehel/skills",
+        repository: "herdrdev/herdr",
+        repositoryUrl: "https://github.com/herdrdev/herdr",
         truncated: false,
       },
     });
   });
 
-  await page.goto("/open-source/jakubkrehel-skills");
+  await page.goto("/open-source/herdr");
   await page.evaluate(() => {
     const w = window as typeof window & { __repositoryTransitions: string[] };
     w.__repositoryTransitions = [];
@@ -192,4 +192,66 @@ test("response committed while the repository panel is hidden returns without re
   const browserContent = treePane.locator("xpath=..");
   await expect.poll(() => browserContent.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
   expect(await browserContent.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
+});
+
+test("document panels bridge click switches, keyboard and reduce stay instant", async ({ page }) => {
+  await page.route("**/api/open-source/herdr/repository/tree", (route) => route.fulfill({
+    json: {
+      branch: "master",
+      entries: [{ path: "README.md", size: 12, type: "blob" }],
+      repository: "herdrdev/herdr",
+      repositoryUrl: "https://github.com/herdrdev/herdr",
+      truncated: false,
+    },
+  }));
+
+  await page.goto("/open-source/herdr");
+  await page.evaluate(() => {
+    const w = window as typeof window & { __panelTransitions: string[] };
+    w.__panelTransitions = [];
+    document.addEventListener("transitionstart", (event) => {
+      const target = event.target as Element | null;
+      if (target?.id === "parsed-document-panel" || target?.id === "repository-document-panel") {
+        w.__panelTransitions.push(`${target.id}:${(event as TransitionEvent).propertyName}`);
+      }
+    });
+  });
+  const readPanelTransitions = () => page.evaluate(() => (
+    window as typeof window & { __panelTransitions?: string[] }
+  ).__panelTransitions ?? []);
+  const resetPanelTransitions = () => page.evaluate(() => {
+    const record = (window as typeof window & { __panelTransitions?: string[] }).__panelTransitions;
+    if (record) record.length = 0;
+  });
+
+  const repositoryTab = page.getByRole("tab", { name: "仓库结构" });
+  const parsedTab = page.getByRole("tab", { name: "中文阅读版" });
+  // 鼠标点击换场：面板本体从透明上浮，只有入场。
+  await repositoryTab.click();
+  await expect.poll(readPanelTransitions).toContain("repository-document-panel:opacity");
+  await expect.poll(readPanelTransitions).toContain("repository-document-panel:transform");
+
+  // 键盘换场（moveTab 方向键与 detail === 0 的合成 click）直接呈现，无过渡事件。
+  await resetPanelTransitions();
+  await repositoryTab.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(parsedTab).toBeFocused();
+  await expect(page.locator("#parsed-document-panel")).toBeVisible();
+  await repositoryTab.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#repository-document-panel")).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await readPanelTransitions()).toEqual([]);
+  await expect(page.locator("#repository-document-panel")).toHaveAttribute("data-instant");
+
+  // reduce 下点击也直接呈现；纯颜色过渡按站内惯例保留。
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await resetPanelTransitions();
+  await parsedTab.click();
+  await expect(page.locator("#parsed-document-panel")).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await readPanelTransitions()).toEqual([]);
+  await expect(page.locator("#parsed-document-panel")).toHaveCSS("transition-property", "none");
+  await expect(parsedTab).toHaveCSS("transition-property", "color");
+  await expect(parsedTab).toHaveCSS("transition-duration", "0.2s");
 });
