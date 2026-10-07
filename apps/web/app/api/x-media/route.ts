@@ -19,8 +19,10 @@ function jsonError(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
 
-function fetchUpstreamOnce(url: URL, headers: Headers, method: "GET" | "HEAD") {
-  return io("x-media.headers", (signal) => fetch(url, { headers, method, redirect: "manual", signal })).pipe(
+function fetchUpstreamOnce(url: URL, headers: Headers, method: "GET" | "HEAD", requestSignal: AbortSignal) {
+  return io("x-media.headers", (signal) => fetch(url, {
+    headers, method, redirect: "manual", signal: AbortSignal.any([requestSignal, signal]),
+  })).pipe(
     Effect.timeoutOrElse({ duration: UPSTREAM_TIMEOUT_MS, orElse: () => Effect.fail(new Error("视频源响应头超时。")) }),
   );
 }
@@ -50,16 +52,21 @@ function getRedirectUrl(location: string | null, base: URL): URL | null {
   }
 }
 
-function fetchUpstream(mediaUrl: URL, headers: Headers, method: "GET" | "HEAD") {
+function fetchUpstream(mediaUrl: URL, headers: Headers, method: "GET" | "HEAD", signal: AbortSignal) {
   return Effect.gen(function* () {
-    const first = yield* fetchUpstreamOnce(mediaUrl, headers, method);
+    const first = yield* fetchUpstreamOnce(mediaUrl, headers, method, signal);
     if (first.status < 300 || first.status >= 400) return first;
 
     const target = getRedirectUrl(first.headers.get("location"), mediaUrl);
+    yield* io("x-media.discard-redirect", () => first.body?.cancel() ?? Promise.resolve());
     if (!target) return null;
-    const second = yield* fetchUpstreamOnce(target, headers, method);
+    const second = yield* fetchUpstreamOnce(target, headers, method, signal);
     // 第二跳仍是重定向则不再跟随，避免被多跳链带出 CDN 域。
-    return second.status >= 300 && second.status < 400 ? null : second;
+    if (second.status >= 300 && second.status < 400) {
+      yield* io("x-media.discard-redirect", () => second.body?.cancel() ?? Promise.resolve());
+      return null;
+    }
+    return second;
   });
 }
 
@@ -73,7 +80,7 @@ async function proxyMedia(request: Request, method: "GET" | "HEAD") {
 
   let upstream: Response | null;
   try {
-    upstream = await Effect.runPromise(fetchUpstream(mediaUrl, headers, method), { signal: request.signal });
+    upstream = await Effect.runPromise(fetchUpstream(mediaUrl, headers, method, request.signal), { signal: request.signal });
   } catch {
     // twimg DNS/连接抖动或响应头超时：与站内其他端点一致返回 JSON，不落 HTML 500。
     return jsonError("视频源暂时无法连接。", 502);

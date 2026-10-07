@@ -13,17 +13,22 @@ export function archiveCutoff(now = new Date()) {
 
 export function openArchive(filename = ARCHIVE_PATH, readonly = true) {
   const db = new Database(filename, { readonly, fileMustExist: readonly });
-  db.function("news_lower", { deterministic: true }, (value) => String(value).toLowerCase());
-  if (!readonly)
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS items (
-      id TEXT PRIMARY KEY, published_at TEXT, synced_at TEXT NOT NULL,
-      content TEXT NOT NULL, selected INTEGER NOT NULL CHECK(selected IN (0,1))
-    );
-    CREATE INDEX IF NOT EXISTS items_date ON items(published_at DESC, id DESC);
-    CREATE TABLE IF NOT EXISTS archive_meta (id INTEGER PRIMARY KEY CHECK(id = 1), value TEXT NOT NULL);
-  `);
-  return db;
+  try {
+    db.function("news_lower", { deterministic: true }, (value) => String(value).toLowerCase());
+    if (!readonly)
+      db.exec(`
+      CREATE TABLE IF NOT EXISTS items (
+        id TEXT PRIMARY KEY, published_at TEXT, synced_at TEXT NOT NULL,
+        content TEXT NOT NULL, selected INTEGER NOT NULL CHECK(selected IN (0,1))
+      );
+      CREATE INDEX IF NOT EXISTS items_date ON items(published_at DESC, id DESC);
+      CREATE TABLE IF NOT EXISTS archive_meta (id INTEGER PRIMARY KEY CHECK(id = 1), value TEXT NOT NULL);
+    `);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }
 
 export function archiveMetadata(db) {
@@ -100,7 +105,7 @@ export function readPublicRows(
       if (changedSince)
         request = request.or(`published_at.gte.${changedSince.cutoff},synced_at.gte.${changedSince.capturedAt}`);
       if (lastId) request = request.gt("id", lastId);
-      const { data, error } = yield* io("readPublicRows", () => request);
+      const { data, error } = yield* io("readPublicRows", (signal) => request.abortSignal(signal));
       if (error) return yield* Effect.fail(new Error(`读取每日动态公开投影失败：${error.message}`));
       if (!data?.length) return rows;
       rows.push(...data);
@@ -175,12 +180,12 @@ export function pruneArchivedRows(client, db, deployed, { now = new Date(), dryR
       for (let offset = 0; offset < ids.length; offset += 100) {
         const batch = ids.slice(offset, offset + 100);
         // synced_at is a compare-and-delete guard against a concurrent sync or backfill.
-        const { error } = yield* io("pruneArchivedRows", () =>
-          client.from("ai_news_public_items").delete().in("id", batch).eq("synced_at", syncedAt),
+        const { error } = yield* io("pruneArchivedRows", (signal) =>
+          client.from("ai_news_public_items").delete().in("id", batch).eq("synced_at", syncedAt).abortSignal(signal),
         );
         if (error) return yield* Effect.fail(new Error(`清理已归档公开投影失败：${error.message}`));
-        const { error: rawError } = yield* io("pruneArchivedRows", () =>
-          client.from("ai_news_items").delete().in("id", batch).lte("synced_at", syncedAt),
+        const { error: rawError } = yield* io("pruneArchivedRows", (signal) =>
+          client.from("ai_news_items").delete().in("id", batch).lte("synced_at", syncedAt).abortSignal(signal),
         );
         if (rawError) return yield* Effect.fail(new Error(`清理已归档原始记录失败：${rawError.message}`));
       }

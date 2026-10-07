@@ -1,8 +1,81 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "../app/api/x-media/route";
+import { GET, HEAD } from "../app/api/x-media/route";
 
 const videoUrl = "https://video.twimg.com/amplify_video/1/vid/avc1/1280x720/video.mp4?tag=1";
+
+afterEach(() => vi.restoreAllMocks());
+
+function upstreamBody(status: number, location?: string) {
+  const cancel = vi.fn();
+  const response = new Response(new ReadableStream({
+    start(controller) { controller.enqueue(new TextEncoder().encode("video-bytes")); },
+    cancel,
+  }), { status, headers: location ? { location } : undefined });
+  return { response, cancel };
+}
+
+it.each([null, "https://evil.example.com/file.mp4"])("cancels a rejected redirect body for location %s", async (location) => {
+  const first = upstreamBody(302, location ?? undefined);
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(first.response);
+  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  expect(response.status).toBe(502);
+  expect(first.cancel).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("cancels the first redirect before following it and leaves the returned body readable", async () => {
+  const first = upstreamBody(302, videoUrl);
+  const second = upstreamBody(200);
+  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(first.response).mockImplementationOnce(async () => {
+    expect(first.cancel).toHaveBeenCalledTimes(1);
+    return second.response;
+  });
+  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  expect(response.status).toBe(200);
+  expect(second.cancel).not.toHaveBeenCalled();
+  const reader = response.body?.getReader();
+  expect(reader).toBeDefined();
+  expect(new TextDecoder().decode((await reader?.read())?.value)).toBe("video-bytes");
+  await reader?.cancel();
+  expect(second.cancel).toHaveBeenCalledTimes(1);
+});
+
+it("cancels both discarded bodies when the second hop also redirects", async () => {
+  const first = upstreamBody(302, videoUrl);
+  const second = upstreamBody(307, videoUrl);
+  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(first.response).mockResolvedValueOnce(second.response);
+  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  expect(response.status).toBe(502);
+  expect(first.cancel).toHaveBeenCalledTimes(1);
+  expect(second.cancel).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the request signal attached to the actual fetch after headers arrive", async () => {
+  const upstream = upstreamBody(200);
+  let transportSignal: AbortSignal | null | undefined;
+  const stopped = vi.fn();
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+    transportSignal = init?.signal;
+    transportSignal?.addEventListener("abort", stopped, { once: true });
+    return upstream.response;
+  });
+  const controller = new AbortController();
+  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`, { signal: controller.signal }));
+  expect(upstream.cancel).not.toHaveBeenCalled();
+  controller.abort();
+  expect(transportSignal?.aborted).toBe(true);
+  expect(stopped).toHaveBeenCalledTimes(1);
+  await response.body?.cancel();
+});
+
+it("preserves successful HEAD responses without cancelling a nonexistent body", async () => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { headers: { "content-length": "10" } }));
+  const response = await HEAD(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  expect(response.status).toBe(200);
+  expect(response.body).toBeNull();
+  expect(response.headers.get("content-length")).toBe("10");
+});
 
 describe("x-media route", () => {
   it("proxies an allowed X MP4 and preserves range playback headers", async () => {

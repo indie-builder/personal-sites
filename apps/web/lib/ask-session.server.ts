@@ -171,6 +171,7 @@ function compactSession(
           "把历史问答压缩为会话摘要，保留用户偏好、目标、未解决问题、前文实体和术语。旧回答不是新的事实依据。不要延续对话，只输出摘要。",
         prompt: `已有摘要：\n${session.summary || "（无）"}\n\n较早的问答：\n${oldTurns.map((turn) => `用户：${turn.question}\n助手：${turn.answer}`).join("\n\n")}`,
         maxOutputTokens: 1_024,
+        maxRetries: 0,
         providerOptions: { anthropic: { thinking: { type: "disabled" } } },
         abortSignal: signal ? AbortSignal.any([signal, runtimeSignal]) : runtimeSignal,
       }),
@@ -205,7 +206,11 @@ export function streamAskAnswer({
     });
     return yield* withSessionLock(
       key,
-      Effect.gen(function* () {
+      Effect.scoped(Effect.gen(function* () {
+        const cancellation = yield* Effect.acquireRelease(
+          Effect.sync(() => new AbortController()),
+          (controller) => Effect.sync(() => controller.abort()),
+        );
         yield* cleanExpiredSessions();
         const existing = yield* readSession(key);
         const model = resolveBigModel(process.env.ASK_MODEL?.trim() || process.env.BIGMODEL_MODEL);
@@ -234,8 +239,9 @@ export function streamAskAnswer({
                 : systemPrompt,
               messages,
               maxOutputTokens: 8_192,
+              maxRetries: 0,
               providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-              abortSignal: signal ? AbortSignal.any([signal, runtimeSignal]) : runtimeSignal,
+              abortSignal: AbortSignal.any([cancellation.signal, runtimeSignal, ...(signal ? [signal] : [])]),
               onError: ({ error }) => {
                 failure = error;
               },
@@ -258,7 +264,7 @@ export function streamAskAnswer({
         yield* writeSession(key, { summary: session.summary, turns: [...session.turns, { question, answer }] }).pipe(
           Effect.catch((error) => Effect.sync(() => console.error("Public ask session persistence failed", error))),
         );
-      }),
+      })),
     );
   });
 }

@@ -1,6 +1,6 @@
-import { Effect } from "effect";
+import { Deferred, Effect } from "effect";
 import { attempt } from "@site/effect";
-import { spawn } from "node:child_process";
+import { acquireSubprocess } from "../../lib/subprocess.mjs";
 import { closeSync, openSync } from "node:fs";
 import path from "node:path";
 
@@ -14,28 +14,15 @@ export function runCommand(command, args, options) {
             if (descriptor !== null) closeSync(descriptor);
           }),
       );
-      yield* Effect.callback((resume) => {
-        const child = spawn(command, args, {
-          cwd: options.cwd,
-          env: { ...process.env, ...options.env },
-          stdio: ["inherit", output ?? "inherit", "inherit"],
-        });
-        child.once("error", (error) => resume(Effect.fail(error)));
-        child.once("exit", (code, signal) =>
-          resume(
-            code === 0
-              ? Effect.void
-              : Effect.fail(
-                  new Error(
-                    `${path.basename(command)} 退出异常（code=${code ?? "null"}, signal=${signal ?? "none"}）。`,
-                  ),
-                ),
-          ),
-        );
-        return Effect.sync(() => {
-          if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-        });
-      });
+      const { closed } = yield* acquireSubprocess(command, args, {
+        cwd: options.cwd,
+        env: { ...process.env, ...options.env },
+        stdio: ["inherit", output ?? "inherit", "inherit"],
+      }, "pipeline.process");
+      const { code, signal } = yield* Deferred.await(closed);
+      if (code !== 0) return yield* Effect.fail(new Error(
+        `${path.basename(command)} 退出异常（code=${code ?? "null"}, signal=${signal ?? "none"}）。`,
+      ));
     }),
   );
 }

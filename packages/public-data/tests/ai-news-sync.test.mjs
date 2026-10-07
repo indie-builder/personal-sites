@@ -4,6 +4,18 @@ import { describe, it } from "node:test";
 
 import { buildSyncRows, fetchFeed, stripEmoji, syncAiNews, toPublicAiNewsItem } from "../src/ai-news/sync.mjs";
 
+function abortableFake(value) {
+  return new Proxy(value, {
+    get(target, key) {
+      if (key === "abortSignal") return () => abortableFake(target);
+      const member = target[key];
+      if (typeof member !== "function") return member;
+      if (key === "then") return member.bind(target);
+      return (...args) => abortableFake(member.apply(target, args));
+    },
+  });
+}
+
 const upstreamItem = {
   category: "ai-models",
   id: "cmssv94cg0h4mroffsb9e7a88",
@@ -21,7 +33,8 @@ const upstreamItem = {
 
 describe("ai news sync", () => {
   const availableStateStore = () => ({
-    acquire: () => Effect.succeed({ acquired: true, etags: {} }),
+    acquire: () => Effect.succeed({ acquired: true, etags: {}, token: {} }),
+    assertOwned: () => Effect.void,
     fail: () => Effect.void,
     succeed: () => Effect.void,
   });
@@ -216,7 +229,7 @@ describe("ai news sync", () => {
     await Effect.runPromise(
       syncAiNews({
         backfill: true,
-        clientFactory,
+        clientFactory: () => abortableFake(clientFactory()),
         env: {
           SUPABASE_SERVICE_ROLE_KEY: "test",
           SUPABASE_URL: "https://example.supabase.co",
@@ -264,9 +277,10 @@ it("interruption aborts the fetch and releases the acquired synchronization leas
   await Effect.runPromiseExit(
     syncAiNews({
       env: { SUPABASE_URL: "https://example.test", SUPABASE_SERVICE_ROLE_KEY: "fixture" },
-      clientFactory: () => client,
+      clientFactory: () => abortableFake(client),
       stateStore: {
-        acquire: () => Effect.succeed({ acquired: true, etags: {} }),
+        acquire: () => Effect.succeed({ acquired: true, etags: {}, token: {} }),
+    assertOwned: () => Effect.void,
         fail: () =>
           Effect.sync(() => {
             failures += 1;

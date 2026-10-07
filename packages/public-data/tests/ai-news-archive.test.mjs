@@ -40,6 +40,7 @@ function fakeClient(rows, mutations = [], fail = false) {
       let cutoff;
       const filters = {};
       const query = {
+        abortSignal() { return query; },
         select() {
           return query;
         },

@@ -98,6 +98,13 @@
       "skillPath": "skills/e2e/SKILL.md",
       "computedHash": "0ff4dfa69e58f911fc25df0ae9d8d367e3a0c44543cef7787724e718a06a9845"
     },
+    "effect": {
+      "source": "indie-builder/agent-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/effect/SKILL.md",
+      "computedHash": "d88417dca5f22fcc80b03ebd4096dfa6113a50cc6bb574bf53f75248cd321e35"
+    },
     "emil-design-eng": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
