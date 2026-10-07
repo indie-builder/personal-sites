@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "./helpers/loader-key";
+import { expect, test, type Page } from "./helpers/loader-key.playwright";
 
 const LONG_MEDIA_DETAIL_PATH = "/curation/2093968800316293400";
 

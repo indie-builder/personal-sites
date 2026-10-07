@@ -1,4 +1,4 @@
-import { expect, test } from "./helpers/loader-key";
+import { expect, test } from "./helpers/loader-key.playwright";
 
 test("retired works routes return 404 and have no navigation", async ({ page, request }) => {
   for (const path of ["/works", "/works/personal-site", "/works/waker"]) {

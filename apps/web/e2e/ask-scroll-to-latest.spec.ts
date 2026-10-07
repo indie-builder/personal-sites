@@ -1,5 +1,5 @@
-import { openAssistant } from "./helpers/assistant";
-import { expect, test } from "./helpers/loader-key";
+import { openAssistant } from "./helpers/assistant.playwright";
+import { expect, test } from "./helpers/loader-key.playwright";
 
 test("Ask gives the scroll-to-latest control a mobile touch target without enlarging desktop", async ({ page }) => {
   await page.setViewportSize({ height: 844, width: 390 });

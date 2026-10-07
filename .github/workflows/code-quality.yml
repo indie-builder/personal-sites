@@ -47,7 +47,9 @@ jobs:
           trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
           curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:7101/rest/v1/ai_news_public_items
           pnpm build
-          PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e ask-flow.spec.ts assistant-drawer.spec.ts ask-scroll-to-latest.spec.ts entry-metadata.spec.ts retired-works.spec.ts
+          PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e ask-flow.spec.ts assistant-drawer.spec.ts ask-scroll-to-latest.spec.ts --pass-with-no-tests
+          # e2e 运行器自起 7100 生产服务器；CI 只跑不依赖 BigModel 与管理端 Supabase 凭据的已搬迁用例。
+          E2E_TELEMETRY_DISABLED=1 pnpm --filter @site/web exec e2e run e2e/entry-metadata.e2e.ts e2e/retired-works.e2e.ts
       - name: Upload Web E2E failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7

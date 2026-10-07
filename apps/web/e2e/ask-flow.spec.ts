@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { openAssistant } from "./helpers/assistant";
+import { openAssistant } from "./helpers/assistant.playwright";
 
 // 键盘激活（Enter，合成 click detail 为 0）直接到达开合终态：本次切换零过渡事件；
 // 指针开合仍走 chevron 旋转与引用淡入过渡。

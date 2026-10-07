@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openAssistant } from "./helpers/assistant";
+import { openAssistant } from "./helpers/assistant.playwright";
 
 test("standalone Ask is retired while the character drawer remains available", async ({ page, request }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });

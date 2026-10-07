@@ -1,13 +1,21 @@
-import { test as base, expect, type Locator, type Page } from "@playwright/test";
+import { test as base } from "@e2e-dev/web";
+import { expect } from "e2e";
+import type { Browser } from "@e2e-dev/web";
 
 export const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
 
-/** 全站 e2e 默认跳过 5s 开机仪式;需要真实播放开场加载的 spec 直接从 @playwright/test 导入。 */
+/**
+ * 全站 e2e 默认跳过 5s 开机仪式；需要真实播放开场加载的用例直接从 @e2e-dev/web 导入 test。
+ * 框架不允许覆写既有 fixture，这里以附加 fixture 注册 init script：
+ * 经由本 test 注册的用例无论是否解构该 fixture，注册期都会执行其 setup。
+ */
 export const test = base.extend({
-  page: async ({ page }, use) => {
-    await page.addInitScript((key) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
-    await use(page);
+  openingLoaderPlayed: async ({ browser }, use) => {
+    await browser.addInitScript((key: string) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
+    await use(undefined);
   },
 });
 
-export { expect, type Locator, type Page };
+export { expect };
+export type { Locator, Screen } from "e2e";
+export type { Browser };

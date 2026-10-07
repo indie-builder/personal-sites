@@ -12,8 +12,8 @@ if (existsSync(envLocalPath)) process.loadEnvFile(envLocalPath);
 const hasBigModelKey = Boolean(process.env.BIGMODEL_API_KEY?.trim());
 
 export default {
-  // 与 apps/web/e2e/ 下的 Playwright 套件共存，只收集 agent 冒烟目录。
-  tests: ["e2e/agent/**/*.e2e.ts"],
+  // 宽匹配一次定型：波次搬迁只增删 e2e/*.e2e.ts 文件，零配置改动。
+  tests: ["e2e/*.e2e.ts", "e2e/agent/**/*.e2e.ts"],
   targets: [
     {
       engine: web(),
