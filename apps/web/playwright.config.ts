@@ -7,6 +7,9 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   reporter: "line",
+  // e2e/ 同时是 e2e 运行器（*.e2e.ts，入口 pnpm test:e2e）与 Playwright（*.spec.ts，入口
+  // pnpm test:e2e:touch）的目录；Playwright 的 testMatch 只认 *.spec.ts 留守件——触摸设备
+  // 仿真与 prefers-reduced-motion CSS 用例，见各 spec 头注释。
   testDir: "./e2e",
   timeout: 30_000,
   use: {
