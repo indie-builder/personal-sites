@@ -20,6 +20,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test test:repo",
     "test:e2e": "pnpm --filter @site/web test:e2e",
+    "test:e2e:agent": "pnpm --filter @site/web test:e2e:agent",
     "health:production": "node scripts/check-production-health.mjs",
     "supabase:push": "node scripts/supabase-db-push.mjs",
     "git:safety": "node scripts/verify-git-safety.mjs --range HEAD",

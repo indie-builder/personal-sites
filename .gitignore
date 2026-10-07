@@ -57,3 +57,5 @@ test-results/
 # Generated Web deployment copies; canonical public snapshots stay in /data.
 /apps/web/data/
 /apps/web/var/
+# e2e agent 冒烟运行产物（报告、回放缓存、应用日志）。
+/apps/web/.e2e/
