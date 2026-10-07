@@ -58,7 +58,9 @@ export async function POST(request: Request) {
           signal: request.signal,
         });
         if (sources.length === 0) {
-          const message = "现有公开资料不足以确认这个问题。你可以换一个更具体的关键词，或切换检索范围后再试。";
+          const message = parsed.success.format === "openui"
+            ? "现有公开资料不足以确认这个问题。你可以换一个更具体的关键词，或在问题里补充相关背景后再试。"
+            : "现有公开资料不足以确认这个问题。你可以换一个更具体的关键词，或切换检索范围后再试。";
           write("text", { delta: parsed.success.format === "openui"
             ? `root = Stack([TextContent(${JSON.stringify(message)})])`
             : message });
