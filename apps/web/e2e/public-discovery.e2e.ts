@@ -3,8 +3,8 @@ import { expect } from "e2e";
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
 
 // 健康断言打管理端 /api/health/*，需要 SUPABASE_SERVICE_ROLE_KEY（CI 按设计无此凭据，
-// 实测回 {"healthy":false}）。整文件打 admin 标签：CI e2e 行 --exclude-tag admin 排除，
-// 本地 .env.local 有凭据仍全量收集。
+// 实测回 {"healthy":false}）。仅该用例打 admin 标签：CI e2e 行 --exclude-tag admin 排除，
+// 本地 .env.local 有凭据仍全量收集；同文件无障碍用例不依赖凭据，照常进 CI。
 test("public discovery endpoints remain machine readable", { tags: ["admin"] }, async ({ app }) => {
   for (const [path, type] of [
     ["/robots.txt", "text/plain"],
@@ -34,7 +34,7 @@ test("public discovery endpoints remain machine readable", { tags: ["admin"] }, 
   expect(await archive.json()).toMatchObject({ digest: expect.any(String) });
 });
 
-test("curation feeds have no automatically detectable accessibility violations", { tags: ["admin"] }, async ({ app, browser }) => {
+test("curation feeds have no automatically detectable accessibility violations", async ({ app, browser }) => {
   // reducedMotion 排除入场动画中途测出的对比度假阳性。
   await emulateReducedMotion(browser);
   // AxeBuilder 绑定 Playwright Page；框架无底层 page 通道，改为注入同版本 axe-core
