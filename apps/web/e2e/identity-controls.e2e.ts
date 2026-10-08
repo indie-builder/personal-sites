@@ -27,6 +27,7 @@ test("theme toggle persists across client navigation, reload, and toggles back",
   expect(detailHref ?? "", "列表必须渲染剪报详情链接").toMatch(/^\/curation\//u);
   await detailLink.click();
   await expect(browser).toHaveURL(new RegExp(`${detailHref}$`, "u"));
+  await expect(browser.locator("article h1")).toBeVisible();
   const detailTitle = (await browser.locator("article h1").textContent())?.trim() ?? "";
   expect(detailTitle, "详情标题必须非空").not.toBe("");
   await expect.poll(async () => (await readTheme(browser)).dataset).toBe(switched);

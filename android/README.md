@@ -27,7 +27,7 @@ export JAVA_HOME=/Users/xbjt/Library/Java/JavaVirtualMachines/jdk-17.0.20.1+1/Co
 ./gradlew :app:installDebug         # 安装到已连接设备/模拟器
 ```
 
-- 使用 AGP 9 内置 Kotlin 和新 DSL，不再应用 `org.jetbrains.kotlin.android` 或设置退出开关；Compose 与序列化编译器插件统一使用版本目录中的 Kotlin 2.4.20。`gradle.properties` 里 `org.gradle.java.home` 指向本机 JDK 17 路径（daemon 用），换机器需调整。
+- 使用 AGP 9 内置 Kotlin 和新 DSL，不再应用 `org.jetbrains.kotlin.android` 或设置退出开关；Compose 与序列化编译器插件统一使用版本目录中的 Kotlin 2.4.21。`gradle.properties` 里 `org.gradle.java.home` 指向本机 JDK 17 路径（daemon 用），换机器需调整。
 - 图标由 `ui/icons/SiteIcons.kt` 内联（Material Symbols 源码矢量），不依赖已停更的 `material-icons-extended`。
 - 性能：只读数据模型经 `stability_config.conf` 标记 Compose 稳定（跳过无效重组）；视频卡片可见时经 `data/VideoPreloader.kt`（media3 DefaultPreloadManager + SimpleCache，64MB LRU）预取片头 5 秒到磁盘缓存，播放用共享缓存的播放器点开即播。
 - `local.properties` 由 Android Studio 生成（`sdk.dir`），不入库。
