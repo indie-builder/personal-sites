@@ -2,8 +2,9 @@ import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
 
-// 头像粒子聚散的行为契约：进站从四周聚合后静止、点击/键盘切换聚散、
-// 墨色随主题、移动端飞行 ghost 靠静态点描兜底。断言读画布真实像素
+// 头像粒子聚散的行为契约：会话已播过开屏仪式时进站直接停在成像终态、
+// 点击/键盘切换聚散、墨色随主题、移动端飞行 ghost 靠静态点描兜底。
+// 首访的名字序列契约在 avatar-name-intro.e2e.ts。断言读画布真实像素
 // （成像落在中心、散开清空中心）与可访问名称，不镜像实现细节。
 const settle = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 

@@ -127,6 +127,21 @@ test("avatar animation lands on its current target when reduced motion turns on 
   expect(await readCenterDensity(page)).toBeLessThan(0.005);
 });
 
+test("name intro collapses straight to the avatar when reduced motion turns on mid-spell", async ({ page }) => {
+  // 首访完整仪式（Playwright 每用例全新 context 即全新会话），名字序列开演后
+  // 开启 reduce：序列取消，直接停在头像成像终态，而不是定格在半成的字。
+  await page.goto("/curation");
+  await expect(page.locator(".opening-loader")).toHaveCount(0, { timeout: 15_000 });
+  const avatar = page.locator(".curation-home__avatar");
+  await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+  // 首字成形：中心成墨但密度远低于成像脸的实心墨。
+  await expect.poll(() => readCenterDensity(page), { timeout: 15_000 }).toBeGreaterThan(0.03);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => readCenterDensity(page), { timeout: 1_000 }).toBeGreaterThan(0.35);
+  await page.waitForTimeout(400);
+  expect(await readCenterDensity(page)).toBeGreaterThan(0.35);
+});
+
 test("avatar animation freezes while hidden and resumes on visibility return", async ({ page }) => {
   await skipOpeningLoader(page);
   await page.goto("/curation");
