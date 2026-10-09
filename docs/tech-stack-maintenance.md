@@ -114,3 +114,24 @@ JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`
 ```
 
 报告保持简洁，提供必要的文件或 PR 链接。版本检查失败、无补丁公告和停止维护的依赖都要保留在结果里。不要承诺会自动定期执行；需要持久调度时另行配置 GitHub Actions 等服务，复用本 SOP 的规则。
+
+## 版本基线（2026-10-09）
+
+README 只保留栈型概述。下表是当日核对的全量版本快照，仅作参考；维护时仍按本文流程从仓库与官方发布源实时核对，精确依赖以各工作区 `package.json`、`pnpm-lock.yaml` 和 `android/gradle/libs.versions.toml` 为准。
+
+| 层 | 版本 |
+| --- | --- |
+| Web | Next.js 16.4.0（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.4 / `@shadcn/react` 0.3.1、Radix UI 1.7.0、Motion 14.0.0、Lucide 1.52.0；部署在 Vercel |
+| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，Vercel 支持上限 24.x）、pnpm 12.10.1、TypeScript 7.0.2、Effect 4.0.1、Turbo 2.11.7、oxlint 1.87.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.3 与 Playwright 1.63.0 |
+| 数据与 AI | Supabase JS 2.117.3、better-sqlite3 13.0.3、AI SDK 7.0.134 / Anthropic 4.0.77、Pi 1.0.4、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
+| 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
+| 原生客户端（iOS） | Swift 6 语言模式、SwiftUI、iOS 26+，无第三方依赖 |
+
+## 依赖审计遗留
+
+2026-10-09 依赖审计剩余 2 项告警：
+
+- `braces` 3.0.3 高危来自 shadcn CLI 的间接依赖，上游暂无修复版（[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，跟踪 [#73](https://github.com/indie-builder/personal-sites/issues/73)）。
+- KaTeX 低危（[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)）正常依赖更新无法覆盖修复，跨版本 override 尚待兼容验证，跟踪 [#74](https://github.com/indie-builder/personal-sites/issues/74)。
+
+另有两条运行时约束。Node.js 26.10.0 属 Current 发布线，待部署平台支持后再评估 major 上界升级。`@steipete/bird` 0.8.0 已停止维护且无新版，当前仅用于离线抓取工具，按既有授权保留。
