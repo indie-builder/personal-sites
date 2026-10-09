@@ -32,7 +32,19 @@ Web 源码直接位于 `apps/web/app/`、`apps/web/components/`、`apps/web/lib/
 
 同一 `apps/web` 目录只运行一个 Next dev 实例，实时验证复用已有服务。浏览器 e2e 有两个入口，都独占 7100 端口：`pnpm test:e2e` 走 e2e 运行器，先构建再自起生产服务并全量收集 `e2e/*.e2e.ts`，这次成功构建可计入交付验证；`pnpm test:e2e:touch` 走 Playwright 只收集 `e2e/*.spec.ts` 留守件（触摸设备与 `prefers-reduced-motion` CSS 用例），默认自建自启生产服务。若刚对同一份未变化源码执行过 `pnpm build`，可用 `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch` 只启动该产物；源码变化后重新构建。该开关只作用于 Playwright 入口，不复用其他进程、不跳过测试，也不能在缺少生产产物时使用。
 
-TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版本或既有 peer exceptions。数据操作命令例如 `pnpm ai-news:archive`、`pnpm curation:sync`、`pnpm github:starred:daily` 保留在根目录，转发给内容管道；它们会访问或写入真实数据，不是验证命令，不挂到 Turbo 的 build/test 依赖中。
+TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版本或既有 peer exceptions。数据操作命令例如 `pnpm ai-news:archive`、`pnpm curation:sync`、`pnpm github:starred:daily` 保留在根目录，转发给内容管道；它们会访问或写入真实数据，不是验证命令，不挂到 Turbo 的 build/test 依赖中。各来源的手动入口与定时调度汇总见[数据同步总览](data-sync.md)。
+
+## 功能到代码路径
+
+| 要追踪的功能 | 写入或入口 | 读取与界面 |
+| --- | --- | --- |
+| 每日动态 | `packages/public-data/src/ai-news/sync.mjs` → Supabase 公开投影 | `apps/web/lib/ai-news.ts` → `apps/web/app/ai-news/`、`apps/web/app/api/ai-news/` 与首页 |
+| X / 抖音 / GitHub Star | `tools/content/scripts/` 调度 `tools/content/modules/x-sync/`、`tools/content/modules/douyin-sync/`、`tools/content/modules/github-starred/` → `data/curation.sqlite` | `apps/web/lib/curation.ts`、`apps/web/lib/open-source.ts` → 栏目与公开 GET API |
+| 问一问 | `apps/web/app/api/ask/route.ts` → `apps/web/lib/ask-search.server.ts`、`apps/web/lib/ask-session.server.ts` | `apps/web/components/use-ask-conversation.ts` 管会话、`apps/web/components/ask-sse.ts` 解析流；`apps/web/components/ask-chat.tsx` → `apps/web/components/ask-message.tsx` → `apps/web/components/ask-answer.tsx` 渲染抽屉、消息与 OpenUI；原生客户端复用公开 API |
+| 本地向量检索 | `tools/content/scripts/local-vectors.mjs` → `tools/content/modules/local-vectors/indexer.mjs`、`tools/content/modules/local-vectors/search.mjs` | 私有文件与公开 Ask 投影只进入本机忽略索引；Web 不读取该索引 |
+| 原生客户端 | [Android data](../android/app/src/main/java/cn/lovemyrmb/personalsite/data/) 与 [iOS Data](../ios/ChenYuanSite/Data/) | 各自原生界面消费公开 GET API 与 `POST /api/ask`；构建命令见各端 README |
+
+页面布局和移动端行为以[前端架构](frontend-architecture.md)与 [DESIGN.md](../DESIGN.md)为准；私有输入和公开投影的界限见[敏感数据说明](sensitive-data.md)。
 
 ## 数据与环境变量
 

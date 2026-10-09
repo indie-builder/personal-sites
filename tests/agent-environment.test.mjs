@@ -7,7 +7,7 @@ import test from "node:test";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
-const documents = ["README.md", "AGENTS.md", "apps/web/AGENTS.md", "GLOSSARY.md", "docs/monorepo.md", "docs/sensitive-data.md", "docs/frontend-architecture.md", ".agents/skills/verify-personal-sites/SKILL.md"];
+const documents = ["README.md", "README.zh-CN.md", "AGENTS.md", "apps/web/AGENTS.md", "GLOSSARY.md", "docs/monorepo.md", "docs/sensitive-data.md", "docs/frontend-architecture.md", "docs/data-sync.md", "docs/tech-stack-maintenance.md", ".agents/skills/verify-personal-sites/SKILL.md"];
 const text = (file) => readFileSync(path.join(root, file), "utf8");
 // Generated framework guides resolve paths from their installed package, not the repo root.
 const authoredText = (file) => text(file).replace(/<!-- BEGIN:[\s\S]*?<!-- END:[^>]*-->/g, "");
