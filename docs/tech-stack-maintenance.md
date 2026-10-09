@@ -4,7 +4,7 @@
 
 ## 触发与范围
 
-项目 Skill 源文件为 `.agents/skills/maintain-stack/SKILL.md`，Claude Code 通过 `.claude/skills/maintain-stack` 相对链接发现它。
+项目 Skill 源文件为 `.agents/skills/maintain-stack/SKILL.md`，Claude Code 通过 `.claude/skills` 目录软链接发现它。
 
 | 输入 | 行为 |
 | --- | --- |

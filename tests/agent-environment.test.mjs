@@ -20,19 +20,16 @@ const nonSourcePaths = new Set([
   "tools/smaug/bookmarks.md",
 ]);
 
-test("tracked Claude skill entries are relative links to the sole canonical skill directory", () => {
+test(".claude/skills is one directory symlink onto the sole canonical skill directory", () => {
+  const entry = path.join(root, ".claude/skills");
+  assert.ok(lstatSync(entry).isSymbolicLink(), ".claude/skills must be a directory symlink");
+  assert.equal(readlinkSync(entry), "../.agents/skills");
+  assert.equal(realpathSync(entry), realpathSync(path.join(root, ".agents/skills")));
   const names = tracked.filter((file) => /^\.agents\/skills\/[^/]+\/SKILL\.md$/.test(file)).map((file) => file.split("/")[2]);
   assert.ok(names.length > 0);
-  for (const name of names) {
-    const entry = path.join(root, ".claude/skills", name);
-    assert.ok(lstatSync(entry).isSymbolicLink(), name);
-    assert.equal(readlinkSync(entry), `../../.agents/skills/${name}`, name);
-    assert.equal(realpathSync(entry), realpathSync(path.join(root, ".agents/skills", name)), name);
-  }
-  for (const file of tracked.filter((file) => file.startsWith(".claude/skills/"))) {
-    assert.equal(file.split("/").length, 3, `Duplicate skill content: ${file}`);
-    assert.ok(existsSync(path.join(root, file, "SKILL.md")), `Broken skill entry: ${file}`);
-  }
+  for (const name of names) assert.ok(existsSync(path.join(entry, name, "SKILL.md")), `Unreachable through the directory link: ${name}`);
+  assert.ok(tracked.includes(".claude/skills"), "The directory symlink must be tracked");
+  assert.deepEqual(tracked.filter((file) => file.startsWith(".claude/skills/")), [], "Skill content must only be tracked in the canonical directory");
 });
 
 test("navigation documents resolve their explicit local links and source paths", () => {
