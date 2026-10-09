@@ -1,4 +1,4 @@
-# 陈远小站 · A running engineering archive
+# 小站 · A running engineering archive
 
 [English](README.md) · [中文](README.zh-CN.md)
 
