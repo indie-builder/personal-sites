@@ -1,0 +1,39 @@
+.canvasBar {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: flex-start;
+  pointer-events: none;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0 16px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 82%);
+  color: var(--color-ink, #202020);
+  font-size: 13px;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.back:hover,
+.back:focus-visible {
+  background: #fff;
+}
+
+:global(html[data-curation-theme="dark"]) .back {
+  background: rgb(32 32 32 / 82%);
+  color: var(--color-ink, #fafafa);
+}
+
+:global(html[data-curation-theme="dark"]) .back:hover,
+:global(html[data-curation-theme="dark"]) .back:focus-visible {
+  background: #202020;
+}

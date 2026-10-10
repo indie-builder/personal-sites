@@ -1,0 +1,76 @@
+'use client';
+
+import { useLayoutEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
+
+// 常驻单例翻页监听：page 组件只把翻页目标写进 <html> dataset（useLayoutEffect，
+// paint 前就绪），keydown 在模块级只注册一次——详情→详情导航的过渡窗口内监听不卸，
+// 消除提交边界丢键。HMR 重载模块时用 window 标记防重复注册。
+const NAV_LISTENER_FLAG = '__detailNavListener__';
+
+let navRouter: ReturnType<typeof useRouter> | null = null;
+
+function ensureNavListener() {
+  const w = window as unknown as Record<string, boolean>;
+  if (w[NAV_LISTENER_FLAG]) return;
+  w[NAV_LISTENER_FLAG] = true;
+  window.addEventListener('keydown', (event) => {
+    // 灯箱打开时让灯箱消费方向键（灯箱翻图），不跳详情页
+    if (document.body.dataset.lightboxOpen === 'true') return;
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.repeat
+    )
+      return;
+    // 焦点在输入控件或局部滚动区（媒体轮播）内时，方向键留给局部
+    const target = event.target as HTMLElement | null;
+    if (
+      target?.closest?.(
+        'input, textarea, select, button, a, [role=tab], [role=slider], [contenteditable], [data-detail-keys-ignore]',
+      )
+    ) {
+      return;
+    }
+    const { detailPrev, detailNext } = document.documentElement.dataset;
+    if (event.key === 'ArrowLeft' && detailPrev) {
+      event.preventDefault();
+      navRouter?.push(detailPrev as Route);
+    } else if (event.key === 'ArrowRight' && detailNext) {
+      event.preventDefault();
+      navRouter?.push(detailNext as Route);
+    }
+  });
+}
+
+/** 详情页键盘 ←/→ 翻页；输入控件、媒体轮播与灯箱优先处理自己的方向键。 */
+export function DetailKeyboardNav({
+  prevHref,
+  nextHref,
+}: {
+  prevHref?: string;
+  nextHref?: string;
+}) {
+  const router = useRouter();
+
+  // 翻页目标写进 <html> dataset（paint 前就绪），常驻单例监听读它导航；
+  // 卸载时清理，避免离开详情页后误导航
+  useLayoutEffect(() => {
+    navRouter = router;
+    ensureNavListener();
+    const root = document.documentElement;
+    if (prevHref) root.dataset.detailPrev = prevHref;
+    else delete root.dataset.detailPrev;
+    if (nextHref) root.dataset.detailNext = nextHref;
+    else delete root.dataset.detailNext;
+    return () => {
+      delete root.dataset.detailPrev;
+      delete root.dataset.detailNext;
+    };
+  }, [router, prevHref, nextHref]);
+  return null;
+}

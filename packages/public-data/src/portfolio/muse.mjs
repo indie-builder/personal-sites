@@ -67,8 +67,8 @@ function toCard(row) {
     href: `/products/muse/${row.slug}`,
     kind,
     src: src ?? "",
-    poster: hasFirst ? (row.first_poster ?? row.first_thumb) : undefined,
-    fullSrc: hasFirst && kind === "image" ? (row.first_src ?? row.first_thumb) : undefined,
+    poster: hasFirst ? (row.first_poster ?? row.first_thumb ?? undefined) : undefined,
+    fullSrc: hasFirst && kind === "image" ? (row.first_src ?? row.first_thumb ?? undefined) : undefined,
     width: hasFirst ? (row.first_width ?? 4) : 4,
     height: hasFirst ? (row.first_height ?? 3) : 3,
     mediaCount: row.media_count,
@@ -120,9 +120,10 @@ export function readMuseDetail(db, slug) {
       .get(slug);
     if (!post) return null;
     const rows = db
-      .prepare("SELECT id, type, src, poster, width, height FROM muse_media WHERE post_id = ? ORDER BY position")
+      .prepare("SELECT id, type, src, poster, thumb, width, height FROM muse_media WHERE post_id = ? ORDER BY position")
       .all(post.id);
     const media = rows.filter((row) => row.src);
+    const firstThumbnail = rows[0] ? (rows[0].poster ?? rows[0].thumb) : null;
     const detail = {
       slug: post.slug,
       title: post.title,
@@ -136,11 +137,12 @@ export function readMuseDetail(db, slug) {
       sourceUrl: post.source_url,
       createdAt: post.created_at,
       publishedAt: post.published_at,
+      firstThumbnail,
       media: media.map((row, index) => ({
         id: row.id,
         type: row.type === "video" ? "video" : "image",
         src: row.src,
-        poster: row.poster ?? null,
+        poster: row.poster ?? row.thumb ?? null,
         width: row.width,
         height: row.height,
         alt: rows.length > 1 ? `${post.title} · 第 ${index + 1} 件` : post.title,

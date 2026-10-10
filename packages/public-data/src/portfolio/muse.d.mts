@@ -20,8 +20,8 @@ export type MuseCard = {
   href: string;
   kind: "image" | "video";
   src: string;
-  poster: string | null | undefined;
-  fullSrc: string | null | undefined;
+  poster: string | undefined;
+  fullSrc: string | undefined;
   width: number;
   height: number;
   mediaCount: number;
@@ -40,6 +40,7 @@ export type MuseDetail = {
   sourceUrl: string | null;
   createdAt: string;
   publishedAt: string | null;
+  firstThumbnail: string | null;
   media: MuseMedia[];
 };
 

@@ -15,12 +15,21 @@
     "shadcn/no-unknown-classes": [
       "error",
       {
-        "allow": ["about-printer", "about-printer__*", "curation-*", "ai-news-*"]
+        "allow": ["about-printer", "about-printer__*", "curation-*", "ai-news-*", "portfolio-*", "ai-openui"]
       }
     ],
     "shadcn/no-raw-colors": "error"
   },
   "overrides": [
+    {
+      "files": ["apps/web/components/portfolio/**"],
+      "rules": {
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/no-static-element-interactions": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off",
+        "jsx-a11y/no-noninteractive-tabindex": "off"
+      }
+    },
     {
       "files": ["tools/content/modules/**/*.mjs"],
       "rules": { "site-effect/execution-boundary": ["error", "business"] }

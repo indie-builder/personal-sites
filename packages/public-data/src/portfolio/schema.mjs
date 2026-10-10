@@ -22,8 +22,8 @@ export const museCardSchema = Schema.Struct({
   href: Schema.String,
   kind: Schema.Literals(["image", "video"]),
   src: Schema.String,
-  poster: Schema.UndefinedOr(Schema.NullOr(Schema.String)),
-  fullSrc: Schema.UndefinedOr(Schema.NullOr(Schema.String)),
+  poster: Schema.UndefinedOr(Schema.String),
+  fullSrc: Schema.UndefinedOr(Schema.String),
   width: Schema.Number,
   height: Schema.Number,
   mediaCount: Schema.Number,
@@ -42,6 +42,7 @@ export const museDetailSchema = Schema.Struct({
   sourceUrl: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
   publishedAt: Schema.NullOr(Schema.String),
+  firstThumbnail: Schema.NullOr(Schema.String),
   media: Schema.Array(museMediaSchema),
 });
 

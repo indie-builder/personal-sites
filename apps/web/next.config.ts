@@ -9,8 +9,18 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/*": ["../../data/sensitive/**", "../../knowledge/sensitive/**", "../../var/**", "../../tools/smaug/**"],
   },
+  images: {
+    // 作品集媒体热链白名单（本地副本优先，缺失时回退上游 CDN）。
+    remotePatterns: [
+      "media.inspora.design",
+      "cdn.jsdelivr.net",
+      "cdn.bestdesignsonx.com",
+      "cdn.collectui.com",
+      "pbs.twimg.com",
+    ].map((hostname) => ({ protocol: "https" as const, hostname })),
+  },
   outputFileTracingIncludes: {
-    "/*": ["data/curation.sqlite", "data/ai-news.sqlite"],
+    "/*": ["data/curation.sqlite", "data/ai-news.sqlite", "data/portfolio.sqlite"],
   },
   experimental: {
     // 每日动态/首页改为动态渲染后，SPA 导航默认每次都重新打服务端（含返回列表），
@@ -37,6 +47,12 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" },
         ],
         source: "/images/:path*",
+      },
+      {
+        // 词典冻结运行时是唯一允许同源 framing 的文档；其余路由保持 DENY。
+        // 后写规则覆盖先写的同键标头（见 Next headers 文档）。
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+        source: "/ai-coding-atlas/index.html",
       },
     ];
   },
