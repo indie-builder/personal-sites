@@ -2,12 +2,16 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AskChat } from "@/components/ask-chat";
-import { ASK_CHAT_STORAGE_KEY, readAskChatSnapshot } from "@/components/ask-chat-snapshot";
+import { ASK_CHAT_DRAFT_STORAGE_KEY, ASK_CHAT_STORAGE_KEY, readAskChatSnapshot } from "@/components/ask-chat-snapshot";
 
 const source = {
   content: "公开关注资料", id: "source-1", publishedAt: null, scope: "daily",
   section: null, sourceId: "project", sourceUrl: "/curation/source", title: "项目来源",
 };
+
+function openuiText(text: string) {
+  return `root = Stack([TextContent(${JSON.stringify(text)})])`;
+}
 
 describe("AskChat interrupted reading and session continuity", () => {
   let stream: ReadableStreamDefaultController<Uint8Array>;
@@ -157,7 +161,7 @@ describe("AskChat interrupted reading and session continuity", () => {
     fireEvent.click(screen.getByText("参考资料 · 1 篇"));
     expect(screen.getByRole("link", { name: /项目来源/ }).getAttribute("href")).toBe("/curation/source");
     expect(screen.queryByText("继续问")).toBeNull();
-    expect(readAskChatSnapshot()?.messages.at(-1)?.content).toBe('root = Stack([TextContent("已经收到的部分回答。")])');
+    expect(readAskChatSnapshot().messages.at(-1)?.content).toBe('root = Stack([TextContent("已经收到的部分回答。")])');
   });
 
   it("preserves text on stream error and resends the original question on retry", async () => {
@@ -210,6 +214,143 @@ describe("AskChat interrupted reading and session continuity", () => {
     render(<AskChat />);
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("更新后的草稿");
     expect(screen.queryByRole("button", { name: "清空对话" })).toBeNull();
+  });
+
+  it("typing a draft writes only the draft key, never the conversation", async () => {
+    window.sessionStorage.setItem(ASK_CHAT_STORAGE_KEY, JSON.stringify({
+      messages: [
+        { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
+        { citations: [source], content: "已经完成的回答", id: "assistant-1", isComplete: true, role: "assistant" },
+      ],
+      question: "",
+    }));
+    render(<AskChat />);
+    expect(screen.getByText("已经完成的回答")).toBeTruthy();
+    const write = vi.spyOn(Storage.prototype, "setItem");
+    write.mockClear();
+
+    const input = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" });
+    for (const character of "新草稿") {
+      fireEvent.change(input, { target: { value: input.value + character } });
+    }
+
+    expect(input.value).toBe("新草稿");
+    expect(write.mock.calls.map(([key]) => key)).not.toContain(ASK_CHAT_STORAGE_KEY);
+    expect(window.sessionStorage.getItem(ASK_CHAT_DRAFT_STORAGE_KEY)).toBe("新草稿");
+    write.mockRestore();
+  });
+
+  it("keeps the old combined snapshot untouched when writes fail, then migrates on the next open", async () => {
+    const legacy = JSON.stringify({
+      format: "openui",
+      messages: [
+        { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
+        { citations: [source], content: openuiText("已经完成的回答"), id: "assistant-1", isComplete: true, role: "assistant" },
+      ],
+      question: "迁移前的草稿",
+    });
+    window.sessionStorage.setItem(ASK_CHAT_STORAGE_KEY, legacy);
+    const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("quota"); });
+    let view: ReturnType<typeof render>;
+    try {
+      view = render(<AskChat />);
+      expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("迁移前的草稿");
+      expect(screen.getByText("已经完成的回答")).toBeTruthy();
+      expect(window.sessionStorage.getItem(ASK_CHAT_STORAGE_KEY)).toBe(legacy);
+      view.unmount();
+    } finally {
+      write.mockRestore();
+    }
+
+    view = render(<AskChat />);
+    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("迁移前的草稿");
+    expect(screen.getByText("已经完成的回答")).toBeTruthy();
+    expect(window.sessionStorage.getItem(ASK_CHAT_DRAFT_STORAGE_KEY)).toBe("迁移前的草稿");
+    expect(JSON.parse(String(window.sessionStorage.getItem(ASK_CHAT_STORAGE_KEY)))).not.toHaveProperty("question");
+    view.unmount();
+  });
+
+  it.each(["draft key", "aggregate quota"])("preserves the legacy draft when %s rejects extraction but allows a smaller message write", (failure) => {
+    const messages = [
+      { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
+      { citations: [source], content: openuiText("已经完成的回答"), id: "assistant-1", isComplete: true, role: "assistant" },
+    ];
+    const legacy = JSON.stringify({ format: "openui", messages, question: "迁移前的草稿" });
+    const storage = window.sessionStorage;
+    const setItem = Storage.prototype.setItem;
+    storage.setItem(ASK_CHAT_STORAGE_KEY, legacy);
+    const quota = ASK_CHAT_STORAGE_KEY.length + legacy.length;
+    const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+      let size = key.length + value.length;
+      for (let index = 0; index < this.length; index++) {
+        const existingKey = this.key(index)!;
+        if (existingKey !== key) size += existingKey.length + this.getItem(existingKey)!.length;
+      }
+      if (failure === "draft key" ? key === ASK_CHAT_DRAFT_STORAGE_KEY : size > quota) {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      }
+      setItem.call(this, key, value);
+    });
+    try {
+      // This smaller overwrite is allowed under both failures; deleting question would lose the draft.
+      storage.setItem(ASK_CHAT_STORAGE_KEY, JSON.stringify({ format: "openui", messages }));
+      setItem.call(storage, ASK_CHAT_STORAGE_KEY, legacy);
+      for (let open = 0; open < 2; open++) {
+        const view = render(<AskChat />);
+        expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("迁移前的草稿");
+        expect(screen.getByText("已经完成的回答")).toBeTruthy();
+        expect(storage.getItem(ASK_CHAT_STORAGE_KEY)).toBe(legacy);
+        expect(storage.getItem(ASK_CHAT_DRAFT_STORAGE_KEY)).toBeNull();
+        view.unmount();
+      }
+    } finally {
+      write.mockRestore();
+    }
+    render(<AskChat />);
+    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("迁移前的草稿");
+    expect(screen.getByText("已经完成的回答")).toBeTruthy();
+    expect(storage.getItem(ASK_CHAT_DRAFT_STORAGE_KEY)).toBe("迁移前的草稿");
+    expect(JSON.parse(String(storage.getItem(ASK_CHAT_STORAGE_KEY)))).not.toHaveProperty("question");
+  });
+
+  it("keeps an intentionally cleared draft empty after reopening", async () => {
+    window.sessionStorage.setItem(ASK_CHAT_STORAGE_KEY, JSON.stringify({
+      format: "openui",
+      messages: [
+        { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
+        { citations: [source], content: openuiText("已经完成的回答"), id: "assistant-1", isComplete: true, role: "assistant" },
+      ],
+      question: "旧草稿",
+    }));
+    const view = render(<AskChat />);
+    fireEvent.change(screen.getByRole("textbox", { name: "输入问题" }), { target: { value: "" } });
+    expect(window.sessionStorage.getItem(ASK_CHAT_DRAFT_STORAGE_KEY)).toBe("");
+    // 模拟迁移中途关页：消息键里仍残留旧草稿副本，重开后必须以空草稿键为准。
+    window.sessionStorage.setItem(ASK_CHAT_STORAGE_KEY, JSON.stringify({
+      format: "openui",
+      messages: [
+        { citations: [], content: "项目？", id: "user-1", isComplete: true, role: "user" },
+        { citations: [source], content: openuiText("已经完成的回答"), id: "assistant-1", isComplete: true, role: "assistant" },
+      ],
+      question: "旧草稿",
+    }));
+    view.unmount();
+    render(<AskChat />);
+    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "输入问题" }).value).toBe("");
+    expect(screen.getByText("已经完成的回答")).toBeTruthy();
+  });
+
+  it("shows partial text as stopped after closing mid-stream and reopening", async () => {
+    const view = render(<AskChat />);
+    await sendQuestion();
+    await emit("text", { delta: 'root = Stack([TextContent("关页前收到的部分回答。")])' });
+    expect(screen.getByText("关页前收到的部分回答。")).toBeTruthy();
+    view.unmount();
+
+    render(<AskChat />);
+    expect(screen.getByText("关页前收到的部分回答。")).toBeTruthy();
+    expect(screen.getByText("已停止生成。")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "发送问题" })).toBeTruthy();
   });
 
   it("does not submit Enter while composing Chinese or Shift+Enter", () => {

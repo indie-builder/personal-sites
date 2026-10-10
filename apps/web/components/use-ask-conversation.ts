@@ -5,7 +5,7 @@ import { io } from "@site/effect";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
+import { readAskChatSnapshot, writeAskChatDraft, writeAskChatMessages, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
 import { askIdPattern } from "@/lib/ask-types";
 
@@ -36,17 +36,20 @@ export function useAskConversation(onStarted: () => void) {
     if (snapshotRead.current) return;
     snapshotRead.current = true;
     const snapshot = readAskChatSnapshot();
-    if (snapshot) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后、绘制前恢复会话，避免草稿闪烁。
-      setMessages(snapshot.messages);
-      setQuestion(snapshot.question);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后、绘制前恢复会话，避免草稿闪烁。
+    setMessages(snapshot.messages);
+    setQuestion(snapshot.question);
     setRestored(true);
   }, []);
 
+  // 各自独立生效：输入草稿只写草稿键，不再序列化整段对话。
   useEffect(() => {
-    if (restored) writeAskChatSnapshot({ messages, question });
-  }, [messages, question, restored]);
+    if (restored) writeAskChatMessages(messages);
+  }, [messages, restored]);
+
+  useEffect(() => {
+    if (restored) writeAskChatDraft(question);
+  }, [question, restored]);
 
   useEffect(() => () => requestController.current?.abort(), []);
 
