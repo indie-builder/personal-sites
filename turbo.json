@@ -29,7 +29,9 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/data/curation.sqlite",
-        "$TURBO_ROOT$/data/ai-news.sqlite"
+        "$TURBO_ROOT$/data/ai-news.sqlite",
+        "$TURBO_ROOT$/data/portfolio.sqlite",
+        "$TURBO_ROOT$/packages/public-data/src/portfolio/data/*.json"
       ]
     },
     "//#test:repo": {
@@ -48,7 +50,9 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/data/curation.sqlite",
-        "$TURBO_ROOT$/data/ai-news.sqlite"
+        "$TURBO_ROOT$/data/ai-news.sqlite",
+        "$TURBO_ROOT$/data/portfolio.sqlite",
+        "$TURBO_ROOT$/packages/public-data/src/portfolio/data/*.json"
       ]
     },
     "dev": {

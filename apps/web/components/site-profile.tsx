@@ -1,4 +1,5 @@
 import { BookOpen, BriefcaseBusiness, GitBranch } from "lucide-react";
+import Link from "next/link";
 
 import { MobileProfileCollapse } from "@/components/mobile-profile-collapse";
 import { AboutPrint } from "@/components/about-print";
@@ -40,10 +41,10 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
               <BookOpen aria-hidden="true" />
               语雀
             </a>
-            <a href="https://portfolio.default-coder.lovemyrmb.cn/" rel="noreferrer" target="_blank">
+            <Link href="/portfolio">
               <BriefcaseBusiness aria-hidden="true" />
               作品集
-            </a>
+            </Link>
             <AboutPrint />
           </nav>
         </div>

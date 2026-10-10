@@ -1,0 +1,139 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  border-bottom: 1px solid var(--line);
+}
+
+.row:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.rowLink {
+  display: grid;
+  grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+  column-gap: clamp(1.25rem, 2.5vw, 2rem);
+  align-items: start;
+  padding: 1.6rem 0;
+  text-decoration: none;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 0.2rem;
+  color: #767676;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
+.previewImage {
+  width: 6.4rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid #ededed;
+}
+
+.previewText {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-hairline, #ededed);
+  border-radius: 3px;
+  color: var(--color-ink-soft, #5c5c5c);
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0.45rem 0.6rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.name {
+  color: var(--color-ink, #202020);
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  font-weight: 620;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.tagline {
+  color: var(--color-ink-soft, #5c5c5c);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.description {
+  max-width: 40rem;
+  color: var(--color-body, #494949);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.rowLink:hover .name,
+.rowLink:focus-visible .name {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.rowLink:focus-visible {
+  outline: 2px solid var(--color-ink, #202020);
+  outline-offset: 2px;
+}
+
+:global(html[data-curation-theme="dark"]) .meta,
+:global(html[data-curation-theme="dark"]) .previewText,
+:global(html[data-curation-theme="dark"]) .tagline {
+  color: #999;
+}
+
+:global(html[data-curation-theme="dark"]) .name {
+  color: #f4f4f4;
+}
+
+:global(html[data-curation-theme="dark"]) .description {
+  color: #d4d4d6;
+}
+
+:global(html[data-curation-theme="dark"]) .row,
+:global(html[data-curation-theme="dark"]) .row:first-child {
+  border-color: #333;
+}
+
+:global(html[data-curation-theme="dark"]) .previewImage {
+  border-color: #3a3a3a;
+}
+
+@media (max-width: 900px) {
+  .rowLink {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .meta {
+    flex-direction: row;
+    gap: 0.55rem;
+  }
+
+  .meta span + span::before {
+    content: "·";
+    margin-right: 0.55rem;
+  }
+}

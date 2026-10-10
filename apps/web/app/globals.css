@@ -7,6 +7,7 @@
 @import "./styles/streams.css";
 @import "./styles/reading.css";
 @import "./styles/profile.css";
+@import "./styles/portfolio.css";
 
 .ask-openui { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 
