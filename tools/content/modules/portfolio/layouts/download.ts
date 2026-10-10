@@ -1,6 +1,7 @@
 import { createWriteStream } from 'node:fs';
 import { rename, rm } from 'node:fs/promises';
 import { Readable } from 'node:stream';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 import { pipeline } from 'node:stream/promises';
 import { Data, Effect, Schedule } from 'effect';
 
@@ -32,7 +33,9 @@ export function downloadTarball(
               await response.body?.cancel();
               throw new Error(`HTTP ${response.status}`);
             }
-            await pipeline(Readable.fromWeb(response.body), createWriteStream(tmpPath), { signal });
+            // fetch 的全局 ReadableStream 与 node:stream/web 声明存在泛型方差差异，桥接为节点类型。
+            const body = response.body as unknown as NodeWebReadableStream<Uint8Array>;
+            await pipeline(Readable.fromWeb(body), createWriteStream(tmpPath), { signal });
           })();
           return { controller, transfer };
         }),

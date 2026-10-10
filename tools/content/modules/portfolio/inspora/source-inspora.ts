@@ -334,7 +334,9 @@ export function syncInspora({
               ...new Set(
                 links
                   .map((link) =>
-                    new URL((link as { href: string }).href).searchParams.get('category'),
+                    new URL((link as unknown as { href: string }).href).searchParams.get(
+                      'category',
+                    ),
                   )
                   .filter((category): category is string => Boolean(category)),
               ),

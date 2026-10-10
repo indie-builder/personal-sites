@@ -2,6 +2,7 @@
 import { createWriteStream } from 'node:fs';
 import { mkdir, rename, rm, stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import { Data, Effect, Schedule } from 'effect';
@@ -62,7 +63,9 @@ const attempt = (url: string, tmpPath: string, absPath: string) =>
             const res = await fetch(url, { signal });
             if (!res.ok || !res.body)
               throw new DownloadError({ url, cause: new Error(`HTTP ${res.status}`) });
-            await pipeline(Readable.fromWeb(res.body), createWriteStream(tmpPath), { signal });
+            // fetch 的全局 ReadableStream 与 node:stream/web 声明存在泛型方差差异，桥接为节点类型。
+            const body = res.body as unknown as NodeWebReadableStream<Uint8Array>;
+            await pipeline(Readable.fromWeb(body), createWriteStream(tmpPath), { signal });
           })();
           return { controller, done };
         }),

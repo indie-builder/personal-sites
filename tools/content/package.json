@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
+    "typecheck": "node ../../scripts/tsc7.mjs --noEmit && node ../../scripts/tsc7.mjs --noEmit -p modules/portfolio/personal-sites/promo",
     "lint": "oxlint --deny-warnings scripts modules lib tests",
     "test": "node --test tests/*.test.mjs",
     "curation:prepare": "node scripts/x-curation-prepare.mjs",
@@ -33,6 +33,9 @@
     "focus:status": "node scripts/focus-status.mjs",
     "vectors:index": "node scripts/local-vectors.mjs index",
     "vectors:search": "node scripts/local-vectors.mjs search",
+    "portfolio:sync": "node scripts/portfolio-sync.mjs",
+    "portfolio:project": "node scripts/portfolio-project.mjs",
+    "portfolio:render": "node scripts/render-promo.mjs",
     "github:starred:run": "node scripts/github-starred.mjs run"
   },
   "dependencies": {
@@ -43,9 +46,16 @@
     "@supabase/supabase-js": "2.117.3",
     "better-sqlite3": "^13.0.3",
     "effect": "4.0.1",
+    "playwright": "1.63.0",
+    "sharp": "0.35.5",
     "sqlite-vec": "0.1.9"
   },
   "devDependencies": {
-    "@steipete/bird": "^0.8.0"
+    "@remotion/cli": "4.0.534",
+    "@steipete/bird": "^0.8.0",
+    "@types/react": "19.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.534"
   }
 }

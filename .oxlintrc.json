@@ -58,6 +58,7 @@
     "node_modules/**",
     "out/**",
     "public/**",
+    "tools/content/modules/portfolio/dictionary-runtime/**",
     "tools/smaug/**",
     "var/**"
   ]

@@ -3,14 +3,9 @@ import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Data, Effect, Schedule } from 'effect';
-import { NodeRuntime } from '@effect/platform-node';
-
-class SyncStepError extends Data.TaggedError('SyncStep')<{
-  readonly step: string;
-  readonly cause: unknown;
-}> {}
+import { OperationError, io } from '@site/effect';
 
 class FaviconError extends Data.TaggedError('Favicon')<{
   readonly url: string;
@@ -18,22 +13,11 @@ class FaviconError extends Data.TaggedError('Favicon')<{
 }> {}
 
 type SourceTool = { name: string; url: string };
+export type ToolCategory = { id: string; tools: { name: string; url: string }[] };
 
-// Node 文件操作不可取消，等待实际完成后才让 scope 清理临时文件。
-const fileStep = <A>(name: string, run: () => Promise<A>) =>
-  Effect.uninterruptible(
-    Effect.tryPromise({
-      try: () => run(),
-      catch: (cause) => new SyncStepError({ step: name, cause }),
-    }),
-  );
-
-const pkgDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..', 'data/sensitive/portfolio/design-engineer-tools');
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(MODULE_DIR, '../../../..');
 const sourceUrl = 'https://designengineer.tools/';
-const catalogPath = path.join(pkgDir, 'catalog.json');
-const iconDir = path.resolve(pkgDir, '../../apps/web/public/design-engineer-tools/icons');
-const categoryPattern = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
-const linkPattern = /<a\s+[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
 const retrySchedule = Schedule.upTo(Schedule.exponential(1000, 2), { times: 2 });
 
 function decode(value: string) {
@@ -48,7 +32,9 @@ function decode(value: string) {
     .trim();
 }
 
-function parseCatalog(html: string) {
+export function parseCatalog(html: string): ToolCategory[] {
+  const categoryPattern = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  const linkPattern = /<a\s+[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
   const headings = [...html.matchAll(categoryPattern)];
   const categories = headings.map((match, index) => {
     const bodyStart = (match.index ?? 0) + match[0].length;
@@ -71,7 +57,14 @@ function parseCatalog(html: string) {
   return categories.filter((category) => category.id && category.tools.length);
 }
 
-function iconPath(url: string) {
+export interface ToolsSyncOptions {
+  /** catalog.json 写出目录（原始工作数据）；默认 data/sensitive/portfolio/design-engineer-tools。 */
+  pkgDir?: string;
+  /** favicon 输出目录；默认 apps/web/public/design-engineer-tools/icons。 */
+  iconDir?: string;
+}
+
+function iconPath(iconDir: string, url: string) {
   const id = createHash('sha256').update(url).digest('hex').slice(0, 16);
   return {
     file: path.join(iconDir, `${id}.png`),
@@ -79,8 +72,8 @@ function iconPath(url: string) {
   };
 }
 
-function syncIcon(tool: SourceTool) {
-  const icon = iconPath(tool.url);
+function syncIcon(iconDir: string, tool: SourceTool) {
+  const icon = iconPath(iconDir, tool.url);
   const attempt = Effect.tryPromise({
     try: async (signal) => {
       const response = await fetch(
@@ -101,7 +94,8 @@ function syncIcon(tool: SourceTool) {
   return Effect.catch(
     Effect.gen(function* () {
       const bytes = yield* Effect.retry(attempt, retrySchedule);
-      yield* fileStep(`favicon:${tool.url}`, () => writeFile(icon.file, bytes));
+      // Node 文件操作不可取消，等待实际完成后才让 scope 清理。
+      yield* Effect.uninterruptible(io(`favicon:${tool.url}`, () => writeFile(icon.file, bytes)));
       return { ...tool, icon: icon.publicPath };
     }),
     (error) =>
@@ -114,12 +108,12 @@ function syncIcon(tool: SourceTool) {
   );
 }
 
-function syncIcons(categories: ReturnType<typeof parseCatalog>) {
+function syncIcons(iconDir: string, categories: ToolCategory[]) {
   return Effect.gen(function* () {
-    yield* fileStep('mkdir:icons', () => mkdir(iconDir, { recursive: true }));
+    yield* io('mkdir:icons', () => mkdir(iconDir, { recursive: true }));
     const tools = categories.flatMap((category) => category.tools);
     const results = yield* Effect.all(
-      tools.map((tool) => syncIcon(tool)),
+      tools.map((tool) => syncIcon(iconDir, tool)),
       { concurrency: 12 },
     );
     let offset = 0;
@@ -137,44 +131,70 @@ function syncIcons(categories: ReturnType<typeof parseCatalog>) {
   });
 }
 
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const html = yield* Effect.retry(
-      Effect.tryPromise({
-        try: async (signal) => {
-          const response = await fetch(sourceUrl, {
-            signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
-            headers: { 'user-agent': 'personal-design-sync/1.0 (+https://designengineer.tools/)' },
-          });
-          if (!response.ok) throw new Error(`目录请求失败: HTTP ${response.status}`);
-          return response.text();
-        },
-        catch: (cause) => new SyncStepError({ step: 'fetch:catalog', cause }),
-      }),
-      retrySchedule,
-    );
-    const categories = parseCatalog(html);
-    const total = categories.reduce((count, category) => count + category.tools.length, 0);
-    if (categories.length < 10 || total < 100) {
-      return yield* Effect.fail(
-        new SyncStepError({
-          step: 'parse:catalog',
-          cause: new Error(`目录解析不完整: ${categories.length} 个分类，${total} 个工具`),
+export function runToolsSync(options: ToolsSyncOptions = {}) {
+  const pkgDir =
+    options.pkgDir ??
+    path.join(REPO_ROOT, 'data/sensitive/portfolio/design-engineer-tools');
+  const iconDir =
+    options.iconDir ?? path.join(REPO_ROOT, 'apps/web/public/design-engineer-tools/icons');
+  const catalogPath = path.join(pkgDir, 'catalog.json');
+  return Effect.scoped(
+    Effect.gen(function* () {
+      const html = yield* Effect.retry(
+        Effect.tryPromise({
+          try: async (signal) => {
+            const response = await fetch(sourceUrl, {
+              signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+              headers: { 'user-agent': 'personal-design-sync/1.0 (+https://designengineer.tools/)' },
+            });
+            if (!response.ok) throw new Error(`目录请求失败: HTTP ${response.status}`);
+            return response.text();
+          },
+          catch: (cause) => new OperationError('fetch:catalog', cause),
         }),
+        retrySchedule,
       );
-    }
-    const synced = yield* syncIcons(categories);
-    const catalog = { sourceUrl, syncedAt: new Date().toISOString(), categories: synced };
-    yield* fileStep('mkdir:package', () => mkdir(pkgDir, { recursive: true }));
-    const temporary = yield* Effect.acquireRelease(Effect.succeed(`${catalogPath}.tmp`), (file) =>
-      Effect.orDie(fileStep('rm:catalog.tmp', () => rm(file, { force: true }))),
-    );
-    yield* fileStep('write:catalog.tmp', () =>
-      writeFile(temporary, `${JSON.stringify(catalog, null, 2)}\n`),
-    );
-    yield* fileStep('rename:catalog', () => rename(temporary, catalogPath));
-    yield* Effect.sync(() => console.log(`已同步 ${categories.length} 个分类、${total} 个工具`));
-  }),
-);
+      const categories = parseCatalog(html);
+      const total = categories.reduce((count, category) => count + category.tools.length, 0);
+      if (categories.length < 10 || total < 100) {
+        return yield* Effect.fail(
+          new OperationError(
+            'parse:catalog',
+            new Error(`目录解析不完整: ${categories.length} 个分类，${total} 个工具`),
+          ),
+        );
+      }
+      const synced = yield* syncIcons(iconDir, categories);
+      const catalog = { sourceUrl, syncedAt: new Date().toISOString(), categories: synced };
+      yield* io('mkdir:package', () => mkdir(pkgDir, { recursive: true }));
+      const temporary = yield* Effect.acquireRelease(Effect.succeed(`${catalogPath}.tmp`), (file) =>
+        Effect.orDie(io('rm:catalog.tmp', () => rm(file, { force: true }))),
+      );
+      yield* Effect.uninterruptible(
+        io('write:catalog.tmp', () =>
+          writeFile(temporary, `${JSON.stringify(catalog, null, 2)}\n`),
+        ),
+      );
+      yield* Effect.uninterruptible(io('rename:catalog', () => rename(temporary, catalogPath)));
+      yield* Effect.sync(() => console.log(`已同步 ${categories.length} 个分类、${total} 个工具`));
+    }),
+  );
+}
 
-NodeRuntime.runMain(program);
+const usage = '用法：node modules/portfolio/design-engineer-tools/sync.ts\n抓取 designengineer.tools 目录与 favicon，写入原始工作库与站点 public。';
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const args = process.argv.slice(2);
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(usage);
+  } else if (args.length > 0) {
+    console.error(`未知参数：${args.join(' ')}\n${usage}`);
+    process.exitCode = 2;
+  } else {
+    const { runCli } = await import('@site/effect/cli');
+    runCli(runToolsSync()).catch((error) => {
+      console.error(`设计工程工具同步失败：${error.message}`);
+      process.exitCode = 1;
+    });
+  }
+}
