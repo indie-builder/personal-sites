@@ -9,7 +9,7 @@ import { useAskConversation } from "@/components/use-ask-conversation";
 import { useMediaQuery } from "@/components/use-media-query";
 import { ArrowDown, ArrowUp, Code2, CornerDownRight, Lightbulb, Square, UserRound } from "lucide-react";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useRef, type ComponentProps } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ComponentProps } from "react";
 
 import styles from "./ask-chat.module.css";
 
@@ -41,9 +41,24 @@ export function AskChat() {
   const isProgrammaticScroll = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const handleStarted = useCallback(() => { shouldFollowLatest.current = true; }, []);
   const {
-    isStreaming, messages, question, setQuestion, stop, submit,
-  } = useAskConversation(() => { shouldFollowLatest.current = true; });
+    isStreaming, messages, question, setQuestion, stop, submit, submitQuestion,
+  } = useAskConversation(handleStarted);
+
+  const handleContinue = useCallback((nextQuestion: string) => {
+    void submitQuestion(nextQuestion, { preserveDraft: true });
+  }, [submitQuestion]);
+
+  const retryByMessageId = useMemo(() => {
+    const retries = new Map<string, () => void>();
+    messages.forEach((message, index) => {
+      const previous = messages[index - 1];
+      if (message.interruption?.kind !== "error" || previous?.role !== "user") return;
+      retries.set(message.id, () => handleContinue(previous.content));
+    });
+    return retries;
+  }, [messages, handleContinue]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -191,13 +206,8 @@ export function AskChat() {
                     isStreamingPlaceholder={isStreaming && index === messages.length - 1}
                     key={message.id}
                     message={message}
-                    onContinue={isStreaming ? undefined : (question) => { void submit(question, { preserveDraft: true }); }}
-                    onRetry={message.interruption?.kind === "error" && !isStreaming ? () => {
-                      const previousQuestion = messages[index - 1];
-                      if (previousQuestion?.role !== "user") return;
-                      // 与主流对话产品一致：重试直接重发原问题，输入框草稿保持不动。
-                      void submit(previousQuestion.content, { preserveDraft: true });
-                    } : undefined}
+                    onContinue={isStreaming ? undefined : handleContinue}
+                    onRetry={message.interruption?.kind === "error" && !isStreaming ? retryByMessageId.get(message.id) : undefined}
                     prefersReducedMotion={prefersReducedMotion}
                   />
                 ))}
