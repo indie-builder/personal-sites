@@ -6,7 +6,7 @@ import { io } from "@site/effect";
 import { ChevronDown, ChevronRight, ExternalLink, FileCode2, Folder, FolderOpen, LoaderCircle } from "lucide-react";
 import { useHasMounted } from "@/components/use-mounted";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "@/components/open-source.module.css";
 import {
@@ -228,7 +228,7 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
     }
   };
 
-  const nodes = tree ? buildGitHubRepositoryTree(tree.entries) : [];
+  const nodes = useMemo(() => (tree ? buildGitHubRepositoryTree(tree.entries) : []), [tree]);
 
   return (
     <div className={styles.repositoryBrowser} data-entrance={entrance.armed ? "" : undefined}>

@@ -3,7 +3,7 @@
 import { Effect } from "effect";
 import { io } from "@site/effect";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { readAskChatSnapshot, writeAskChatSnapshot, type ChatMessage } from "@/components/ask-chat-snapshot";
 import { applyStreamEvent, parseEvents } from "@/components/ask-sse";
@@ -50,13 +50,13 @@ export function useAskConversation(onStarted: () => void) {
 
   useEffect(() => () => requestController.current?.abort(), []);
 
-  const updateAssistant = (id: string, update: (message: ChatMessage) => ChatMessage) => {
+  const updateAssistant = useCallback((id: string, update: (message: ChatMessage) => ChatMessage) => {
     setMessages((current) => current.map((message) => (message.id === id ? update(message) : message)));
-  };
+  }, []);
 
-  const submit = async (suggestion?: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
-    const trimmedQuestion = (suggestion ?? question).trim();
-    if (!trimmedQuestion || isStreaming || submitInFlight.current) return;
+  const submitQuestion = useCallback(async (rawQuestion: string, { preserveDraft = false }: { preserveDraft?: boolean } = {}) => {
+    const trimmedQuestion = rawQuestion.trim();
+    if (!trimmedQuestion || submitInFlight.current) return;
     submitInFlight.current = true;
 
     session.current ??= {
@@ -149,6 +149,10 @@ export function useAskConversation(onStarted: () => void) {
       requestController.current = null;
       setIsStreaming(false);
     }
+  }, [onStarted, updateAssistant]);
+
+  const submit = (suggestion?: string, options?: { preserveDraft?: boolean }) => {
+    return submitQuestion(suggestion ?? question, options);
   };
 
   return {
@@ -158,5 +162,6 @@ export function useAskConversation(onStarted: () => void) {
     setQuestion,
     stop: () => requestController.current?.abort(),
     submit,
+    submitQuestion,
   };
 }

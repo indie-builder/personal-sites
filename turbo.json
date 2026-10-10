@@ -10,6 +10,10 @@
     "lint": {
       "dependsOn": [
         "^lint"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/effect-lint-plugin.mjs"
       ]
     },
     "//#lint:repo": {},
