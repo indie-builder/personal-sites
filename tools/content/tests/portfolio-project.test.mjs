@@ -1,7 +1,8 @@
 // 作品集公开投影（publisher）行为测试：去重离线化、媒体物化、隐私列剔除、原子发布。
 
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -271,6 +272,127 @@ test("发布失败保留旧产物：输入损坏时不覆盖已发布的库", as
   assert.equal(after.prepare("SELECT COUNT(*) c FROM muse_posts").get().c, 1, "旧产物保留");
   assert.ok(!existsSync(path.join(root, "out", "data2", "layouts.json")), "失败不落新目录投影");
   after.close();
+});
+
+test("工具目录只发布分类并剔除同步元数据；Schema 不合时失败不动旧产物", async (t) => {
+  const root = fixtureInput(t, "tools-public");
+  writeInputs(root);
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "p1" }));
+  const { outputPath, dataDir, summary } = await publish(root);
+  const published = JSON.parse(readFileSync(path.join(dataDir, "tools.json"), "utf8"));
+  assert.deepEqual(Object.keys(published), ["categories"], "公开工具目录只保留 categories");
+  assert.deepEqual(published.categories, [
+    { id: "Inspiration", tools: [{ name: "示例", url: "https://example.com", icon: null }] },
+  ]);
+  assert.equal(summary.tools, 1);
+
+  writeInputs(root, {
+    tools: { sourceUrl: "https://example.com/tools", syncedAt: "2026-10-02T00:00:00.000Z", categories: [{ id: "X", tools: [{ name: "缺 url" }] }] },
+  });
+  const failure = await Effect.runPromiseExit(publishPortfolio({ inputRoot: root, outputPath, dataDir }));
+  assert.ok(Exit.isFailure(failure), "缺 url 的工具条目必须失败");
+  assert.match(String(Cause.squash(failure.cause).message), /工具目录不符合公开 Schema/);
+  assert.equal(
+    JSON.parse(readFileSync(path.join(dataDir, "tools.json"), "utf8")).categories[0].id,
+    "Inspiration",
+    "旧工具目录保留",
+  );
+});
+
+test("库损坏时已变的目录 JSON 也不落盘：先全部校验再统一替换", async (t) => {
+  const root = fixtureInput(t, "invalid-db");
+  writeInputs(root);
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "stable" }));
+  const { outputPath, dataDir } = await publish(root);
+  const oldLayouts = readFileSync(path.join(dataDir, "layouts.json"), "utf8");
+  const oldTools = readFileSync(path.join(dataDir, "tools.json"), "utf8");
+
+  writeInputs(root, { catalog: [{ ...LAYOUT_ITEM, id: "002", name: "新条目" }] });
+  writeFileSync(path.join(root, "inspora.db"), "not a sqlite database");
+  const failure = await Effect.runPromiseExit(publishPortfolio({ inputRoot: root, outputPath, dataDir }));
+  assert.ok(Exit.isFailure(failure), "损坏源库必须失败");
+  assert.equal(readFileSync(path.join(dataDir, "layouts.json"), "utf8"), oldLayouts, "旧图鉴保留");
+  assert.equal(readFileSync(path.join(dataDir, "tools.json"), "utf8"), oldTools, "旧工具目录保留");
+  const db = new Database(outputPath, { readonly: true });
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM muse_posts").get().c, 1, "旧库保留");
+  db.close();
+  assert.deepEqual(readdirSync(dataDir).sort(), ["layouts.json", "tools.json"], "无暂存/备份残留");
+  const outEntries = readdirSync(path.dirname(outputPath)).sort();
+  assert.deepEqual(outEntries, ["data", "portfolio.sqlite"], "无锁/暂存目录残留");
+});
+
+test("替换中途失败回滚已上位的产物：目标被目录占据时不留半成品", async (t) => {
+  const root = fixtureInput(t, "rollback");
+  writeInputs(root);
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "before" }));
+  const { outputPath, dataDir } = await publish(root);
+  const oldLayouts = readFileSync(path.join(dataDir, "layouts.json"), "utf8");
+
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "after" }));
+  writeInputs(root, {
+    catalog: [{ ...LAYOUT_ITEM, id: "002", name: "新条目" }],
+    tools: { ...TOOLS_CATALOG, categories: [{ id: "Fonts", tools: [{ name: "另一工具", url: "https://example.com/2", icon: null }] }] },
+  });
+  // tools.json 目标被非空目录占据：备份 link 立即失败，此时库与图鉴已替换
+  rmSync(path.join(dataDir, "tools.json"));
+  mkdirSync(path.join(dataDir, "tools.json/sub"), { recursive: true });
+  writeFileSync(path.join(dataDir, "tools.json/sub/blocker"), "x");
+
+  const failure = await Effect.runPromiseExit(publishPortfolio({ inputRoot: root, outputPath, dataDir }));
+  assert.ok(Exit.isFailure(failure), "替换失败必须失败");
+  assert.match(String(Cause.squash(failure.cause).message), /已回滚保留旧产物/);
+  const db = new Database(outputPath, { readonly: true });
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM muse_posts").get().c, 1, "已上位的库恢复为旧内容");
+  db.close();
+  assert.equal(readFileSync(path.join(dataDir, "layouts.json"), "utf8"), oldLayouts, "已上位的图鉴恢复");
+  assert.deepEqual(
+    readdirSync(dataDir).filter((name) => /\.bak-|\.new-/.test(name)),
+    [],
+    "无备份/暂存残留",
+  );
+  assert.ok(
+    !readdirSync(path.dirname(outputPath)).some((name) => name.startsWith(".portfolio-publish-")),
+    "暂存目录已清理",
+  );
+});
+
+test("并发发布互斥：活锁冲突清晰失败，死锁自动接管", async (t) => {
+  const root = fixtureInput(t, "lock");
+  writeInputs(root);
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "p1" }));
+  const { outputPath, dataDir } = await publish(root);
+  const lockPath = `${outputPath}.lock`;
+
+  writeFileSync(lockPath, JSON.stringify({ pid: process.pid }));
+  const conflict = await Effect.runPromiseExit(publishPortfolio({ inputRoot: root, outputPath, dataDir }));
+  assert.ok(Exit.isFailure(conflict), "活锁持有者存在时必须失败");
+  assert.match(String(Cause.squash(conflict.cause).message), /另一个发布进程正在运行（pid \d+）/);
+  assert.ok(existsSync(lockPath), "冲突方不删除他人锁");
+
+  const exited = spawnSync(process.execPath, ["-e", "process.exit(0)"]);
+  writeFileSync(lockPath, JSON.stringify({ pid: exited.pid }));
+  const second = await publish(root);
+  assert.equal(second.summary.posts, 1, "死锁接管后发布成功");
+  assert.ok(!existsSync(lockPath), "接管方发布后释放锁");
+});
+
+test("公开库超过体积上限时在替换前失败并保留旧产物", async (t) => {
+  const root = fixtureInput(t, "size-guard");
+  writeInputs(root);
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "first" }));
+  const { outputPath, dataDir } = await publish(root);
+
+  seedRawDb(root, ({ stmts }) => addPost(stmts, { id: "second" }));
+  writeInputs(root, { catalog: [{ ...LAYOUT_ITEM, id: "002", name: "新条目" }] });
+  const failure = await Effect.runPromiseExit(
+    publishPortfolio({ inputRoot: root, outputPath, dataDir, maxSnapshotBytes: 8 }),
+  );
+  assert.ok(Exit.isFailure(failure), "超限必须失败");
+  assert.match(String(Cause.squash(failure.cause).message), /超过上限/);
+  const db = new Database(outputPath, { readonly: true });
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM muse_posts").get().c, 1, "旧库保留");
+  db.close();
+  assert.match(readFileSync(path.join(dataDir, "layouts.json"), "utf8"), /"001"/, "旧图鉴保留");
 });
 
 test("布局图鉴投影物化 corrections 与 CDN 回退", (t) => {

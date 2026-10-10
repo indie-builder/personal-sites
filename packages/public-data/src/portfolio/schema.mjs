@@ -110,3 +110,46 @@ export const portfolioProductSchema = Schema.Struct({
   href: Schema.String,
   cover: Schema.String,
 });
+
+/** 公开库 DDL（唯一事实）：发布器建库与读取侧测试共用同一建表契约。 */
+export const PUBLIC_SCHEMA = `
+  PRAGMA journal_mode = DELETE;
+  CREATE TABLE muse_posts (
+    id TEXT PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    creator_name TEXT,
+    creator_url TEXT,
+    creator_avatar TEXT,
+    description TEXT,
+    category TEXT,
+    industries TEXT NOT NULL,
+    colors TEXT NOT NULL,
+    styles TEXT NOT NULL,
+    source_url TEXT,
+    created_at TEXT NOT NULL,
+    published_at TEXT,
+    is_featured INTEGER NOT NULL,
+    media_count INTEGER NOT NULL,
+    search TEXT NOT NULL
+  ) STRICT;
+  CREATE INDEX idx_muse_posts_created ON muse_posts(created_at DESC);
+  CREATE TABLE muse_media (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL REFERENCES muse_posts(id),
+    position INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    src TEXT,
+    preview_src TEXT,
+    poster TEXT,
+    thumb TEXT,
+    width INTEGER,
+    height INTEGER,
+    UNIQUE(post_id, position)
+  ) STRICT;
+  CREATE INDEX idx_muse_media_post ON muse_media(post_id, position);
+  CREATE TABLE portfolio_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  ) STRICT;
+`;

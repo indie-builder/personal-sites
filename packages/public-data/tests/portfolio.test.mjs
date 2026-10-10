@@ -10,7 +10,7 @@ import test from "node:test";
 import Database from "better-sqlite3";
 import { Effect } from "effect";
 
-import { PUBLIC_SCHEMA } from "../../../tools/content/modules/portfolio/project.mjs";
+import { PUBLIC_SCHEMA } from "../src/portfolio/schema.mjs";
 import {
   layoutEntries,
   personalSitePromo,

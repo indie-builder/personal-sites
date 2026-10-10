@@ -1,17 +1,18 @@
 // 作品集公开投影：从 data/sensitive/portfolio 的离线工作数据构建唯一公共产物。
 // 输出 data/portfolio.sqlite（灵感集）与 packages/public-data/src/portfolio/data/*.json（图鉴/工具目录）。
-// 构建失败保留旧产物；成功后在临时目录校验并原子替换。
+// 全部产物先在目标同目录暂存并校验，通过后逐文件原子替换；任何失败（含替换中途失败）保留旧产物。
 
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { link, mkdir, mkdtemp, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import Database from "better-sqlite3";
-import { Data, Effect } from "effect";
+import { Data, Effect, Schema } from "effect";
 
 import { io } from "@site/effect";
+import { PUBLIC_SCHEMA, toolCategorySchema } from "@site/public-data/portfolio/schema.mjs";
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const REPOSITORY_ROOT = path.resolve(MODULE_DIR, "../../../..");
@@ -20,6 +21,9 @@ export const PORTFOLIO_OUTPUT_PATH = path.join(REPOSITORY_ROOT, "data/portfolio.
 const PUBLIC_DATA_DIR = path.join(REPOSITORY_ROOT, "packages/public-data/src/portfolio/data");
 const WEB_PUBLIC_DIR = path.join(REPOSITORY_ROOT, "apps/web/public");
 
+/** 公开库发布体积上限：与 config/git-safety.json 的 max_regular_git_file_bytes 一致（50 MiB），超限在替换前失败。 */
+const MAX_SNAPSHOT_BYTES = 52_428_800;
+
 export class PortfolioInputError extends Data.TaggedError("PortfolioInputError") {
   constructor(message) {
     super({ message });
@@ -27,6 +31,18 @@ export class PortfolioInputError extends Data.TaggedError("PortfolioInputError")
 }
 
 export class PortfolioParityError extends Data.TaggedError("PortfolioParityError") {
+  constructor(message) {
+    super({ message });
+  }
+}
+
+export class PortfolioConflictError extends Data.TaggedError("PortfolioConflictError") {
+  constructor(message) {
+    super({ message });
+  }
+}
+
+export class PortfolioSizeError extends Data.TaggedError("PortfolioSizeError") {
   constructor(message) {
     super({ message });
   }
@@ -138,48 +154,6 @@ function museSearchColumn(post) {
     .join(" ")
     .toLowerCase();
 }
-
-export const PUBLIC_SCHEMA = `
-  PRAGMA journal_mode = DELETE;
-  CREATE TABLE muse_posts (
-    id TEXT PRIMARY KEY,
-    slug TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    creator_name TEXT,
-    creator_url TEXT,
-    creator_avatar TEXT,
-    description TEXT,
-    category TEXT,
-    industries TEXT NOT NULL,
-    colors TEXT NOT NULL,
-    styles TEXT NOT NULL,
-    source_url TEXT,
-    created_at TEXT NOT NULL,
-    published_at TEXT,
-    is_featured INTEGER NOT NULL,
-    media_count INTEGER NOT NULL,
-    search TEXT NOT NULL
-  ) STRICT;
-  CREATE INDEX idx_muse_posts_created ON muse_posts(created_at DESC);
-  CREATE TABLE muse_media (
-    id TEXT PRIMARY KEY,
-    post_id TEXT NOT NULL REFERENCES muse_posts(id),
-    position INTEGER NOT NULL,
-    type TEXT NOT NULL,
-    src TEXT,
-    preview_src TEXT,
-    poster TEXT,
-    thumb TEXT,
-    width INTEGER,
-    height INTEGER,
-    UNIQUE(post_id, position)
-  ) STRICT;
-  CREATE INDEX idx_muse_media_post ON muse_media(post_id, position);
-  CREATE TABLE portfolio_meta (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  ) STRICT;
-`;
 
 const MUSE_SCHEMA_STATEMENTS = new Set([
   "CREATE TABLE muse_posts",
@@ -441,24 +415,133 @@ export function projectLayouts(catalog, corrections, publicDir) {
   });
 }
 
-function writeJsonIfChanged(destination, value) {
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM"; // EPERM：进程存在但属其他用户
+  }
+}
+
+/**
+ * 进程级独占锁：`wx` 原子创建即持锁。只有持锁进程确认已死才接管（崩溃残留不永久阻塞），
+ * 其余冲突以 PortfolioConflictError 失败；锁内容不可读按冲突处理，不抢可能正在写入的锁。
+ */
+function acquirePublishLock(lockPath) {
+  return Effect.gen(function* () {
+    const outcome = yield* io("portfolio.lock", async () => {
+      const create = async () => {
+        const handle = await open(lockPath, "wx");
+        try {
+          await handle.writeFile(`${JSON.stringify({ pid: process.pid })}\n`, "utf8");
+        } finally {
+          await handle.close();
+        }
+      };
+      try {
+        await create();
+        return { acquired: true, pid: null };
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+      }
+      let held = null;
+      try {
+        held = JSON.parse(await readFile(lockPath, "utf8"));
+      } catch {
+        // 保留 held = null，按未知冲突处理
+      }
+      if (!held || !Number.isInteger(held.pid) || processAlive(held.pid)) {
+        return { acquired: false, pid: held?.pid ?? "unknown" };
+      }
+      await rm(lockPath, { force: true });
+      await create();
+      return { acquired: true, pid: null };
+    });
+    if (!outcome.acquired) {
+      return yield* Effect.fail(
+        new PortfolioConflictError(
+          `另一个发布进程正在运行（pid ${outcome.pid}），拒绝并发发布；确认后删除 ${lockPath}`,
+        ),
+      );
+    }
+  });
+}
+
+async function removeFiles(files) {
+  for (const file of files) await rm(file, { force: true });
+}
+
+/** 暂存 JSON 到目标同目录（保证 rename 原子且同卷）；登记进 stagedFiles 由作用域统一清理。 */
+function stageJson(stagedFiles, destination, value) {
+  const staged = `${destination}.new-${randomUUID().slice(0, 8)}`;
   const content = `${JSON.stringify(value, null, 1)}\n`;
-  return io("portfolio.write-json", async () => {
-    const previous = await readFile(destination, "utf8").catch(() => "");
-    if (previous !== content) await writeFile(destination, content, "utf8");
-    return destination;
+  stagedFiles.push(staged);
+  return io("portfolio.stage-json", () => writeFile(staged, content, "utf8")).pipe(
+    Effect.as({ staged, content }),
+  );
+}
+
+/**
+ * 逐文件原子替换：旧产物先硬链接为同目录备份，再 rename 暂存文件上位。
+ * 任一步失败即回滚已上位的文件（rename 备份回目标；无备份的新产物删除）。
+ * 回滚本身失败时把全部错误合并抛出，绝不吞掉真实失败。
+ */
+function commitReplacements(replacements) {
+  return io("portfolio.commit", async () => {
+    const token = randomUUID().slice(0, 8);
+    const replaced = [];
+    try {
+      for (const { destination, staged, content } of replacements) {
+        if (content !== undefined && (await readFile(destination, "utf8").catch(() => null)) === content) {
+          continue; // 内容未变则不触碰原文件
+        }
+        const backup = `${destination}.bak-${token}`;
+        const hadPrior = existsSync(destination);
+        if (hadPrior) await link(destination, backup);
+        try {
+          await rename(staged, destination);
+        } catch (error) {
+          // 目标未被触碰，清掉备份即可；备份清理失败不能掩盖替换错误
+          if (hadPrior) await rm(backup, { force: true }).catch(() => {});
+          throw error;
+        }
+        replaced.push({ destination, backup: hadPrior ? backup : null });
+      }
+    } catch (cause) {
+      const failures = [cause];
+      for (const { destination, backup } of replaced) {
+        try {
+          if (backup) await rename(backup, destination);
+          else await rm(destination, { force: true });
+        } catch (rollback) {
+          failures.push(rollback);
+        }
+      }
+      const detail = failures
+        .map((failure) => (failure instanceof Error ? failure.message : String(failure)))
+        .join("；");
+      throw new Error(
+        failures.length > 1
+          ? `发布替换失败且回滚未完全成功（备份保留在目标旁，需人工处理）：${detail}`
+          : `发布替换失败，已回滚保留旧产物：${detail}`,
+      );
+    }
+    await removeFiles(replaced.filter((entry) => entry.backup).map((entry) => entry.backup));
   });
 }
 
 /**
- * 唯一发布入口：读取离线输入，构建临时库与目录投影，校验后原子替换公共产物。
- * 输入只读；任何失败保留旧产物。
+ * 唯一发布入口：读取离线输入，把全部产物暂存在各自目标同目录，
+ * 校验（库完整性/一致性、工具目录公开 Schema、体积上限）通过后按 库→图鉴→工具 逐文件原子替换。
+ * 进程级独占锁拒绝并发发布；输入只读；任何失败保留旧产物。
  */
 export function publishPortfolio(options = {}) {
   const inputRoot = options.inputRoot ?? DEFAULT_INPUT_ROOT;
   const publicDir = options.publicDir ?? WEB_PUBLIC_DIR;
   const outputPath = options.outputPath ?? PORTFOLIO_OUTPUT_PATH;
   const dataDir = options.dataDir ?? PUBLIC_DATA_DIR;
+  const maxSnapshotBytes = options.maxSnapshotBytes ?? MAX_SNAPSHOT_BYTES;
   return Effect.scoped(Effect.gen(function* () {
     const rawDbPath = path.join(inputRoot, "inspora.db");
     if (!existsSync(rawDbPath)) {
@@ -466,6 +549,13 @@ export function publishPortfolio(options = {}) {
         new PortfolioInputError(`缺少输入 ${rawDbPath}；先运行 portfolio:sync 同步离线数据。`),
       );
     }
+    yield* io("portfolio.mkdir", () => mkdir(path.dirname(outputPath), { recursive: true }));
+    yield* io("portfolio.mkdir-data", () => mkdir(dataDir, { recursive: true }));
+    const lockPath = `${outputPath}.lock`;
+    yield* Effect.acquireRelease(acquirePublishLock(lockPath), () =>
+      io("portfolio.unlock", () => rm(lockPath, { force: true })).pipe(Effect.ignore),
+    );
+
     const catalog = JSON.parse(yield* io("portfolio.read-layouts", () => readFile(path.join(inputRoot, "catalog.json"), "utf8")));
     const corrections = JSON.parse(
       yield* io("portfolio.read-corrections", () => readFile(path.join(inputRoot, "corrections.json"), "utf8")),
@@ -482,15 +572,29 @@ export function publishPortfolio(options = {}) {
         new PortfolioInputError(`布局图鉴目录结构异常：${Array.isArray(catalog) ? catalog.length : "非数组"}`),
       );
     }
+    // 公开工具目录只需要分类；Schema 解码同时剔除 syncedAt/sourceUrl 等内部同步元数据
+    let toolCategories;
+    try {
+      toolCategories = Schema.decodeUnknownSync(Schema.Array(toolCategorySchema))(tools?.categories);
+    } catch (cause) {
+      return yield* Effect.fail(new PortfolioInputError(`工具目录不符合公开 Schema：${cause.message}`));
+    }
 
     const layouts = projectLayouts(catalog, corrections, publicDir);
     const layoutsMissing = layouts.filter((item) => item.image === null).length;
-    yield* io("portfolio.mkdir", () => mkdir(dataDir, { recursive: true }));
-    yield* writeJsonIfChanged(path.join(dataDir, "layouts.json"), layouts);
-    yield* writeJsonIfChanged(path.join(dataDir, "tools.json"), tools);
+    const stagedFiles = [];
+    yield* Effect.acquireRelease(
+      Effect.void,
+      () => io("portfolio.cleanup-staged", () => removeFiles(stagedFiles)).pipe(Effect.ignore),
+    );
+    const stagedLayouts = yield* stageJson(stagedFiles, path.join(dataDir, "layouts.json"), layouts);
+    const stagedTools = yield* stageJson(stagedFiles, path.join(dataDir, "tools.json"), {
+      categories: toolCategories,
+    });
 
+    // 暂存目录紧邻最终产物，避免 /tmp 跨卷 rename 失败
     const staging = yield* Effect.acquireRelease(
-      io("portfolio.mkdtemp", () => mkdtemp(path.join(tmpdir(), "portfolio-project-"))),
+      io("portfolio.mkdtemp", () => mkdtemp(path.join(path.dirname(outputPath), ".portfolio-publish-"))),
       (directory) => io("portfolio.cleanup", () => rm(directory, { recursive: true, force: true })).pipe(Effect.ignore),
     );
     const temporaryDb = path.join(staging, "portfolio.sqlite");
@@ -547,7 +651,30 @@ export function publishPortfolio(options = {}) {
         outputDb.close();
       }
     });
-    yield* io("portfolio.publish-db", () => rename(temporaryDb, outputPath));
+    const snapshotBytes = yield* io("portfolio.stat-snapshot", () => stat(temporaryDb)).pipe(
+      Effect.map((info) => info.size),
+    );
+    if (snapshotBytes > maxSnapshotBytes) {
+      return yield* Effect.fail(
+        new PortfolioSizeError(`公开库体积 ${snapshotBytes} 字节超过上限 ${maxSnapshotBytes}，拒绝发布`),
+      );
+    }
+
+    yield* Effect.uninterruptible(
+      commitReplacements([
+        { destination: outputPath, staged: temporaryDb },
+        {
+          destination: path.join(dataDir, "layouts.json"),
+          staged: stagedLayouts.staged,
+          content: stagedLayouts.content,
+        },
+        {
+          destination: path.join(dataDir, "tools.json"),
+          staged: stagedTools.staged,
+          content: stagedTools.content,
+        },
+      ]),
+    );
     return {
       database: outputPath,
       posts: parity.posts,
@@ -556,7 +683,7 @@ export function publishPortfolio(options = {}) {
       built: summary,
       layouts: layouts.length,
       layoutsMissing,
-      tools: tools.categories.reduce((total, category) => total + category.tools.length, 0),
+      tools: toolCategories.reduce((total, category) => total + category.tools.length, 0),
     };
   }));
 }
