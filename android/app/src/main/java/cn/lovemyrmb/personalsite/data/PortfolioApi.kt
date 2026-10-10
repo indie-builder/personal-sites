@@ -12,9 +12,7 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-const val PORTFOLIO_BASE_URL = "https://portfolio.default-coder.lovemyrmb.cn/"
-
-/** 作品集产品入口（/api/portfolio）：layouts / muse 原生浏览，其余产品跳站点网页。 */
+/** 作品集产品入口（/api/portfolio）：layouts / muse 原生浏览，其余产品跳统一站点产品页。 */
 @Serializable
 data class PortfolioProduct(
     val id: String = "",
@@ -24,6 +22,22 @@ data class PortfolioProduct(
     val dateLabel: String = "",
     val cover: String = "",
 )
+
+/** 产品目的地二选一：App 内集合浏览，或统一站点产品详情页（未知 id 也落在自己的产品页，不误跳他页）。 */
+sealed interface PortfolioDestination {
+    data class NativeCollection(val collection: String) : PortfolioDestination
+    data class WebPage(val url: String) : PortfolioDestination
+}
+
+fun PortfolioProduct.destination(): PortfolioDestination {
+    val native = when (id) {
+        "layout-compositions" -> "layouts"
+        "muse" -> "muse"
+        else -> null
+    }
+    return if (native != null) PortfolioDestination.NativeCollection(native)
+    else PortfolioDestination.WebPage(MediaUrls.sitePage("/products/$id"))
+}
 
 @Serializable
 data class PortfolioProducts(val items: List<PortfolioProduct> = emptyList())
@@ -68,7 +82,7 @@ data class PortfolioPage(
 @Serializable
 data class PortfolioDetail(val item: PortfolioItem)
 
-/** 作品集公共 API（personal-design 服务所有）：GET /api/portfolio[/{collection}[/{id}]]。 */
+/** 作品集公共 API（与站点同源）：GET /api/portfolio[/{collection}[/{id}]]。 */
 interface PortfolioApi {
     @GET("api/portfolio")
     suspend fun products(): PortfolioProducts

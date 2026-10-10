@@ -49,6 +49,7 @@
 		A20000000000000000000042 = {isa = PBXBuildFile; fileRef = A10000000000000000000042; };
 		A20000000000000000000043 = {isa = PBXBuildFile; fileRef = A10000000000000000000043; };
 		A20000000000000000000044 = {isa = PBXBuildFile; fileRef = A10000000000000000000044; };
+		A20000000000000000000045 = {isa = PBXBuildFile; fileRef = A10000000000000000000045; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +128,7 @@
 		A10000000000000000000042 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskParts.swift; sourceTree = "<group>"; };
 		A10000000000000000000043 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRows.swift; sourceTree = "<group>"; };
 		A10000000000000000000044 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownInlineParser.swift; sourceTree = "<group>"; };
+		A10000000000000000000045 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioDestinationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -217,6 +219,7 @@
 				A10000000000000000000027,
 				A10000000000000000000028,
 				A10000000000000000000034,
+				A10000000000000000000045,
 			);
 			path = ChenYuanSiteTests;
 			sourceTree = "<group>";
@@ -365,6 +368,7 @@
 				A20000000000000000000027,
 				A20000000000000000000028,
 				A20000000000000000000034,
+				A20000000000000000000045,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

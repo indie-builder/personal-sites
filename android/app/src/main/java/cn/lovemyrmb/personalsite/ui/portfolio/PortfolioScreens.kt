@@ -46,12 +46,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cn.lovemyrmb.personalsite.data.CurationMedia
 import cn.lovemyrmb.personalsite.data.CurationSource
-import cn.lovemyrmb.personalsite.data.PORTFOLIO_BASE_URL
 import cn.lovemyrmb.personalsite.data.PortfolioApi
+import cn.lovemyrmb.personalsite.data.PortfolioDestination
 import cn.lovemyrmb.personalsite.data.PortfolioMedia
 import cn.lovemyrmb.personalsite.data.PortfolioProduct
 import cn.lovemyrmb.personalsite.data.PortfolioViewModel
 import cn.lovemyrmb.personalsite.data.ReaderPayload
+import cn.lovemyrmb.personalsite.data.destination
 import cn.lovemyrmb.personalsite.ui.components.ContentPhase
 import cn.lovemyrmb.personalsite.ui.components.CurationMediaSection
 import cn.lovemyrmb.personalsite.ui.components.ErrorRetry
@@ -63,13 +64,6 @@ import cn.lovemyrmb.personalsite.ui.icons.SiteIcons
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
-
-/** 产品入口的原生集合；其余产品（工具 / 个人网站）保持跳站点网页。 */
-private fun PortfolioProduct.nativeCollection(): String? = when (id) {
-    "layout-compositions" -> "layouts"
-    "muse" -> "muse"
-    else -> null
-}
 
 /** 作品集落地页：产品列表（名称、简介、日期、封面），下拉刷新、失败重试。 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -130,16 +124,19 @@ fun PortfolioScreen(
                                 }
                             }
                             itemsIndexed(products, key = { _, product -> product.id }) { _, product ->
-                                val collection = product.nativeCollection()
+                                val destination = product.destination()
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable(
                                             role = Role.Button,
-                                            onClickLabel = if (collection != null) "打开${product.name}" else "在浏览器打开${product.name}",
+                                            onClickLabel = if (destination is PortfolioDestination.NativeCollection) "打开${product.name}" else "在浏览器打开${product.name}",
                                         ) {
-                                            if (collection != null) onOpenCollection(collection) else onOpenLink(PORTFOLIO_BASE_URL)
+                                            when (destination) {
+                                                is PortfolioDestination.NativeCollection -> onOpenCollection(destination.collection)
+                                                is PortfolioDestination.WebPage -> onOpenLink(destination.url)
+                                            }
                                         }
                                         .padding(horizontal = SiteSpace.page, vertical = SiteSpace.item),
                                     horizontalArrangement = Arrangement.spacedBy(SiteSpace.paragraph),

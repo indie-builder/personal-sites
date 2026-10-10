@@ -1,9 +1,10 @@
 import AVKit
 import SwiftUI
 
-/// Four actual products from the portfolio service. Navigation stays in the app.
+/// Products from the unified site's portfolio API. Four destinations stay native; the rest open the site product page.
 struct PortfolioView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     @State private var products: [PortfolioProduct] = []
     @State private var error = false
     @State private var attempt = 0
@@ -45,39 +46,20 @@ struct PortfolioView: View {
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(products) { product in
-                            NavigationLink(value: destination(product.id)) {
-                                HStack(alignment: .center, spacing: 20) {
-                                    VStack(alignment: .leading, spacing: 9) {
-                                        Text(product.name).font(.system(size: 18, weight: .semibold))
-                                            .foregroundStyle(SiteTheme.ink)
-                                        Text(product.summary).siteSummaryStyle().fixedSize(horizontal: false, vertical: true)
-                                        HStack(spacing: 6) {
-                                            Text("\(product.date) · \(product.dateLabel)")
-                                            Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                                        }
-                                        .siteMetaStyle().padding(.top, 3)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    Group {
-                                        if product.cover.isEmpty {
-                                            Image(systemName: "square.grid.2x2")
-                                                .font(.system(size: 30, weight: .ultraLight))
-                                                .foregroundStyle(SiteTheme.ink)
-                                        } else {
-                                            RemoteImage(url: URL(string: product.cover), contentMode: .fit)
-                                                .padding(product.id == "layout-compositions" ? 8 : 0)
-                                        }
-                                    }
-                                    .frame(width: 100, height: 112)
-                                    .background(SiteTheme.line.opacity(0.35))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .accessibilityHidden(true)
+                            if let route = Self.nativeDestination(product.id) {
+                                NavigationLink(value: route) { PortfolioProductRow(product: product) }
+                                    .buttonStyle(SitePressStyle.row)
+                                    .accessibilityIdentifier("portfolio-\(product.id)")
+                            } else {
+                                Button {
+                                    openURL(Self.productPage(product.id))
+                                } label: {
+                                    PortfolioProductRow(product: product)
                                 }
-                                .padding(.vertical, 20)
-                                .contentShape(Rectangle())
+                                .buttonStyle(SitePressStyle.row)
+                                .accessibilityIdentifier("portfolio-\(product.id)")
+                                .accessibilityHint("在浏览器打开产品页面")
                             }
-                            .buttonStyle(SitePressStyle.row)
-                            .accessibilityIdentifier("portfolio-\(product.id)")
                             Divider().overlay(SiteTheme.line)
                         }
                         // 已有内容时刷新失败不顶掉列表（对齐 Home 信息流与集合页的页脚重试）。
@@ -98,14 +80,18 @@ struct PortfolioView: View {
         .task(id: attempt) { await load() }
     }
 
-    private func destination(_ id: String) -> Route {
+    /// 四个原生页面之外的产品（含未知 id）打开统一站点产品页，不再误入「个人网站」。
+    static func nativeDestination(_ id: String) -> Route? {
         switch id {
         case "layout-compositions": .portfolioCollection("layouts")
         case "muse": .portfolioCollection("muse")
         case "design-engineer-tools": .portfolioTools
-        default: .portfolioSite
+        case "personal-sites": .portfolioSite
+        default: nil
         }
     }
+
+    static func productPage(_ id: String) -> URL { SiteAPI.url("products/\(id)") }
 
     private func load() async {
         error = false
@@ -116,6 +102,43 @@ struct PortfolioView: View {
             // 成功落地时再清一次，避免「有内容 + 误报刷新失败」的页脚残留。
             error = false
         } catch { if !Task.isCancelled { self.error = true } }
+    }
+}
+
+/// 落地页产品行：名称、简介、日期与封面，原生导航与网页外链共用。
+private struct PortfolioProductRow: View {
+    let product: PortfolioProduct
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 9) {
+                Text(product.name).font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(SiteTheme.ink)
+                Text(product.summary).siteSummaryStyle().fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 6) {
+                    Text("\(product.date) · \(product.dateLabel)")
+                    Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                }
+                .siteMetaStyle().padding(.top, 3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                if product.cover.isEmpty {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 30, weight: .ultraLight))
+                        .foregroundStyle(SiteTheme.ink)
+                } else {
+                    RemoteImage(url: URL(string: product.cover), contentMode: .fit)
+                        .padding(product.id == "layout-compositions" ? 8 : 0)
+                }
+            }
+            .frame(width: 100, height: 112)
+            .background(SiteTheme.line.opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .accessibilityHidden(true)
+        }
+        .padding(.vertical, 20)
+        .contentShape(Rectangle())
     }
 }
 

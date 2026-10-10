@@ -94,16 +94,16 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 
 ## 原生作品集
 
-`UI/PortfolioView.swift` 实现作品索引、视频、工具目录和个人网站介绍；`UI/PortfolioCollectionView.swift` 负责布局图鉴与灵感集合，`UI/PortfolioItemReader.swift` 负责原生阅读和图片缩放。集合返回时保留搜索、分类、已加载条目和阅读位置；详情可在当前已加载结果内切换上一件／下一件，更多结果由集合滚动追加。
+`UI/PortfolioView.swift` 实现作品索引、视频、工具目录和个人网站介绍；`UI/PortfolioCollectionView.swift` 负责布局图鉴与灵感集合，`UI/PortfolioItemReader.swift` 负责原生阅读和图片缩放。产品落地页的目的地契约：布局参考、灵感集、设计工程工具、个人网站四个产品走原生页面，其余产品（AI 词典、AI 问答、文字游乐场及后续新增）打开统一站点产品页 `/products/{id}`，未知 id 同样落在自己的产品页，不误入他页。集合返回时保留搜索、分类、已加载条目和阅读位置；详情可在当前已加载结果内切换上一件／下一件，更多结果由集合滚动追加。
 
-`Data/PortfolioAPI.swift` 只读 personal-design 的 `/api/portfolio`，不打包内容快照、不解析 HTML、无 WebView。仅原作、工具官网和“打开网站”保留明确外链。图鉴手机端采用分类/主题筛选与图片列表，未搬用桌面双页书籍动画。元数据在线加载，离线显示可重试错误。
+`Data/PortfolioAPI.swift` 只读统一站点的 `/api/portfolio`（与 `SiteAPI` 同基座），不打包内容快照、不解析 HTML、无 WebView。仅原作、工具官网和“打开网站”保留明确外链。图鉴手机端采用分类/主题筛选与图片列表，未搬用桌面双页书籍动画。元数据在线加载，离线显示可重试错误。
 
-后端实现与接口文档位于 `/Users/xbjt/Documents/myself/personal-design/docs/portfolio-api.md`。Release 连接线上作品集域名；上线前需要部署该项目新增接口。
+接口契约的历史文档位于 personal-design 仓库 `docs/portfolio-api.md`；作品集接口已并入站点服务，Release 与站点同域。本地 Debug 可用 `PORTFOLIO_BASE_URL` 覆盖联调，生产包不会读取该覆盖值。
 
-本地启动 personal-design 服务后：
+本地启动站点服务后：
 
 ```bash
-SIMCTL_CHILD_PORTFOLIO_BASE_URL=http://127.0.0.1:7200/ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite -skip-opening -route-portfolio
+SIMCTL_CHILD_PORTFOLIO_BASE_URL=http://127.0.0.1:3000/ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite -skip-opening -route-portfolio
 ```
 
 原生联调 UI 测试 `testPortfolioNativeBrowsing` 需要 test runner 环境 `PORTFOLIO_TEST_BASE_URL`，测试会将其传给应用；未提供时明确跳过，不请求生产 API。

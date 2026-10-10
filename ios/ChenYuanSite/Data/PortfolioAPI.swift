@@ -69,9 +69,8 @@ nonisolated struct PortfolioProducts: Decodable, Sendable { let items: [Portfoli
 nonisolated struct PortfolioDetail: Decodable, Sendable { let item: PortfolioItem }
 nonisolated struct PortfolioTools: Decodable, Sendable { let categories: [PortfolioToolCategory] }
 
-/// Public portfolio API owned by personal-design; no bundled content or HTML scraping.
+/// Portfolio API served by the unified site (same base as SiteAPI); no bundled content or HTML scraping.
 nonisolated struct PortfolioAPI: Sendable {
-    static let productionURL = URL(string: "https://portfolio.default-coder.lovemyrmb.cn/")!
     let baseURL: URL
     private let session: URLSession
 
@@ -79,9 +78,9 @@ nonisolated struct PortfolioAPI: Sendable {
         if let baseURL { self.baseURL = baseURL }
         else {
             #if DEBUG
-            self.baseURL = ProcessInfo.processInfo.environment["PORTFOLIO_BASE_URL"].flatMap(URL.init(string:)) ?? Self.productionURL
+            self.baseURL = ProcessInfo.processInfo.environment["PORTFOLIO_BASE_URL"].flatMap(URL.init(string:)) ?? SiteAPI.baseURL
             #else
-            self.baseURL = Self.productionURL
+            self.baseURL = SiteAPI.baseURL
             #endif
         }
         self.session = session
