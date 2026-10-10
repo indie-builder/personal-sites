@@ -61,7 +61,7 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 - 同步、归档、清理、数据库推送、部署等有副作用的命令直接通过 pnpm 执行，不使用 Turbo 缓存。
 - 暂不开启远程缓存。Web `.next` 可能包含构建时读取的外部内容；不要把私有队列、原始资料或凭据加入任何缓存 outputs。
 - GitHub Code quality 调用根类型检查、lint、单测，并构建一次后运行关键 Web E2E。`apps/web/scripts/ci-public-data.mjs` 只在 CI 启动，提供空新闻增量，配合已提交的公开 SQLite；不使用生产数据库或模型凭据。Ask 回归在浏览器拦截模型请求；失败保存 trace。原生工程保留各自操作系统和路径触发规则。
-- 根 `tests/agent-environment.test.mjs` 随 `pnpm test` 检查已跟踪技能的相对软链接、核心导航文档的本地链接/路径及明确列出的 pnpm 命令，避免机械性漂移。事实和领域语义仍需评审核对。每日动态工作流调用内容工具脚本，归档仍为根 `data/ai-news.sqlite`。
+- 根 `tests/agent-environment.test.mjs` 随 `pnpm test` 检查 `.claude/skills` 目录软链接与技能内容的唯一跟踪目录、核心导航文档的本地链接/路径及明确列出的 pnpm 命令，避免机械性漂移。事实和领域语义仍需评审核对。每日动态工作流调用内容工具脚本，归档仍为根 `data/ai-news.sqlite`。
 
 ## Vercel
 
