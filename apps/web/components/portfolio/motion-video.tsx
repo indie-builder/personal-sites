@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type VideoHTMLAttributes } from 'react';
 import { instantMotion, observeMotionPolicy } from '@/lib/portfolio/motion';
+import { usePreviewPlayback } from './preview-playback';
 
 type Props = Omit<VideoHTMLAttributes<HTMLVideoElement>, 'src'> & {
   src: string;
@@ -17,6 +18,7 @@ export function MotionVideo({
   onPause,
   ...props
 }: Props) {
+  const enabled = usePreviewPlayback();
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = ref.current;
@@ -49,7 +51,7 @@ export function MotionVideo({
         video.src = src;
         video.load();
       }
-      eligible = active && visible && !document.hidden;
+      eligible = enabled && active && visible && !document.hidden;
       if (!eligible || (instantMotion() && automaticPlayback && !manualPlay)) {
         pauseAutomatically();
       } else if (
@@ -141,7 +143,7 @@ export function MotionVideo({
       video.removeEventListener('play', play);
       video.pause();
     };
-  }, [active, src, props.controls, manualControls]);
+  }, [active, src, props.controls, manualControls, enabled]);
   return (
     <video
       {...props}

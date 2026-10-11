@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import { usePreviewPlayback } from '@/components/portfolio/preview-playback';
 
 // WAAPI easing strings cannot reference CSS var(); these constants are the single TS
 // source. Entries naming a globals.css token are dual-sourced — keep values in sync.
@@ -94,6 +95,7 @@ export function useVisiblePlay(
   onPlay: (playing: boolean) => void,
   threshold = 0.3,
 ) {
+  const enabled = usePreviewPlayback();
   const report = useRef(onPlay);
   useEffect(() => {
     report.current = onPlay;
@@ -103,7 +105,7 @@ export function useVisiblePlay(
     if (!element) return;
     let visible = false;
     const update = () => {
-      const next = visible && !document.hidden && !instantMotion();
+      const next = enabled && visible && !document.hidden && !instantMotion();
       report.current(next);
     };
     const observer = new IntersectionObserver(
@@ -120,5 +122,5 @@ export function useVisiblePlay(
       stop();
       report.current(false);
     };
-  }, [ref, threshold]);
+  }, [ref, threshold, enabled]);
 }

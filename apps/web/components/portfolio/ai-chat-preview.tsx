@@ -23,7 +23,7 @@ export function AiChatPreview() {
       data-running={running || undefined}
       aria-hidden="true"
     >
-      <span className={styles.question}>看看两周试用的效果</span>
+      <span className={styles.question}>用示例数据比较两组结果</span>
       <div className={styles.reply}>
         <div className={styles.thinking}>
           <i />
@@ -33,18 +33,18 @@ export function AiChatPreview() {
         <div className={styles.answer}>
           <div className={styles.heading}>
             <strong>任务完成率</strong>
-            <small>试用样本</small>
+            <small>示例数据</small>
           </div>
           <div className={styles.chart}>
             <div>
-              <span>对照</span>
+              <span>A 组</span>
               <i>
                 <b className={styles.before} />
               </i>
               <em>60%</em>
             </div>
             <div>
-              <span>试用</span>
+              <span>B 组</span>
               <i>
                 <b className={styles.after} />
               </i>

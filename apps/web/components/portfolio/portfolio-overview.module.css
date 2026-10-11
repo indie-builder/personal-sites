@@ -2,6 +2,12 @@
    真实日期节点 + 连续竖线串起七段作品；同日作品共用日期节点，以短刻度衔接。
    形态只在本模块内，不改信息流样式；颜色全部走 .portfolio-scope 的明暗 token。 */
 
+.previewScope { position:relative; max-width:660px; }
+.playback { position:absolute; top:-12px; right:0; z-index:1; display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 8px; border:0; background:var(--color-paper); color:var(--color-ink-soft); font:inherit; font-size:.75rem; cursor:pointer; }
+.playback:focus-visible { outline:2px solid var(--color-ink); outline-offset:2px; }
+.playback:disabled { cursor:default; }
+.previewScope[data-preview-paused] .bookMotion * { animation:none !important; }
+
 .timeline {
   max-width: 660px;
   margin: 0;
@@ -77,6 +83,8 @@
 
 .work {
   display: grid;
+  grid-template-columns:minmax(0,1fr);
+  min-width:0;
   /* 书架的翻书动效允许升出媒体面（溢入简介区），但不得在窄屏撑出横向滚动。 */
   overflow: clip;
   gap: 0.3rem;
@@ -91,6 +99,10 @@
   align-content: center;
   column-gap: 1.1rem;
 }
+
+.work[data-compact] .title { grid-area:title; align-self:end; }
+.work[data-compact] .tagline { grid-area:tagline; align-self:start; }
+.work[data-compact] .media { grid-area:media; }
 
 .work:focus-visible {
   outline: 2px solid var(--color-ink);
@@ -147,19 +159,22 @@
   background: var(--color-plate);
 }
 
-.mediaArcade,
-.mediaMuse {
-  aspect-ratio: 16 / 9;
-}
+.mediaArcade { aspect-ratio: 2.4; }
+.mediaMuse { aspect-ratio: 2; }
 
 .mediaWindow {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 2.1;
   flex-direction: column;
 }
 
-.mediaChat,
-.mediaShelf {
-  height: 13.5rem;
+.mediaChat { height:11.5rem; }
+.mediaShelf { height:13rem; }
+.bookMotion { min-width:0; }
+.bookMotion [data-preview] { padding-inline:4px; }
+.bookMotion [data-preview] > div { width:100%; min-width:0; }
+.bookMotion [data-preview] > div > span { flex:1 1 0; min-width:0; width:auto; }
+@media(max-width:560px) {
+  .bookMotion [data-preview] > div > span { padding-inline:1px; }
 }
 
 .work[data-compact] .media {

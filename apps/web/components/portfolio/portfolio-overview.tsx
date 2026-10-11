@@ -15,6 +15,7 @@ import { MotionVideo } from "./motion-video";
 import { OverviewBookPreview } from "./overview-book-preview";
 import { OverviewToolPreview } from "./overview-tool-preview";
 import { WordArcadePreview } from "./word-arcade-preview";
+import { PreviewPlaybackScope } from "./preview-playback";
 import styles from "./portfolio-overview.module.css";
 
 export type MusePreview = { src: string; alt: string; videoSrc?: string };
@@ -124,9 +125,11 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
   const layoutCategories = Effect.runSync(readLayoutCategories());
   const stops = portfolioProducts.map((product, index) => ({
     product,
-    continues: index > 0 && portfolioProducts[index - 1]?.date === product.date,
+    continues: index > 0 && portfolioProducts[index - 1]?.date === product.date
+      && portfolioProducts[index - 1]?.dateLabel === product.dateLabel,
   }));
   return (
+    <PreviewPlaybackScope>
     <ol className={styles.timeline}>
       {stops.map(({ product, continues }) => (
         <li className={styles.stop} data-continue={continues || undefined} key={product.slug}>
@@ -135,9 +138,10 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
           ) : (
             <>
               <span aria-hidden="true" className={styles.node} />
-              <time className={styles.date} dateTime={product.date}>
-                {product.date.replaceAll("-", ".")}
-              </time>
+              <span className={styles.date}>
+                <time dateTime={product.date}>{product.date.replaceAll("-", ".")}</time>
+                <span> · {product.dateLabel}</span>
+              </span>
             </>
           )}
           <Link
@@ -162,5 +166,6 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
         <span className={styles.date}>未完待续</span>
       </li>
     </ol>
+    </PreviewPlaybackScope>
   );
 }

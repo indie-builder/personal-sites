@@ -18,6 +18,7 @@
 .thinking i { width:4px; height:4px; border-radius:50%; background:var(--color-ink-soft); }
 .thinking i:nth-child(2) { opacity:.65; }
 .thinking i:nth-child(3) { opacity:.35; }
+:global([data-preview-paused]) .surface * { animation:none !important; }
 @media(prefers-reduced-motion:no-preference) {
   .surface[data-motion] .question { animation:question 8s var(--ease-out) infinite both; }
   .surface[data-motion] .thinking { animation:thinking 8s ease infinite both; }
@@ -27,9 +28,9 @@
   .surface[data-motion] .followUp { animation:followUp 8s var(--ease-out) infinite both; }
   .surface[data-motion] :is(.question,.thinking,.answer,.before,.after,.followUp) { animation-play-state:var(--preview-play-state); }
 }
-@keyframes question { 0% { opacity:0; transform:translateY(6px); } 6%,88% { opacity:1; transform:translateY(0); } 96%,100% { opacity:0; transform:translateY(-4px); } }
-@keyframes thinking { 0%,8%,26%,100% { opacity:0; } 12%,20% { opacity:1; } }
-@keyframes answer { 0%,22% { opacity:0; transform:translateY(8px); } 30%,88% { opacity:1; transform:translateY(0); } 96%,100% { opacity:0; transform:translateY(-4px); } }
-@keyframes beforeBar { 0%,34% { transform:scaleX(0); } 46%,100% { transform:scaleX(1); } }
-@keyframes afterBar { 0%,40% { transform:scaleX(0); } 54%,100% { transform:scaleX(1); } }
-@keyframes followUp { 0%,54% { opacity:0; transform:translateY(4px); } 62%,88% { opacity:1; transform:translateY(0); } 96%,100% { opacity:0; transform:translateY(-4px); } }
+@keyframes question { 0%,100% { opacity:1; } 50% { opacity:.85; } }
+@keyframes thinking { 0%,100% { opacity:0; } }
+@keyframes answer { 0%,100% { opacity:1; } }
+@keyframes beforeBar { 0%,100% { transform:scaleX(1); } 45% { transform:scaleX(.92); } }
+@keyframes afterBar { 0%,100% { transform:scaleX(1); } 55% { transform:scaleX(.94); } }
+@keyframes followUp { 0%,100% { opacity:1; } }
