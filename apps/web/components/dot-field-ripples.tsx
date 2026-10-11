@@ -182,11 +182,6 @@ export function DotFieldRipples() {
         paint(performance.now());
       }
     });
-    const themeObserver = new MutationObserver((records) => {
-      if (!armed || !records.some((record) => record.attributeName === "data-curation-theme")) return;
-      syncMetrics();
-      if (!raf) paint(performance.now());
-    });
     const syncMotionPolicy = () => {
       if (reducedQuery.matches || !fineQuery.matches) disable();
       else {
@@ -201,7 +196,6 @@ export function DotFieldRipples() {
     document.addEventListener("visibilitychange", onVisibility);
     reducedQuery.addEventListener("change", syncMotionPolicy);
     fineQuery.addEventListener("change", syncMotionPolicy);
-    themeObserver.observe(document.documentElement, { attributes: true });
     resizeObserver.observe(parent);
     intersection.observe(parent);
     syncMotionPolicy();
@@ -214,7 +208,6 @@ export function DotFieldRipples() {
       document.removeEventListener("visibilitychange", onVisibility);
       reducedQuery.removeEventListener("change", syncMotionPolicy);
       fineQuery.removeEventListener("change", syncMotionPolicy);
-      themeObserver.disconnect();
       resizeObserver.disconnect();
       intersection.disconnect();
     };

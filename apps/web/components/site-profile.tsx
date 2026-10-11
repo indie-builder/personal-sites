@@ -8,7 +8,6 @@ import { ParticleAvatar } from "@/components/particle-avatar";
 import { ProfileIntroduction } from "@/components/profile-introduction";
 import { ProfileTransitionBridge } from "@/components/profile-transition-bridge";
 import { MobileSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { siteProfile } from "../../../config/site-profile.mjs";
 
 type SiteProfileProps = {
@@ -21,7 +20,6 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
     <aside aria-labelledby="profile-name" className="curation-home__profile">
       <MobileProfileCollapse section={mobileSection ?? "profile"} />
       <ProfileTransitionBridge section={mobileSection ?? "profile"} />
-      <ThemeToggle />
       <div className="curation-home__profile-header">
         <ParticleAvatar name={siteProfile.name} />
 

@@ -19,7 +19,6 @@ const durationByKind = {
 } as const;
 const revealSelectors = [
   ".curation-home__profile-header",
-  ".curation-theme-toggle",
   'nav[aria-label="内容导航"]',
   ".interactive-dot-field",
   ".curation-home__bio",

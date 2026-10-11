@@ -247,48 +247,6 @@
   stroke-width: 1.5;
 }
 
-:global(html[data-curation-theme="dark"]) .root {
-  color: #f4f4f4;
-}
-
-:global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]),
-:global(html[data-curation-theme="dark"]) .citation {
-  border-color: #333;
-}
-
-:global(html[data-curation-theme="dark"]) .viewport {
-  scrollbar-color: rgb(244 244 244 / 30%) transparent;
-}
-
-:global(html[data-curation-theme="dark"]) .viewport::-webkit-scrollbar-thumb {
-  background-color: rgb(244 244 244 / 30%);
-}
-
-:global(html[data-curation-theme="dark"]) .viewport:hover::-webkit-scrollbar-thumb {
-  background-color: rgb(244 244 244 / 48%);
-}
-
-:global(html[data-curation-theme="dark"]) .empty,
-:global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]),
-:global(html[data-curation-theme="dark"]) .sourcesSummary,
-:global(html[data-curation-theme="dark"]) .citation,
-:global(html[data-curation-theme="dark"]) .status,
-:global(html[data-curation-theme="dark"]) .interruption {
-  color: #999;
-}
-
-:global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]):hover,
-:global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]):focus-visible,
-:global(html[data-curation-theme="dark"]) .citation:hover,
-:global(html[data-curation-theme="dark"]) .citation:focus-visible {
-  color: #f4f4f4;
-}
-
-:global(html[data-curation-theme="dark"]) .userBubble {
-  background: #f4f4f4;
-  color: #181818;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .root :global([data-slot="message-scroller-viewport"]) {
     scroll-behavior: auto !important;
@@ -367,12 +325,6 @@
 .drawerSend:focus-visible { outline:2px solid #767676; outline-offset:3px; }
 .userBubble { max-width: 270px; border-radius: 12px 12px 4px; background: #171717; color: #fff; padding: 8px 12px; font-size: 13px; line-height: 20px; }
 .assistantBubble { font-size: 13px; line-height: 21px; }
-:global(html[data-curation-theme="dark"]) .suggestions :global([data-slot="button"]) { background: #2b2b2b; color: #b8b8bb; }
-:global(html[data-curation-theme="dark"]) .drawerComposer { background:#2b2b2b; }
-:global(html[data-curation-theme="dark"]) .drawerInput { color:#f4f4f4; }
-:global(html[data-curation-theme="dark"]) .drawerSend { background:#f4f4f4; color:#181818; }
-:global(html[data-curation-theme="dark"]) .welcomeWalker { color:#f4f4f4; }
-:global(html[data-curation-theme="dark"]) .welcomeHeader p { color:#b8b8bb; }
 @media (max-width: 900px) { .suggestions :global([data-slot="button"]) { min-height: 44px; } .drawerInput { font-size:16px; line-height:22px; } }
 @media (prefers-reduced-motion: reduce) {
   .welcomeRise { animation: none; }

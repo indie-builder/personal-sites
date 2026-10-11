@@ -1,4 +1,4 @@
-@media (max-width:900px) { .curation-home { grid-template-columns:minmax(0,1fr); align-content:start; gap:0; }.curation-home__profile { position:relative; height:auto; min-height:0; border-bottom:1px solid var(--line); padding:2rem; }.curation-theme-toggle { top:2rem; right:2rem; }.curation-detail .curation-home__profile { display:none; }.curation-home__feed,.curation-detail__article { max-width:none; padding:2rem; } }
+@media (max-width:900px) { .curation-home { grid-template-columns:minmax(0,1fr); align-content:start; gap:0; }.curation-home__profile { position:relative; height:auto; min-height:0; border-bottom:1px solid var(--line); padding:2rem; }.curation-detail .curation-home__profile { display:none; }.curation-home__feed,.curation-detail__article { max-width:none; padding:2rem; } }
 
 @media (max-width:900px) {
   .ai-news-detail__back,
@@ -14,7 +14,6 @@
     justify-content:center;
   }
 
-  .curation-theme-toggle,
   .curation-home__external-links a,
   .curation-home__about-trigger {
     min-width:2.75rem;
@@ -38,10 +37,6 @@
     background:var(--line);
     content:"";
     transform:translate(-50%,-50%);
-  }
-
-  html[data-curation-theme="dark"] .curation-home__external-links>:not(:first-child)::before {
-    background:#404040;
   }
 
   .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-home__profile {
@@ -83,11 +78,6 @@
     display: none;
   }
 
-  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-theme-toggle {
-    top: 1rem;
-    right: 2rem;
-  }
-
 
   .curation-home--mobile-home .curation-home__feed {
     display: none;
@@ -113,17 +103,11 @@
     padding: 1rem 1rem 0;
   }
 
-  .curation-home:not(.curation-detail):not(.curation-home--mobile-home) .curation-theme-toggle {
-    right: 1rem;
-  }
-
 
 }
 
 @media (max-width:560px) { .curation-home__stream > li > a { grid-template-columns:minmax(0,1fr); }.curation-home__stream-meta { grid-column:1/-1; flex-direction:row; } }
 
-html[data-curation-theme="dark"] .curation-detail__intro h1 { color:#f4f4f4; }
-html[data-curation-theme="dark"] .curation-detail__intro p { color:#b5b5b7; }
 
 .curation-open-source-detail .curation-detail__article { padding-top:1.5rem; }
 .curation-open-source-detail .curation-detail__header,
@@ -138,10 +122,6 @@ html[data-curation-theme="dark"] .curation-detail__intro p { color:#b5b5b7; }
 .curation-open-source-detail .curation-detail__cta:active:not(:focus-visible) { transform:translateX(0) scale(.97); }
 .curation-open-source-detail .curation-detail__cta svg { width:.8rem; height:.8rem; stroke-width:1.7; }
 .curation-open-source-detail .curation-detail__cta-host { color:#767676; font-size:.76rem; }
-html[data-curation-theme="dark"] .curation-open-source-detail .curation-detail__header h1 { color:#f4f4f4; }
-html[data-curation-theme="dark"] .curation-open-source-detail .curation-detail__note p { color:#d4d4d6; }
-html[data-curation-theme="dark"] .curation-open-source-detail .curation-detail__cta { background:#f4f4f4; color:#181818; }
-html[data-curation-theme="dark"] .curation-open-source-detail .curation-detail__cta-host { color:#999; }
 
 @media (max-width:900px) {
   .curation-detail__article { padding:1.35rem 1.25rem 4rem; }
@@ -188,12 +168,6 @@ html[data-curation-theme="dark"] .curation-open-source-detail .curation-detail__
 :focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
 .skip-link { position:fixed; top:.75rem; left:.75rem; z-index:70; border-radius:.4rem; background:var(--ink); color:#fff; font-size:.78rem; padding:.5rem .8rem; text-decoration:none; transform:translateY(-3rem); transition:transform 160ms ease; }
 .skip-link:focus-visible { transform:translateY(0); }
-html[data-curation-theme="dark"] .skip-link { background:#f4f4f4; color:#181818; }
-/* 深色下 --ink(#1c1c1e) 压在 #181818 背景上对比度约 1.1:1，焦点环等于没有。 */
-html[data-curation-theme="dark"] :focus-visible { outline-color:#f4f4f4; }
-/* 深色下 html/body 与开场动画仍按浅色变量取白底：过滚露白、硬刷新白闪。 */
-html[data-curation-theme="dark"], html[data-curation-theme="dark"] body { background:#181818; }
-html[data-curation-theme="dark"] .opening-loader { background:#181818; }
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }
   .curation-home__external-links a,

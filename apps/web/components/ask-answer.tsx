@@ -4,7 +4,6 @@ import { Renderer, type ActionEvent, type OpenUIError, type ParseResult } from "
 import { ThemeProvider, safeOpenUrl, type Theme } from "@openuidev/react-ui";
 import { openuiLibrary } from "@openuidev/react-ui/genui-lib";
 
-import { useSiteThemeDark } from "@/components/use-mounted";
 import { memo, useCallback, useState } from "react";
 
 const theme: Theme = {
@@ -22,7 +21,6 @@ export const AskAnswer = memo(function AskAnswer({ source, isStreaming, onContin
   isStreaming: boolean;
   onContinue?: (question: string) => void;
 }) {
-  const dark = useSiteThemeDark();
   const [invalid, setInvalid] = useState(false);
   const [hasRoot, setHasRoot] = useState(true);
   const onError = useCallback((errors: OpenUIError[]) => setInvalid(errors.length > 0), []);
@@ -38,7 +36,7 @@ export const AskAnswer = memo(function AskAnswer({ source, isStreaming, onContin
 
   return (
     <div className="ask-openui">
-      <ThemeProvider cssSelector=".ask-openui" lightTheme={theme} mode={dark ? "dark" : "light"}>
+      <ThemeProvider cssSelector=".ask-openui" lightTheme={theme} mode="light">
         <Renderer
           isStreaming={isStreaming}
           library={openuiLibrary}
