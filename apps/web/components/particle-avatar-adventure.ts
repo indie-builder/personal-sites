@@ -55,7 +55,6 @@ export type AdventureMascotState = {
   x: number;
   y: number;
   lean: number;
-  arms: number;
   crouch: number;
   pose: 0 | 1;
 };
@@ -79,7 +78,6 @@ function stateAt(index: number, p: number): AdventureMascotState {
   let x = lerp(0, 420, p / 10);
   let y = 192;
   let lean = 0.08;
-  let arms = 0;
   let crouch = 1;
   let walking = true;
   if (p < 2) {
@@ -101,14 +99,12 @@ function stateAt(index: number, p: number): AdventureMascotState {
           x = lerp(94, 266, (u - 0.3) / 0.7);
           y -= arc((u - 0.3) / 0.7, 84);
           walking = false;
-          arms = 0.65;
         }
         break;
       case "gap":
         x = lerp(88, 272, u);
         y -= arc(u, 78);
         walking = false;
-        arms = 0.6;
         break;
       case "stairs":
         if (u < 0.25) {
@@ -137,7 +133,6 @@ function stateAt(index: number, p: number): AdventureMascotState {
           x = 154;
           y -= arc((u - 0.3) / 0.4, 45);
           walking = false;
-          arms = 0.65;
         } else {
           x = lerp(154, 266, (u - 0.7) / 0.3);
         }
@@ -146,7 +141,6 @@ function stateAt(index: number, p: number): AdventureMascotState {
         if (u < 0.62) {
           x = lerp(88, 172, u / 0.62);
           lean = 0.22;
-          arms = 1;
         } else {
           x = lerp(172, 278, (u - 0.62) / 0.38);
           y -= arc((u - 0.62) / 0.38, 48);
@@ -204,7 +198,6 @@ function stateAt(index: number, p: number): AdventureMascotState {
           x = lerp(124, 296, q);
           y = 192 - arc(q, 96);
           walking = false;
-          arms = 0.7;
         }
         break;
       case "gate":
@@ -222,7 +215,7 @@ function stateAt(index: number, p: number): AdventureMascotState {
   } else {
     x = lerp(END_X[chapter], 420, (p - 7) / 3);
   }
-  return { chapter, x, y, lean, arms, crouch, pose: walking ? ((Math.floor(p * 8) % 2) as 0 | 1) : 1 };
+  return { chapter, x, y, lean, crouch, pose: walking ? ((Math.floor(p * 8) % 2) as 0 | 1) : 1 };
 }
 
 export function adventureState(time: number): AdventureMascotState {
@@ -251,12 +244,8 @@ function pushMascot(state: AdventureMascotState) {
         }
       }
       if (!inside) continue;
-      let xx = x - 13.5;
-      let yy = (y - 32) * state.crouch;
-      if (state.arms && x >= 20 && y >= 4 && y < 16) {
-        xx += state.arms * 4;
-        yy += state.arms * 4;
-      }
+      const xx = x - 13.5;
+      const yy = (y - 32) * state.crouch;
       pushPoint(MASCOT_CX + (xx * cos - yy * sin) * MASCOT_SCALE, state.y + (xx * sin + yy * cos) * MASCOT_SCALE);
     }
   }

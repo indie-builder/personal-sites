@@ -101,6 +101,26 @@ describe("writeAdventureFrame", () => {
 });
 
 describe("adventureState physics", () => {
+  it("keeps the original head and eye outline intact throughout jumps", () => {
+    const body = [[0, 0, 8, 24], [12, 0, 8, 8], [7, 4, 16, 4], [12, 4, 4, 12], [20, 4, 4, 12], [7, 12, 20, 4], [4, 15, 19, 13], [8, 15, 4, 13], [16, 20, 4, 8]];
+    for (const time of [5, 15, 35, 85.7]) {
+      const state = adventureState(time);
+      const { out } = frame(time, 4000);
+      let i = 0;
+      for (let y = 0; y < 16; y += 1.2) {
+        for (let x = 0; x < 27; x += 1.2) {
+          if (!body.some(([rx, ry, rw, rh]) => x >= rx && x < rx + rw && y >= ry && y < ry + rh)) continue;
+          const xx = x - 13.5;
+          const yy = y - 32;
+          const expectedX = (94 + (xx * Math.cos(state.lean) - yy * Math.sin(state.lean)) * 2.6) / 240;
+          const expectedY = (state.y + (xx * Math.sin(state.lean) + yy * Math.cos(state.lean)) * 2.6) / 240;
+          expect(out[i++]).toBeCloseTo(expectedX, 6);
+          expect(out[i++]).toBeCloseTo(expectedY, 6);
+        }
+      }
+    }
+  });
+
   it("hands the mascot from one chapter to the next at the seam", () => {
     expect(adventureState(9.9999).x).toBeGreaterThan(419);
     expect(adventureState(10.0001).x).toBeLessThan(1);
