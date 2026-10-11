@@ -1,13 +1,13 @@
 import { expect, test, type Browser } from "./helpers/loader-key.ts";
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
 
-// 预览契约：每个作品有自己的媒体面比例（紧凑停靠左右分栏、宽度有意不同）；
-// 书脊等内容不溢出自己的框；只有阅读线附近的当前站在播
+// 预览契约：每个作品模块有自己的媒体面比例（各卡预览尺寸有意不同）；
+// 书脊等内容不溢出自己的框；只有阅读线附近的最近模块在播
 // （[data-preview-station][data-preview-playing] 是资格探针）；
 // 暂停后全部停播、内容保持可读；减少动态效果时静态呈现且播放控制禁用。
-// 纵向时间轴用页面原生滚动，后段示例先滚入视口再断言。
+// 模块画廊用页面原生滚动，后段示例先滚入视口再断言。
 
-// 把作品顶边对到视口 25% 处，让阅读线落在该站内容内成为当前站。
+// 把模块顶边对到视口 25% 处，让阅读线落在该模块内容内成为最近模块。
 const scrollToWork = (browser: Browser, slug: string) =>
   browser.evaluate((target) => {
     const link = document.getElementById(`portfolio-work-${target}`);
@@ -30,7 +30,7 @@ for (const width of [320, 390, 1440]) {
         browser.evaluate(() => {
           const frames = [...document.querySelectorAll("[data-preview-station]")];
           if (frames.length !== 7) return null;
-          // 各自的比例不同属预期（紧凑停靠 15rem 媒体列、其余整幅），只要求非零且在自己的链接内。
+          // 各卡的比例不同属预期（模块内预览尺寸有意不等宽等高），只要求非零且在自己的链接内。
           return frames.every((frame) => {
             const link = frame.closest("a");
             if (!link) return false;
@@ -75,11 +75,13 @@ for (const width of [320, 390, 1440]) {
     await expect(screen.getByText("示例数据", { exact: true })).toBeVisible();
     const content = await browser.evaluate(() => {
       const preview = document.querySelector("[data-chat-preview]");
-      return preview
-        ? [...preview.querySelectorAll("strong,small,em")].every(
-            (element) => getComputedStyle(element).visibility !== "hidden" && Number(getComputedStyle(element).opacity) > 0,
-          )
-        : false;
+      if (!preview) return false;
+      const frame = preview.getBoundingClientRect();
+      return [...preview.querySelectorAll("small,em")].every((element) => {
+        const rect = element.getBoundingClientRect();
+        return getComputedStyle(element).visibility !== "hidden" && Number(getComputedStyle(element).opacity) > 0 &&
+          rect.left >= frame.left && rect.right <= frame.right && rect.top >= frame.top && rect.bottom <= frame.bottom;
+      });
     });
     expect(content).toBe(true);
   });

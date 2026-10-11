@@ -1,137 +1,56 @@
-/* 作品集总览：纵向时间线（源站首页横向时间轴的窄栏改写）。
-   真实日期节点 + 连续竖线串起七段作品；同日作品共用日期节点，以短刻度衔接。
+/* 作品集总览：七个独立作品模块（pawr.link/max 式）。
+   每个模块是一枚完整链接卡片：头部语义图标 + 名称 + 右上箭头，
+   正文左侧标语与日期、右侧真实微缩预览；无时间轴、无轨道、无尾结点。
    形态只在本模块内，不改信息流样式；颜色全部走 .portfolio-scope 的明暗 token。 */
 
-.timeline {
+.gallery {
+  container-type: inline-size;
   position: relative;
-  max-width: 660px;
+  max-width: 520px;
 }
 
-/* 静音工具行：右上角绝对定位，不占据纵向空间，首个日期在左、暂停在右。 */
 .utility {
-  position: absolute;
-  top: -12px;
-  right: 0;
-  z-index: 1;
   display: flex;
   justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 .list {
-  max-width: 660px;
+  display: flex;
+  max-width: 520px;
   margin: 0;
-  padding: 0 0 40svh;
+  /* 末段留出越过阅读线（35vh）的余量，便于最后一个模块获得预览播放资格。 */
+  padding: 0 0 45svh;
+  flex-direction: column;
+  gap: 32px;
   list-style: none;
 }
 
-.stop {
-  position: relative;
-  padding-bottom: 3.25rem;
-  padding-left: 2rem;
+.item {
+  min-width: 0;
 }
 
-/* 轨迹竖线：从本停靠的节点延伸到下一停靠；停靠间无外距，线因此连续。 */
-.stop::before {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: 10px;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-hairline-strong);
-}
-
-.node {
-  position: absolute;
-  left: 0;
-  top: 7px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-ink);
-  transition: box-shadow var(--dur-fast) ease;
-}
-
-/* 阅读线命中的当前站：节点外一圈浅环，唯一的当前态标记。 */
-.stop[data-active="true"] .node {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink) 14%, transparent);
-}
-
-/* 同日续作：不重复日期，用横跨轨迹的短刻度标记（源站轨中刻度的竖排对应）。 */
-.tick {
-  position: absolute;
-  left: 0;
-  top: 12px;
-  width: 7px;
-  height: 1px;
-  background: var(--color-hairline-strong);
-}
-
-.stop[data-active="true"] .tick {
-  background: var(--color-ink);
-}
-
-.date {
-  display: block;
-  margin: 0 0 0.8rem;
-  color: var(--color-ink-soft);
-  font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-  line-height: 1.4;
-}
-
-/* 末端开口：通向「未完待续」的最后一段为虚线，节点空心（源站收尾语言）。 */
-.future {
-  padding-bottom: 0;
-}
-
-.future::before {
-  top: 0;
-  bottom: auto;
-  width: 0;
-  height: 10px;
-  background: none;
-  border-left: 1px dashed var(--color-hairline-strong);
-}
-
-.future .node {
-  background: var(--color-paper);
-  border: 1px solid var(--color-ink-soft);
-}
-
+/* 完整链接模块：整卡 44px+ 触达；无嵌套交互元素。 */
 .work {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head head"
+    "body media";
+  grid-template-columns: minmax(0, 1fr) 200px;
+  align-content: start;
   min-width: 0;
-  /* 书架的翻书动效允许升出媒体面（溢入简介区），但不得在窄屏撑出横向滚动。 */
+  /* 书架的翻书动效允许升出媒体面（溢入模块头部区），但不得撑出模块圆角。 */
   overflow: clip;
-  gap: 0.3rem;
-  border-radius: var(--radius-md);
+  min-height: 196px;
+  gap: 14px 24px;
+  padding: 20px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: 24px;
+  background: var(--color-paper);
   color: inherit;
   text-decoration: none;
   scroll-margin-top: 1.5rem; /* 命中锚点时给桌面留出呼吸位 */
-}
-
-.work[data-compact] {
-  grid-template-areas: "title media" "tagline media";
-  grid-template-columns: minmax(0, 1fr) 15rem;
-  align-content: center;
-  column-gap: 1.1rem;
-}
-
-.work[data-compact] .title {
-  grid-area: title;
-  align-self: end;
-}
-
-.work[data-compact] .tagline {
-  grid-area: tagline;
-  align-self: start;
-}
-
-.work[data-compact] .media {
-  grid-area: media;
+  transition: border-color var(--dur-fast) ease;
 }
 
 .work:focus-visible {
@@ -139,31 +58,42 @@
   outline-offset: 4px;
 }
 
-.title {
+.head {
   display: flex;
+  grid-area: head;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 0;
+  gap: 12px;
+  min-height: 40px;
 }
 
-.name {
+/* 语义图标：安静的描边小方，40px。 */
+.badge {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--color-hairline);
+  border-radius: 12px;
+  background: var(--color-plate);
   color: var(--color-ink);
-  font-size: 1.15rem;
+}
+
+.title {
+  min-width: 0;
+  margin: 0;
+  flex: 1;
+  color: var(--color-ink);
+  font-size: 1rem;
   font-weight: 620;
   letter-spacing: -0.02em;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
-.tagline {
-  color: var(--color-ink-soft);
-  font-size: 0.85rem;
-  line-height: 1.6;
-}
-
 .enter {
   flex: none;
+  margin: 2px 2px 0 0;
   color: var(--color-ink-soft);
   transition:
     transform var(--dur-base) var(--ease-out),
@@ -171,9 +101,13 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .work:hover {
+    border-color: var(--color-border-hover);
+  }
+
   .work:hover .enter {
     color: var(--color-ink);
-    transform: translateX(4px);
+    transform: translate(2px, -2px);
   }
 }
 
@@ -181,47 +115,94 @@
   color: var(--color-ink);
 }
 
-.work:active {
-  transform: scale(0.985);
-  transition-duration: 70ms;
+/* 左侧正文：标语 + 本模块自己的日期。 */
+.body {
+  display: flex;
+  grid-area: body;
+  min-width: 0;
+  flex-direction: column;
+  align-self: center;
+  gap: 6px;
 }
 
+.tagline {
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.date {
+  color: var(--color-ink-soft);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
+/* 右侧真实微缩预览：桌面 ~200x124，容器 <420px 时收窄。 */
 .media {
   position: relative;
   display: flex;
-  margin-top: 0.55rem;
+  grid-area: media;
   overflow: hidden;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   background: var(--color-plate);
 }
 
-.mediaArcade {
-  aspect-ratio: 2.4;
-}
-
-.mediaMuse {
-  aspect-ratio: 2;
-}
-
+.mediaArcade,
+.mediaChat,
+.mediaGraph,
+.mediaMuse,
+.mediaShelf,
+.mediaTools,
 .mediaWindow {
-  aspect-ratio: 2.1;
-  flex-direction: column;
+  height: 124px;
 }
 
-.mediaChat {
-  height: 11.5rem;
-}
-
+/* 书架停靠：翻书动效允许升出媒体面，板沿由书架自身的下边框承担。 */
 .mediaShelf {
-  height: 13rem;
+  align-items: flex-end;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
 }
 
-.work[data-compact] .media {
-  height: 11rem;
-  margin-top: 0;
+/* 窄容器：标题整行，正文/日期在左，缩略图占 46% 且至多 140px，卡片自然长高。 */
+@container (max-width: 420px) {
+  .work {
+    grid-template-columns: minmax(0, 1fr) min(46%, 140px);
+    gap: 12px 16px;
+  }
+
+  .mediaArcade,
+  .mediaChat,
+  .mediaGraph,
+  .mediaMuse,
+  .mediaShelf,
+  .mediaTools,
+  .mediaWindow {
+    height: 100px;
+  }
+
+  .title {
+    font-size: 0.95rem;
+  }
+
+  .toolGrid span {
+    justify-content: center;
+  }
+
+  .toolGrid b {
+    display: none;
+  }
+
+  .tagline {
+    font-size: 0.78rem;
+  }
 }
 
-/* 预览停靠（活动站且未暂停才播放）：资格包装填满各自的媒体面。 */
+/* 预览停靠（活动模块且未暂停才播放）：资格包装填满各自的媒体面。 */
 .previewStation {
   position: relative;
   display: flex;
@@ -234,41 +215,129 @@
   animation: none !important;
 }
 
+/* 迷你书架：8 枚书脊等宽铺满，轻量翻书只在小范围内起落。 */
 .bookMotion {
   width: 100%;
   min-width: 0;
 }
 
-.bookMotion [data-preview] {
-  padding-inline: 4px;
+.bookMotion [data-book-stack] {
+  height: 100%;
 }
 
-.bookMotion [data-preview] > div {
-  width: 100%;
-  min-width: 0;
-}
-
-.bookMotion [data-preview] > div > span {
-  flex: 1 1 0;
-  min-width: 0;
+.bookMotion [data-book-spine] {
   width: auto;
+  min-width: 0;
+  flex: 1 1 0;
 }
 
-@media (max-width: 560px) {
-  .bookMotion [data-preview] > div > span {
-    padding-inline: 1px;
+.bookMotion [data-book-number] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bookMotion [data-book-stack] {
+    perspective: 420px;
+    transform-style: preserve-3d;
+  }
+
+  .bookMotion [data-book-spine] {
+    --pull-x: -8px;
+    transform-style: preserve-3d;
+    transform-origin: 50% 100%;
+  }
+
+  .bookMotion [data-book-cover] {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 56px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    border: 1px solid color-mix(in srgb, var(--binding-ink) 22%, transparent);
+    border-radius: 0 4px 4px 0;
+    background: var(--binding);
+    box-shadow:
+      inset -3px 0 0 #f5f1e7,
+      inset 0 0 0 5px var(--binding),
+      inset 0 0 0 6px color-mix(in srgb, var(--binding-ink) 22%, transparent);
+    color: var(--binding-ink);
+    font: 500 10px/1.4 var(--font-sans);
+    letter-spacing: 0;
+    text-align: center;
+    transform: rotateY(90deg);
+    transform-origin: 0 50%;
+    backface-visibility: hidden;
+    opacity: 0;
+  }
+
+  .bookMotion [data-book-active="true"] {
+    animation: preview-book-reveal 6s var(--ease-travel) both;
+    animation-play-state: paused;
+  }
+
+  .bookMotion [data-book-active="true"] > [data-book-cover] {
+    animation: preview-cover-reveal 6s ease both;
+    animation-play-state: paused;
+  }
+
+  .bookMotion[data-running="true"] [data-book-active="true"],
+  .bookMotion[data-running="true"] [data-book-active="true"] > [data-book-cover] {
+    animation-play-state: running;
+  }
+
+  .bookMotion [data-book-spine]:nth-child(7) {
+    --pull-x: -12px;
+  }
+
+  .bookMotion [data-book-spine]:nth-child(8) {
+    --pull-x: -16px;
   }
 }
 
-/* 书架停靠：封面翻出书架需要溢出可见，媒体面由书架自身的板沿承担。 */
-.mediaShelf {
-  align-items: flex-end;
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
+@keyframes preview-book-reveal {
+  0%,
+  4%,
+  100% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
+  }
+  16% {
+    transform: translate3d(0, -6px, 40px) rotateX(-6deg) rotateY(0);
+  }
+  28%,
+  68% {
+    transform: translate3d(var(--pull-x), -10px, 52px) rotateX(0) rotateY(-90deg);
+  }
+  84% {
+    transform: translate3d(0, -6px, 40px) rotateX(-6deg) rotateY(0);
+  }
 }
 
-/* 个人网站停靠：迷你浏览器窗口包住本站截图。 */
+@keyframes preview-cover-reveal {
+  0%,
+  4%,
+  100% {
+    opacity: 0;
+  }
+  16%,
+  84% {
+    opacity: 1;
+  }
+}
+
+.bookMotion [data-book-cover] small {
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* 个人网站停靠：迷你浏览器窗口包住本站真实截图。 */
 .siteWindow {
   display: grid;
   width: 100%;
@@ -280,8 +349,8 @@
 .siteBar {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
   border-bottom: 1px solid var(--color-hairline);
   background: var(--color-paper);
 }
@@ -293,8 +362,8 @@
 }
 
 .dots i {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--color-hairline-strong);
 }
@@ -302,11 +371,11 @@
 .address {
   overflow: hidden;
   min-width: 0;
-  padding: 0.15rem 0.6rem;
+  padding: 0.1rem 0.5rem;
   border-radius: var(--radius-pill);
   background: var(--color-plate);
   color: var(--color-ink-soft);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -320,11 +389,12 @@
   object-position: top;
 }
 
+/* 灵感集停靠：视频/封面完整可见（contain），不裁掉主体。 */
 .museVideo {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* 词典停靠：静态知识网（SVG），不加载外部图谱运行时。 */
@@ -348,10 +418,10 @@
 
 .graph text {
   fill: var(--color-ink-soft);
-  font: 500 9px var(--font-sans);
+  font: 500 11px var(--font-sans);
 }
 
-/* 工具目录停靠：2×2 收录格，可见时轮流点亮。 */
+/* 工具目录停靠：2×2 收录格，图标 + 短名，可见时轮流点亮。 */
 .toolGrid {
   display: grid;
   width: 100%;
@@ -363,12 +433,12 @@
 .toolGrid span {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
-  padding: 12px;
+  padding: 8px;
   color: var(--color-ink-soft);
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.35;
   overflow-wrap: anywhere;
   transition:
@@ -386,8 +456,8 @@
 
 .toolGrid i {
   position: relative;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   flex: none;
   overflow: hidden;
   border-radius: var(--radius-control);
@@ -397,8 +467,8 @@
 .toolGrid i svg {
   position: absolute;
   inset: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
   transition:
     opacity 180ms ease,
@@ -430,109 +500,6 @@
   font-weight: 400;
 }
 
-/* 书架停靠：书架预览的翻书动效（源站首页同款，键帧与支点在此模块内）。 */
-@media (prefers-reduced-motion: no-preference) {
-  .bookMotion [data-preview] > div {
-    perspective: 700px;
-    transform-style: preserve-3d;
-  }
-
-  .bookMotion [data-preview] > div > span {
-    --pull-x: -28px;
-    transform-style: preserve-3d;
-    transform-origin: 50% 100%;
-  }
-
-  .bookMotion [data-preview] > div > span > [data-book-cover] {
-    position: absolute;
-    top: 0;
-    left: 100%;
-    width: 96px;
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    align-items: center;
-    justify-content: center;
-    padding: 20px 12px;
-    border: 1px solid color-mix(in srgb, var(--binding-ink) 22%, transparent);
-    border-radius: 0 4px 4px 0;
-    background: var(--binding);
-    box-shadow:
-      inset -3px 0 0 #f5f1e7,
-      inset 0 0 0 7px var(--binding),
-      inset 0 0 0 8px color-mix(in srgb, var(--binding-ink) 22%, transparent);
-    color: var(--binding-ink);
-    font: 500 15px/1.5 var(--font-sans);
-    letter-spacing: 0;
-    text-align: center;
-    transform: rotateY(90deg);
-    transform-origin: 0 50%;
-    backface-visibility: hidden;
-    opacity: 0;
-  }
-
-  .bookMotion [data-book-active="true"] {
-    animation: preview-book-reveal 6s var(--ease-travel) both;
-    animation-play-state: paused;
-  }
-
-  .bookMotion [data-book-active="true"] > [data-book-cover] {
-    animation: preview-cover-reveal 6s ease both;
-    animation-play-state: paused;
-  }
-
-  .bookMotion[data-running="true"] [data-book-active="true"],
-  .bookMotion[data-running="true"] [data-book-active="true"] > [data-book-cover] {
-    animation-play-state: running;
-  }
-
-  .bookMotion [data-preview] > div > span:nth-child(7) {
-    --pull-x: -55px;
-  }
-
-  .bookMotion [data-preview] > div > span:nth-child(8) {
-    --pull-x: -75px;
-  }
-}
-
-@keyframes preview-book-reveal {
-  0%,
-  4%,
-  100% {
-    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
-  }
-  16% {
-    transform: translate3d(0, -14px, 95px) rotateX(-10deg) rotateY(0);
-  }
-  28%,
-  68% {
-    transform: translate3d(var(--pull-x), -22px, 125px) rotateX(0) rotateY(-90deg);
-  }
-  84% {
-    transform: translate3d(0, -14px, 95px) rotateX(-10deg) rotateY(0);
-  }
-}
-
-@keyframes preview-cover-reveal {
-  0%,
-  4%,
-  100% {
-    opacity: 0;
-  }
-  16%,
-  84% {
-    opacity: 1;
-  }
-}
-
-.bookMotion [data-book-cover] small {
-  font-size: 9px;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
 .playback {
   display: inline-flex;
   align-items: center;
@@ -557,38 +524,6 @@
   cursor: default;
 }
 
-@media (max-width: 560px) {
-  .stop {
-    padding-bottom: 2.6rem;
-    padding-left: 1.4rem;
-  }
-
-  .name {
-    font-size: 1.05rem;
-  }
-
-  .mediaArcade,
-  .mediaMuse,
-  .mediaWindow {
-    aspect-ratio: 4 / 3;
-  }
-
-  .mediaChat,
-  .mediaShelf {
-    height: 12rem;
-  }
-
-  .work[data-compact] {
-    grid-template-areas: "title" "tagline" "media";
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .work[data-compact] .media {
-    height: 10rem;
-    margin-top: 0.55rem;
-  }
-}
-
 /* 移动端固定头会盖住锚点目标，给返回锚点留出安全距离。 */
 @media (max-width: 900px) {
   .work {
@@ -598,16 +533,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .enter,
-  .node {
+  .work {
     transition: none;
   }
 
   .work:hover .enter,
   .work:focus-visible .enter {
-    transform: none;
-  }
-
-  .work:active {
     transform: none;
   }
 }

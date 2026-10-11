@@ -23,7 +23,8 @@ export function WordArcadePreview() {
       disposed = false;
     let ink = '',
       paper = '';
-    const font = '500 21px "Albert Sans", system-ui, sans-serif';
+    // 字号随画布宽度缩放，迷你模块里标题砖块仍完整落在画布内。
+    let font = '500 21px "Albert Sans", system-ui, sans-serif';
 
     const draw = () => {
       if (!game) return;
@@ -80,17 +81,20 @@ export function WordArcadePreview() {
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       // Preserve fractional-DPR edge coverage with the original rect drawing path.
       background = Number.isInteger(scale) ? arcadeBackgroundPaths(width, height) : undefined;
+      const size = Math.max(13, Math.min(21, Math.round(width / 10)));
+      font = `500 ${size}px "Albert Sans", system-ui, sans-serif`;
       ctx.font = font;
       const letters = Array.from(headlines[0]).filter((char) => /[\p{L}\p{N}]/u.test(char));
       const widths = letters.map((char) => ctx.measureText(char).width);
       let x = (width - widths.reduce((sum, w) => sum + w, 0)) / 2;
+      const brickY = Math.max(30, Math.round(height * 0.42));
       game = new Arcade(
         'breakout',
         width,
         height,
         letters.map((text, i) => {
           const w = widths[i]!;
-          const letter = { text, x, y: 52, w, h: 23, headline: true };
+          const letter = { text, x, y: brickY, w, h: 23, headline: true };
           x += w;
           return letter;
         }),

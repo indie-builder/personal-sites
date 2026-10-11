@@ -5,7 +5,8 @@ import { ArrowUpRight } from 'lucide-react';
 import { instantMotion, useVisiblePlay } from '@/lib/portfolio/motion';
 import styles from './ai-chat-preview.module.css';
 
-export function AiChatPreview() {
+/** compact：作品集模块里的迷你尺寸（字号/内距收紧，身份与「示例数据」保持可读）。 */
+export function AiChatPreview({ compact = false }: { compact?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
   const [running, setRunning] = useState(false);
@@ -19,11 +20,12 @@ export function AiChatPreview() {
       ref={ref}
       className={styles.surface}
       data-chat-preview
+      data-compact={compact || undefined}
       data-motion={enabled || undefined}
       data-running={running || undefined}
       aria-hidden="true"
     >
-      <span className={styles.question}>用示例数据比较两组结果</span>
+      <span className={styles.question}>{compact ? '比较两组结果' : '用示例数据比较两组结果'}</span>
       <div className={styles.reply}>
         <div className={styles.thinking}>
           <i />
@@ -32,7 +34,7 @@ export function AiChatPreview() {
         </div>
         <div className={styles.answer}>
           <div className={styles.heading}>
-            <strong>任务完成率</strong>
+            {compact ? null : <strong>任务完成率</strong>}
             <small>示例数据</small>
           </div>
           <div className={styles.chart}>
@@ -51,10 +53,12 @@ export function AiChatPreview() {
               <em>90%</em>
             </div>
           </div>
-          <span className={styles.followUp}>
-            看看改进建议
-            <ArrowUpRight size={12} strokeWidth={1.6} />
-          </span>
+          {compact ? null : (
+            <span className={styles.followUp}>
+              看看改进建议
+              <ArrowUpRight size={12} strokeWidth={1.6} />
+            </span>
+          )}
         </div>
       </div>
     </div>

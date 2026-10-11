@@ -43,14 +43,14 @@ export function BookSpines({
 }) {
   return (
     <div className={styles.shelf} data-preview={!onOpen || undefined}>
-      <div className={styles.books}>
+      <div className={styles.books} data-book-stack>
         {categories.map((category, index) => {
           const [color, ink, height, width] = bindings[index % bindings.length]!;
           const label = categoryLabel(category.name);
           const content = (
             <Fragment key={category.name}>
               <span className={styles.spineTitle}>{label}</span>
-              <span className={styles.spineBottom}>
+              <span className={styles.spineBottom} data-book-number>
                 {String(index + 1).padStart(2, '0')}
                 <span>{category.count} 页</span>
               </span>
@@ -58,6 +58,7 @@ export function BookSpines({
           );
           const props = {
             className: styles.spine,
+            'data-book-spine': true,
             style: {
               '--binding': color,
               '--binding-ink': ink,

@@ -19,11 +19,11 @@ async function touchSwipe(page: Page, from: { x: number; y: number }, to: { x: n
 test.describe("touch media", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 
-  // 纵向时间轴不再有内层滚动区域：触摸纵滑只滚动文档，手势不拦截链接点按。
-  test("vertical touch gesture scrolls the page natively and a later tap still opens the work", async ({ page }) => {
+  // 独立模块画廊没有内层滚动区域：触摸纵滑只滚动文档，手势不拦截卡片点按。
+  test("vertical touch gesture scrolls the page natively and a later card tap still opens the work", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 320 });
     await page.goto("/portfolio");
-    const box = await page.locator("[data-portfolio-timeline]").boundingBox();
+    const box = await page.locator("[data-portfolio-gallery]").boundingBox();
     expect(box).toBeTruthy();
     if (!box) return;
     const x = box.x + box.width / 2;

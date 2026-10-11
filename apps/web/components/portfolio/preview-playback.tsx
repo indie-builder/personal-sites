@@ -6,14 +6,14 @@ import styles from "./portfolio-overview.module.css";
 
 const PreviewPlayback = createContext(true);
 
-type TimelinePlaybackValue = {
+type GalleryPlaybackValue = {
   activeSlug: string | null;
   playing: boolean;
   reduced: boolean;
   toggle: () => void;
 };
 
-const TimelinePlayback = createContext<TimelinePlaybackValue>({
+const GalleryPlayback = createContext<GalleryPlaybackValue>({
   activeSlug: null,
   playing: true,
   reduced: false,
@@ -36,14 +36,14 @@ export function PreviewPlaybackScope({ activeSlug, children }: { activeSlug: str
   }, []);
   const playing = !paused && !reduced;
   return (
-    <TimelinePlayback.Provider value={{ activeSlug, playing, reduced, toggle: () => setPaused(!paused) }}>
+    <GalleryPlayback.Provider value={{ activeSlug, playing, reduced, toggle: () => setPaused(!paused) }}>
       <PreviewPlayback.Provider value={playing}>{children}</PreviewPlayback.Provider>
-    </TimelinePlayback.Provider>
+    </GalleryPlayback.Provider>
   );
 }
 
 export function PlaybackToggle() {
-  const { playing, reduced, toggle } = useContext(TimelinePlayback);
+  const { playing, reduced, toggle } = useContext(GalleryPlayback);
   return (
     <button className={styles.playback} type="button" disabled={reduced} onClick={toggle}>
       {playing ? <Pause aria-hidden="true" size={14} /> : <Play aria-hidden="true" size={14} />}
@@ -52,9 +52,9 @@ export function PlaybackToggle() {
   );
 }
 
-/** 预览只在自己的停靠处于活动位且未暂停时播放；包装元素供测试检视播放资格。 */
+/** 预览只在自己的模块处于活动位且未暂停时播放；包装元素供测试检视播放资格。 */
 export function PreviewStation({ slug, children }: { slug: string; children: ReactNode }) {
-  const { activeSlug, playing } = useContext(TimelinePlayback);
+  const { activeSlug, playing } = useContext(GalleryPlayback);
   const eligible = activeSlug === slug && playing;
   return (
     <PreviewPlayback.Provider value={eligible}>

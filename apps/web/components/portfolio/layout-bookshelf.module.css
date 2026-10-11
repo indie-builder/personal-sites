@@ -63,10 +63,11 @@
 @keyframes turn-forward { to { transform:rotateY(-180deg); } }
 @keyframes turn-backward { to { transform:rotateY(180deg); } }
 @keyframes paper-shade { 0%,100% { opacity:0; } 50% { opacity:.3; } }
-.shelf[data-preview] { width:100%; margin:0; padding:0 18px; border-bottom-width:4px; align-self:center; }
-.shelf[data-preview] .books { min-height:185px; gap:3px; }
-.shelf[data-preview] .spine { height:calc(var(--book-height)*.46); padding:12px 2px 8px; cursor:inherit; }
-.shelf[data-preview] .spineTitle { font-size:11px; }
+/* 总览模块迷你书架：8 枚书脊等宽铺满媒体面，尺寸由此处统一约束。 */
+.shelf[data-preview] { width:100%; margin:0; padding:0 4px; border-bottom-width:4px; align-self:center; }
+.shelf[data-preview] .books { min-height:0; gap:2px; }
+.shelf[data-preview] .spine { height:calc(var(--book-height)*.26); padding:6px 1px 5px; cursor:inherit; }
+.shelf[data-preview] .spineTitle { font-size:9px; }
 .shelf[data-preview] .spineBottom { font-size:8px; }
 .shelf[data-preview] .spineBottom>span { display:none; }
 @media (max-width:900px) { .library { padding:20px 24px 48px; } .shelf { padding:0 24px; } .spineTitle { font-size:19px; } .spread { min-height:280px; } }
