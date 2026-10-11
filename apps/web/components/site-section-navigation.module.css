@@ -22,13 +22,6 @@
   padding: 2rem 0 0.78rem;
 }
 
-.mastheadGroup {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: baseline;
-  gap: 0.9rem;
-}
-
 .current {
   color: var(--ink);
   font-size: 0.95rem;

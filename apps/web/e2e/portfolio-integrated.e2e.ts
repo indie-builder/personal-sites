@@ -42,19 +42,22 @@ test("作品集并入本站：七个产品入口可用，公开 API 返回真实
   expect(hidden.status).toBe(404);
 });
 
-test("作品流切换与产品返回保持浏览器历史", async ({ app, screen, browser }) => {
+test("左侧「作品集 / 信息集」切换与产品返回保持浏览器历史", async ({ app, screen, browser }) => {
   await app.open("/");
-  await screen.getByRole("link", "作品流", { exact: false }).tap();
+  await screen.getByRole("link", "作品集", { exact: true }).tap();
   await expect(browser).toHaveURL(/\/portfolio$/u);
+  await expect(screen.getByRole("link", "信息集", { exact: true })).toHaveAttribute("href", "/");
   await expect(screen.getByRole("link", "打开布局参考")).toBeVisible();
 
   await screen.getByRole("link", "打开布局参考").tap();
   await expect(browser).toHaveURL(/\/products\/layout-compositions$/u);
+  await expect(screen.getByRole("link", "信息集", { exact: true })).toHaveAttribute("href", "/");
 
   await browser.back();
   await expect(browser).toHaveURL(/\/portfolio$/u);
-  await screen.getByRole("link", "信息流", { exact: true }).tap();
+  await screen.getByRole("link", "信息集", { exact: true }).tap();
   await expect(browser).toHaveURL(/\/$/u);
+  await expect(screen.getByRole("link", "作品集", { exact: true })).toHaveAttribute("href", "/portfolio");
 });
 
 test("作品图鉴可以搜索、阅读、放大并返回", async ({ app, screen }) => {

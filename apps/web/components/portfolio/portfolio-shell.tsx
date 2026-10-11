@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { SiteModeNavigation } from "@/components/site-mode-navigation";
 import { SiteProfile } from "@/components/site-profile";
 import styles from "./portfolio-shell.module.css";
 
@@ -12,7 +11,7 @@ type PortfolioShellProps = {
   hideMasthead?: boolean;
 };
 
-// 作品集共用壳：目标身份轨 + 宽内容列 + 「信息流 / 作品流」模式切换。
+// 作品集共用壳：目标身份轨 + 宽内容列 + 刊名行；回信息流走身份轨的「信息集」链接。
 // 不复用源站 workspace 外壳；main 地标由此壳唯一提供。
 export function PortfolioShell({ children, label = "作品集", hideMasthead = false }: PortfolioShellProps) {
   return (
@@ -25,7 +24,6 @@ export function PortfolioShell({ children, label = "作品集", hideMasthead = f
         {hideMasthead ? null : (
           <div className="portfolio-home__mode">
             <span className="portfolio-home__mode-label">{label}</span>
-            <SiteModeNavigation current="portfolio" />
           </div>
         )}
         {children}

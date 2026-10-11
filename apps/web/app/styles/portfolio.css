@@ -77,7 +77,6 @@ html[data-input="keyboard"] .portfolio-scope *::after {
 .portfolio-home__mode {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid var(--line);
   padding: 0 0 0.78rem;

@@ -29,9 +29,9 @@ PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch   # Playwright 留守件（须先�
 | 关于我 / 主题 | `identity-controls`、`profile-motion` | 主题切换经客户端导航与硬刷新持久并可切回；关于我小票展示真实经历、Escape 关闭、焦点回落、背景滚动解锁；打印小票 Motion 与 reduce 终态 |
 | 公开元数据 | `entry-metadata`、`public-discovery` | 详情 canonical 归一到 `/curation/[id]`、分享卡带 og:image、列表 canonical 裸路径；`/feed.xml`、`/robots.txt`、`/sitemap.xml` 与健康端点机器可读；精选流 axe 无违规 |
 | 站点边界 | `retired-works`、`section-navigation`、`layout-input-regressions` | 已退役路由 404 无导航、版块切换即时且内容可见、原生 BODY 键盘滚动 |
-| 作品集 | `portfolio-integrated` | 站内信息流与作品流切换、七个作品路由与公开 API、画册搜索放大与返回、词典同源嵌入响应头 |
+| 作品集 | `portfolio-integrated` | 左侧「作品集 / 信息集」切换、七个作品路由与公开 API、画册搜索放大与返回、词典同源嵌入响应头 |
 
-注意区分：**设计收藏**是 `/design` 信息流，展示带设计判读的剪报；**作品集**是 `/portfolio` 作品流，`portfolio-integrated` 覆盖其站内入口和产品，不替代设计收藏的覆盖。
+注意区分：**设计收藏**是 `/design` 信息流，展示带设计判读的剪报；**作品集**是 `/portfolio` 作品集总览，`portfolio-integrated` 覆盖其站内入口和产品，不替代设计收藏的覆盖。
 
 ## Playwright 留守件
 
