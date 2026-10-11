@@ -296,7 +296,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
   const advanceRef = useRef<() => void>(() => {});
   const pausedAtRef = useRef(0);
   const visibleRef = useRef(true);
-  // 彩蛋形态目标（九形 × 两姿势）与两只洗牌袋的状态。
+  // 彩蛋形态目标（十形 × 两姿势）与两只洗牌袋的状态。
   const shapesRef = useRef<ShapeTargets>({});
   const trackBagRef = useRef<FunTrack[] | null>(null);
   const staticBagRef = useRef<readonly FunShapeId[] | null>(null);
@@ -621,7 +621,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       // 否则保留静态点描兜底，避免空白头像。
       if (!paint()) return;
       setParticlesOn(true);
-      // 九形彩蛋目标同步预备：纯路径栅格化无字体等待，失败只是点击彩蛋不可用。
+      // 十形彩蛋目标同步预备：纯路径栅格化无字体等待，失败只是点击彩蛋不可用。
       shapesRef.current = buildShapeTargets(field.targets.length / 2);
       const assembleNow = () => {
         pos.set(field.targets);

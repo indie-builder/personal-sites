@@ -1,25 +1,28 @@
+import { SPRITE_BODY_RECTS, SPRITE_FEET_A_RECTS, SPRITE_FEET_B_RECTS } from "./assistant-sprite-geometry";
+
 const TAU = Math.PI * 2;
 
 // 栅格化画布边长，与概念板一致；形态坐标按此边长归一。
 export const SHAPE_SRC = 240;
 
-export const FUN_SHAPE_IDS = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish"] as const;
+export const FUN_SHAPE_IDS = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish", "mascot"] as const;
 
 export type FunShapeId = (typeof FUN_SHAPE_IDS)[number];
 
 export type FunTrack = readonly FunShapeId[];
 
-// 五支彩蛋轨道覆盖全部九形；鱼轨单独成轨。
+// 六支彩蛋轨道覆盖全部十形；鱼与吉祥物各自单独成轨。
 export const FUN_TRACKS = [
   ["terminal", "robot"],
   ["infinity", "planet"],
   ["plane", "spark"],
   ["sprout", "smile"],
   ["fish"],
+  ["mascot"],
 ] as const satisfies readonly FunTrack[];
 
 // 有明确「一次拍」手势的形态；其余落形后静态停留即可。
-export const GESTURE_SHAPES: ReadonlySet<FunShapeId> = new Set(["robot", "planet", "plane", "sprout", "smile", "fish"]);
+export const GESTURE_SHAPES: ReadonlySet<FunShapeId> = new Set(["robot", "planet", "plane", "sprout", "smile", "fish", "mascot"]);
 
 export function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -33,7 +36,7 @@ export function mulberry32(seed: number) {
 
 export type ShapeCtx = Pick<CanvasRenderingContext2D,
   | "beginPath" | "moveTo" | "lineTo" | "bezierCurveTo" | "quadraticCurveTo" | "closePath"
-  | "arc" | "ellipse" | "roundRect" | "fill" | "stroke" | "save" | "restore"
+  | "arc" | "ellipse" | "roundRect" | "fillRect" | "fill" | "stroke" | "save" | "restore"
   | "translate" | "rotate" | "scale" | "fillStyle" | "strokeStyle" | "lineWidth" | "lineCap" | "lineJoin"
 >;
 
@@ -265,6 +268,18 @@ function drawFish(ctx: ShapeCtx, pose: 0 | 1) {
   ctx.stroke();
 }
 
+// 整数倍缩放保留方块边缘，同时为粒子抖动留出内边距。
+function drawMascot(ctx: ShapeCtx, pose: 0 | 1) {
+  ctx.fillStyle = "#000";
+  ctx.save();
+  ctx.translate(39, 24);
+  ctx.scale(6, 6);
+  for (const [x, y, width, height] of SPRITE_BODY_RECTS) ctx.fillRect(x, y, width, height);
+  const feet = pose === 0 ? SPRITE_FEET_A_RECTS : SPRITE_FEET_B_RECTS;
+  for (const [x, y, width, height] of feet) ctx.fillRect(x, y, width, height);
+  ctx.restore();
+}
+
 export const SHAPE_DRAW: Record<FunShapeId, ShapeDraw> = {
   terminal: drawTerminal,
   robot: drawRobot,
@@ -275,6 +290,7 @@ export const SHAPE_DRAW: Record<FunShapeId, ShapeDraw> = {
   sprout: drawSprout,
   smile: drawSmile,
   fish: drawFish,
+  mascot: drawMascot,
 };
 
 export const SHAPE_POINT_MIN = 0.08;

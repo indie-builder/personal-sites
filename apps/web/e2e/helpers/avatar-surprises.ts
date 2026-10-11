@@ -1,7 +1,7 @@
 import type { Browser } from "@e2e-dev/web";
 
 // 短停留可能被跨进程轮询漏掉，形态与像素在页内记录。
-export const FUN_SHAPES = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish"] as const;
+export const FUN_SHAPES = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish", "mascot"] as const;
 
 export type AvatarStageEvent = { shape: string; state: string; t: number };
 export type AvatarStageLog = { events: AvatarStageEvent[]; pixels: Record<string, string[]> };

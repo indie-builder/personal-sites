@@ -78,8 +78,8 @@ const readCenterDensity = (page: Page) => page.evaluate(() => {
   return ink / total;
 });
 
-// 九个趣味形的 data-avatar-shape 实际取值。
-const FUN_FORM_PATTERN = /^(terminal|robot|infinity|planet|plane|spark|sprout|smile|fish)$/;
+// 各个趣味形的 data-avatar-shape 实际取值。
+const FUN_FORM_PATTERN = /^(terminal|robot|infinity|planet|plane|spark|sprout|smile|fish|mascot)$/;
 
 const readCanvasDataUrl = (page: Page) => page.evaluate(() => {
   const canvas = document.querySelector<HTMLCanvasElement>(".curation-home__avatar-particles");
@@ -120,7 +120,7 @@ test("avatar rests on the portrait and a click shows a still surprise form under
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 
   await avatar.click();
-  // reduce 下点击直接落到静止趣味形（九形之一），不播动画。
+  // reduce 下点击直接落到静止趣味形（十形之一），不播动画。
   await expect(avatar).toHaveAttribute("aria-label", "回到陈远的点描头像");
   await expect(avatar).toHaveAttribute("data-avatar-state", "static");
   await expect(avatar).toHaveAttribute("data-avatar-shape", FUN_FORM_PATTERN);
@@ -182,7 +182,7 @@ test("a surprise track freezes while hidden and the remaining dwell survives the
     const button = document.querySelector<HTMLElement>(".curation-home__avatar");
     const canvas = document.querySelector<HTMLCanvasElement>(".curation-home__avatar-particles");
     if (!button || !canvas) return;
-    const FUN = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish"];
+    const FUN = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish", "mascot"];
     const isFun = () => FUN.includes(button.dataset.avatarShape ?? "");
     const leaveFun = () => new Promise<void>((resolve) => {
       const observer = new MutationObserver(() => {

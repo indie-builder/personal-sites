@@ -23,7 +23,7 @@ const waitIdlePortrait = (browser: import("@e2e-dev/web").Browser, timeout: numb
     return current !== null && current.state === "idle" && current.shape === "portrait";
   }, { timeout }).toBe(true);
 
-test("all nine surprise forms are reachable and pixel-distinct through still activations", async ({ app, screen, browser }) => {
+test("every surprise form is reachable and pixel-distinct through still activations", async ({ app, screen, browser }) => {
   await skipOpeningLoader(browser);
   await app.open("/");
   const avatar = screen.getByRole("button", "点描头像", { exact: false });
@@ -37,7 +37,7 @@ test("all nine surprise forms are reachable and pixel-distinct through still act
     return true;
   });
   const seen: Array<{ digest: string; shape: string }> = [];
-  for (let activation = 0; activation < 9; activation += 1) {
+  for (let activation = 0; activation < FUN_LIST.length; activation += 1) {
     await browser.keyboard.press("Enter");
     await expect.poll(async () => {
       const current = await readAvatarMeta(browser);

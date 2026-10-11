@@ -27,6 +27,12 @@ import {
   type FunTrack,
   type ShapeCtx,
 } from "@/components/particle-avatar-shapes";
+import {
+  SPRITE_BODY_RECTS,
+  SPRITE_FEET_A_RECTS,
+  SPRITE_FEET_B_RECTS,
+  type SpriteRect,
+} from "@/components/assistant-sprite-geometry";
 
 function inkRgba(side: number, points: Array<[number, number, "ink" | "white"]>): Uint8ClampedArray {
   const rgba = new Uint8ClampedArray(side * side * 4);
@@ -62,6 +68,7 @@ function recorder() {
     arc: rec("arc"),
     ellipse: rec("ellipse"),
     roundRect: rec("roundRect"),
+    fillRect: rec("fillRect"),
     fill: rec("fill"),
     stroke: rec("stroke"),
     save: rec("save"),
@@ -110,8 +117,8 @@ describe("sampleInkPoints", () => {
 });
 
 describe("surprise playlist", () => {
-  it("covers all nine forms across the five curated tracks without inner repeats", () => {
-    expect(FUN_TRACKS).toHaveLength(5);
+  it("covers all ten forms across the six curated tracks without inner repeats", () => {
+    expect(FUN_TRACKS).toHaveLength(6);
     expect([...new Set(FUN_TRACKS.flat())].sort()).toEqual([...FUN_SHAPE_IDS].sort());
     for (const track of FUN_TRACKS) {
       expect(new Set(track).size).toBe(track.length);
@@ -141,9 +148,9 @@ describe("surprise playlist", () => {
   it("never starts a refilled bag with the form just shown", () => {
     // 恒等洗牌（不交换）下首轨为 terminal 轨，用 lastForm=terminal 逼出换轨。
     expect(nextTrack([], "terminal", seqRand([])).track).toBe(FUN_TRACKS[1]);
-    // 首抽把鱼轨换到袋首（i=4 与 j=0 交换），边界保护必须把它换走。
-    const fishFirst = nextTrack([], "fish", seqRand([0.1]));
-    expect(fishFirst.track[0]).not.toBe("fish");
+    // 首抽把单形的吉祥物轨换到袋首（i=5 与 j=0 交换），边界保护必须把它换走。
+    const mascotFirst = nextTrack([], "mascot", seqRand([0.1]));
+    expect(mascotFirst.track[0]).not.toBe("mascot");
   });
 
   it("preserves a nonconflicting shuffle order at refill", () => {
@@ -157,10 +164,11 @@ describe("surprise playlist", () => {
 
   it("refills when the only remaining draw would repeat a displayed form", () => {
     expect(nextTrack([FUN_TRACKS[4]], "fish", seqRand([])).track[0]).not.toBe("fish");
+    expect(nextTrack([FUN_TRACKS[5]], "mascot", seqRand([])).track[0]).not.toBe("mascot");
     expect(nextStaticForm(["robot"], "robot", seqRand([])).form).not.toBe("robot");
   });
 
-  it("deals all nine forms in static mode without adjacent repeats", () => {
+  it("deals all forms in static mode without adjacent repeats", () => {
     let bag: readonly FunShapeId[] | null = null;
     let last: FunShapeId | null = null;
     const rand = mulberry32(42);
@@ -217,14 +225,14 @@ describe("SHAPE_DRAW silhouettes", () => {
     return trace;
   };
 
-  it("draws nine distinct silhouettes with finite coordinates inside the raster box", () => {
+  it("draws each form as a distinct silhouette with finite coordinates inside the raster box", () => {
     // 仅坐标类指令受栅格边界约束；rotate/scale 的参数是角度与比例。
-    const coordCommands = new Set(["moveTo", "lineTo", "bezier", "quad", "arc", "ellipse", "roundRect"]);
+    const coordCommands = new Set(["moveTo", "lineTo", "bezier", "quad", "arc", "ellipse", "roundRect", "fillRect"]);
     const traces = FUN_SHAPE_IDS.map((id) => traceOf(id, 0).join("|"));
     expect(new Set(traces).size).toBe(FUN_SHAPE_IDS.length);
     for (const id of FUN_SHAPE_IDS) {
       const trace = traceOf(id, 0);
-      expect(trace.some((entry) => entry === "fill" || entry === "stroke")).toBe(true);
+      expect(trace.some((entry) => ["fill", "stroke", "fillRect"].includes(entry.split(":")[0]))).toBe(true);
       for (const entry of trace) {
         const name = entry.split(":")[0];
         if (!coordCommands.has(name)) continue;
@@ -243,6 +251,28 @@ describe("SHAPE_DRAW silhouettes", () => {
       const base = traceOf(id, 0).join("|");
       const alt = traceOf(id, 1).join("|");
       expect(alt === base).toBe(!GESTURE_SHAPES.has(id));
+    }
+  });
+
+  it("redraws the assistant sprite pixels with its own two feet frames as the pose", () => {
+    const fillRects = (pose: 0 | 1) => traceOf("mascot", pose).filter((entry) => entry.startsWith("fillRect:"));
+    const expected = (rects: readonly SpriteRect[]) => rects.map(([x, y, width, height]) => `fillRect:${x},${y},${width},${height}`);
+    expect(fillRects(0)).toEqual([...expected(SPRITE_BODY_RECTS), ...expected(SPRITE_FEET_A_RECTS)]);
+    expect(fillRects(1)).toEqual([...expected(SPRITE_BODY_RECTS), ...expected(SPRITE_FEET_B_RECTS)]);
+  });
+
+  it("fits the mascot inside the sampling bounds at a pixel-aligned uniform scale", () => {
+    const trace = traceOf("mascot", 0);
+    const translate = trace.find((entry) => entry.startsWith("translate:"))!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+    const scale = trace.find((entry) => entry.startsWith("scale:"))!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+    // 等比缩放保持 27:32 原始宽高比，整数倍保持像元对齐不产生半覆盖像素。
+    expect(scale[0]).toBe(scale[1]);
+    expect(Number.isInteger(scale[0])).toBe(true);
+    for (const [x, y, width, height] of [...SPRITE_BODY_RECTS, ...SPRITE_FEET_A_RECTS, ...SPRITE_FEET_B_RECTS]) {
+      expect(translate[0] + x * scale[0]).toBeGreaterThanOrEqual(SHAPE_SRC * SHAPE_POINT_MIN);
+      expect(translate[0] + (x + width) * scale[0]).toBeLessThanOrEqual(SHAPE_SRC * SHAPE_POINT_MAX);
+      expect(translate[1] + y * scale[1]).toBeGreaterThanOrEqual(SHAPE_SRC * SHAPE_POINT_MIN);
+      expect(translate[1] + (y + height) * scale[1]).toBeLessThanOrEqual(SHAPE_SRC * SHAPE_POINT_MAX);
     }
   });
 });
