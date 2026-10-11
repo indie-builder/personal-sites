@@ -22,9 +22,17 @@ import styles from "./portfolio-overview.module.css";
 export type MusePreview = { src: string; alt: string; videoSrc?: string };
 
 const mediaShapes: Record<string, string> = {
+  "word-arcade": styles.mediaArcade,
+  "ai-chat": styles.mediaChat,
   "personal-sites": styles.mediaWindow,
+  muse: styles.mediaMuse,
   "layout-compositions": styles.mediaShelf,
+  "ai-coding-dictionary": styles.mediaGraph,
+  "design-engineer-tools": styles.mediaTools,
 };
+
+/** 图谱与工具目录用左文右图的紧凑停靠，其余媒体整幅，保持轨迹的错落节奏。 */
+const compactSlugs = new Set(["ai-coding-dictionary", "design-engineer-tools"]);
 
 const graphNodes = [
   { name: "Model", x: 58, y: 55, r: 12, color: "#bdced9" },
@@ -111,22 +119,33 @@ function previewFor(
   }
 }
 
-// 纵向总览：每个作品自成停靠（日期—even 同日—逐站可见），短横枝导向作品内容。
+// 纵向总览时间线：按真实日期升序排开，日期节点与连续竖线让七段作品读成一条成长轨迹；
+// 同日作品共用日期节点，以短刻度衔接。整段作品是一枚链接（无嵌套交互），
+// 可访问名保持「打开${name}」；不虚构阶段与数据。
 export function PortfolioOverview({ musePreviews }: { musePreviews: readonly MusePreview[] }) {
   const layoutCategories = Effect.runSync(readLayoutCategories());
+  const stops = portfolioProducts.map((product, index) => ({
+    product,
+    continues: index > 0 && portfolioProducts[index - 1]?.date === product.date,
+  }));
   return (
     <PortfolioTimeline>
-      {portfolioProducts.map((product) => (
-        <li className={styles.stop} data-timeline-stop={product.slug} key={product.slug}>
-          <time className={styles.date} dateTime={product.date}>
-            {product.date.replaceAll("-", ".")}
-          </time>
-          <span aria-hidden="true" className={styles.rule}>
-            <span className={styles.node} />
-          </span>
+      {stops.map(({ product, continues }) => (
+        <li className={styles.stop} data-continue={continues || undefined} data-timeline-stop={product.slug} key={product.slug}>
+          {continues ? (
+            <span aria-hidden="true" className={styles.tick} />
+          ) : (
+            <>
+              <span aria-hidden="true" className={styles.node} />
+              <time className={styles.date} dateTime={product.date}>
+                {product.date.replaceAll("-", ".")}
+              </time>
+            </>
+          )}
           <Link
             aria-label={`打开${product.name}`}
             className={styles.work}
+            data-compact={compactSlugs.has(product.slug) || undefined}
             data-portfolio-work={product.slug}
             href={product.href as Route}
             id={`portfolio-work-${product.slug}`}
@@ -137,19 +156,15 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
             </h2>
             <span className={styles.tagline}>{product.tagline}</span>
             <span className={`${styles.media} ${mediaShapes[product.slug] ?? ""}`}>
-              <PreviewStation slug={product.slug}>
-                {previewFor(product, musePreviews, layoutCategories)}
-              </PreviewStation>
+              <PreviewStation slug={product.slug}>{previewFor(product, musePreviews, layoutCategories)}</PreviewStation>
             </span>
           </Link>
         </li>
       ))}
       {/* 末端开口：虚线延伸 + 空心节点 + 未完待续，无日期、无链接、无预览。 */}
       <li className={`${styles.stop} ${styles.future}`} data-timeline-end>
-        <span aria-hidden="true" className={styles.rule}>
-          <span className={styles.node} />
-        </span>
-        <span className={styles.endLabel}>未完待续</span>
+        <span aria-hidden="true" className={styles.node} />
+        <span className={styles.date}>未完待续</span>
       </li>
     </PortfolioTimeline>
   );

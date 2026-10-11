@@ -1,8 +1,9 @@
 import { expect, test, type Browser } from "./helpers/loader-key.ts";
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
 
-// 预览契约：七个作品共用同一外框（等宽等高）；书脊等内容不溢出自己的框；
-// 只有阅读线附近的当前站在播（[data-preview-station][data-preview-playing] 是资格探针）；
+// 预览契约：每个作品有自己的媒体面比例（紧凑停靠左右分栏、宽度有意不同）；
+// 书脊等内容不溢出自己的框；只有阅读线附近的当前站在播
+// （[data-preview-station][data-preview-playing] 是资格探针）；
 // 暂停后全部停播、内容保持可读；减少动态效果时静态呈现且播放控制禁用。
 // 纵向时间轴用页面原生滚动，后段示例先滚入视口再断言。
 
@@ -16,7 +17,7 @@ const scrollToWork = (browser: Browser, slug: string) =>
   }, slug);
 
 for (const width of [320, 390, 1440]) {
-  test(`作品预览在 ${width}px 共用同一外框，暂停后全部停播且内容可读`, async ({ app, browser, screen }) => {
+  test(`作品预览在 ${width}px 各自成幅且留在链接内，暂停后全部停播且内容可读`, async ({ app, browser, screen }) => {
     await browser.setViewport({ width, height: 900 });
     await app.open("/portfolio");
     await screen.getByRole("button", "暂停预览").tap();
@@ -29,9 +30,21 @@ for (const width of [320, 390, 1440]) {
         browser.evaluate(() => {
           const frames = [...document.querySelectorAll("[data-preview-station]")];
           if (frames.length !== 7) return null;
-          const heights = frames.map((frame) => frame.getBoundingClientRect().height);
-          const widths = frames.map((frame) => frame.getBoundingClientRect().width);
-          return Math.max(...heights) - Math.min(...heights) < 1 && Math.max(...widths) - Math.min(...widths) < 1;
+          // 各自的比例不同属预期（紧凑停靠 15rem 媒体列、其余整幅），只要求非零且在自己的链接内。
+          return frames.every((frame) => {
+            const link = frame.closest("a");
+            if (!link) return false;
+            const rect = frame.getBoundingClientRect();
+            const bounds = link.getBoundingClientRect();
+            return (
+              rect.width > 0 &&
+              rect.height > 0 &&
+              rect.left >= bounds.left - 1 &&
+              rect.right <= bounds.right + 1 &&
+              rect.top >= bounds.top - 1 &&
+              rect.bottom <= bounds.bottom + 1
+            );
+          });
         }),
       )
       .toBe(true);

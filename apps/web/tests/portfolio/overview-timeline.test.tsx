@@ -54,14 +54,33 @@ function rect(top: number, bottom: number): DOMRect {
 }
 
 describe("作品集总览时间线", () => {
-  it("每个停靠显示自己的真实日期（同日作品也各自成站），链接按日期升序", () => {
+  it("日期按组升序唯一显示，同日续作用短刻度衔接，链接按日期升序", () => {
     const { container } = renderOverview();
 
     const stops = [...container.querySelectorAll("li[data-timeline-stop]")];
-    expect(stops.map((stop) => stop.querySelector("time")?.getAttribute("datetime"))).toEqual(
-      portfolioProducts.map((product) => product.date),
-    );
-    expect(container.querySelectorAll("li[data-timeline-stop] > time")).toHaveLength(portfolioProducts.length);
+    expect(stops).toHaveLength(portfolioProducts.length);
+
+    // 每个日期只显示一次（停靠的直接子 time），顺序与数据升序一致。
+    const uniqueDates = [...new Set(portfolioProducts.map((product) => product.date))];
+    const shownTimes = stops.map((stop) => [...stop.children].find((child) => child.tagName === "TIME"));
+    expect(shownTimes.filter(Boolean)).toHaveLength(uniqueDates.length);
+    expect(shownTimes.filter(Boolean).map((time) => time?.getAttribute("datetime"))).toEqual(uniqueDates);
+    uniqueDates.forEach((date, index) => {
+      expect(shownTimes.filter(Boolean)[index]?.textContent).toBe(date.replaceAll("-", "."));
+    });
+
+    // 同日续作：不重复日期，改用横跨轨迹的短刻度。
+    const continuationSlugs = portfolioProducts
+      .filter((product, index) => index > 0 && portfolioProducts[index - 1]?.date === product.date)
+      .map((product) => product.slug);
+    for (const slug of continuationSlugs) {
+      const stop = container.querySelector(`li[data-timeline-stop="${slug}"]`);
+      expect(stop?.hasAttribute("data-continue")).toBe(true);
+      expect(stop?.querySelector("time")).toBeNull();
+      expect(
+        [...(stop?.children ?? [])].some((child) => child.getAttribute("aria-hidden") === "true"),
+      ).toBe(true);
+    }
 
     const hrefs = portfolioProducts.map((product) => product.href);
     const links = portfolioProducts.map((product) => screen.getByRole("link", { name: `打开${product.name}` }));

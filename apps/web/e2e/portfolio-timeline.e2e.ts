@@ -32,7 +32,7 @@ const workInViewport = (browser: Browser, slug: string) =>
     return rect.top >= 0 && rect.bottom <= window.innerHeight + 1;
   }, slug);
 
-test("纵向结构契约：七站各显真实日期、唯一尾站，横向控件与行者已删除", async ({ app, screen, browser }) => {
+test("纵向结构契约：七站按日期分组升序、同日续作短刻度、唯一尾站，横向控件与行者已删除", async ({ app, screen, browser }) => {
   await app.open("/portfolio");
   await expect(screen.getByRole("region", "作品时间轴")).toBeVisible();
   for (const [slug, name] of WORKS) {
@@ -45,14 +45,21 @@ test("纵向结构契约：七站各显真实日期、唯一尾站，横向控�
         const region = document.querySelector('[role="region"][aria-label="作品时间轴"]');
         const stops = [...document.querySelectorAll("li[data-timeline-stop]")];
         const end = document.querySelector("li[data-timeline-end]");
-        const dates = stops.map((stop) => stop.querySelector("time")?.textContent?.trim() ?? "");
+        const dates = [...document.querySelectorAll("li[data-timeline-stop] > time")].map(
+          (time) => time.textContent?.trim() ?? "",
+        );
         const datePattern = /^\d{4}\.\d{2}\.\d{2}$/u;
-        const sameDay = dates.filter((date) => date === dates[0]).length;
+        const ascending = dates.every((date, index) => index === 0 || dates[index - 1]! < date);
+        const continuations = [...document.querySelectorAll("li[data-continue]")];
         return {
           stopCount: stops.length,
           endCount: document.querySelectorAll("li[data-timeline-end]").length,
-          datesAllShown: dates.length === 7 && dates.every((date) => datePattern.test(date)),
-          sameDayBothShown: sameDay === 2,
+          dateGroupsAscending: dates.length === 6 && dates.every((date) => datePattern.test(date)) && ascending,
+          continuationTicks:
+            continuations.length === 1 &&
+            continuations.every(
+              (stop) => stop.querySelector("time") === null && stop.querySelector(":scope > span[aria-hidden='true']") !== null,
+            ),
           endIsTail: Boolean(end && !end.querySelector("a") && !end.querySelector("time") && end.textContent?.includes("未完待续")),
           listInWrapper: Boolean(wrapper?.contains(document.querySelector("ol[data-timeline-list]") ?? null)),
           horizontalButtons: [...document.querySelectorAll("button")].filter((button) => {
@@ -68,8 +75,8 @@ test("纵向结构契约：七站各显真实日期、唯一尾站，横向控�
     .toEqual({
       stopCount: 7,
       endCount: 1,
-      datesAllShown: true,
-      sameDayBothShown: true,
+      dateGroupsAscending: true,
+      continuationTicks: true,
       endIsTail: true,
       listInWrapper: true,
       horizontalButtons: 0,
@@ -172,7 +179,8 @@ for (const { width, height } of VIEWPORTS) {
             noInnerVerticalScroll: innerSlack <= 0,
             columnAligned: Math.max(...lefts) - Math.min(...lefts) <= 1,
             monotonicY,
-            endBelowLastStop: end.getBoundingClientRect().top > rects[rects.length - 1]!.bottom,
+            // 基准态停靠以 padding 收尾，尾站与其紧邻（>=）即视为在其下方。
+            endBelowLastStop: end.getBoundingClientRect().top >= rects[rects.length - 1]!.bottom,
           };
         }),
       )

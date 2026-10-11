@@ -1,27 +1,24 @@
-/* 作品集总览：纵向时间线。
-   桌面：日期槽（约 5.5rem）在连续纵轨外侧，短横枝导向右列作品内容；
-   窄容器（<600px）改用内容内完整日期 + 8px 轨 + 28px 缩进。
-   颜色全部走 .portfolio-scope 的明暗 token；形态只在本模块内。 */
+/* 作品集总览：纵向时间线（源站首页横向时间轴的窄栏改写）。
+   真实日期节点 + 连续竖线串起七段作品；同日作品共用日期节点，以短刻度衔接。
+   形态只在本模块内，不改信息流样式；颜色全部走 .portfolio-scope 的明暗 token。 */
 
 .timeline {
-  container-type: inline-size;
   position: relative;
-  max-width: 46.25rem; /* 模块上限 740px，或容器可用宽度 */
+  max-width: 660px;
 }
 
-/* 静音工具行：右上角，与首个日期保持距离，不设标题/导航。 */
+/* 静音工具行：右上角绝对定位，不占据纵向空间，首个日期在左、暂停在右。 */
 .utility {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
-  margin: 0 0 1.25rem;
 }
 
 .list {
-  --rail-left: 5.5rem; /* 纵轨 x：日期槽右缘 = 横枝左缘 */
-  --stop-gap: 3.5rem;  /* 作品间距 56px */
-  --node-y: 0.8rem;    /* 节点与标题首行光学对齐 */
-  position: relative;
-  display: block;
+  max-width: 660px;
   margin: 0;
   padding: 0 0 40svh;
   list-style: none;
@@ -29,131 +26,112 @@
 
 .stop {
   position: relative;
-  display: grid;
-  grid-template-columns: 5.5rem 2rem minmax(0, 1fr);
-  align-items: start;
-  margin-block-end: var(--stop-gap);
+  padding-bottom: 3.25rem;
+  padding-left: 2rem;
 }
 
-.stop:last-child {
-  margin-block-end: 0;
-}
-
-/* 连续纵轨（常显浅色）：从本站节点越过停靠间距延伸到下一站节点。 */
+/* 轨迹竖线：从本停靠的节点延伸到下一停靠；停靠间无外距，线因此连续。 */
 .stop::before {
   content: "";
   position: absolute;
-  left: var(--rail-left);
-  top: var(--node-y);
-  bottom: calc(-1 * (var(--stop-gap) + var(--node-y)));
+  left: 3px;
+  top: 10px;
+  bottom: 0;
   width: 1px;
-  background: var(--color-hairline);
-}
-
-/* 已读线段轻微加深；末端虚线开口在其后声明，同等特异性下由后者接管。 */
-.stop[data-seen]::before {
-  background: var(--color-hairline-strong);
-}
-
-.stop:nth-last-child(2)::before {
-  width: 0;
-  background: none;
-  border-left: 1px dashed var(--color-hairline-strong);
-}
-
-.future::before {
-  content: none;
-}
-
-/* 横枝：轨到内容的一小段水平线；节点骑在轨上。 */
-.rule {
-  position: relative;
-  display: block;
-  grid-column: 2;
-  grid-row: 1;
-  align-self: stretch;
-}
-
-.rule::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--node-y);
-  height: 1px;
   background: var(--color-hairline-strong);
 }
 
 .node {
   position: absolute;
   left: 0;
-  top: var(--node-y);
-  box-sizing: border-box;
+  top: 7px;
   width: 7px;
   height: 7px;
-  border: 1px solid var(--color-ink-soft);
   border-radius: 50%;
-  background: var(--color-paper);
-  transform: translate(-50%, -50%);
-  transition:
-    background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease,
-    box-shadow var(--dur-fast) ease;
-}
-
-.stop[data-seen] .node {
-  border-color: var(--color-ink-soft);
-  background: var(--color-ink-soft);
-}
-
-.stop[data-active="true"] .node {
-  border-color: var(--color-ink);
   background: var(--color-ink);
+  transition: box-shadow var(--dur-fast) ease;
+}
+
+/* 阅读线命中的当前站：节点外一圈浅环，唯一的当前态标记。 */
+.stop[data-active="true"] .node {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink) 14%, transparent);
 }
 
+/* 同日续作：不重复日期，用横跨轨迹的短刻度标记（源站轨中刻度的竖排对应）。 */
+.tick {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 7px;
+  height: 1px;
+  background: var(--color-hairline-strong);
+}
+
+.stop[data-active="true"] .tick {
+  background: var(--color-ink);
+}
+
 .date {
-  grid-column: 1;
-  grid-row: 1;
-  margin: 0;
-  padding-block-start: 0.3rem;
-  padding-inline-end: 0.45rem; /* 与纵轨留出呼吸位 */
+  display: block;
+  margin: 0 0 0.8rem;
   color: var(--color-ink-soft);
   font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
   line-height: 1.4;
-  text-align: right;
 }
 
-.stop[data-active="true"] .date {
-  color: var(--color-ink);
+/* 末端开口：通向「未完待续」的最后一段为虚线，节点空心（源站收尾语言）。 */
+.future {
+  padding-bottom: 0;
 }
 
-.endLabel {
-  grid-column: 3;
-  grid-row: 1;
-  margin: 0;
-  padding-block-start: 0.3rem;
-  color: var(--color-ink-soft);
-  font-size: 0.82rem;
-  letter-spacing: 0.01em;
-  line-height: 1.4;
+.future::before {
+  top: 0;
+  bottom: auto;
+  width: 0;
+  height: 10px;
+  background: none;
+  border-left: 1px dashed var(--color-hairline-strong);
+}
+
+.future .node {
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink-soft);
 }
 
 .work {
-  grid-column: 3;
-  grid-row: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
-  /* 书架封面翻出书架需要向上溢出媒体面，但不能撑出页面横向滚动。 */
+  /* 书架的翻书动效允许升出媒体面（溢入简介区），但不得在窄屏撑出横向滚动。 */
   overflow: clip;
   gap: 0.3rem;
   border-radius: var(--radius-md);
   color: inherit;
   text-decoration: none;
   scroll-margin-top: 1.5rem; /* 命中锚点时给桌面留出呼吸位 */
+}
+
+.work[data-compact] {
+  grid-template-areas: "title media" "tagline media";
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  align-content: center;
+  column-gap: 1.1rem;
+}
+
+.work[data-compact] .title {
+  grid-area: title;
+  align-self: end;
+}
+
+.work[data-compact] .tagline {
+  grid-area: tagline;
+  align-self: start;
+}
+
+.work[data-compact] .media {
+  grid-area: media;
 }
 
 .work:focus-visible {
@@ -203,18 +181,47 @@
   color: var(--color-ink);
 }
 
+.work:active {
+  transform: scale(0.985);
+  transition-duration: 70ms;
+}
+
 .media {
   position: relative;
   display: flex;
-  width: 100%;
-  max-width: 35rem; /* 预览面上限 560px */
   margin-top: 0.55rem;
-  height: clamp(11.25rem, 45cqi, 16.25rem); /* 180–260px */
   overflow: hidden;
   border-radius: var(--radius-md);
   background: var(--color-plate);
 }
 
+.mediaArcade {
+  aspect-ratio: 2.4;
+}
+
+.mediaMuse {
+  aspect-ratio: 2;
+}
+
+.mediaWindow {
+  aspect-ratio: 2.1;
+  flex-direction: column;
+}
+
+.mediaChat {
+  height: 11.5rem;
+}
+
+.mediaShelf {
+  height: 13rem;
+}
+
+.work[data-compact] .media {
+  height: 11rem;
+  margin-top: 0;
+}
+
+/* 预览停靠（活动站且未暂停才播放）：资格包装填满各自的媒体面。 */
 .previewStation {
   position: relative;
   display: flex;
@@ -228,30 +235,27 @@
 }
 
 .bookMotion {
+  width: 100%;
   min-width: 0;
 }
 
-.mediaShelf .bookMotion [data-preview] {
+.bookMotion [data-preview] {
   padding-inline: 4px;
 }
 
-.mediaShelf .bookMotion [data-preview] > div {
+.bookMotion [data-preview] > div {
   width: 100%;
   min-width: 0;
-  min-height: 0;
 }
 
-/* 纵向更高的媒体面：书脊按装帧高度放大，八本连封面完整入框。 */
-.mediaShelf .bookMotion [data-preview] > div > span {
+.bookMotion [data-preview] > div > span {
   flex: 1 1 0;
   min-width: 0;
   width: auto;
-  height: calc(var(--book-height) * 0.42);
-  padding-block: 10px 6px;
 }
 
-@container (max-width: 480px) {
-  .mediaShelf .bookMotion [data-preview] > div > span {
+@media (max-width: 560px) {
+  .bookMotion [data-preview] > div > span {
     padding-inline: 1px;
   }
 }
@@ -265,10 +269,6 @@
 }
 
 /* 个人网站停靠：迷你浏览器窗口包住本站截图。 */
-.mediaWindow {
-  flex-direction: column;
-}
-
 .siteWindow {
   display: grid;
   width: 100%;
@@ -324,7 +324,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* 词典停靠：静态知识网（SVG），不加载外部图谱运行时。 */
@@ -431,23 +431,19 @@
 }
 
 /* 书架停靠：书架预览的翻书动效（源站首页同款，键帧与支点在此模块内）。 */
-.bookMotion {
-  width: 100%;
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  .mediaShelf .bookMotion [data-preview] > div {
+  .bookMotion [data-preview] > div {
     perspective: 700px;
     transform-style: preserve-3d;
   }
 
-  .mediaShelf .bookMotion [data-preview] > div > span {
-    --pull-x: -32px;
+  .bookMotion [data-preview] > div > span {
+    --pull-x: -28px;
     transform-style: preserve-3d;
     transform-origin: 50% 100%;
   }
 
-  .mediaShelf .bookMotion [data-preview] > div > span > [data-book-cover] {
+  .bookMotion [data-preview] > div > span > [data-book-cover] {
     position: absolute;
     top: 0;
     left: 100%;
@@ -492,12 +488,12 @@
     animation-play-state: running;
   }
 
-  .mediaShelf .bookMotion [data-preview] > div > span:nth-child(7) {
-    --pull-x: -64px;
+  .bookMotion [data-preview] > div > span:nth-child(7) {
+    --pull-x: -55px;
   }
 
-  .mediaShelf .bookMotion [data-preview] > div > span:nth-child(8) {
-    --pull-x: -96px;
+  .bookMotion [data-preview] > div > span:nth-child(8) {
+    --pull-x: -75px;
   }
 }
 
@@ -544,7 +540,7 @@
   min-height: 44px;
   padding: 0 8px;
   border: 0;
-  background: none;
+  background: var(--color-paper);
   color: var(--color-ink-soft);
   font: inherit;
   font-size: 0.75rem;
@@ -561,86 +557,35 @@
   cursor: default;
 }
 
-/* 窄容器：纵轨贴前缘 8px，内容缩进 28px，完整日期移到标题上方。 */
-@container (max-width: 37.5rem) {
-  .list {
-    --rail-left: 0.5rem;
-    --stop-gap: 2.5rem; /* 作品间距 40px */
-  }
-
+@media (max-width: 560px) {
   .stop {
-    grid-template-columns: 0.5rem 1.25rem minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    row-gap: 0.4rem;
+    padding-bottom: 2.6rem;
+    padding-left: 1.4rem;
   }
 
-  .date {
-    grid-column: 3;
-    grid-row: 1;
-    padding-block-start: 0;
-    text-align: left;
+  .name {
+    font-size: 1.05rem;
   }
 
-  .rule {
-    grid-column: 2;
-    grid-row: 2;
+  .mediaArcade,
+  .mediaMuse,
+  .mediaWindow {
+    aspect-ratio: 4 / 3;
   }
 
-  .work {
-    grid-column: 3;
-    grid-row: 2;
+  .mediaChat,
+  .mediaShelf {
+    height: 12rem;
   }
 
-  /* 末端标签与节点同行。 */
-  .future {
-    grid-template-rows: auto;
+  .work[data-compact] {
+    grid-template-areas: "title" "tagline" "media";
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .future .rule {
-    grid-row: 1;
-  }
-
-  .endLabel {
-    grid-row: 1;
-  }
-
-  /* 窄帧里封面更窄、拉出更深，保证第 7/8 本封面完整留在框内。 */
-  .mediaShelf .bookMotion [data-preview] > div > span {
-    --pull-x: -34px;
-  }
-
-  .mediaShelf .bookMotion [data-preview] > div > span:nth-child(7) {
-    --pull-x: -60px;
-  }
-
-  .mediaShelf .bookMotion [data-preview] > div > span:nth-child(8) {
-    --pull-x: -84px;
-  }
-
-  .mediaShelf .bookMotion [data-preview] > div > span > [data-book-cover] {
-    width: 88px;
-    padding: 14px 10px;
-    font-size: 13px;
-  }
-}
-
-/* 横屏矮视口：原生页面滚动 + 合理预览上限，不设强制高度面板。 */
-@media (max-height: 500px) {
-  .list {
-    --stop-gap: 2.25rem;
-  }
-
-  .utility {
-    margin-bottom: 0.6rem;
-  }
-
-  .media {
-    height: clamp(9rem, 24cqi, 11.5rem);
-  }
-
-  .mediaShelf .bookMotion [data-preview] > div > span {
-    height: calc(var(--book-height) * 0.3);
-    padding-block: 8px 4px;
+  .work[data-compact] .media {
+    height: 10rem;
+    margin-top: 0.55rem;
   }
 }
 
@@ -659,6 +604,10 @@
 
   .work:hover .enter,
   .work:focus-visible .enter {
+    transform: none;
+  }
+
+  .work:active {
     transform: none;
   }
 }

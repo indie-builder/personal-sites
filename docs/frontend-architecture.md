@@ -42,7 +42,7 @@ RootLayout
       └─ 文档版本切换为客户端状态，中文阅读版服务端渲染
 ```
 
-作品集总览是右栏的纵向时间线：`apps/web/components/portfolio/portfolio-overview.tsx` 在服务端渲染七站与「未完待续」尾站（每站显示真实日期，同日作品不共用节点），`portfolio-timeline.tsx` 是客户端的小型视口追踪层，用相交与阅读线（约 35vh）判定唯一当前站并驱动一次性进场动画；浏览就是页面原生纵向滚动，没有内层滚动、前后按钮、方向键拦截或恢复快照。预览播放沿用 `preview-playback.tsx` 的暂停与 reduced-motion 策略，仅当前站可播。作品壳 `portfolio-shell.tsx` 提供每个作品页唯一的「返回作品集」出口：显式返回经 `/portfolio#portfolio-work-{slug}` 的原生锚点回到出发作品；浏览器后退交给浏览器原生滚动恢复，两者都不做自定义焦点还原，不改写 `history.scrollRestoration`，URL 哈希只作为分享与回退锚点，不随滚动更新。
+作品集总览是右栏的纵向时间线：`apps/web/components/portfolio/portfolio-overview.tsx` 在服务端渲染七站与「未完待续」尾站（日期在线内、位于标题上方，同日作品共用日期并以短刻度衔接），`portfolio-timeline.tsx` 是客户端的小型视口追踪层，用相交与阅读线（约 35vh）判定唯一当前站并驱动一次性进场动画；浏览就是页面原生纵向滚动，没有内层滚动、前后按钮、方向键拦截或恢复快照。预览播放沿用 `preview-playback.tsx` 的暂停与 reduced-motion 策略，仅当前站可播。作品壳 `portfolio-shell.tsx` 提供每个作品页唯一的「返回作品集」出口：显式返回经 `/portfolio#portfolio-work-{slug}` 的原生锚点回到出发作品；浏览器后退交给浏览器原生滚动恢复，两者都不做自定义焦点还原，不改写 `history.scrollRestoration`，URL 哈希只作为分享与回退锚点，不随滚动更新。
 
 首页与每日动态版块在预渲染和再验证时合并 SQLite 历史与 Supabase 增量。命中页面缓存时，首屏直接使用缓存内容，无需每次请求都等待 Supabase。缓存超过 60 秒后，下一次请求仍返回旧页面，并触发后台再验证；成功后，后续请求使用新页面。60 秒是再验证间隔，不是内容陈旧时间的上限。两页保留数据 Suspense 边界与加载状态。分页 API 沿用自身的 HTTP 缓存策略，不受页面 `revalidate` 配置控制。
 
