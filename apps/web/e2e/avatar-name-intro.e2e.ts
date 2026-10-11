@@ -2,14 +2,14 @@ import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
+import { FUN_SHAPES, readAvatarMeta, readCanvasDigest } from "./helpers/avatar-surprises.ts";
 
 // 首访名字序列的行为契约：粒子先成「陈」再成「远」最终落回头像，全程
 // 同一批粒子（墨形逐段不同）；帘幕遮罩期间不开演，本会话刷新不再重播，
-// 序列中点击立即取消并回到散开，减少动态直接停在头像。断言读画布真实
+// 序列中点击立即取消并回到成像头像，减少动态直接停在头像。断言读画布真实
 // 像素并与页内绘制的字形参照比对，不镜像实现细节。
 const GRID = 12;
 const CENTER_MIN = 0.03;
-const SCATTERED_CENTER_MAX = 0.005;
 const PLATEAU_MIN_MS = 250;
 
 type Frame = { t: number; loader: boolean; grid: string };
@@ -254,9 +254,15 @@ test("a click while awaiting the reveal aborts the pending sequence for good", a
     return true;
   });
   await expect(browser.locator(".opening-loader")).toHaveCount(0, { timeout: 15_000 });
-  // 揭幕后再等两段变形窗口：修复前序列照常开演、中心成字。
-  await new Promise<void>((resolve) => setTimeout(resolve, 3500));
-  expect((await readCenter(browser))!).toBeLessThan(SCATTERED_CENTER_MAX);
+  // 中止后不再开演名字：直接落到头像成像终态。
+  await expect.poll(() => readCenter(browser), { timeout: 15_000 }).toBeGreaterThan(CENTER_MIN);
+  // 之后画面稳定在头像：迟到的 reveal/字形回调不得再开演成字。
+  const first = await readCenter(browser);
+  await new Promise<void>((resolve) => setTimeout(resolve, 1_500));
+  const second = await readCenter(browser);
+  expect(first!).toBeGreaterThan(CENTER_MIN);
+  expect(second!).toBeGreaterThan(CENTER_MIN);
+  expect(Math.abs(second! - first!)).toBeLessThan(1e-3);
 });
 
 // P2 停留：首字变形中途隐藏页面，恢复后必须补完变形并可见地停留陈，
@@ -341,22 +347,115 @@ test("the character dwell survives a mid-morph hide and resume", async ({ app, b
   expect((leftChen - firstChen) * 80).toBeGreaterThanOrEqual(300);
 });
 
-test("clicking during the name intro cancels the sequence into scatter", async ({ app, screen, browser }) => {
+// P2 竞态：首访字形采样被扣在 fonts.load 上，等用户已取消开场并用键盘
+// 定格新的静态彩蛋之后才放行。迟到的采样回调不得覆盖已定格的形：形名与
+// 真实像素都原样保留，下一次激活仍正常回到头像。
+test("a late first-visit glyph load must not overwrite a newly settled static form", async ({ app, browser }) => {
+  await browser.addInitScript(() => {
+    const w = window as typeof window & {
+      __fontsArmed?: boolean;
+      __fontsDone?: number;
+      __fontsStarted?: number;
+      __releaseFonts?: () => void;
+    };
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    w.__releaseFonts = release;
+    let started = 0;
+    let done = 0;
+    const fonts = document.fonts;
+    const orig = fonts.load.bind(fonts);
+    fonts.load = ((...args: Parameters<typeof orig>) => {
+      started += 1;
+      w.__fontsStarted = started;
+      return gate
+        .then(() => orig(...args))
+        .then((faces) => {
+          done += 1;
+          w.__fontsDone = done;
+          return faces;
+        });
+    }) as typeof orig;
+    // 拦截未武装（字体集不可改写等）必须显式失败，不允许退化成普通首访。
+    w.__fontsArmed = true;
+  });
+  await app.clearState();
+  await app.open("/");
+  const armed = await browser.evaluate(() => (window as typeof window & { __fontsArmed?: boolean }).__fontsArmed === true);
+  expect(armed).toBe(true);
+  // 粒子接管且首字的 load 确实被扣住（全站只有序列采样调用 fonts.load）。
+  await expect.poll(() => browser.evaluate(() => ({
+    particles: document.querySelector<HTMLButtonElement>(".curation-home__avatar")?.dataset.particles === "on",
+    started: (window as typeof window & { __fontsStarted?: number }).__fontsStarted ?? 0,
+  })), { timeout: 20_000 }).toEqual({ particles: true, started: 1 });
+  await expect(browser.locator(".opening-loader")).toHaveCount(0, { timeout: 15_000 });
+  await browser.evaluate(() => {
+    document.querySelector<HTMLButtonElement>(".curation-home__avatar")?.focus();
+    return true;
+  });
+  await browser.keyboard.press("Enter");
+  await expect.poll(async () => {
+    const meta = await readAvatarMeta(browser);
+    return meta !== null && meta.state === "idle" && meta.shape === "portrait";
+  }, { timeout: 5_000 }).toBe(true);
+  const portraitDigest = await readCanvasDigest(browser);
+  expect(portraitDigest).not.toBeNull();
+  await browser.keyboard.press("Enter");
+  await expect.poll(async () => {
+    const meta = await readAvatarMeta(browser);
+    return meta !== null && meta.state === "static" && (FUN_SHAPES as readonly string[]).includes(meta.shape ?? "");
+  }, { timeout: 5_000 }).toBe(true);
+  const held = await readAvatarMeta(browser);
+  const heldDigest = await readCanvasDigest(browser);
+  expect(heldDigest).not.toBeNull();
+  await browser.evaluate(() => {
+    (window as typeof window & { __releaseFonts?: () => void }).__releaseFonts?.();
+    return true;
+  });
+  // 名字两字串行采样：第二字的 load 在第一字放行后才发起，只看完成数会在
+  // 两字之间误判完成；发起数含第二字且与完成数追平，迟到回调链才算走完。
+  await expect.poll(() => browser.evaluate(() => {
+    const w = window as typeof window & { __fontsDone?: number; __fontsStarted?: number };
+    const started = w.__fontsStarted ?? 0;
+    return started >= 2 && (w.__fontsDone ?? 0) === started;
+  }), { timeout: 15_000 }).toBe(true);
+  // 迟到分支的 setView 经 React 调度提交：过两帧再读，覆盖（若存在）已落定。
+  await browser.evaluate(() => new Promise<boolean>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)));
+  }));
+  const retained = await readAvatarMeta(browser);
+  expect(retained).toMatchObject({ shape: held?.shape, state: "static" });
+  expect(await readCanvasDigest(browser)).toBe(heldDigest);
+  await browser.keyboard.press("Enter");
+  await expect.poll(async () => {
+    const meta = await readAvatarMeta(browser);
+    return meta !== null && meta.state === "idle" && meta.shape === "portrait";
+  }, { timeout: 5_000 }).toBe(true);
+  expect(await readCanvasDigest(browser)).toBe(portraitDigest);
+});
+
+test("clicking during the name intro cancels the sequence into the idle portrait", async ({ app, screen, browser }) => {
   await app.clearState();
   await expect(browser.locator(".opening-loader")).toHaveCount(0, { timeout: 15_000 });
-  // 序列开演后（中心首次成墨）立即点击：取消余下段落并散开。
-  await expect.poll(() => readCenter(browser), { timeout: 15_000 }).toBeGreaterThan(CENTER_MIN);
+  // 序列开演后立即点击：取消余下段落，从当前位置直接回头像。
+  await expect.poll(async () => {
+    const current = await readAvatarMeta(browser);
+    return current !== null && current.state === "intro";
+  }, { timeout: 15_000 }).toBe(true);
   await screen.getByRole("button", "点描头像", { exact: false }).click();
-  await expect(screen.getByRole("button", "聚拢陈远的点描头像")).toBeVisible();
-  await expect.poll(() => readCenter(browser), { timeout: 5_000 }).toBeLessThan(SCATTERED_CENTER_MAX);
-  // 取消后不再出现任何后续字形：间隔读取仍保持散开。
-  await new Promise<void>((resolve) => setTimeout(resolve, 1200));
-  expect((await readCenter(browser))!).toBeLessThan(SCATTERED_CENTER_MAX);
-
-  // 再次点击直返头像并静止。
-  await screen.getByRole("button", "聚拢陈远的点描头像").click();
-  await expect(screen.getByRole("button", "分散陈远的点描头像")).toBeVisible();
+  await expect(screen.getByRole("button", "回到陈远的点描头像")).toBeVisible();
+  await expect.poll(async () => {
+    const current = await readAvatarMeta(browser);
+    return current !== null && current.state === "idle" && current.shape === "portrait";
+  }, { timeout: 5_000 }).toBe(true);
   await expect.poll(() => readCenter(browser), { timeout: 5_000 }).toBeGreaterThan(CENTER_MIN);
+  // 取消后不再出现任何后续字形：间隔读取仍稳定在头像。
+  const first = await readCenter(browser);
+  await new Promise<void>((resolve) => setTimeout(resolve, 1_200));
+  const second = await readCenter(browser);
+  expect(Math.abs(second! - first!)).toBeLessThan(1e-3);
 });
 
 test("the name intro plays once per session and stays assembled after reload", async ({ app, browser }) => {

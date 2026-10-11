@@ -1,21 +1,31 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getOpeningRevealAt,
   hasOpeningPlayedThisSession,
   onOpeningReveal,
 } from "@/components/opening-reveal";
+import {
+  buildShapeTargets,
+  mulberry32,
+  nextStaticForm,
+  nextTrack,
+  planSurpriseStages,
+  RETURN_MORPH_MS,
+  RETURN_STAGGER,
+  type FunShapeId,
+  type FunTrack,
+  type ShapeTargets,
+} from "@/components/particle-avatar-shapes";
 
 const STIPPLE_SRC = "/images/ample-avatar-stipple.png";
 const STIPPLE_FALLBACK_SRC = "/images/ample-avatar-stipple-ink.png";
 const TARGET_COUNT = 700;
 const MAX_COUNT = 4000;
-const TOGGLE_MS = 720;
 const ASSEMBLE_STAGGER = 240;
-const TOGGLE_STAGGER = 110;
 const TAU = Math.PI * 2;
 // 等面积圆在高频下会被抗锯齿稀释成浅灰；放大半径补回点描图实心墨点
 // （中位等价半径约 1.13 源像素）的视觉重量。
@@ -33,21 +43,12 @@ const INTRO_CHAR_DWELL_MS = 380;
 const INTRO_CHAR_STAGGER = 120;
 const INTRO_AVATAR_MORPH_MS = 800;
 
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// DOM 契约：data-avatar-state 是当前交互相位；data-avatar-shape 是已落定
+// 形态，形变途中为 transition。仅在段落边界更新，不逐帧驱动 React。
+type AvatarPhase = "idle" | "intro" | "surprise" | "returning" | "static";
+type SettledShape = "portrait" | "name" | FunShapeId;
+type AvatarShape = SettledShape | "transition";
 
-function easeOutCubic(t: number) {
-  return 1 - (1 - t) ** 3;
-}
-
-// 字与字之间的形变全程在画面上移动，用 in-out 曲线读作「重组」而不是「到达」。
 function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
@@ -60,19 +61,25 @@ type ParticleField = {
   sourceSize: number;
 };
 
-// 名字序列的一段：粒子飞往 targets 停 dwellMs 后进入下一段；最终段是头像。
-type IntroStage = {
+// 有限序列（开场姓名或点击彩蛋）中的一站：粒子飞往 targets 停 dwellMs。
+type SequenceStage = {
+  shape: SettledShape;
   targets: Float32Array;
   morphMs: number;
   stagger: number;
   dwellMs: number;
 };
 
-type IntroPlan = {
-  stages: IntroStage[];
+// 唯一的序列所有者：节拍器职责与旧 IntroPlan 相同，kind 区分开场与彩蛋。
+type SequencePlan = {
+  kind: "intro" | "surprise";
+  stages: SequenceStage[];
   next: number;
   timer: number;
-  // 停留计时在隐藏/离屏时到点后置位，恢复可见时由恢复路径推进。
+  dwellEndsAt: number;
+  // 隐藏/离屏时停留计时同步冻结，恢复可见后续走剩余停留而不是整段吞掉。
+  dwellRemaining: number | null;
+  // 停留到点时被隐藏挂起的推进，恢复可见时即刻续拍。
   holdAdvance: boolean;
 };
 
@@ -255,13 +262,13 @@ async function sampleGlyphField(char: string, count: number): Promise<Float32Arr
   return points;
 }
 
-async function buildIntroStages(name: string, count: number): Promise<IntroStage[]> {
-  const stages: IntroStage[] = [];
+async function buildIntroStages(name: string, count: number): Promise<SequenceStage[]> {
+  const stages: SequenceStage[] = [];
   for (const char of [...name]) {
     if (!char.trim()) continue;
     const targets = await sampleGlyphField(char, count);
     if (targets) {
-      stages.push({ targets, morphMs: INTRO_CHAR_MORPH_MS, stagger: INTRO_CHAR_STAGGER, dwellMs: INTRO_CHAR_DWELL_MS });
+      stages.push({ shape: "name", targets, morphMs: INTRO_CHAR_MORPH_MS, stagger: INTRO_CHAR_STAGGER, dwellMs: INTRO_CHAR_DWELL_MS });
     }
   }
   return stages;
@@ -279,17 +286,25 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
   const endsRef = useRef<Float32Array | null>(null);
   const startsRef = useRef<Float32Array | null>(null);
   const animRef = useRef<{ t0: number; dur: number; stagger: number; raf: number; ease: (t: number) => number } | null>(null);
-  const introRef = useRef<IntroPlan | null>(null);
-  // 开场序列整体生命周期的作废标记：等待揭幕的窗口期内点击/开启减少
-  // 动态同样作废，迟到的 reveal 回调不得再开演。
+  const planRef = useRef<SequencePlan | null>(null);
+  // 开场仪式整体生命周期的作废标记：等待揭幕的窗口期内点击/开启减少
+  // 动态同样作废，迟到的 reveal 回调与字形采样不得再开演或直写头像。
   const introAbortedRef = useRef(false);
+  // 'pending'：开场仪式尚未演完（含等待揭幕）；任何取消/播完即 'done'。
+  const introStageRef = useRef<"pending" | "done">("pending");
   // step 的定格回调需要推进序列，经 ref 解开与 animateTo 的循环依赖。
-  const advanceIntroRef = useRef<() => void>(() => {});
+  const advanceRef = useRef<() => void>(() => {});
   const pausedAtRef = useRef(0);
   const visibleRef = useRef(true);
-  const [assembled, setAssembled] = useState(true);
+  // 彩蛋形态目标（九形 × 两姿势）与两只洗牌袋的状态。
+  const shapesRef = useRef<ShapeTargets>({});
+  const trackBagRef = useRef<FunTrack[] | null>(null);
+  const staticBagRef = useRef<readonly FunShapeId[] | null>(null);
+  const lastShownFormRef = useRef<FunShapeId | null>(null);
+  const staticShapeRef = useRef<FunShapeId | null>(null);
   // 粒子画布首次成功绘制后才接管，散开态不透出静态完整脸。
   const [particlesOn, setParticlesOn] = useState(false);
+  const [view, setView] = useState<{ phase: AvatarPhase; shape: AvatarShape }>({ phase: "idle", shape: "portrait" });
 
   const paint = useCallback((): boolean => {
     const canvas = canvasRef.current;
@@ -348,12 +363,21 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       paint();
       if (settled) {
         animRef.current = null;
-        // 开场序列的当前段形变真实完成（仅在可见帧发生）：此刻才起停留
-        // 计时，后台/离屏暂停不会吞掉字形的可读停留。
-        const intro = introRef.current;
-        const stage = intro?.stages[intro.next - 1];
-        if (intro && stage && !intro.timer) {
-          intro.timer = window.setTimeout(advanceIntroRef.current, stage.dwellMs);
+        // 当前段形变真实完成（仅在可见帧发生）：此刻才起停留计时，并按
+        // 落定形态更新 DOM；末段落定即序列收尾回到 idle。
+        const plan = planRef.current;
+        const stage = plan?.stages[plan.next - 1];
+        if (plan && stage) {
+          const finished = plan.next >= plan.stages.length;
+          if (stage.shape !== "portrait" && stage.shape !== "name") lastShownFormRef.current = stage.shape;
+          setView((v) => ({ ...v, phase: finished ? "idle" : v.phase, shape: stage.shape }));
+          if (finished) {
+            planRef.current = null;
+            if (plan.kind === "intro") introStageRef.current = "done";
+          } else if (!plan.timer && stage.dwellMs > 0) {
+            plan.dwellEndsAt = now + stage.dwellMs;
+            plan.timer = window.setTimeout(advanceRef.current, stage.dwellMs);
+          }
         }
         return;
       }
@@ -373,7 +397,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
   }, [step]);
 
   const animateTo = useCallback(
-    (ends: Float32Array, dur: number, stagger: number, ease: (t: number) => number = easeOutCubic) => {
+    (ends: Float32Array, dur: number, stagger: number, ease: (t: number) => number) => {
       const pos = posRef.current;
       if (!pos) return;
       stopLoop();
@@ -386,57 +410,119 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     [runLoop, stopLoop],
   );
 
-  const cancelIntro = useCallback(() => {
-    introAbortedRef.current = true;
-    const intro = introRef.current;
-    if (!intro) return;
-    if (intro.timer) window.clearTimeout(intro.timer);
-    introRef.current = null;
-  }, []);
+  const cancelSequence = useCallback(() => {
+    const plan = planRef.current;
+    if (plan) {
+      if (plan.timer) window.clearTimeout(plan.timer);
+      planRef.current = null;
+    }
+    stopLoop();
+    animRef.current = null;
+  }, [stopLoop]);
 
-  // 开场序列的节拍器：每段形变由 animateTo 驱动，定格时 step 回调按该段
+  // 序列的节拍器：每段形变由 animateTo 驱动，定格时 step 回调按该段
   // dwellMs 起停留计时再进下一段；到点时不可见则挂起，交恢复路径续拍。
-  const advanceIntro = useCallback(
-    function advanceIntro() {
-      const intro = introRef.current;
-      if (!intro) return;
-      intro.timer = 0;
-      // 后台标签/滚出视口：不推进也不轮询，回到可见时由 resumeAnim 续拍。
-      if (document.hidden || !visibleRef.current) {
-        intro.holdAdvance = true;
-        return;
-      }
-      const stage = intro.stages[intro.next];
-      intro.next += 1;
-      if (!stage) {
-        introRef.current = null;
-        return;
-      }
-      animateTo(stage.targets, stage.morphMs, stage.stagger, easeInOutCubic);
-    },
-    [animateTo],
-  );
-
-  useEffect(() => {
-    advanceIntroRef.current = advanceIntro;
-  }, [advanceIntro]);
-
-  const toggle = useCallback(() => {
-    const field = fieldRef.current;
-    if (!field) return;
-    // 开场序列中点击：取消余下段落，从当前位置直接进入散开/聚拢切换。
-    cancelIntro();
-    const nextAssembled = !assembled;
-    setAssembled(nextAssembled);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      stopLoop();
-      animRef.current = null;
-      posRef.current = new Float32Array(nextAssembled ? field.targets : field.scatter);
-      void paint();
+  const advanceSequence = useCallback(() => {
+    const plan = planRef.current;
+    if (!plan) return;
+    plan.timer = 0;
+    plan.dwellEndsAt = 0;
+    plan.dwellRemaining = null;
+    // 后台标签/滚出视口：不推进也不轮询，回到可见时由 resumeAnim 续拍。
+    if (document.hidden || !visibleRef.current) {
+      plan.holdAdvance = true;
       return;
     }
-    animateTo(nextAssembled ? field.targets : field.scatter, TOGGLE_MS, TOGGLE_STAGGER);
-  }, [animateTo, assembled, cancelIntro, paint, stopLoop]);
+    const stage = plan.stages[plan.next];
+    if (!stage) return;
+    plan.next += 1;
+    const phase: AvatarPhase = stage.shape === "portrait" ? "returning" : plan.kind === "intro" ? "intro" : "surprise";
+    setView((v) => ({ ...v, phase, shape: "transition" }));
+    animateTo(stage.targets, stage.morphMs, stage.stagger, easeInOutCubic);
+  }, [animateTo]);
+
+  useEffect(() => {
+    advanceRef.current = advanceSequence;
+  }, [advanceSequence]);
+
+  const startReturn = useCallback(() => {
+    const field = fieldRef.current;
+    if (!field) return;
+    planRef.current = {
+      kind: "surprise",
+      stages: [{ shape: "portrait", targets: field.targets, morphMs: RETURN_MORPH_MS, stagger: RETURN_STAGGER, dwellMs: 0 }],
+      next: 0,
+      timer: 0,
+      dwellEndsAt: 0,
+      dwellRemaining: null,
+      holdAdvance: false,
+    };
+    setView((v) => ({ ...v, phase: "returning", shape: "transition" }));
+    advanceRef.current();
+  }, []);
+
+  // 空闲时的一次点击彩蛋：抽一支轨道，形态目标缺位的站自动跳过。
+  const startSurprise = useCallback(() => {
+    const field = fieldRef.current;
+    if (!field) return;
+    const shapes = shapesRef.current;
+    const draw = nextTrack(trackBagRef.current, lastShownFormRef.current, Math.random);
+    trackBagRef.current = draw.bag;
+    const stages: SequenceStage[] = [];
+    for (const spec of planSurpriseStages(draw.track)) {
+      const targets = shapes[spec.shape]?.[spec.pose];
+      if (targets) {
+        stages.push({ shape: spec.shape, targets, morphMs: spec.morphMs, stagger: spec.stagger, dwellMs: spec.dwellMs });
+      }
+    }
+    if (stages.length === 0) return;
+    stages.push({ shape: "portrait", targets: field.targets, morphMs: RETURN_MORPH_MS, stagger: RETURN_STAGGER, dwellMs: 0 });
+    planRef.current = { kind: "surprise", stages, next: 0, timer: 0, dwellEndsAt: 0, dwellRemaining: null, holdAdvance: false };
+    setView((v) => ({ ...v, phase: "surprise", shape: "transition" }));
+    advanceRef.current();
+  }, []);
+
+  const onActivate = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    const field = fieldRef.current;
+    const pos = posRef.current;
+    // 任何点击都作废等待中的开场仪式：场未就绪时同样只置标记，迟到的
+    // 字形采样/揭幕回调不得再开演或覆盖后续交互。
+    introAbortedRef.current = true;
+    if (!field || !pos) return;
+    const introOngoing = introStageRef.current === "pending" || planRef.current?.kind === "intro";
+    const hadPlan = planRef.current !== null;
+    const inStatic = staticShapeRef.current !== null;
+    if (introOngoing) introStageRef.current = "done";
+    cancelSequence();
+    staticShapeRef.current = null;
+    // 键盘/读屏点击（detail=0）与减少动态：无飞行、无计时，直出静态形态。
+    const instant = event.detail === 0 || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (instant) {
+      const shapes = shapesRef.current;
+      if (!inStatic && !introOngoing && !hadPlan && shapes) {
+        const draw = nextStaticForm(staticBagRef.current, lastShownFormRef.current, Math.random);
+        staticBagRef.current = draw.bag;
+        const targets = shapes[draw.form]?.[0];
+        if (targets) {
+          staticShapeRef.current = draw.form;
+          pos.set(targets);
+          void paint();
+          lastShownFormRef.current = draw.form;
+          setView({ phase: "static", shape: draw.form });
+          return;
+        }
+      }
+      pos.set(field.targets);
+      void paint();
+      setView({ phase: "idle", shape: "portrait" });
+      return;
+    }
+    if (introOngoing || hadPlan || inStatic) {
+      startReturn();
+      return;
+    }
+    startSurprise();
+  };
 
   useEffect(() => {
     const button = buttonRef.current;
@@ -446,13 +532,24 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     const reducedQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     // 统一暂停/恢复：恢复只发生在可见、未隐藏且确有暂停中的动画时，
-    // 暂停时长折算进 t0，保证回到前台从暂停处续播而不是跳帧。
+    // 暂停时长折算进 t0，保证回到前台从暂停处续播而不是跳帧；停留计时
+    // 同步冻结剩余时长，隐藏期不吞掉可读停留。
     const pauseAnim = () => {
       const anim = animRef.current;
       if (anim?.raf) {
         pausedAtRef.current = performance.now();
         cancelAnimationFrame(anim.raf);
         anim.raf = 0;
+      }
+      const plan = planRef.current;
+      if (plan?.timer) {
+        window.clearTimeout(plan.timer);
+        plan.timer = 0;
+        if (plan.next === 0) {
+          plan.holdAdvance = true;
+        } else {
+          plan.dwellRemaining = Math.max(0, plan.dwellEndsAt - performance.now());
+        }
       }
     };
     const resumeAnim = () => {
@@ -461,11 +558,15 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
         anim.t0 += performance.now() - pausedAtRef.current;
         anim.raf = requestAnimationFrame(step);
       }
-      // 停留到点时被隐藏挂起的序列：回到可见即刻续拍。
-      const intro = introRef.current;
-      if (intro?.holdAdvance) {
-        intro.holdAdvance = false;
-        advanceIntroRef.current();
+      const plan = planRef.current;
+      if (!plan || plan.timer) return;
+      if (plan.dwellRemaining !== null) {
+        plan.dwellEndsAt = performance.now() + plan.dwellRemaining;
+        plan.timer = window.setTimeout(advanceRef.current, plan.dwellRemaining);
+        plan.dwellRemaining = null;
+      } else if (plan.holdAdvance) {
+        plan.holdAdvance = false;
+        advanceRef.current();
       }
     };
 
@@ -473,20 +574,20 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       if (document.hidden) pauseAnim();
       else if (visibleRef.current) resumeAnim();
     };
-    // 会话中途开启减少动态：开场序列取消并直接落到头像终态；
-    // 普通聚散切换的飞行仍落其当前目标，不覆盖用户刚表达的意图。
+    // 会话中途开启减少动态：任何序列取消并直接落到头像终态，无残留计时。
     const onReducedChange = () => {
       if (!reducedQuery.matches) return;
       const field = fieldRef.current;
       const pos = posRef.current;
-      const introActive = introRef.current !== null;
-      cancelIntro();
-      stopLoop();
-      animRef.current = null;
+      introAbortedRef.current = true;
+      introStageRef.current = "done";
+      cancelSequence();
+      staticShapeRef.current = null;
       if (pos && field) {
-        pos.set(introActive ? field.targets : (endsRef.current ?? field.targets));
+        pos.set(field.targets);
         void paint();
       }
+      setView({ phase: "idle", shape: "portrait" });
     };
 
     const observer = new ResizeObserver(() => {
@@ -495,7 +596,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     observer.observe(button);
     document.addEventListener("visibilitychange", onVisibility);
     reducedQuery.addEventListener("change", onReducedChange);
-    // 定格状态下切主题立即换墨色重绘。
+    // 定格状态下切主题立即换墨色重绘，不打断进行中的序列。
     const themeObserver = new MutationObserver((records) => {
       if (records.some((r) => r.attributeName === "data-curation-theme")) void paint();
     });
@@ -520,23 +621,30 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       // 否则保留静态点描兜底，避免空白头像。
       if (!paint()) return;
       setParticlesOn(true);
+      // 九形彩蛋目标同步预备：纯路径栅格化无字体等待，失败只是点击彩蛋不可用。
+      shapesRef.current = buildShapeTargets(field.targets.length / 2);
       const assembleNow = () => {
         pos.set(field.targets);
         void paint();
+        setView({ phase: "idle", shape: "portrait" });
       };
-      // 名字序列只属于开屏仪式的首次登场：本会话已播过仪式（或要求减少动态）
-      // 直接停在头像终态，刷新与客户端导航重挂载都不再重播。
-      if (reducedQuery.matches || hasOpeningPlayedThisSession()) {
+      // 名字序列只属于开屏仪式的首次登场：本会话已播过仪式（或要求减少动态、
+      // 或等待期已被点击作废）直接停在头像终态，刷新与重挂载都不再重播。
+      if (reducedQuery.matches || hasOpeningPlayedThisSession() || introAbortedRef.current) {
+        introStageRef.current = "done";
         assembleNow();
         return;
       }
+      setView((v) => ({ ...v, phase: "intro", shape: "transition" }));
       const stages = await buildIntroStages(name, field.targets.length / 2);
       if (disposed) return;
-      stages.push({ targets: field.targets, morphMs: INTRO_AVATAR_MORPH_MS, stagger: ASSEMBLE_STAGGER, dwellMs: 0 });
+      if (introAbortedRef.current) return;
+      stages.push({ shape: "portrait", targets: field.targets, morphMs: INTRO_AVATAR_MORPH_MS, stagger: ASSEMBLE_STAGGER, dwellMs: 0 });
       const beginIntro = (elapsedMs: number) => {
         if (disposed || introAbortedRef.current) return;
-        introRef.current = { stages, next: 0, timer: 0, holdAdvance: false };
-        introRef.current.timer = window.setTimeout(advanceIntro, Math.max(0, INTRO_AFTER_REVEAL_MS - elapsedMs));
+        planRef.current = { kind: "intro", stages, next: 0, timer: 0, dwellEndsAt: 0, dwellRemaining: null, holdAdvance: false };
+        setView((v) => ({ ...v, phase: "intro", shape: "transition" }));
+        planRef.current.timer = window.setTimeout(advanceSequence, Math.max(0, INTRO_AFTER_REVEAL_MS - elapsedMs));
       };
       // 揭幕帘升起后才开演，名字不藏在遮罩后面。字形采样恰逢帘已抬起
       // （事件已派发、DOM 未卸载）时按已流逝时间补偿立即续上，不错过
@@ -547,6 +655,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
         return;
       }
       if (!document.querySelector(".opening-loader")) {
+        introStageRef.current = "done";
         assembleNow();
         return;
       }
@@ -556,24 +665,25 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     return () => {
       disposed = true;
       unsubscribeReveal?.();
-      cancelIntro();
+      cancelSequence();
       observer.disconnect();
       intersection.disconnect();
       themeObserver.disconnect();
       reducedQuery.removeEventListener("change", onReducedChange);
       document.removeEventListener("visibilitychange", onVisibility);
-      stopLoop();
-      animRef.current = null;
     };
-  }, [advanceIntro, cancelIntro, name, paint, step, stopLoop]);
+  }, [advanceSequence, cancelSequence, name, paint, step]);
 
+  const settledPortrait = view.phase === "idle" && view.shape === "portrait";
   return (
     <button
       ref={buttonRef}
-      aria-label={assembled ? `分散${name}的点描头像` : `聚拢${name}的点描头像`}
+      aria-label={settledPortrait ? `播放${name}点描头像的粒子彩蛋` : `回到${name}的点描头像`}
       className="curation-home__avatar"
+      data-avatar-shape={view.shape}
+      data-avatar-state={view.phase}
       data-particles={particlesOn ? "on" : "off"}
-      onClick={toggle}
+      onClick={onActivate}
       type="button"
     >
       <Image
