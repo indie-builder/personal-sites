@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function PersonalSitesPage() {
   return (
-    <PortfolioShell label="个人网站">
+    <PortfolioShell label="个人网站" productSlug="personal-sites">
       <header className={styles.header}>
         <div>
           <p>一份持续更新的个人工程档案。</p>

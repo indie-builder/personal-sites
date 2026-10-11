@@ -36,7 +36,7 @@ export default function LayoutCompositionsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   return (
-    <PortfolioShell label="布局参考">
+    <PortfolioShell label="布局参考" productSlug="layout-compositions">
       {/* searchParams 在 Suspense 内 await：预渲染期必然挂起，首屏只由请求时分叉
           按当前筛选输出跨页图片，不会在预渲染外壳里重复一份空参数渲染。 */}
       <Suspense

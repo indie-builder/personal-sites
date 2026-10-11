@@ -1,9 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, Menu, Plus, X } from 'lucide-react';
+import { Check, ChevronDown, Menu, Plus, X } from 'lucide-react';
 import {
   avatarUrl,
   defaultAgent,
@@ -248,13 +247,6 @@ export function AiChat() {
           inert={headerHidden && !panel}
           aria-hidden={(headerHidden && !panel) || undefined}
         >
-          <Link
-            aria-label="返回作品集"
-            className={buttonClassName({ icon: true, variant: 'ghost' })}
-            href="/portfolio"
-          >
-            <ArrowLeft size={22} strokeWidth={1.6} />
-          </Link>
           <button
             ref={menuButton}
             type="button"

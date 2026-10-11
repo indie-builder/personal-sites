@@ -22,7 +22,7 @@ export default function MusePage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   return (
-    <PortfolioShell label="灵感集">
+    <PortfolioShell label="灵感集" productSlug="muse">
       {/* searchParams 转发进 Suspense 内 await：预渲染期必然挂起，外壳不预渲染网格，
           首屏只由请求时分叉输出（服务端按当前筛选，设计契约） */}
       <Suspense

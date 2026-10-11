@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 // 单列聊天界面：保留源站 480px 工作台与移动端整屏行为，模式行隐藏以复用高度。
 export default function AiChatPage() {
   return (
-    <PortfolioShell hideMasthead label="AI 问答">
+    <PortfolioShell hideMasthead label="AI 问答" productSlug="ai-chat">
       <div className={styles.chat}>
         <AiChat />
       </div>

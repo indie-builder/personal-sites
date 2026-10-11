@@ -51,6 +51,9 @@ test("左侧「作品集 / 信息集」切换与产品返回保持浏览器历�
 
   await screen.getByRole("link", "打开布局参考").tap();
   await expect(browser).toHaveURL(/\/products\/layout-compositions$/u);
+  const overviewReturn = screen.getByRole("link", "返回作品集");
+  await expect(overviewReturn).toBeVisible();
+  await expect(overviewReturn).toHaveAttribute("href", "/portfolio#portfolio-work-layout-compositions");
   await expect(screen.getByRole("link", "信息集", { exact: true })).toHaveAttribute("href", "/");
 
   await browser.back();
@@ -71,6 +74,18 @@ test("作品图鉴可以搜索、阅读、放大并返回", async ({ app, screen
   await expect(screen.getByRole("dialog", "三分法构图")).toBeHidden();
   await screen.getByRole("button", "返回书架").tap();
   await expect(screen.getByRole("searchbox", "搜索图鉴名称或主题")).toBeVisible();
+});
+
+test("七个作品根页与灵感集详情都只有一个「返回作品集」出口", async ({ app }) => {
+  const muse = (await (await fetch(new URL("/api/portfolio/muse?limit=1", app.baseUrl))).json()) as {
+    items: { href: string }[];
+  };
+  const pages = [...products.map((slug) => `/products/${slug}`), muse.items[0]?.href ?? "/products/muse"];
+  for (const page of pages) {
+    const html = await (await fetch(new URL(page, app.baseUrl))).text();
+    expect(html.match(/<a\b[^>]*\sdata-portfolio-return(?:=|\s|>)/gu)?.length ?? 0, page).toBe(1);
+    expect(html.includes("返回作品集"), page).toBe(true);
+  }
 });
 
 test("词典允许本地嵌入，普通页面仍禁止 framing", async ({ app }) => {

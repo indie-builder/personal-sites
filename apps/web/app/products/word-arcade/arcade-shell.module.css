@@ -4,26 +4,3 @@
   min-height: calc(100dvh - 5rem);
   flex-direction: column;
 }
-
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-ink-soft, #5c5c5c);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.back:hover,
-.back:focus-visible {
-  color: var(--color-ink, #202020);
-}
-
-:global(html[data-curation-theme="dark"]) .back {
-  color: #999;
-}
-
-:global(html[data-curation-theme="dark"]) .back:hover,
-:global(html[data-curation-theme="dark"]) .back:focus-visible {
-  color: #f4f4f4;
-}

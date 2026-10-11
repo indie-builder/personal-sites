@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default function MuseDetailPage({ params }: PageProps) {
   return (
-    <PortfolioShell hideMasthead>
+    <PortfolioShell hideMasthead productSlug="muse">
       {/* params 属请求时数据，转发进 Suspense 内的子组件再 await：外壳可预渲染，内容照旧服务端输出 */}
       <Suspense fallback={null}>
         <Detail params={params} />

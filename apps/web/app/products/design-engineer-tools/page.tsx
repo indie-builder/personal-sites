@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function DesignEngineerToolsPage() {
   const toolCategories = Effect.runSync(readToolCategories());
   return (
-    <PortfolioShell label="设计工程工具">
+    <PortfolioShell label="设计工程工具" productSlug="design-engineer-tools">
       <section aria-label="设计工程工具目录">
         <div className={styles.groups}>
           {toolCategories.map((category, index) => (

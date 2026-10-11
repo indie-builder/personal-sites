@@ -15,23 +15,16 @@ import { MotionVideo } from "./motion-video";
 import { OverviewBookPreview } from "./overview-book-preview";
 import { OverviewToolPreview } from "./overview-tool-preview";
 import { WordArcadePreview } from "./word-arcade-preview";
-import { PreviewPlaybackScope } from "./preview-playback";
+import { PortfolioTimeline } from "./portfolio-timeline";
+import { PreviewStation } from "./preview-playback";
 import styles from "./portfolio-overview.module.css";
 
 export type MusePreview = { src: string; alt: string; videoSrc?: string };
 
 const mediaShapes: Record<string, string> = {
-  "word-arcade": styles.mediaArcade,
-  "ai-chat": styles.mediaChat,
   "personal-sites": styles.mediaWindow,
-  muse: styles.mediaMuse,
   "layout-compositions": styles.mediaShelf,
-  "ai-coding-dictionary": styles.mediaGraph,
-  "design-engineer-tools": styles.mediaTools,
 };
-
-/** 图谱与工具目录用左文右图的紧凑停靠，其余媒体整幅，保持轨迹的错落节奏。 */
-const compactSlugs = new Set(["ai-coding-dictionary", "design-engineer-tools"]);
 
 const graphNodes = [
   { name: "Model", x: 58, y: 55, r: 12, color: "#bdced9" },
@@ -118,35 +111,43 @@ function previewFor(
   }
 }
 
-// 总览时间线：源站首页横向作品时间轴的窄栏改写。按真实日期升序排开，
-// 日期节点与连续竖线让七段作品读成一条成长轨迹；同日作品共用日期节点，以短刻度衔接。
-// 整段作品是一枚链接（无嵌套交互），可访问名保持「打开${name}」；不虚构阶段与数据。
+function WalkerSilhouette() {
+  return (
+    <svg aria-hidden="true" className={styles.walker} shapeRendering="crispEdges" viewBox="0 0 27 32">
+      <rect x="0" y="0" width="8" height="24" />
+      <rect x="12" y="0" width="8" height="8" />
+      <rect x="7" y="4" width="16" height="4" />
+      <rect x="12" y="4" width="4" height="12" />
+      <rect x="20" y="4" width="4" height="12" />
+      <rect x="7" y="12" width="20" height="4" />
+      <rect x="4" y="15" width="19" height="13" />
+      <rect x="8" y="15" width="4" height="13" />
+      <rect x="16" y="20" width="4" height="8" />
+      <rect x="8" y="28" width="4" height="4" />
+      <rect x="16" y="28" width="4" height="4" />
+    </svg>
+  );
+}
+
 export function PortfolioOverview({ musePreviews }: { musePreviews: readonly MusePreview[] }) {
   const layoutCategories = Effect.runSync(readLayoutCategories());
-  const stops = portfolioProducts.map((product, index) => ({
-    product,
-    continues: index > 0 && portfolioProducts[index - 1]?.date === product.date,
-  }));
   return (
-    <PreviewPlaybackScope>
-    <ol className={styles.timeline}>
-      {stops.map(({ product, continues }) => (
-        <li className={styles.stop} data-continue={continues || undefined} key={product.slug}>
-          {continues ? (
-            <span aria-hidden="true" className={styles.tick} />
-          ) : (
-            <>
-              <span aria-hidden="true" className={styles.node} />
-              <time className={styles.date} dateTime={product.date}>
-                {product.date.replaceAll("-", ".")}
-              </time>
-            </>
-          )}
+    <PortfolioTimeline>
+      {portfolioProducts.map((product) => (
+        <li className={styles.stop} data-name={product.name} data-timeline-stop={product.slug} key={product.slug}>
+          <time className={styles.date} dateTime={product.date}>
+            {product.date.replaceAll("-", ".")}
+          </time>
+          <span aria-hidden="true" className={styles.rule}>
+            <span className={styles.node} />
+            <WalkerSilhouette />
+          </span>
           <Link
             aria-label={`打开${product.name}`}
             className={styles.work}
-            data-compact={compactSlugs.has(product.slug) || undefined}
+            data-portfolio-work={product.slug}
             href={product.href as Route}
+            id={`portfolio-work-${product.slug}`}
           >
             <span className={styles.title}>
               <span className={styles.name}>{product.name}</span>
@@ -154,16 +155,19 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
             </span>
             <span className={styles.tagline}>{product.tagline}</span>
             <span className={`${styles.media} ${mediaShapes[product.slug] ?? ""}`}>
-              {previewFor(product, musePreviews, layoutCategories)}
+              <PreviewStation slug={product.slug}>
+                {previewFor(product, musePreviews, layoutCategories)}
+              </PreviewStation>
             </span>
           </Link>
         </li>
       ))}
-      <li className={`${styles.stop} ${styles.future}`}>
-        <span aria-hidden="true" className={styles.node} />
+      <li className={`${styles.stop} ${styles.future}`} data-name="未完待续" data-timeline-end>
         <span className={styles.date}>未完待续</span>
+        <span aria-hidden="true" className={styles.rule}>
+          <span className={styles.node} />
+        </span>
       </li>
-    </ol>
-    </PreviewPlaybackScope>
+    </PortfolioTimeline>
   );
 }

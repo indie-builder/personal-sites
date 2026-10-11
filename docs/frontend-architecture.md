@@ -21,7 +21,7 @@ RootLayout
    ├─ /open-source              开源关注版块（ISR，revalidate = 300）
    │  ├─ Profile rail（与首页相同）
    │  └─ 内容导航 + 公开资料问答（个人简介、每日关注、开源关注）
-   ├─ /portfolio                作品集总览，按真实日期升序的纵向时间线（七个作品）
+   ├─ /portfolio                作品集总览，按真实日期升序的横向时间线（七个作品＋未完待续尾站）
    ├─ /products/*               作品内页，复用身份轨与作用域样式
    ├─ /api/portfolio/*          Web 与原生客户端共享的作品公开 GET API
    ├─ /api/ai-chat              作品聊天，独立于站点 Ask
@@ -41,6 +41,8 @@ RootLayout
       ├─ Profile rail（与首页相同）
       └─ 文档版本切换为客户端状态，中文阅读版服务端渲染
 ```
+
+作品集总览是右栏的横向时间线：`apps/web/components/portfolio/portfolio-overview.tsx` 在服务端渲染七站与「未完待续」尾站（每站显示真实日期，同日作品不共用节点），`portfolio-timeline.tsx` 是客户端包裹层，拥有原生横向滚动、当前站判定、方向键与 Home/End、前后按钮、鼠标拖动和恢复快照；预览播放沿用 `preview-playback.tsx` 的暂停与 reduced-motion 策略，仅当前站可播，小行者剪影只随当前站出现且无自动巡游。作品壳 `portfolio-shell.tsx` 提供每个作品页唯一的「返回作品集」出口：显式返回经 `/portfolio#portfolio-work-{slug}` 与最近一次离开的会话快照回到出发作品并恢复横向位置与焦点；浏览器后退从对应历史条目的 `history.state` 快照恢复。两种恢复都不改写 `history.scrollRestoration`，URL 哈希只作为分享与回退锚点，不随滚动更新。
 
 首页与每日动态版块在预渲染和再验证时合并 SQLite 历史与 Supabase 增量。命中页面缓存时，首屏直接使用缓存内容，无需每次请求都等待 Supabase。缓存超过 60 秒后，下一次请求仍返回旧页面，并触发后台再验证；成功后，后续请求使用新页面。60 秒是再验证间隔，不是内容陈旧时间的上限。两页保留数据 Suspense 边界与加载状态。分页 API 沿用自身的 HTTP 缓存策略，不受页面 `revalidate` 配置控制。
 
