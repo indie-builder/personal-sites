@@ -1,4 +1,4 @@
-import { BookOpen, BriefcaseBusiness, GitBranch } from "lucide-react";
+import { BookOpen, GitBranch } from "lucide-react";
 
 import { MobileProfileCollapse } from "@/components/mobile-profile-collapse";
 import { AboutPrint } from "@/components/about-print";
@@ -8,6 +8,7 @@ import { ParticleAvatar } from "@/components/particle-avatar";
 import { ProfileIntroduction } from "@/components/profile-introduction";
 import { ProfileTransitionBridge } from "@/components/profile-transition-bridge";
 import { MobileSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
+import { SiteModeLink } from "@/components/site-mode-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { siteProfile } from "../../../config/site-profile.mjs";
 
@@ -40,10 +41,7 @@ export function SiteProfile({ animateOnFirstHomeVisit = false, mobileSection }: 
               <BookOpen aria-hidden="true" />
               语雀
             </a>
-            <a href="https://portfolio.default-coder.lovemyrmb.cn/" rel="noreferrer" target="_blank">
-              <BriefcaseBusiness aria-hidden="true" />
-              作品集
-            </a>
+            <SiteModeLink />
             <AboutPrint />
           </nav>
         </div>

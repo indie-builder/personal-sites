@@ -6,7 +6,7 @@ import styles from "./site-section-navigation.module.css";
 
 export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source";
 
-// 刊头只包含阅读版块；问答由个人简介中的角色打开。
+// 刊头只包含阅读版块；问答由个人简介中的角色打开；作品集由身份轨的「作品集」链接进入。
 const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; label: string }> = [
   { href: "/ai-news", id: "ai-news", label: "每日动态" },
   { href: "/curation", id: "daily", label: "每日关注" },
@@ -38,9 +38,9 @@ export function MobileSectionNavigation({ current }: { current: SiteSection }) {
   );
 }
 
-// 桌面刊头：当前版块是 Title 档刊名，兄弟版块收为 quiet 同行链接，
-// 整个头部共享一条细线——导航不再使用 tab 语法。桌面无独立「首页」：/ 的右侧即每日动态，
-// 「首页」只保留在移动端导航（回到展开的个人资料）。
+// 桌面刊头：当前版块刊名 + 兄弟版块 quiet 同行链接，整个头部共享一条细线——导航不使用
+// tab 语法。桌面无独立「首页」：/ 的右侧即每日动态，「首页」只保留在移动端导航（回到
+// 展开的个人资料）。作品集入口在身份轨左端的「作品集」链接。
 export function ContentSectionNavigation({ current }: { current: SiteSection }) {
   const currentSection = siblingSections.find((section) => section.id === current) ?? siblingSections[0];
   const siblings = siblingSections.filter((section) => section.id !== currentSection.id);

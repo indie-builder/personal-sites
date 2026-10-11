@@ -9,7 +9,7 @@
 | `scripts`、`config`、`tests` | 根工作区 | 仓库保护、TS7 入口、共享公开配置、Git/打包边界测试 |
 | `android`、`ios` | 原生工程 | 保持 Gradle / Xcode 构建与各自 CI |
 
-Web 和内容管道通过 `workspace:*` 依赖 `@site/public-data`，使用显式子路径导入。公共包不得反向引用 Web 或离线分析工具；`@site/effect` 只依赖 Effect，业务执行约定见 [Effect 开发规则](effect-architecture.md)；Pi、Transformers、sqlite-vec、bird 仅由内容管道持有。共同的智谱端点/模型默认值仍由根 `config/bigmodel.mjs` 提供，Pi 适配器归内容管道。
+Web 和内容管道通过 `workspace:*` 依赖 `@site/public-data`，使用显式子路径导入。公共包不得反向引用 Web 或离线分析工具；`@site/effect` 只依赖 Effect，业务执行约定见 [Effect 开发规则](effect-architecture.md)；Transformers、sqlite-vec、bird 仅由内容管道持有。Pi 用于离线分析及迁入的独立作品 `/api/ai-chat`，Web 仅为该产品持有 Pi 运行依赖，站点 `/api/ask` 继续使用 AI SDK。共同的智谱端点、密钥和模型默认值由根 `config/bigmodel.mjs` 提供。
 
 ## 命令
 
@@ -48,7 +48,7 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 ## 数据与环境变量
 
-- 根 `data/curation.sqlite` 和 `data/ai-news.sqlite` 是唯一提交的公开快照。`apps/web/scripts/prepare-data.mjs` 在 dev/build/test 前将这两个明确列出的文件复制到被忽略的 `apps/web/data/`，缺少任一文件就失败。不会递归复制 `data/`，也不会打包敏感目录。
+- 根 `data/curation.sqlite`、`data/ai-news.sqlite` 和 `data/portfolio.sqlite` 是提交的公开 SQLite 快照。`apps/web/scripts/prepare-data.mjs` 在 dev/build/test 前将这三个明确列出的文件复制到被忽略的 `apps/web/data/`，缺少任一文件就失败。不会递归复制 `data/`，也不会打包敏感目录。
 - Web 运行时只读自己的 `data/` 副本；修改根快照后要重新启动 dev 或重新 build/deploy。
 - 根 `.env.local` 继续作为本机配置。Web 命令在 Next 启动前通过 `--import ./scripts/load-env.mjs` 复用现有 env loader 加载，线上使用平台注入的环境变量；内容脚本继续使用现有本机 env loader。凭据不复制到 apps/packages，也不进入 Git 或缓存输出。
 - 本机 Ask 历史继续使用根 `var/ask-sessions/`，保留既有会话；线上仍使用 Supabase Storage。函数追踪显式排除私有数据、会话和 Smaug 目录。
@@ -56,7 +56,7 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 ## 缓存与 CI
 
-- lint/typecheck/test 由 Turbo 根据工作区依赖排序，并复用本地缓存；根 `config/**`、TS7 入口、oxlint 配置参与失效判定。数据测试和 Web build 另外将两份根 SQLite 作为输入，确保仅更新归档也能触发构建。
+- lint/typecheck/test 由 Turbo 根据工作区依赖排序，并复用本地缓存；根 `config/**`、TS7 入口、oxlint 配置参与失效判定。数据测试和 Web build 另外将三份根 SQLite 作为输入，确保仅更新归档也能触发构建。
 - 根 Git 保护测试依赖 Git 状态，不缓存。Web build 会预渲染来自 Supabase 的 Sitemap，外部数据变化不体现在 Git，因此 build 关闭缓存。只有消除或显式版本化外部构建输入后才能开启。
 - 同步、归档、清理、数据库推送、部署等有副作用的命令直接通过 pnpm 执行，不使用 Turbo 缓存。
 - 暂不开启远程缓存。Web `.next` 可能包含构建时读取的外部内容；不要把私有队列、原始资料或凭据加入任何缓存 outputs。
@@ -65,8 +65,8 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 ## Vercel
 
-项目 Root Directory 改为 `apps/web`，开启构建时包含根目录之外的源文件（公共包、根配置和两份 SQLite）。`apps/web/vercel.json` 固定 Install Command 为 `pnpm install --frozen-lockfile --filter @site/web...`，避免安装离线分析依赖；Build Command 使用 `pnpm build`（此目录下为 Web 包脚本），Framework 仍是 Next.js，Output Directory 使用默认 `.next`。
+项目 Root Directory 改为 `apps/web`，开启构建时包含根目录之外的源文件（公共包、根配置和三份 SQLite）。`apps/web/vercel.json` 固定 Install Command 为 `pnpm install --frozen-lockfile --filter @site/web...`，避免安装离线分析依赖；Build Command 使用 `pnpm build`（此目录下为 Web 包脚本），Framework 仍是 Next.js，Output Directory 使用默认 `.next`。
 
-`next.config.ts` 的 `outputFileTracingRoot` 和 `turbopack.root` 指向仓库根；函数的显式数据追踪只包含 Web 自己的两个 SQLite 副本。移除此前可能设置的根级构建/输出覆盖。环境变量继续保存在现有 Vercel 项目中。
+`next.config.ts` 的 `outputFileTracingRoot` 和 `turbopack.root` 指向仓库根；函数的显式数据追踪只包含 Web 自己的三个 SQLite 副本。移除此前可能设置的根级构建/输出覆盖。环境变量继续保存在现有 Vercel 项目中。
 
 这是部署项目设置的迁移条件；在旧代码仍为默认分支时不要提前修改生产项目的 Root Directory。合并迁移与切换 Root Directory 需一并安排。本机可以通过 `pnpm build` 和 `pnpm --filter @site/web start` 验证迁移后的完整应用。

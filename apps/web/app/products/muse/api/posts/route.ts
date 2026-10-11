@@ -1,0 +1,25 @@
+import type { NextRequest } from "next/server";
+import { Effect } from "effect";
+
+import { readMuseCardsPage } from "@site/public-data/portfolio/muse.mjs";
+
+import { getPortfolioDatabase } from "@/lib/portfolio/data.server";
+
+const MUSE_BATCH = 24;
+
+/** 灵感网格滚动追加的分片接口：按当前筛选返回一个窗口（与 /api/portfolio/muse 同一读取）。 */
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  const { items, total } = await Effect.runPromise(
+    readMuseCardsPage(getPortfolioDatabase(), {
+      q: params.get("q") ?? "",
+      category: params.get("cat") ?? "全部",
+      offset: Math.max(0, Number(params.get("offset")) || 0),
+      limit: Math.min(240, Math.max(1, Number(params.get("limit")) || MUSE_BATCH)),
+    }),
+  );
+  return Response.json(
+    { total, items },
+    { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
+  );
+}

@@ -21,6 +21,10 @@ RootLayout
    ├─ /open-source              开源关注版块（ISR，revalidate = 300）
    │  ├─ Profile rail（与首页相同）
    │  └─ 内容导航 + 公开资料问答（个人简介、每日关注、开源关注）
+   ├─ /portfolio                作品集总览，按真实日期升序的横向时间线（七个作品＋未完待续尾站）
+   ├─ /products/*               作品内页，复用身份轨与作用域样式
+   ├─ /api/portfolio/*          Web 与原生客户端共享的作品公开 GET API
+   ├─ /api/ai-chat              作品聊天，独立于站点 Ask
    ├─ /feed.xml                 最近公开内容的 RSS 2.0 聚合
    ├─ /sitemap.xml              栏目与公开详情页索引
    ├─ /robots.txt               搜索引擎抓取规则
@@ -37,6 +41,8 @@ RootLayout
       ├─ Profile rail（与首页相同）
       └─ 文档版本切换为客户端状态，中文阅读版服务端渲染
 ```
+
+作品集总览是右栏的横向时间线：`apps/web/components/portfolio/portfolio-overview.tsx` 在服务端渲染七站与「未完待续」尾站（每站显示真实日期，同日作品不共用节点），`portfolio-timeline.tsx` 是客户端包裹层，拥有原生横向滚动、当前站判定、方向键与 Home/End、前后按钮、鼠标拖动和恢复快照；预览播放沿用 `preview-playback.tsx` 的暂停与 reduced-motion 策略，仅当前站可播，小行者剪影只随当前站出现且无自动巡游。作品壳 `portfolio-shell.tsx` 提供每个作品页唯一的「返回作品集」出口：显式返回经 `/portfolio#portfolio-work-{slug}` 与最近一次离开的会话快照回到出发作品并恢复横向位置与焦点；浏览器后退从对应历史条目的 `history.state` 快照恢复。两种恢复都不改写 `history.scrollRestoration`，URL 哈希只作为分享与回退锚点，不随滚动更新。
 
 首页与每日动态版块在预渲染和再验证时合并 SQLite 历史与 Supabase 增量。命中页面缓存时，首屏直接使用缓存内容，无需每次请求都等待 Supabase。缓存超过 60 秒后，下一次请求仍返回旧页面，并触发后台再验证；成功后，后续请求使用新页面。60 秒是再验证间隔，不是内容陈旧时间的上限。两页保留数据 Suspense 边界与加载状态。分页 API 沿用自身的 HTTP 缓存策略，不受页面 `revalidate` 配置控制。
 
@@ -57,7 +63,7 @@ RootLayout
 
 统一健康状态会执行 SQLite `quick_check`，并按 `rowid` 双向核对 `ask_documents` 与 FTS5，而不是只比较总数；数据库损坏、缺失索引行或孤儿索引行都会让健康端点返回 503。
 
-“问一问”的本地 FTS 语料由公开个人简介、每日关注和开源关注派生；每日动态合并 SQLite 历史与 Supabase 增量检索。完整问题、拆词结果与不同来源使用排名融合后统一取前六条，并由固定公开语料评测集验证召回。AI SDK 将本轮资料包、历史问答与可选的历史摘要发送给智谱；历史达到 64,000 字符时自动总结较早轮次，保留最近四轮原文。流式结果沿用站点 SSE 协议：Web 请求带 `format: "openui"`，文本 delta 累积为 OpenUI Lang；原生端不传 format，继续使用现有文本输出。官方组件提示词由 `node apps/web/scripts/generate-openui-prompt.mjs` 生成到 `ask-openui-prompt.json`，升级 OpenUI 后同步再生成，避免服务端运行时加载客户端组件。默认组件按钮可继续提问，Tabs 等局部交互由 OpenUI 管理；未接入模型 Query/Mutation 工具。旧浏览器文字快照只在恢复时一次性包入 TextContent，保留历史和草稿。Pi 只用于离线资料解析。请求限流在 Supabase 中按 IP 的 HMAC 摘要原子计数，所有 Vercel 实例共享 10 分钟 50 次的窗口；浏览器不持有 service-role key。
+“问一问”的本地 FTS 语料由公开个人简介、每日关注和开源关注派生；每日动态合并 SQLite 历史与 Supabase 增量检索。完整问题、拆词结果与不同来源使用排名融合后统一取前六条，并由固定公开语料评测集验证召回。AI SDK 将本轮资料包、历史问答与可选的历史摘要发送给智谱；历史达到 64,000 字符时自动总结较早轮次，保留最近四轮原文。流式结果沿用站点 SSE 协议：Web 请求带 `format: "openui"`，文本 delta 累积为 OpenUI Lang；原生端不传 format，继续使用现有文本输出。官方组件提示词由 `node apps/web/scripts/generate-openui-prompt.mjs` 生成到 `ask-openui-prompt.json`，升级 OpenUI 后同步再生成，避免服务端运行时加载客户端组件。默认组件按钮可继续提问，Tabs 等局部交互由 OpenUI 管理；未接入模型 Query/Mutation 工具。旧浏览器文字快照只在恢复时一次性包入 TextContent，保留历史和草稿。站点问一问继续使用 AI SDK。迁入的独立作品 `/products/ai-chat` 通过 Pi 提供 `/api/ai-chat`，与 Ask 的接口、历史和检索隔离。请求限流在 Supabase 中按 IP 的 HMAC 摘要原子计数，所有 Vercel 实例共享 10 分钟 50 次的窗口；浏览器不持有 service-role key。
 
 ## 交付与移动浏览器
 

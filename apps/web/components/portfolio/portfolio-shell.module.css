@@ -1,0 +1,26 @@
+.home {
+  /* 作品列取满右栏宽度；产品内部自行约束阅读宽度。 */
+  align-items: start;
+}
+
+/* 产品页共用的总览出口：位于产品内容上方，与日期/链接分区，44px 触达。 */
+.return {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-bottom: 0.9rem;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.return:hover,
+.return:focus-visible {
+  color: var(--color-ink);
+}
+
+.return:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}

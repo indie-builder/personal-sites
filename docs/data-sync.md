@@ -8,6 +8,7 @@
 | X 书签与点赞 | `pnpm curation:sync` | 抓取、解析、设计分类并重建本地公开 SQLite；[同步说明](supabase-x-sync.md) |
 | 抖音收藏 | `pnpm douyin:sync`，然后 `pnpm curation:publish` | 发现、下载、转写/OCR、策展；成功入队的条目在重建 SQLite 后公开；[同步说明](douyin-curation.md) |
 | GitHub Star | `pnpm github:starred:daily` | 增量检查、补齐中文阅读版并更新本地 SQLite；`github:starred:sync` 仅同步来源；[同步说明](github-starred-sync.md) |
+| 作品集 | `pnpm portfolio:sync <来源>`，然后 `pnpm portfolio:project` | 本机工作数据生成公开 SQLite 与目录；媒体和视频制作见[作品集维护](portfolio.md) |
 
 ## 定时调度
 

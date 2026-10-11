@@ -89,7 +89,7 @@ nonisolated final class AccessibilityTraitsTests: XCTestCase {
     @MainActor
     func testPortfolioNativeBrowsing() throws {
         guard let base = ProcessInfo.processInfo.environment["PORTFOLIO_TEST_BASE_URL"] else {
-            throw XCTSkip("需要运行 personal-design API 并指定 PORTFOLIO_TEST_BASE_URL")
+            throw XCTSkip("需要运行站点 API 并指定 PORTFOLIO_TEST_BASE_URL")
         }
         let app = XCUIApplication()
         app.launchEnvironment["PORTFOLIO_BASE_URL"] = base

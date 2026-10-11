@@ -185,6 +185,30 @@ test("avatar keeps the static stipple when the canvas context is unavailable", a
   await expect(avatar).toBeVisible();
 });
 
+// 横向作品时间轴的 reduce 契约：e2e 运行器的 matchMedia 补丁只改 JS 现读，
+// 这里用 emulateMedia 验证 CSS 级联层面——reduce 下时间轴子树（行者、墨色、
+// 停靠内容）没有任何运行中的动画或过渡，按钮推进后也瞬时落定。
+test("portfolio timeline has no running animations under reduced motion and settles instantly on advance", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/portfolio");
+  const runningCount = () =>
+    page.evaluate(() => {
+      const wrapper = document.querySelector("[data-portfolio-timeline]");
+      if (!wrapper) return -1;
+      return wrapper
+        .getAnimations({ subtree: true })
+        .filter((animation) => animation.playState === "running").length;
+    });
+  await expect(page.locator("#portfolio-timeline")).toBeVisible();
+  await expect.poll(runningCount).toBe(0);
+  await page.getByRole("button", { name: "向后浏览作品" }).click();
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")))
+    .toBe("muse");
+  await expect.poll(runningCount).toBe(0);
+});
+
 test.describe("touch media", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 

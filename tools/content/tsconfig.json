@@ -6,12 +6,14 @@
     "strict": true,
     "allowJs": true,
     "checkJs": false,
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true
   },
   "include": [
     "modules/analysis/model-runner.mjs",
     "modules/analysis/retry.mjs",
+    "modules/portfolio/**/*.ts",
     "tests/*.types.mts"
   ]
 }

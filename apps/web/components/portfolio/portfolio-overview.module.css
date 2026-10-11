@@ -1,0 +1,685 @@
+.timeline {
+  container-type: inline-size;
+  position: relative;
+  padding-block-start: clamp(2rem, 7dvh, 4rem);
+}
+
+.help {
+  margin: 0 0 0.45rem;
+  color: var(--color-ink-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.viewport {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-inline: 0.5rem;
+  scroll-padding-inline: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.viewport:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -2px;
+}
+
+.viewport[data-dragging],
+.viewport[data-dragging] a {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.list {
+  box-sizing: border-box;
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 0;
+  padding-inline-end: max(0px, calc(100cqi - min(22.5rem, calc(100cqi - 4rem)) - 1rem));
+  gap: 2rem;
+  list-style: none;
+}
+
+.stop {
+  flex: none;
+  box-sizing: border-box;
+  width: min(22.5rem, calc(100cqi - 4rem));
+}
+
+.date {
+  display: block;
+  margin: 0 0 2rem;
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  min-height: 1.15em;
+}
+
+.stop[data-active="true"] .date {
+  color: var(--color-ink);
+}
+
+.rule {
+  position: relative;
+  display: block;
+  height: 1px;
+  margin: 0 0 0.9rem;
+  width: calc(100% + 2rem);
+  background: var(--color-hairline-strong);
+}
+
+.node {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  transform: translateY(-50%);
+}
+
+.stop[data-active="true"] .node {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink) 16%, transparent);
+}
+
+.walker {
+  position: absolute;
+  left: 13px;
+  bottom: 2px;
+  display: none;
+  width: 21px;
+  height: 25px;
+  fill: var(--color-ink);
+}
+
+.stop[data-active="true"] .walker {
+  display: block;
+}
+
+/* 末端开口：通向「未完待续」的最后一段为虚线，节点空心（源站收尾语言）。 */
+.future .rule {
+  width: 100%;
+  background: none;
+  border-top: 1px dashed var(--color-hairline-strong);
+}
+
+.future .node {
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink-soft);
+}
+
+.work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow: clip;
+  gap: 0.3rem;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.work:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 4px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.7em;
+}
+
+.name {
+  color: var(--color-ink);
+  font-size: 1.15rem;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tagline {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  min-height: 3.2em;
+}
+
+.enter {
+  flex: none;
+  color: var(--color-ink-soft);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .work:hover .enter {
+    color: var(--color-ink);
+    transform: translateX(4px);
+  }
+}
+
+.work:focus-visible .enter {
+  color: var(--color-ink);
+}
+
+.work:active {
+  transform: scale(0.985);
+  transition-duration: 70ms;
+}
+
+.media {
+  position: relative;
+  display: flex;
+  margin-top: 0.55rem;
+  height: clamp(9rem, 26cqi, 13rem);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-plate);
+}
+
+.previewStation {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+.previewStation[data-preview-playing="false"] .bookMotion * {
+  animation: none !important;
+}
+
+.bookMotion {
+  min-width: 0;
+}
+
+.mediaShelf .bookMotion [data-preview] {
+  padding-inline: 4px;
+}
+
+.mediaShelf .bookMotion [data-preview] > div {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: clamp(8rem, 24cqi, 11.5rem);
+}
+
+.mediaShelf .bookMotion [data-preview] > div > span {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: calc(var(--book-height) * 0.3);
+  padding-block: 8px;
+}
+
+@container (max-width: 480px) {
+  .mediaShelf .bookMotion [data-preview] > div > span {
+    padding-inline: 1px;
+  }
+}
+
+/* 书架停靠：封面翻出书架需要溢出可见，媒体面由书架自身的板沿承担。 */
+.mediaShelf {
+  align-items: flex-end;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* 个人网站停靠：迷你浏览器窗口包住本站截图。 */
+.mediaWindow {
+  flex-direction: column;
+}
+
+.siteWindow {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: auto 1fr;
+  border: 1px solid var(--color-hairline);
+}
+
+.siteBar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-hairline);
+  background: var(--color-paper);
+}
+
+.dots {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-hairline-strong);
+}
+
+.address {
+  overflow: hidden;
+  min-width: 0;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-plate);
+  color: var(--color-ink-soft);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.siteShot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.museVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 词典停靠：静态知识网（SVG），不加载外部图谱运行时。 */
+.graph {
+  width: 100%;
+  height: 100%;
+}
+
+.graph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.graphEdges {
+  fill: none;
+  stroke: var(--color-ink-soft);
+  stroke-width: 1;
+  opacity: 0.4;
+}
+
+.graph text {
+  fill: var(--color-ink-soft);
+  font: 500 9px var(--font-sans);
+}
+
+/* 工具目录停靠：2×2 收录格，可见时轮流点亮。 */
+.toolGrid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--color-paper);
+}
+
+.toolGrid span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px;
+  color: var(--color-ink-soft);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+
+.toolGrid span:nth-child(odd) {
+  border-right: 1px solid var(--color-hairline);
+}
+
+.toolGrid span:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.toolGrid i {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+
+.toolGrid i :global(img),
+.toolGrid i svg {
+  position: absolute;
+  inset: 0;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  transition:
+    opacity 180ms ease,
+    transform var(--dur-settle) var(--ease-out);
+}
+
+.toolGrid i svg {
+  opacity: 0;
+}
+
+.toolGrid span[data-active="true"] {
+  color: var(--color-ink);
+  background: var(--color-plate);
+}
+
+.toolGrid span[data-active="true"] i :global(img) {
+  opacity: 0;
+  transform: scale(0.78);
+}
+
+.toolGrid span[data-active="true"] i svg {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
+.toolGrid b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+
+/* 书架停靠：书架预览的翻书动效（源站首页同款，键帧与支点在此模块内）。 */
+.bookMotion {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mediaShelf .bookMotion [data-preview] > div {
+    perspective: 700px;
+    transform-style: preserve-3d;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div > span {
+    --pull-x: -28px;
+    transform-style: preserve-3d;
+    transform-origin: 50% 100%;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div > span > [data-book-cover] {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 96px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 12px;
+    border: 1px solid color-mix(in srgb, var(--binding-ink) 22%, transparent);
+    border-radius: 0 4px 4px 0;
+    background: var(--binding);
+    box-shadow:
+      inset -3px 0 0 #f5f1e7,
+      inset 0 0 0 7px var(--binding),
+      inset 0 0 0 8px color-mix(in srgb, var(--binding-ink) 22%, transparent);
+    color: var(--binding-ink);
+    font: 500 15px/1.5 var(--font-sans);
+    letter-spacing: 0;
+    text-align: center;
+    transform: rotateY(90deg);
+    transform-origin: 0 50%;
+    backface-visibility: hidden;
+    opacity: 0;
+  }
+
+  .bookMotion [data-book-active="true"] {
+    animation: preview-book-reveal 6s var(--ease-travel) both;
+    animation-play-state: paused;
+  }
+
+  .bookMotion [data-book-active="true"] > [data-book-cover] {
+    animation: preview-cover-reveal 6s ease both;
+    animation-play-state: paused;
+  }
+
+  .bookMotion[data-running="true"] [data-book-active="true"],
+  .bookMotion[data-running="true"] [data-book-active="true"] > [data-book-cover] {
+    animation-play-state: running;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div > span:nth-child(7) {
+    --pull-x: -55px;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div > span:nth-child(8) {
+    --pull-x: -75px;
+  }
+}
+
+@keyframes preview-book-reveal {
+  0%,
+  4%,
+  100% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
+  }
+  16% {
+    transform: translate3d(0, -14px, 95px) rotateX(-10deg) rotateY(0);
+  }
+  28%,
+  68% {
+    transform: translate3d(var(--pull-x), -22px, 125px) rotateX(0) rotateY(-90deg);
+  }
+  84% {
+    transform: translate3d(0, -14px, 95px) rotateX(-10deg) rotateY(0);
+  }
+}
+
+@keyframes preview-cover-reveal {
+  0%,
+  4%,
+  100% {
+    opacity: 0;
+  }
+  16%,
+  84% {
+    opacity: 1;
+  }
+}
+
+.bookMotion [data-book-cover] small {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
+.caption {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  min-height: 1.4em;
+  min-width: 0;
+  text-wrap: pretty;
+}
+
+.controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.playback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-right: 0.4rem;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--color-ink-soft);
+  font: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.playback:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.playback:disabled {
+  cursor: default;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.step:disabled {
+  color: var(--color-hairline-strong);
+  cursor: default;
+}
+
+.step:not(:disabled):hover {
+  background: var(--color-plate);
+  border-radius: var(--radius-pill);
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    transition: none;
+  }
+
+  .work:hover .enter,
+  .work:focus-visible .enter {
+    transform: none;
+  }
+
+  .work:active {
+    transform: none;
+  }
+
+  .step:not(:disabled):hover {
+    background: none;
+  }
+}
+
+@container (max-width: 340px) {
+  .footer {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .caption {
+    flex-basis: 100%;
+  }
+
+  .controls {
+    margin-inline-start: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .timeline {
+    padding-block-start: 0;
+  }
+}
+
+@media (max-height: 500px) {
+  .timeline {
+    padding-block-start: 0;
+  }
+
+  .help {
+    margin-bottom: 0.15rem;
+    line-height: 1.2;
+  }
+
+  .date {
+    margin-bottom: 1rem;
+  }
+
+  .walker {
+    width: 13px;
+    height: 15px;
+  }
+
+  .rule {
+    margin-bottom: 0.4rem;
+  }
+
+  .title {
+    min-height: 1.6em;
+  }
+
+  .tagline {
+    min-height: 1.6em;
+  }
+
+  .media {
+    height: 6rem;
+    margin-top: 0.25rem;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div {
+    height: 5.5rem;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div > span {
+    height: calc(var(--book-height) * 0.2);
+    padding-block: 5px;
+  }
+
+  .mediaShelf .bookMotion [data-preview] > div > span > [data-book-cover] {
+    width: 72px;
+    padding: 8px;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .footer {
+    margin-top: 0.25rem;
+  }
+}

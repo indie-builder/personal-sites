@@ -18,7 +18,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - `apps/web` owns Next.js, UI and HTTP APIs; `tools/content` owns offline pipelines; `packages/public-data` owns shared public schemas, SQLite helpers and news synchronization.
 - Next.js guides resolve from `apps/web/node_modules/next/dist/docs/`. Keep shared packages independent of apps and offline tool dependencies.
-- Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/`. Do not copy sensitive directories.
+- Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the three approved files (`curation.sqlite`, `ai-news.sqlite`, `portfolio.sqlite`) into ignored `apps/web/data/`. Do not copy sensitive directories.
 - Data operations bypass Turbo caching; Web build caching stays disabled while prerendering reads Supabase. See `docs/monorepo.md`.
 
 ## Task and Domain Context

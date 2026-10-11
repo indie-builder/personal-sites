@@ -1,0 +1,101 @@
+/* 作品集作用域：迁移产品的中性 token 与内容列布局。
+   只在 .portfolio-scope 内生效，不引入源站全局 reset/主题；主题跟随目标 data-curation-theme。 */
+
+.portfolio-scope {
+  --color-workspace: #ffffff;
+  --color-paper: #ffffff;
+  --color-plate: #fafafa;
+  --color-body: #494949;
+  --color-ink: #202020;
+  --color-ink-soft: #5c5c5c;
+  --color-ink-faint: #5c5c5c;
+  --color-hairline: #ededed;
+  --color-hairline-strong: #dbdbdb;
+  --color-subtle: #ededed;
+  --color-border-hover: #bdbdbd;
+  --color-control-border: #848484;
+  --color-accent: #353535;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-chat-screen: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-travel: cubic-bezier(0.45, 0, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur-settle: 180ms;
+  --dur-base: 200ms;
+  --dur-enter: 200ms;
+  --dur-exit: 140ms;
+  --control-height: 44px;
+  --control-icon-size: 18px;
+  --control-icon-stroke: 1.6;
+  --radius-control: 4px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-pill: 999px;
+  color: var(--color-body);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+html[data-curation-theme="dark"] .portfolio-scope {
+  --color-workspace: #202020;
+  --color-paper: #202020;
+  --color-plate: #353535;
+  --color-body: #ededed;
+  --color-ink: #fafafa;
+  --color-ink-soft: #bdbdbd;
+  --color-ink-faint: #bdbdbd;
+  --color-hairline: #494949;
+  --color-hairline-strong: #5c5c5c;
+  --color-subtle: #494949;
+  --color-border-hover: #848484;
+  --color-control-border: #848484;
+  --color-accent: #ededed;
+}
+
+/* 键盘操作即时完成，不等待视觉过渡（源站输入契约）。 */
+html[data-input="keyboard"] .portfolio-scope *,
+html[data-input="keyboard"] .portfolio-scope *::before,
+html[data-input="keyboard"] .portfolio-scope *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+/* 作品列：比阅读流更宽的工作区，不设 50rem 上限；由产品自身控制内容宽度。 */
+.portfolio-home__content {
+  width: 100%;
+  min-width: 0;
+  padding: 2rem 1.875rem 4rem 0;
+}
+
+.portfolio-home__mode {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 0.78rem;
+}
+
+.portfolio-home__mode-label {
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.portfolio-quiet {
+  color: var(--color-ink-soft, #5c5c5c);
+}
+
+@media (max-width: 900px) {
+  .portfolio-home__content {
+    padding: 1.5rem 1rem 3rem;
+  }
+}

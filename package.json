@@ -55,6 +55,10 @@
     "focus:status": "pnpm --filter @site/content focus:status",
     "vectors:index": "pnpm --filter @site/content vectors:index",
     "vectors:search": "pnpm --filter @site/content vectors:search",
+    "portfolio:sync": "pnpm --filter @site/content portfolio:sync",
+    "portfolio:project": "pnpm --filter @site/content portfolio:project",
+    "portfolio:render": "pnpm --filter @site/content portfolio:render",
+    "portfolio:openui": "pnpm --filter @site/web portfolio:openui",
     "github:starred:run": "pnpm --filter @site/content github:starred:run"
   },
   "devDependencies": {

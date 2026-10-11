@@ -4,7 +4,6 @@ import android.content.Context
 import cn.lovemyrmb.personalsite.data.AskClient
 import cn.lovemyrmb.personalsite.data.AskController
 import cn.lovemyrmb.personalsite.data.DetailEntry
-import cn.lovemyrmb.personalsite.data.PORTFOLIO_BASE_URL
 import cn.lovemyrmb.personalsite.data.PortfolioApi
 import cn.lovemyrmb.personalsite.data.ReaderPayload
 import cn.lovemyrmb.personalsite.data.SITE_BASE_URL
@@ -53,7 +52,7 @@ class AppContainer(
         .create(SiteApi::class.java)
 
     val portfolioApi: PortfolioApi = portfolioApi ?: Retrofit.Builder()
-        .baseUrl(PORTFOLIO_BASE_URL)
+        .baseUrl(SITE_BASE_URL)
         .client(feedClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()

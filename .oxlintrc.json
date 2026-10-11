@@ -15,12 +15,18 @@
     "shadcn/no-unknown-classes": [
       "error",
       {
-        "allow": ["about-printer", "about-printer__*", "curation-*", "ai-news-*"]
+        "allow": ["about-printer", "about-printer__*", "curation-*", "ai-news-*", "portfolio-*", "ai-openui"]
       }
     ],
     "shadcn/no-raw-colors": "error"
   },
   "overrides": [
+    {
+      "files": ["apps/web/components/portfolio/word-arcade.tsx"],
+      "rules": {
+        "jsx-a11y/no-noninteractive-tabindex": ["error", { "roles": ["application"] }]
+      }
+    },
     {
       "files": ["tools/content/modules/**/*.mjs"],
       "rules": { "site-effect/execution-boundary": ["error", "business"] }
@@ -49,6 +55,7 @@
     "node_modules/**",
     "out/**",
     "public/**",
+    "tools/content/modules/portfolio/dictionary-runtime/**",
     "tools/smaug/**",
     "var/**"
   ]
