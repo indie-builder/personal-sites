@@ -2,7 +2,7 @@ import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
-import { FUN_SHAPES, readAvatarMeta, readCanvasDigest } from "./helpers/avatar-surprises.ts";
+import { readAvatarMeta, readCanvasDigest } from "./helpers/avatar.ts";
 
 // 首访名字序列的行为契约：粒子先成「陈」再成「远」最终落回头像，全程
 // 同一批粒子（墨形逐段不同）；帘幕遮罩期间不开演，本会话刷新不再重播，
@@ -405,7 +405,7 @@ test("a late first-visit glyph load must not overwrite a newly settled static fo
   await browser.keyboard.press("Enter");
   await expect.poll(async () => {
     const meta = await readAvatarMeta(browser);
-    return meta !== null && meta.state === "static" && (FUN_SHAPES as readonly string[]).includes(meta.shape ?? "");
+    return meta !== null && meta.state === "static" && meta.shape === "mascot";
   }, { timeout: 5_000 }).toBe(true);
   const held = await readAvatarMeta(browser);
   const heldDigest = await readCanvasDigest(browser);
@@ -445,7 +445,8 @@ test("clicking during the name intro cancels the sequence into the idle portrait
     return current !== null && current.state === "intro";
   }, { timeout: 15_000 }).toBe(true);
   await screen.getByRole("button", "点描头像", { exact: false }).click();
-  await expect(screen.getByRole("button", "回到陈远的点描头像")).toBeVisible();
+  // 开场中的点击是「先回头像」：此刻的下一个动作才是变成伙伴。
+  await expect(screen.getByRole("button", "将陈远的点描头像变成像素小伙伴")).toBeVisible();
   await expect.poll(async () => {
     const current = await readAvatarMeta(browser);
     return current !== null && current.state === "idle" && current.shape === "portrait";

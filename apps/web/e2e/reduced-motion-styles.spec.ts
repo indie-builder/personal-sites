@@ -51,9 +51,10 @@ test("repository panel transitions are neutralized under reduced motion once dat
 });
 
 // 头像粒子的契约：粒子接管后静态点描只在 ghost 克隆兜底；reduce 下（含
-// 会话中途开启）点击直接落到静止趣味形/头像、隐藏冻结含剩余停留；触屏
-// 点按播放正常彩蛋轨道。e2e 运行器无 emulateMedia 与 hasTouch 设备仿真，
-// 留 Playwright。
+// 会话中途开启）点击直接落到静止伙伴帧/头像；会话中途开启 reduce 把已选中
+// 的伙伴定格为静止帧并保留选择，关闭后只续播指针选中的循环；触屏点按播放
+// 伙伴踏步循环。e2e 运行器无 emulateMedia 与 hasTouch 设备仿真，留 Playwright
+//（会话中途切换依赖 emulateMedia 派发的 change 事件，运行器的 matchMedia 补丁做不到）。
 const skipOpeningLoader = (page: Page) => page.addInitScript(() => window.sessionStorage.setItem("personal-site:opening-loader-played", "true"));
 
 // 成像态脸占据中心：中心 40% 方框的墨点像素占比。
@@ -77,9 +78,6 @@ const readCenterDensity = (page: Page) => page.evaluate(() => {
   }
   return ink / total;
 });
-
-// 各个趣味形的 data-avatar-shape 实际取值。
-const FUN_FORM_PATTERN = /^(terminal|robot|infinity|planet|plane|spark|sprout|smile|fish|mascot)$/;
 
 const readCanvasDataUrl = (page: Page) => page.evaluate(() => {
   const canvas = document.querySelector<HTMLCanvasElement>(".curation-home__avatar-particles");
@@ -107,23 +105,23 @@ test("avatar particle canvas takes over and the ghost clone keeps the static sti
   expect(ghostOpacity).toBe("1");
 });
 
-test("avatar rests on the portrait and a click shows a still surprise form under reduced motion", async ({ page }) => {
+test("avatar rests on the portrait and a click shows the still mascot under reduced motion", async ({ page }) => {
   await skipOpeningLoader(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/curation");
   const avatar = page.locator(".curation-home__avatar");
   await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
-  await expect(avatar).toHaveAttribute("aria-label", "播放陈远点描头像的粒子彩蛋");
+  await expect(avatar).toHaveAttribute("aria-label", "将陈远的点描头像变成像素小伙伴");
   await expect(avatar).toHaveAttribute("data-avatar-state", "idle");
   await expect(avatar).toHaveAttribute("data-avatar-shape", "portrait");
   // 无进站飞行：武装后首次读取即成像终态。
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 
   await avatar.click();
-  // reduce 下点击直接落到静止趣味形（十形之一），不播动画。
+  // reduce 下点击直接落到静止伙伴帧，不播动画。
   await expect(avatar).toHaveAttribute("aria-label", "回到陈远的点描头像");
   await expect(avatar).toHaveAttribute("data-avatar-state", "static");
-  await expect(avatar).toHaveAttribute("data-avatar-shape", FUN_FORM_PATTERN);
+  await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
   const still = await readCanvasDataUrl(page);
   await page.waitForTimeout(300);
   expect(await readCanvasDataUrl(page)).toBe(still);
@@ -135,21 +133,104 @@ test("avatar rests on the portrait and a click shows a still surprise form under
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 });
 
-test("enabling reduced motion mid-surprise cancels the track onto the portrait", async ({ page }) => {
+for (const disableWhileHidden of [false, true]) {
+  test(`a mascot selected by pointer under reduced motion resumes when the preference is disabled${disableWhileHidden ? " while hidden" : ""}`, async ({ page }) => {
+    await skipOpeningLoader(page);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/curation");
+    const avatar = page.locator(".curation-home__avatar");
+    await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+    const portrait = await readCanvasDataUrl(page);
+    await avatar.click();
+    await expect(avatar).toHaveAttribute("data-avatar-state", "static");
+    await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+    const still = await readCanvasDataUrl(page);
+    expect(still).not.toBe(portrait);
+
+    if (disableWhileHidden) {
+      await page.evaluate(() => {
+        Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    }
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    if (disableWhileHidden) {
+      await page.waitForTimeout(600);
+      expect(await readCanvasDataUrl(page)).toBe(still);
+      await page.evaluate(() => {
+        Reflect.deleteProperty(document, "hidden");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    }
+    await expect(avatar).toHaveAttribute("data-avatar-state", "mascot");
+    await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+    await expect.poll(async () => {
+      const first = await readCanvasDataUrl(page);
+      await page.waitForTimeout(250);
+      return first !== (await readCanvasDataUrl(page));
+    }).toBe(true);
+
+    await avatar.click();
+    await expect(avatar).toHaveAttribute("data-avatar-state", "idle");
+    expect(await readCanvasDataUrl(page)).toBe(portrait);
+  });
+}
+
+test("reduced motion landing mid-mascot freezes the still frame and turning it off resumes the loop", async ({ page }) => {
   await skipOpeningLoader(page);
   await page.goto("/curation");
   const avatar = page.locator(".curation-home__avatar");
   await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
 
   await avatar.click();
-  await expect(avatar).toHaveAttribute("data-avatar-state", "surprise", { timeout: 3_000 });
-  // 轨道进行中开启 reduce：序列取消、无残留定时器，直接回到头像终态。
+  await expect(avatar).toHaveAttribute("data-avatar-state", "mascot", { timeout: 3_000 });
+  // 踏步中开启 reduce：定格为静止伙伴帧，选择保留，无残留计时。
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 2_000 });
+  await expect(avatar).toHaveAttribute("data-avatar-state", "static", { timeout: 2_000 });
+  await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  const still = await readCanvasDataUrl(page);
+  await page.waitForTimeout(300);
+  expect(await readCanvasDataUrl(page)).toBe(still);
+
+  // 关闭 reduce：指针选中的伙伴续播循环，画面重新动起来。
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(avatar).toHaveAttribute("data-avatar-state", "mascot", { timeout: 2_000 });
+  await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  await expect.poll(async () => {
+    const first = await readCanvasDataUrl(page);
+    await page.waitForTimeout(250);
+    return first !== (await readCanvasDataUrl(page));
+  }, { timeout: 5_000 }).toBe(true);
+
+  await avatar.click();
+  await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 5_000 });
   await expect(avatar).toHaveAttribute("data-avatar-shape", "portrait");
-  await page.waitForTimeout(500);
+});
+
+test("a keyboard-still mascot stays still across a reduced-motion round trip", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.goto("/curation");
+  const avatar = page.locator(".curation-home__avatar");
+  await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
+
+  // 键盘路径定格静止伙伴帧。
+  await avatar.focus();
+  await page.keyboard.press("Enter");
+  await expect(avatar).toHaveAttribute("data-avatar-state", "static", { timeout: 2_000 });
+  await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  const still = await readCanvasDataUrl(page);
+
+  // 开启再关闭 reduce：键盘定格的选择不续播循环，画面保持静止帧。
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => readCanvasDataUrl(page), { timeout: 2_000 }).toBe(still);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.waitForTimeout(600);
+  await expect(avatar).toHaveAttribute("data-avatar-state", "static");
+  expect(await readCanvasDataUrl(page)).toBe(still);
+
+  await page.keyboard.press("Enter");
+  await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 2_000 });
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
-  await expect(avatar).toHaveAttribute("data-avatar-state", "idle");
 });
 
 test("name intro collapses straight to the avatar when reduced motion turns on mid-spell", async ({ page }) => {
@@ -167,35 +248,24 @@ test("name intro collapses straight to the avatar when reduced motion turns on m
   expect(await readCenterDensity(page)).toBeGreaterThan(0.35);
 });
 
-test("a surprise track freezes while hidden and the remaining dwell survives the pause", async ({ page }) => {
+test("the mascot walk freezes while hidden and resumes the loop after the pause", async ({ page }) => {
   await skipOpeningLoader(page);
   await page.goto("/curation");
   const avatar = page.locator(".curation-home__avatar");
   await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
 
   await avatar.click();
-  // 页内探针：定格到趣味形的当帧隐藏页面，1.5s 后恢复；测量隐藏期画面
-  // 是否冻结、恢复到离开该形的时间（剩余停留是否可见）。
+  // 页内探针：踏步中的当帧隐藏页面，1.5s 后恢复；测量隐藏期画面是否冻结。
+  // 运行器侧同契约（含恢复后续走与显式返回）在 avatar-mascot.e2e.ts。
   await page.evaluate(() => {
-    const w = window as typeof window & { __freezeProbe?: { done: boolean; frozenWhileHidden: boolean; heldMs: number } };
-    w.__freezeProbe = { done: false, frozenWhileHidden: false, heldMs: -1 };
+    const w = window as typeof window & { __freezeProbe?: { done: boolean; frozenWhileHidden: boolean } };
+    w.__freezeProbe = { done: false, frozenWhileHidden: false };
     const button = document.querySelector<HTMLElement>(".curation-home__avatar");
     const canvas = document.querySelector<HTMLCanvasElement>(".curation-home__avatar-particles");
     if (!button || !canvas) return;
-    const FUN = ["terminal", "robot", "infinity", "planet", "plane", "spark", "sprout", "smile", "fish", "mascot"];
-    const isFun = () => FUN.includes(button.dataset.avatarShape ?? "");
-    const leaveFun = () => new Promise<void>((resolve) => {
-      const observer = new MutationObserver(() => {
-        if (!isFun()) {
-          observer.disconnect();
-          resolve();
-        }
-      });
-      observer.observe(button, { attributes: true, attributeFilter: ["data-avatar-shape"] });
-    });
     const tick = () => {
       if (w.__freezeProbe?.done) return;
-      if (isFun()) {
+      if (button.dataset.avatarState === "mascot") {
         const atHide = canvas.toDataURL();
         Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
         document.dispatchEvent(new Event("visibilitychange"));
@@ -203,11 +273,7 @@ test("a surprise track freezes while hidden and the remaining dwell survives the
           w.__freezeProbe!.frozenWhileHidden = canvas.toDataURL() === atHide;
           Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
           document.dispatchEvent(new Event("visibilitychange"));
-          const resumedAt = performance.now();
-          void leaveFun().then(() => {
-            w.__freezeProbe!.heldMs = Math.round(performance.now() - resumedAt);
-            w.__freezeProbe!.done = true;
-          });
+          w.__freezeProbe!.done = true;
         }, 1_500);
         return;
       }
@@ -216,12 +282,18 @@ test("a surprise track freezes while hidden and the remaining dwell survives the
     requestAnimationFrame(tick);
   });
   await expect.poll(() => page.evaluate(() => (window as typeof window & { __freezeProbe?: { done: boolean } }).__freezeProbe?.done ?? false), { timeout: 25_000 }).toBe(true);
-  const probe = await page.evaluate(() => (window as typeof window & { __freezeProbe?: { done: boolean; frozenWhileHidden: boolean; heldMs: number } }).__freezeProbe);
-  // 隐藏期间定格画面不推进；恢复后剩余停留仍可见（不被隐藏期吞掉）。
+  // 隐藏期间定格画面不推进；恢复后循环续走（画面重新变化）。
+  const probe = await page.evaluate(() => (window as typeof window & { __freezeProbe?: { frozenWhileHidden: boolean } }).__freezeProbe);
   expect(probe?.frozenWhileHidden).toBe(true);
-  expect(probe?.heldMs).toBeGreaterThanOrEqual(120);
-  // 恢复后轨道继续走完，回到 idle 头像。
-  await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 8_000 });
+  await expect.poll(async () => {
+    const first = await readCanvasDataUrl(page);
+    await page.waitForTimeout(250);
+    return first !== (await readCanvasDataUrl(page));
+  }, { timeout: 5_000 }).toBe(true);
+  // 仍是选中的伙伴，直到显式点击才回头像。
+  await expect(avatar).toHaveAttribute("data-avatar-state", "mascot");
+  await avatar.click();
+  await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 5_000 });
   await expect(avatar).toHaveAttribute("data-avatar-shape", "portrait");
 });
 
@@ -267,21 +339,21 @@ test("dot field ripples step down to the static gradient under reduced motion an
 test.describe("touch media", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 
-  test("tapping the avatar plays the surprise track and a second tap returns to the portrait", async ({ page }) => {
+  test("tapping the avatar starts the mascot walk and a second tap returns to the portrait", async ({ page }) => {
     await skipOpeningLoader(page);
     await page.goto("/curation");
     expect(await page.evaluate(() => matchMedia("(hover: none) and (pointer: coarse)").matches)).toBe(true);
     const avatar = page.locator(".curation-home__avatar");
     await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
 
-    // 触屏点按是普通指针输入：播放完整彩蛋轨道而不是瞬时定格。
+    // 触屏点按是普通指针输入：播放持续踏步的伙伴循环而不是瞬时定格。
     await avatar.tap();
-    await expect(avatar).toHaveAttribute("data-avatar-state", "surprise", { timeout: 3_000 });
+    await expect(avatar).toHaveAttribute("data-avatar-state", "mascot", { timeout: 3_000 });
     await expect(avatar).toHaveAttribute("aria-label", "回到陈远的点描头像");
     // 点按不恢复静态点描，粒子态持续接管。
     await expect(page.locator(".curation-home__avatar-stipple")).toHaveCSS("opacity", "0");
 
-    // 轨道进行中再点：取消并回到头像。
+    // 再点：取消循环并回到头像。
     await avatar.tap();
     await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 6_000 });
     await expect(avatar).toHaveAttribute("data-avatar-shape", "portrait");
