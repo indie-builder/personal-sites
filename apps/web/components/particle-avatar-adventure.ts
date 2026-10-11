@@ -12,11 +12,6 @@ export const ADVENTURE_LOOP_SECONDS = ADVENTURE_CHAPTER_SECONDS * CHAPTER_COUNT;
 // 减少/键盘定格取第一段 5s：助跑已过、跨栏动作正中的可读帧。
 export const ADVENTURE_STATIC_TIME = 5;
 
-// 冒险画面固定浅色纸底与深墨，不随站点主题；点描头像仍随主题。
-export const ADVENTURE_INK = "#292923";
-export const ADVENTURE_PAPER = "#f7f2e7";
-export const ADVENTURE_PAPER_FADE_MS = 400;
-
 // 逻辑视口（原型坐标系）：伙伴锚定视口 x=94，每章世界宽 420，相机随 x 平移。
 const VIEW = 240;
 const SPAN = 420;

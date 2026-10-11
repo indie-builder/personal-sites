@@ -7,9 +7,9 @@ import { readAvatarMeta, readCanvasDigest } from "./helpers/avatar.ts";
 // 逐像素回到头像；快速连点总是从当前位置反转，不排队续播；隐藏/离屏冻结
 // 冒险时钟与剩余停留，恢复后续走（时钟只累计可见播放时长）；静止头像不
 // 跑动画帧。data-avatar-chapter/-round 只在选中伙伴期间出现，头像态缺失；
-// 冒险场景固定浅色墨与暖白底，不随站点主题。全轮次回归用 page-init 的
-// rAF/performance.now 相干加速时钟压缩到有界时长。断言读画布真实像素与
-// DOM 相位，不镜像实现细节。
+// 冒险与头像共用同一透明画布与主题墨色，随页面底色融合。全轮次回归用
+// page-init 的 rAF/performance.now 相干加速时钟压缩到有界时长。断言读画布
+// 真实像素与 DOM 相位，不镜像实现细节。
 const settle = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const skipOpeningLoader = (browser: import("@e2e-dev/web").Browser) =>
@@ -78,35 +78,26 @@ const readChapterWithDigest = (browser: import("@e2e-dev/web").Browser) => brows
   return { chapter: button?.getAttribute("data-avatar-chapter") ?? null, digest: (h >>> 0).toString(16) };
 });
 
-// 场景配色证据：画布像素里深墨（<120）与暖白（>200）的占比、墨像素平均
-// 亮度，以及按钮底色亮度（暖白底落在按钮背景时的另一实现位置）。
+// 透明画布与墨色证据：四角像素的 alpha 峰值（无纸底填充块时为 0）与墨
+// 像素平均亮度（浅色主题深墨、深色主题浅墨，即随主题的对比度）。
 const readSceneInk = (browser: import("@e2e-dev/web").Browser) => browser.evaluate(() => {
   const canvas = document.querySelector<HTMLCanvasElement>(".curation-home__avatar-particles");
-  const button = document.querySelector<HTMLElement>(".curation-home__avatar");
-  if (!canvas || !button || canvas.width === 0) return null;
+  if (!canvas || canvas.width === 0) return null;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
+  let cornerAlpha = 0;
+  for (const [cx, cy] of [[0, 0], [canvas.width - 1, 0], [0, canvas.height - 1], [canvas.width - 1, canvas.height - 1]] as const) {
+    cornerAlpha = Math.max(cornerAlpha, ctx.getImageData(cx, cy, 1, 1).data[3]);
+  }
   const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const total = data.length / 4;
-  let dark = 0;
-  let light = 0;
   let inkSum = 0;
   let inkCount = 0;
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] <= 60) continue;
-    const level = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    inkSum += level;
+    inkSum += (data[i] + data[i + 1] + data[i + 2]) / 3;
     inkCount += 1;
-    if (level < 120) dark += 1;
-    else if (level > 200) light += 1;
   }
-  const rgb = /rgba?\((\d+), (\d+), (\d+)/u.exec(getComputedStyle(button).backgroundColor);
-  return {
-    darkInk: dark / total,
-    lightGround: light / total,
-    inkMean: inkCount === 0 ? null : inkSum / inkCount,
-    buttonGround: rgb ? (Number(rgb[1]) + Number(rgb[2]) + Number(rgb[3])) / (3 * 255) : 0,
-  };
+  return { cornerAlpha, inkMean: inkCount === 0 ? null : inkSum / inkCount };
 });
 
 test("the mascot keeps stepping past the old auto-return boundary until an explicit click", async ({ app, screen, browser }) => {
@@ -303,26 +294,37 @@ test("one continuous run plays all ten stories in order and wraps into round 2",
   expect(await readChapterMeta(browser)).toEqual({ chapter: null, round: null });
 });
 
-test("the story scene keeps fixed light ink across site themes while the portrait still follows the theme", async ({ app, screen, browser }) => {
+test("the canvas stays transparent with theme ink across portrait and adventure", async ({ app, screen, browser }) => {
   await skipOpeningLoader(browser);
   await app.open("/");
   const avatar = screen.getByRole("button", "点描头像", { exact: false });
   await expect(avatar).toBeVisible();
   await waitIdlePortrait(browser, 20_000);
 
+  // 头像态：四角全透明（没有纸底填充块），浅色主题下墨色足够深。
+  const portrait = await readSceneInk(browser);
+  expect(portrait?.cornerAlpha).toBe(0);
+  expect(portrait?.inkMean ?? 255).toBeLessThan(120);
+
+  // 进入冒险：画面共用透明画布与主题墨色，不再铺固定纸底。
   await avatar.click();
-  await expect.poll(async () => (await readChapterMeta(browser))?.round, { timeout: 3_000 }).toBe("1");
-  const lightScene = await readSceneInk(browser);
-  expect(lightScene?.darkInk ?? 0).toBeGreaterThan(0.005);
+  await expect.poll(async () => {
+    const current = await readAvatarMeta(browser);
+    return current !== null && current.state === "mascot" && current.shape === "mascot";
+  }, { timeout: 3_000 }).toBe(true);
+  const adventure = await readSceneInk(browser);
+  expect(adventure?.cornerAlpha).toBe(0);
+  expect(adventure?.inkMean ?? 255).toBeLessThan(120);
 
-  // 深色主题：冒险画面仍是固定深墨加暖白底，不跟随主题把墨翻白。
+  // 深色主题：墨色随主题翻浅（跟随主题而非固定配色），画布仍透明。
   await browser.locator(".curation-theme-toggle").click();
-  await expect.poll(async () => (await readSceneInk(browser))?.darkInk ?? 0, { timeout: 3_000 }).toBeGreaterThan(0.005);
-  const darkScene = await readSceneInk(browser);
-  expect((darkScene?.lightGround ?? 0) > 0.25 || (darkScene?.buttonGround ?? 0) > 0.8).toBe(true);
+  await expect.poll(async () => (await readSceneInk(browser))?.inkMean ?? 0, { timeout: 3_000 }).toBeGreaterThan(180);
+  expect((await readSceneInk(browser))?.cornerAlpha).toBe(0);
 
-  // 回到头像：头像态墨色仍随主题（既有主题路径没有被场景配色替换）。
+  // 回到头像：透明画布与主题墨色保持。
   await avatar.click();
   await waitIdlePortrait(browser, 5_000);
-  await expect.poll(async () => (await readSceneInk(browser))?.inkMean ?? 0, { timeout: 3_000 }).toBeGreaterThan(200);
+  const returned = await readSceneInk(browser);
+  expect(returned?.cornerAlpha).toBe(0);
+  expect(returned?.inkMean ?? 0).toBeGreaterThan(180);
 });
