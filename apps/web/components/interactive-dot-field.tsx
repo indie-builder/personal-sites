@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { DotFieldParallax } from "@/components/dot-field-parallax";
+import { DotFieldRipples } from "@/components/dot-field-ripples";
 
 const TECHNICAL_TERMS = [
   "retry.policy", "human.in.loop", "agent.runtime", "tool.call()",
@@ -77,6 +78,7 @@ export function InteractiveDotField() {
       className="interactive-dot-field"
       role="group"
     >
+      <DotFieldRipples />
       <DotFieldParallax>
         {TERMS_BY_LANE.map((terms, lane) => (
           <span className="interactive-dot-field__lane" key={lane}>

@@ -185,6 +185,26 @@ test("avatar keeps the static stipple when the canvas context is unavailable", a
   await expect(avatar).toBeVisible();
 });
 
+// 技术词条底纹水波的同面契约：画布接管后收起 CSS 静态点阵；会话中途开启
+// reduce 立即回退 CSS 静态（画布清空，无双格叠加），关闭 reduce 重新接管且不自动起波。
+test("dot field ripples step down to the static gradient under reduced motion and re-arm without waves", async ({ page }) => {
+  await skipOpeningLoader(page);
+  await page.goto("/curation");
+  const field = page.locator(".interactive-dot-field");
+  const canvas = field.locator("canvas");
+  await expect(field).toHaveAttribute("data-dot-ripples", "ready", { timeout: 10_000 });
+  await expect(field).toHaveCSS("background-image", "none");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(field).not.toHaveAttribute("data-dot-ripples", "ready");
+  await expect(field).not.toHaveCSS("background-image", "none");
+  await expect(canvas).not.toHaveAttribute("data-rippling", "true");
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(field).toHaveAttribute("data-dot-ripples", "ready", { timeout: 5_000 });
+  await expect(canvas).not.toHaveAttribute("data-rippling", "true");
+});
+
 test.describe("touch media", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 
