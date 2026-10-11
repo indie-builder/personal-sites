@@ -2,23 +2,19 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import styles from "./ask-assistant.module.css";
+import { SPRITE_BODY_RECTS, SPRITE_FEET_A_RECTS, SPRITE_FEET_B_RECTS, type SpriteRect } from "./assistant-sprite-geometry";
+
+const spriteRects = (rects: readonly SpriteRect[], keyPrefix: string) =>
+  rects.map(([x, y, width, height]) => <rect key={`${keyPrefix}:${x},${y}`} height={height} width={width} x={x} y={y} />);
 
 // Pixel geometry and two walking frames observed on joeypescatore.com (Ovid).
 export function AssistantSprite() {
   return (
     <svg aria-hidden="true" viewBox="0 0 27 32" width="17" height={544 / 27} shapeRendering="crispEdges" className={styles.sprite}>
       <g fill="currentColor">
-        <rect x="0" y="0" width="8" height="24" />
-        <rect x="12" y="0" width="8" height="8" />
-        <rect x="7" y="4" width="16" height="4" />
-        <rect x="12" y="4" width="4" height="12" />
-        <rect x="20" y="4" width="4" height="12" />
-        <rect x="7" y="12" width="20" height="4" />
-        <rect x="4" y="15" width="19" height="13" />
-        <rect x="8" y="15" width="4" height="13" />
-        <rect x="16" y="20" width="4" height="8" />
-        <g className={styles.feetA}><rect x="8" y="28" width="4" height="4" /><rect x="16" y="28" width="4" height="4" /></g>
-        <g className={styles.feetB}><rect x="10" y="28" width="4" height="4" /><rect x="14" y="28" width="4" height="4" /></g>
+        {spriteRects(SPRITE_BODY_RECTS, "body")}
+        <g className={styles.feetA}>{spriteRects(SPRITE_FEET_A_RECTS, "feetA")}</g>
+        <g className={styles.feetB}>{spriteRects(SPRITE_FEET_B_RECTS, "feetB")}</g>
       </g>
     </svg>
   );
