@@ -9,9 +9,6 @@ import {
   onOpeningReveal,
 } from "@/components/opening-reveal";
 import {
-  ADVENTURE_INK,
-  ADVENTURE_PAPER,
-  ADVENTURE_PAPER_FADE_MS,
   ADVENTURE_STATIC_TIME,
   writeAdventureFrame,
   type AdventureChapter,
@@ -315,10 +312,8 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
   // 用户意图的唯一事实源落在这份 ref：指针或键盘选中的伙伴决定下一次激活
   // 回到头像，头像决定下一次激活进伙伴；指针选中可续播，键盘定格保持静止。
   const selectionRef = useRef<Selection>("portrait");
-  // 冒险进度与画面模式：elapsed 只在可见帧推进（t0 折算暂停时长）；ink 为
-  // true 时画布切换到冒险专属的暖白纸底与深墨，头像仍随主题。
+  // 冒险进度：elapsed 只在可见帧推进（t0 折算暂停时长）。
   const adventureTimeRef = useRef(0);
-  const adventureInkRef = useRef(false);
   // 粒子画布首次成功绘制后才接管，散开态不透出静态完整脸。
   const [particlesOn, setParticlesOn] = useState(false);
   const [view, setView] = useState<AvatarView>({ phase: "idle", shape: "portrait" });
@@ -337,9 +332,8 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return false;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 画布透明，墨色取继承的 color，跟随浅深主题即时切换；冒险画面例外：
-    // 固定暖白纸底加深墨（不随主题），纸墨随形变进度交叉淡入淡出，避免
-    // 深色主题下浅色粒子落在暖白底上中途隐身。
+    // 画布保持透明，页面底色即纸底；墨色取继承的 color，头像与冒险画面
+    // 共用同一主题墨色，跟随浅深主题即时切换。
     ctx.clearRect(0, 0, css, css);
     ctx.beginPath();
     for (let i = 0; i < pos.length; i += 2) {
@@ -350,28 +344,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       ctx.moveTo(x + r, y);
       ctx.arc(x, y, r, 0, TAU);
     }
-    const themeInk = getComputedStyle(canvas).color;
-    if (adventureInkRef.current) {
-      const now = performance.now();
-      const anim = animRef.current;
-      const fade = anim?.kind === "adventure" ? Math.min(1, (now - anim.t0) / ADVENTURE_PAPER_FADE_MS) : anim?.kind === "morph" ? 1 - Math.min(1, Math.max(0, (now - anim.t0) / (anim.dur + anim.stagger))) : 1;
-      if (fade > 0) {
-        ctx.globalAlpha = fade;
-        ctx.fillStyle = ADVENTURE_PAPER;
-        ctx.fillRect(0, 0, css, css);
-      }
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = ADVENTURE_INK;
-      ctx.fill();
-      if (fade < 1) {
-        ctx.globalAlpha = 1 - fade;
-        ctx.fillStyle = themeInk;
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      return true;
-    }
-    ctx.fillStyle = themeInk;
+    ctx.fillStyle = getComputedStyle(canvas).color;
     ctx.fill();
     return true;
   }, []);
@@ -426,10 +399,8 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
             planRef.current = null;
             if (plan.kind === "intro") introStageRef.current = "done";
             if (plan.kind === "return") {
-              // 返回落定：退出冒险配色并按主题重绘，chapter/round 一并清空。
-              adventureInkRef.current = false;
+              // 返回落定：chapter/round 一并清空。
               setView((v) => (v.chapter === undefined ? v : { ...v, chapter: undefined, round: undefined }));
-              void paint();
             }
           } else if (!plan.timer && stage.dwellMs > 0) {
             plan.dwellEndsAt = now + stage.dwellMs;
@@ -528,7 +499,6 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       if (!pos) return;
       cancelSequence();
       adventureTimeRef.current = startElapsed;
-      adventureInkRef.current = true;
       animRef.current = { kind: "adventure", t0: performance.now() - startElapsed * 1000, raf: 0 };
       const scene = writeAdventureFrame(startElapsed, pos.length / 2, pos);
       paint();
@@ -555,7 +525,6 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     if (introOngoing) {
       selectionRef.current = "portrait";
       if (instant) {
-        adventureInkRef.current = false;
         pos.set(field.targets);
         void paint();
         setView({ phase: "idle", shape: "portrait" });
@@ -569,14 +538,12 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
         selectionRef.current = event.detail === 0 ? "mascot-static" : "mascot-pointer";
         // 键盘/减少动态定格：第一段 5s 的静止冒险帧，无飞行、无计时。
         adventureTimeRef.current = ADVENTURE_STATIC_TIME;
-        adventureInkRef.current = true;
         const scene = writeAdventureFrame(ADVENTURE_STATIC_TIME, pos.length / 2, pos);
         void paint();
         setView({ phase: "static", shape: "mascot", chapter: scene.chapter, round: scene.round });
         return;
       }
       selectionRef.current = "portrait";
-      adventureInkRef.current = false;
       pos.set(field.targets);
       void paint();
       setView({ phase: "idle", shape: "portrait" });
@@ -662,7 +629,6 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       cancelSequence();
       if (!pos || !field) return;
       if (selectionRef.current !== "portrait") {
-        adventureInkRef.current = true;
         if (!frozen) {
           adventureTimeRef.current = ADVENTURE_STATIC_TIME;
           const scene = writeAdventureFrame(ADVENTURE_STATIC_TIME, pos.length / 2, pos);
@@ -673,7 +639,6 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
         }
         return;
       }
-      adventureInkRef.current = false;
       pos.set(field.targets);
       void paint();
       setView({ phase: "idle", shape: "portrait" });
