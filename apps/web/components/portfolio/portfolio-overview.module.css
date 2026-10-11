@@ -1,145 +1,440 @@
-.list {
-  margin: 0;
+/* 作品集总览：右栏窄列展示卡（用户明确允许作品集使用卡片）。形态只在本模块内，
+   不改信息流样式；颜色全部走 .portfolio-scope 的明暗 token。 */
+
+.gallery {
+  display: grid;
+  max-width: 660px;
+  margin: 1.5rem 0 0;
   padding: 0;
+  gap: 1.1rem;
   list-style: none;
 }
 
-.row {
-  border-bottom: 1px solid var(--line);
-}
-
-.row:first-child {
-  border-top: 1px solid var(--line);
-}
-
-.rowLink {
+.card {
   display: grid;
-  grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
-  grid-template-areas: "meta preview" "meta copy";
-  column-gap: clamp(1.25rem, 2.5vw, 2rem);
-  align-items: start;
-  padding: 1.6rem 0;
+  grid-template-areas: "head" "media" "copy";
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0.9rem;
+  padding: 1.1rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-panel);
+  background: var(--color-paper);
+  /* 书架卡的翻书动效允许溢出媒体面，但不得在窄屏撑出横向滚动。 */
+  overflow: clip;
   text-decoration: none;
+  transition: border-color var(--dur-fast) ease;
 }
 
-.meta {
-  grid-area: meta;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding-top: 0.2rem;
-  color: #767676;
-  font-size: 0.72rem;
-  line-height: 1.4;
-}
-
-.previews {
-  grid-area: preview;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-bottom: 0.8rem;
-}
-
-.previewImage {
-  width: 6.4rem;
-  height: 4rem;
-  object-fit: cover;
-  border-radius: 3px;
-  border: 1px solid #ededed;
-}
-
-.previewText {
-  display: inline-flex;
-  max-width: 100%;
+.card[data-compact] {
+  grid-template-areas: "head head" "copy media";
+  grid-template-columns: minmax(0, 1fr) 15rem;
   align-items: center;
+  column-gap: 1.1rem;
+}
+
+.head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-plate);
+  color: var(--color-ink);
+}
+
+.enter {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--color-border-hover);
+}
+
+.card:hover .enter,
+.card:focus-visible .enter {
+  transform: translate(2px, -2px);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.media {
+  position: relative;
+  display: flex;
+  grid-area: media;
   overflow: hidden;
-  border: 1px solid var(--color-hairline, #ededed);
-  border-radius: 3px;
-  color: var(--color-ink-soft, #5c5c5c);
-  font-size: 0.72rem;
-  line-height: 1;
-  padding: 0.45rem 0.6rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-plate);
+}
+
+.mediaArcade,
+.mediaMuse {
+  aspect-ratio: 16 / 9;
+}
+
+.mediaWindow {
+  aspect-ratio: 16 / 9;
+  flex-direction: column;
+}
+
+.mediaChat,
+.mediaShelf {
+  height: 12.5rem;
+}
+
+.mediaGraph,
+.mediaTools {
+  height: 10.5rem;
+}
+
+/* 书架卡：封面翻出书架需要溢出可见，媒体面由书架自身的板沿承担。 */
+.mediaShelf {
+  align-items: flex-end;
+  overflow: visible;
+  border: 0;
+  background: transparent;
 }
 
 .copy {
   grid-area: copy;
   display: grid;
   min-width: 0;
-  gap: 0.3rem;
+  gap: 0.25rem;
+}
+
+.card[data-compact] .copy {
+  align-content: center;
 }
 
 .name {
-  color: var(--color-ink, #202020);
-  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  color: var(--color-ink);
+  font-size: 1.05rem;
   font-weight: 620;
-  letter-spacing: -0.03em;
-  line-height: 1.25;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
 
 .tagline {
-  color: var(--color-ink-soft, #5c5c5c);
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-
-.description {
-  max-width: 40rem;
-  color: var(--color-body, #494949);
+  color: var(--color-ink-soft);
   font-size: 0.82rem;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
-.rowLink:hover .name,
-.rowLink:focus-visible .name {
-  text-decoration: underline;
-  text-underline-offset: 4px;
+/* 个人网站卡：迷你浏览器窗口包住本站截图。 */
+.siteWindow {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: auto 1fr;
 }
 
-.rowLink:focus-visible {
-  outline: 2px solid var(--color-ink, #202020);
-  outline-offset: 2px;
+.siteBar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-hairline);
+  background: var(--color-paper);
 }
 
-:global(html[data-curation-theme="dark"]) .meta,
-:global(html[data-curation-theme="dark"]) .previewText,
-:global(html[data-curation-theme="dark"]) .tagline {
-  color: #999;
+.dots {
+  display: flex;
+  flex: none;
+  gap: 4px;
 }
 
-:global(html[data-curation-theme="dark"]) .name {
-  color: #f4f4f4;
+.dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-hairline-strong);
 }
 
-:global(html[data-curation-theme="dark"]) .description {
-  color: #d4d4d6;
+.address {
+  overflow: hidden;
+  min-width: 0;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-plate);
+  color: var(--color-ink-soft);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-:global(html[data-curation-theme="dark"]) .row,
-:global(html[data-curation-theme="dark"]) .row:first-child {
-  border-color: #333;
+.siteShot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
 }
 
-:global(html[data-curation-theme="dark"]) .previewImage {
-  border-color: #3a3a3a;
+.museVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-@media (max-width: 900px) {
-  .rowLink {
+/* 词典卡：静态知识网（SVG），不加载外部图谱运行时。 */
+.graph {
+  width: 100%;
+  height: 100%;
+}
+
+.graph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.graphEdges {
+  fill: none;
+  stroke: var(--color-ink-soft);
+  stroke-width: 1;
+  opacity: 0.4;
+}
+
+.graph text {
+  fill: var(--color-ink-soft);
+  font: 500 9px var(--font-sans);
+}
+
+/* 工具目录卡：2×2 收录格，可见时轮流点亮。 */
+.toolGrid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--color-paper);
+}
+
+.toolGrid span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px;
+  color: var(--color-ink-soft);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+
+.toolGrid span:nth-child(odd) {
+  border-right: 1px solid var(--color-hairline);
+}
+
+.toolGrid span:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.toolGrid i {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+
+.toolGrid i :global(img),
+.toolGrid i svg {
+  position: absolute;
+  inset: 0;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  transition:
+    opacity 180ms ease,
+    transform var(--dur-settle) var(--ease-out);
+}
+
+.toolGrid i svg {
+  opacity: 0;
+}
+
+.toolGrid span[data-active="true"] {
+  color: var(--color-ink);
+  background: var(--color-plate);
+}
+
+.toolGrid span[data-active="true"] i :global(img) {
+  opacity: 0;
+  transform: scale(0.78);
+}
+
+.toolGrid span[data-active="true"] i svg {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
+.toolGrid b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+
+/* 布局图鉴卡：书架预览的翻书动效（源站首页同款，键帧与支点在此模块内）。 */
+.bookMotion {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bookMotion [data-preview] > div {
+    perspective: 700px;
+    transform-style: preserve-3d;
+  }
+
+  .bookMotion [data-preview] > div > span {
+    --pull-x: -28px;
+    transform-style: preserve-3d;
+    transform-origin: 50% 100%;
+  }
+
+  .bookMotion [data-preview] > div > span > [data-book-cover] {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 96px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 12px;
+    border: 1px solid color-mix(in srgb, var(--binding-ink) 22%, transparent);
+    border-radius: 0 4px 4px 0;
+    background: var(--binding);
+    box-shadow:
+      inset -3px 0 0 #f5f1e7,
+      inset 0 0 0 7px var(--binding),
+      inset 0 0 0 8px color-mix(in srgb, var(--binding-ink) 22%, transparent);
+    color: var(--binding-ink);
+    font: 500 15px/1.5 var(--font-sans);
+    letter-spacing: 0;
+    text-align: center;
+    transform: rotateY(90deg);
+    transform-origin: 0 50%;
+    backface-visibility: hidden;
+    opacity: 0;
+  }
+
+  .bookMotion [data-book-active="true"] {
+    animation: preview-book-reveal 6s var(--ease-travel) both;
+    animation-play-state: paused;
+  }
+
+  .bookMotion [data-book-active="true"] > [data-book-cover] {
+    animation: preview-cover-reveal 6s ease both;
+    animation-play-state: paused;
+  }
+
+  .bookMotion[data-running="true"] [data-book-active="true"],
+  .bookMotion[data-running="true"] [data-book-active="true"] > [data-book-cover] {
+    animation-play-state: running;
+  }
+
+  .bookMotion [data-preview] > div > span:nth-child(7) {
+    --pull-x: -55px;
+  }
+
+  .bookMotion [data-preview] > div > span:nth-child(8) {
+    --pull-x: -75px;
+  }
+}
+
+@keyframes preview-book-reveal {
+  0%,
+  4%,
+  100% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0);
+  }
+  16% {
+    transform: translate3d(0, -14px, 95px) rotateX(-10deg) rotateY(0);
+  }
+  28%,
+  68% {
+    transform: translate3d(var(--pull-x), -22px, 125px) rotateX(0) rotateY(-90deg);
+  }
+  84% {
+    transform: translate3d(0, -14px, 95px) rotateX(-10deg) rotateY(0);
+  }
+}
+
+@keyframes preview-cover-reveal {
+  0%,
+  4%,
+  100% {
+    opacity: 0;
+  }
+  16%,
+  84% {
+    opacity: 1;
+  }
+}
+
+.bookMotion [data-book-cover] small {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+@media (max-width: 560px) {
+  .gallery {
+    gap: 0.9rem;
+  }
+
+  .card {
+    padding: 0.9rem;
+  }
+
+  .card[data-compact] {
+    grid-template-areas: "head" "copy" "media";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "meta" "preview" "copy";
-    row-gap: 0.6rem;
+    align-items: stretch;
   }
 
-  .meta {
-    flex-direction: row;
-    gap: 0.55rem;
+  .mediaArcade,
+  .mediaMuse,
+  .mediaWindow {
+    aspect-ratio: 4 / 3;
   }
 
-  .meta span + span::before {
-    content: "·";
-    margin-right: 0.55rem;
+  .mediaChat,
+  .mediaShelf {
+    height: 11.5rem;
+  }
+
+  .mediaGraph,
+  .mediaTools {
+    height: 9.5rem;
   }
 }
