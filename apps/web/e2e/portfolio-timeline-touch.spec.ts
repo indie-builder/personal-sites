@@ -19,30 +19,19 @@ async function touchSwipe(page: Page, from: { x: number; y: number }, to: { x: n
 test.describe("touch media", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 
-  test("touch horizontal swipe scrolls the timeline without navigating, and a later tap still opens the work", async ({ page }) => {
-    await page.goto("/portfolio");
-    const region = page.locator("#portfolio-timeline");
-    await expect(region).toBeVisible();
-    const box = await region.boundingBox();
-    expect(box).toBeTruthy();
-    if (!box) return;
-    const y = box.y + box.height / 2;
-    await touchSwipe(page, { x: 300, y }, { x: 80, y });
-    await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(20);
-    expect(page.url()).not.toContain("/products/");
-    await page.getByRole("link", { name: "打开布局参考" }).tap();
-    await expect(page).toHaveURL(/\/products\/layout-compositions$/u);
-  });
-
-  test("vertical touch gestures over the timeline keep scrolling the page", async ({ page }) => {
+  // 纵向时间轴不再有内层滚动区域：触摸纵滑只滚动文档，手势不拦截链接点按。
+  test("vertical touch gesture scrolls the page natively and a later tap still opens the work", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 320 });
     await page.goto("/portfolio");
-    const box = await page.locator("#portfolio-timeline").boundingBox();
+    const box = await page.locator("[data-portfolio-timeline]").boundingBox();
     expect(box).toBeTruthy();
     if (!box) return;
     const x = box.x + box.width / 2;
     const y = Math.min(box.y + box.height / 2, 280);
     await touchSwipe(page, { x, y }, { x, y: Math.max(100, y - 160) });
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(20);
+    expect(page.url()).not.toContain("/products/");
+    await page.getByRole("link", { name: "打开布局参考" }).tap();
+    await expect(page).toHaveURL(/\/products\/layout-compositions$/u);
   });
 });

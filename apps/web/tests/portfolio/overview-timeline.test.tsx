@@ -1,7 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { StrictMode } from "react";
 import { act } from "react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { portfolioProducts } from "@site/public-data/portfolio/products.mjs";
 
@@ -10,7 +9,7 @@ import { PortfolioShell } from "@/components/portfolio/portfolio-shell";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/products/muse", useRouter: () => ({}) }));
 
-// 预览与时间轴依赖 IntersectionObserver / matchMedia / ResizeObserver；jsdom 未实现，用不触发的桩。
+// 预览与时间轴依赖 IntersectionObserver / matchMedia；jsdom 未实现，用不触发的桩。
 beforeAll(() => {
   window.matchMedia ??= ((query: string) => ({
     matches: false,
@@ -36,36 +35,22 @@ beforeAll(() => {
     observe() {}
     unobserve() {}
     disconnect() {}
-  }) as unknown as typeof ResizeObserver;
-  window.scrollTo = scrollToMock as unknown as typeof window.scrollTo;
+  }) as unknown as typeof window.ResizeObserver;
   // 身份轨的问答入口用 WAAPI；jsdom 未实现，给一个立即完成的桩。
   Element.prototype.animate ??= (() =>
     ({ finished: Promise.resolve(), cancel() {}, play() {}, pause() {} })) as unknown as typeof Element.prototype.animate;
 });
 
-beforeEach(() => {
-  history.replaceState(null, "");
-  window.location.hash = "";
-  history.replaceState(null, "");
-  sessionStorage.clear();
-  scrollToMock.mockClear();
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-});
-
 afterEach(() => {
-  vi.useRealTimers();
   cleanup();
 });
 
-const SESSION_KEY = "personal-site:portfolio-return:v1";
-const scrollToMock = vi.fn();
-
-function validSnapshot(overrides: Record<string, unknown> = {}) {
-  return { v: 1, slug: "muse", offset: 120, viewportWidth: 800, focus: "link", ...overrides };
-}
-
 function renderOverview() {
   return render(<PortfolioOverview musePreviews={[{ src: "/muse.webp", alt: "" }]} />);
+}
+
+function rect(top: number, bottom: number): DOMRect {
+  return { top, bottom, height: bottom - top, width: 300, left: 0, right: 300, x: 0, y: top } as DOMRect;
 }
 
 describe("作品集总览时间线", () => {
@@ -84,6 +69,7 @@ describe("作品集总览时间线", () => {
     links.forEach((link, index) => {
       expect(link.id).toBe(`portfolio-work-${portfolioProducts[index].slug}`);
       expect(link.getAttribute("data-portfolio-work")).toBe(portfolioProducts[index].slug);
+      expect(link.querySelector("h2")?.textContent).toContain(portfolioProducts[index].name);
     });
   });
 
@@ -97,112 +83,72 @@ describe("作品集总览时间线", () => {
     expect(tail?.querySelector("time")).toBeNull();
   });
 
-  it("外壳契约：region/帮助文本/箭头按钮/字幕，且只有活动停靠的预览具备播放资格", () => {
-    const { container } = renderOverview();
+  it("纵向外壳：无横向控制/帮助/字幕，仅保留右上角暂停预览", () => {
+    renderOverview();
+    expect(screen.queryByRole("region", { name: "作品时间轴" })).toBeTruthy();
+    expect(screen.queryByText("左右滑动或拖动浏览作品，也可使用左右方向键。")).toBeNull();
+    expect(screen.queryByRole("button", { name: "向前浏览作品" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "向后浏览作品" })).toBeNull();
+    expect(screen.getByRole("button", { name: "暂停预览" })).toBeTruthy();
+  });
 
-    const region = document.getElementById("portfolio-timeline");
-    expect(region?.getAttribute("role")).toBe("region");
-    expect(region?.getAttribute("aria-label")).toBe("作品时间轴");
-    expect(region?.getAttribute("tabindex")).toBe("0");
-    const helpId = region?.getAttribute("aria-describedby");
-    expect(helpId).toBe("portfolio-timeline-help");
-    expect(document.getElementById("portfolio-timeline-help")?.textContent).toBe(
-      "左右滑动或拖动浏览作品，也可使用左右方向键。",
-    );
+  it("阅读线命中的可见停靠成为唯一活动站，其预览具备播放资格", async () => {
+    const { container } = renderOverview();
+    const stops = [...container.querySelectorAll("li[data-timeline-stop]")];
+    // jsdom 无布局：前两站滚过阅读线，第三站横跨阅读线，其余在下方。
+    stops.forEach((stop, index) => {
+      vi.spyOn(stop, "getBoundingClientRect").mockImplementation(() =>
+        index < 2 ? rect(-600, -100) : index === 2 ? rect(100, 500) : rect(600, 1000),
+      );
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event("scroll"));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    });
 
     const root = container.querySelector("[data-portfolio-timeline]") as HTMLElement;
-    expect(root.getAttribute("data-active-station")).toBe(portfolioProducts[0].slug);
-    expect(container.querySelectorAll('li[data-active="true"]')).toHaveLength(1);
-    expect(root.querySelector("[data-timeline-caption]")?.textContent).toBe(
-      `${portfolioProducts[0].name} · 1 / ${portfolioProducts.length}`,
-    );
-
-    const previous = screen.getByRole("button", { name: "向前浏览作品" });
-    const next = screen.getByRole("button", { name: "向后浏览作品" });
-    for (const button of [previous, next]) {
-      expect(button.getAttribute("aria-controls")).toBe("portfolio-timeline");
-    }
-    expect(previous.getAttribute("data-direction")).toBe("previous");
-    expect(next.getAttribute("data-direction")).toBe("next");
-    expect((previous as HTMLButtonElement).disabled).toBe(true);
+    expect(root.getAttribute("data-active-station")).toBe(portfolioProducts[2].slug);
+    expect(stops[2].getAttribute("data-active")).toBe("true");
+    expect(stops.filter((stop) => stop.getAttribute("data-active") === "true")).toHaveLength(1);
+    expect(stops.slice(0, 3).map((stop) => stop.getAttribute("data-seen"))).toEqual(["true", "true", "true"]);
+    expect(stops.slice(3).every((stop) => stop.hasAttribute("data-seen"))).toBe(false);
 
     const playing = [...container.querySelectorAll('[data-preview-playing="true"]')];
     expect(playing).toHaveLength(1);
-    expect(playing[0].getAttribute("data-preview-station")).toBe(portfolioProducts[0].slug);
-    expect(container.querySelectorAll('[data-preview-playing="false"]')).toHaveLength(portfolioProducts.length - 1);
+    expect(playing[0].getAttribute("data-preview-station")).toBe(portfolioProducts[2].slug);
   });
-});
 
-describe("时间轴快照恢复", () => {
-  it("挂载（含 Strict Mode 双挂载）不写入初始零位快照", async () => {
-    render(
-      <StrictMode>
-        <PortfolioOverview musePreviews={[{ src: "/muse.webp", alt: "" }]} />
-      </StrictMode>,
-    );
-    await act(async () => {});
-    act(() => {
-      vi.advanceTimersByTime(500);
+  it("阅读线位于作品间隙时选择距离更近的可见停靠", async () => {
+    const { container } = renderOverview();
+    const stops = [...container.querySelectorAll("li[data-timeline-stop]")];
+    const line = window.innerHeight * 0.35;
+    stops.forEach((stop, index) => {
+      vi.spyOn(stop, "getBoundingClientRect").mockImplementation(() =>
+        index === 0 ? rect(-100, line - 55) : index === 1 ? rect(line + 1, line + 300) : rect(2000, 2400),
+      );
     });
-    expect((history.state as Record<string, unknown> | null)?.portfolioTimeline ?? null).toBeNull();
-  });
-
-  it("滚动停稳后写入当前停靠快照", async () => {
-    renderOverview();
-    const viewport = document.getElementById("portfolio-timeline") as HTMLElement;
     await act(async () => {
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      viewport.dispatchEvent(new Event("scroll"));
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+      window.dispatchEvent(new Event("scroll"));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     });
-    act(() => {
-      vi.advanceTimersByTime(500);
+    expect(container.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")).toBe("muse");
+  });
+
+  it("视口内没有可见停靠时不设活动站", async () => {
+    const { container } = renderOverview();
+    const stops = [...container.querySelectorAll("li[data-timeline-stop]")];
+    stops.forEach((stop) => {
+      vi.spyOn(stop, "getBoundingClientRect").mockImplementation(() => rect(-800, -100));
     });
-    const snapshot = (history.state as Record<string, unknown> | null)?.portfolioTimeline as Record<string, unknown>;
-    expect(snapshot?.slug).toBe(portfolioProducts[0].slug);
-    expect(snapshot?.focus).toBe("none");
-  });
 
-  it("坏存储与无效快照不致崩溃，回到首个停靠", () => {
-    sessionStorage.setItem(SESSION_KEY, "{oops");
-    history.replaceState(
-      {
-        portfolioTimeline: { v: 2, slug: "ghost", offset: -5, viewportWidth: 0, pageY: Number.NaN, focus: "sideways" },
-      },
-      "",
-    );
-    const { container } = renderOverview();
-    expect(container.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")).toBe(
-      portfolioProducts[0].slug,
-    );
-  });
+    await act(async () => {
+      window.dispatchEvent(new Event("resize"));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    });
 
-  it("哈希指向的停靠优先：会话快照 slug 不匹配时对齐哈希站点且不清除记录", () => {
-    window.location.hash = "#portfolio-work-muse";
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(validSnapshot({ slug: "word-arcade" })));
-    const { container } = renderOverview();
-    expect(container.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")).toBe("muse");
-    expect(document.activeElement?.id).toBe("portfolio-work-muse");
-    expect(sessionStorage.getItem(SESSION_KEY)).toContain("word-arcade");
-  });
-
-  it("浏览器后退优先恢复当前历史条目，而非旧哈希与较新的会话记录", () => {
-    window.location.hash = "#portfolio-work-muse";
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(validSnapshot({ slug: "muse" })));
-    history.replaceState({ portfolioTimeline: validSnapshot({ slug: "ai-chat" }) }, "");
-    const { container } = renderOverview();
-    expect(container.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")).toBe("ai-chat");
-    expect(document.activeElement?.id).toBe("portfolio-work-ai-chat");
-  });
-
-  it("宽度变化后的返回按停靠对齐，页面纵向恢复交给浏览器", () => {
-    window.location.hash = "#portfolio-work-muse";
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(validSnapshot({ slug: "muse", viewportWidth: 800 })));
-    const { container } = renderOverview();
-    // jsdom 测得宽度与 800 不符：走站点对齐路径，而不是应用保存的横向偏移。
-    expect(container.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")).toBe("muse");
-    expect(document.activeElement?.id).toBe("portfolio-work-muse");
-    expect(scrollToMock).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-portfolio-timeline]")?.getAttribute("data-active-station")).toBeNull();
+    expect(container.querySelectorAll('li[data-active="true"]')).toHaveLength(0);
   });
 });
 

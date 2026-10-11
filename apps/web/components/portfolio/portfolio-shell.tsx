@@ -39,7 +39,6 @@ export function PortfolioShell({ children, label = "作品集", hideMasthead = f
             className={styles.return}
             data-portfolio-return
             href={`/portfolio#portfolio-work-${productSlug}` as Route}
-            scroll={false}
           >
             <ArrowLeft aria-hidden="true" size={16} strokeWidth={1.6} />
             返回作品集

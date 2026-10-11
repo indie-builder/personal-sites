@@ -111,36 +111,18 @@ function previewFor(
   }
 }
 
-function WalkerSilhouette() {
-  return (
-    <svg aria-hidden="true" className={styles.walker} shapeRendering="crispEdges" viewBox="0 0 27 32">
-      <rect x="0" y="0" width="8" height="24" />
-      <rect x="12" y="0" width="8" height="8" />
-      <rect x="7" y="4" width="16" height="4" />
-      <rect x="12" y="4" width="4" height="12" />
-      <rect x="20" y="4" width="4" height="12" />
-      <rect x="7" y="12" width="20" height="4" />
-      <rect x="4" y="15" width="19" height="13" />
-      <rect x="8" y="15" width="4" height="13" />
-      <rect x="16" y="20" width="4" height="8" />
-      <rect x="8" y="28" width="4" height="4" />
-      <rect x="16" y="28" width="4" height="4" />
-    </svg>
-  );
-}
-
+// 纵向总览：每个作品自成停靠（日期—even 同日—逐站可见），短横枝导向作品内容。
 export function PortfolioOverview({ musePreviews }: { musePreviews: readonly MusePreview[] }) {
   const layoutCategories = Effect.runSync(readLayoutCategories());
   return (
     <PortfolioTimeline>
       {portfolioProducts.map((product) => (
-        <li className={styles.stop} data-name={product.name} data-timeline-stop={product.slug} key={product.slug}>
+        <li className={styles.stop} data-timeline-stop={product.slug} key={product.slug}>
           <time className={styles.date} dateTime={product.date}>
             {product.date.replaceAll("-", ".")}
           </time>
           <span aria-hidden="true" className={styles.rule}>
             <span className={styles.node} />
-            <WalkerSilhouette />
           </span>
           <Link
             aria-label={`打开${product.name}`}
@@ -149,10 +131,10 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
             href={product.href as Route}
             id={`portfolio-work-${product.slug}`}
           >
-            <span className={styles.title}>
+            <h2 className={styles.title}>
               <span className={styles.name}>{product.name}</span>
               <ArrowRight aria-hidden="true" className={styles.enter} size={17} strokeWidth={1.6} />
-            </span>
+            </h2>
             <span className={styles.tagline}>{product.tagline}</span>
             <span className={`${styles.media} ${mediaShapes[product.slug] ?? ""}`}>
               <PreviewStation slug={product.slug}>
@@ -162,11 +144,12 @@ export function PortfolioOverview({ musePreviews }: { musePreviews: readonly Mus
           </Link>
         </li>
       ))}
-      <li className={`${styles.stop} ${styles.future}`} data-name="未完待续" data-timeline-end>
-        <span className={styles.date}>未完待续</span>
+      {/* 末端开口：虚线延伸 + 空心节点 + 未完待续，无日期、无链接、无预览。 */}
+      <li className={`${styles.stop} ${styles.future}`} data-timeline-end>
         <span aria-hidden="true" className={styles.rule}>
           <span className={styles.node} />
         </span>
+        <span className={styles.endLabel}>未完待续</span>
       </li>
     </PortfolioTimeline>
   );
