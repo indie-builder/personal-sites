@@ -7,6 +7,8 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export const viewport: Viewport = {
+  // 站点仅提供浅色主题：固定 color-scheme，避免系统深色模式改写表单控件与滚动条。
+  colorScheme: "light",
   // 支持此提示的手机浏览器在键盘弹出时压缩内容视口，组合器随可用高度排布。
   interactiveWidget: "resizes-content",
 };
@@ -40,15 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html data-scroll-behavior="smooth" lang="zh-CN" suppressHydrationWarning>
-      <head>
-        <script
-          // 在首帧绘制前恢复主题选择（本地存储优先，否则跟随系统），避免暗色用户首帧白屏。
-          dangerouslySetInnerHTML={{
-            __html: 'try{var t=window.localStorage.getItem("curation-theme");if(t!=="light"&&t!=="dark")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.curationTheme=t}catch{}',
-          }}
-        />
-      </head>
+    <html data-scroll-behavior="smooth" lang="zh-CN">
       <body>
         <a className="skip-link" href="#site-main">跳到主要内容</a>
         <OpeningLoader />

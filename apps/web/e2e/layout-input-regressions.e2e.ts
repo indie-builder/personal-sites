@@ -33,8 +33,13 @@ test("desktop list pages keep native BODY keyboard scrolling", async ({ app, bro
 test("mobile profile collapse preserves sticky clamping and scroll hysteresis", async ({ app, browser }) => {
   await browser.setViewport({ height: 844, width: 390 });
   await app.open("/curation");
+  // 流式骨架期页面高度不足 81px，先等真实条目进场再滚动，否则 scrollTo 被钳在 0。
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll(".curation-home__stream li").length)).toBeGreaterThan(0);
   const profile = browser.locator(".curation-home__profile");
   const navigation = browser.locator(".curation-home__profile [data-mobile-navigation]");
+  await expect.poll(() => browser.evaluate(() =>
+    document.querySelector<HTMLElement>(".curation-home__profile")?.style.getPropertyValue("--mobile-profile-offset") ?? "",
+  )).not.toBe("");
   const expanded = (await profile.boundingBox())!;
   // 旧 navigation.evaluate 读 offsetTop：profile 作用域单匹配，页内直取。
   const offset = await browser.evaluate(() => {
@@ -57,7 +62,10 @@ test("mobile profile collapse preserves sticky clamping and scroll hysteresis", 
   });
 
   for (const top of [81, 90, 105, 600, 90, 40, 16]) {
-    await scrollTo(top);
+    await expect.poll(async () => {
+      await scrollTo(top);
+      return browser.evaluate(() => window.scrollY);
+    }).toBe(top);
     await expect(profile).toHaveAttribute("data-mobile-collapsed", "");
     await expect.poll(readProfileStyle).toEqual({ top: `-${offset}px`, transform: "none" });
     await expect.poll(async () => (await profile.boundingBox())!.y).toBe(-Math.min(top, offset));
@@ -94,7 +102,6 @@ for (const path of ["/", "/curation"] as const) {
     await app.open(path);
 
     const controls = [
-      screen.getByRole("button", /切换为.+主题/u),
       screen.getByRole("link", "GitHub"),
       screen.getByRole("link", "语雀"),
       screen.getByRole("button", "关于我"),

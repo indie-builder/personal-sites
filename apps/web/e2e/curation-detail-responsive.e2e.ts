@@ -3,6 +3,12 @@ import type { Browser } from "@e2e-dev/web";
 
 const LONG_MEDIA_DETAIL_PATH = "/curation/2093968800316293400";
 
+// 直开的详情页走 ISR 流式响应：loading 骨架与正文在揭幕脚本的最小停留窗口内
+// 同时在 DOM（一显一隐）。布局读取前先等骨架撤离，否则严格单匹配必然撞上双份。
+async function waitForSpreadRevealed(browser: Browser) {
+  await expect.poll(() => browser.evaluate(() => document.querySelectorAll(".curation-detail__body").length)).toBe(1);
+}
+
 // 框架 locator 无 evaluate：布局读取走 browser.evaluate。严格单匹配为加强，
 // 旧 spec 同点位只查存在（querySelector 非空即用），这里对齐页内单匹配校验。
 async function readSpreadLayout(browser: Browser) {
@@ -42,7 +48,7 @@ test("curation spread uses one column until 1200px, then restores sticky facing 
   for (const width of [901, 1_199]) {
     await browser.setViewport({ height: 900, width });
     await app.open(LONG_MEDIA_DETAIL_PATH);
-    await expect(browser.locator(".curation-detail__body")).toBeVisible();
+    await waitForSpreadRevealed(browser);
 
     const layout = await readSpreadLayout(browser);
     expect(layout.bodyColumns.trim().split(/\s+/u)).toHaveLength(1);
@@ -57,7 +63,7 @@ test("curation spread uses one column until 1200px, then restores sticky facing 
   for (const width of [1_200, 1_440]) {
     await browser.setViewport({ height: 900, width });
     await app.open(LONG_MEDIA_DETAIL_PATH);
-    await expect(browser.locator(".curation-detail__body")).toBeVisible();
+    await waitForSpreadRevealed(browser);
 
     const layout = await readSpreadLayout(browser);
     expect(layout.bodyColumns.trim().split(/\s+/u)).toHaveLength(2);
@@ -72,6 +78,7 @@ test("curation spread uses one column until 1200px, then restores sticky facing 
 test("intermediate spread widths keep wheel scrolling on the document", async ({ app, browser }) => {
   await browser.setViewport({ height: 900, width: 901 });
   await app.open(LONG_MEDIA_DETAIL_PATH);
+  await waitForSpreadRevealed(browser);
 
   const evidence = browser.locator(".curation-detail__evidence");
   const evidenceBox = await evidence.boundingBox();
@@ -110,11 +117,10 @@ for (const path of [LONG_MEDIA_DETAIL_PATH, "/open-source"] as const) {
   });
 }
 
-test("single-column spread keeps its layout in dark theme and on mobile", async ({ app, browser }) => {
+test("single-column spread keeps its layout on mobile", async ({ app, browser }) => {
   await browser.setViewport({ height: 900, width: 1_199 });
   await app.open(LONG_MEDIA_DETAIL_PATH);
-  await browser.locator(".curation-home__profile .curation-theme-toggle").click();
-  await expect(browser.locator("html")).toHaveAttribute("data-curation-theme", "dark");
+  await waitForSpreadRevealed(browser);
   expect((await readSpreadLayout(browser)).evidence.position).toBe("static");
 
   await browser.setViewport({ height: 844, width: 390 });

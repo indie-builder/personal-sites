@@ -6,7 +6,6 @@ import { Suspense, type ReactNode } from "react";
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import { ContentSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
 import { SiteProfile } from "@/components/site-profile";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { StreamSkeletonLines } from "@/components/stream-skeleton";
 import styles from "@/components/open-source.module.css";
 
@@ -46,7 +45,7 @@ export function DetailPage({ children, mainClassName = "curation-home curation-d
   );
 }
 
-/** 详情页顶部的返回导航（真实返回链接 + 主题切换）。 */
+/** 详情页顶部的返回导航（真实返回链接）。 */
 export function DetailTopbar({ backClassName, backHref, backLabel, className = "curation-detail__back" }: {
   backClassName?: string;
   backHref: string;
@@ -59,7 +58,6 @@ export function DetailTopbar({ backClassName, backHref, backLabel, className = "
         <ArrowLeft aria-hidden="true" />
         {backLabel}
       </Link>
-      <ThemeToggle />
     </nav>
   );
 }
@@ -84,7 +82,6 @@ export function DetailLoadingChrome({ backLabel, loadingLabel }: { backLabel: st
           <ArrowLeft aria-hidden="true" />
           {backLabel}
         </span>
-        <ThemeToggle />
       </nav>
       <header className="curation-detail__header">
         <p className={styles.loadingLabel}>{loadingLabel}</p>

@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import { LoadingDocument } from "@/components/page-shell";
 import styles from "@/components/open-source.module.css";
 import { SiteProfile } from "@/components/site-profile";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 import { AiNewsDetailFallbackPainted } from "./detail-entrance";
 
@@ -17,9 +16,6 @@ export function AiNewsDetailSkeleton() {
           <ArrowLeft aria-hidden="true" />
           返回每日动态
         </span>
-        <div className="ai-news-detail__actions">
-          <ThemeToggle />
-        </div>
       </div>
 
       <header className="ai-news-detail__header">

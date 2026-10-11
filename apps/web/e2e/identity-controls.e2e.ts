@@ -1,50 +1,27 @@
-import type { Browser } from "@e2e-dev/web";
 import { expect, test } from "./helpers/loader-key.ts";
 
-async function readTheme(browser: Browser) {
-  return browser.evaluate(() => ({
-    dataset: document.documentElement.dataset.curationTheme ?? null,
-    stored: window.localStorage.getItem("curation-theme"),
-  }));
-}
-
-const labelFor = (theme: string | null) => (theme === "dark" ? "切换为浅色主题" : "切换为深色主题");
-const flip = (theme: string | null) => (theme === "dark" ? "light" : "dark");
-
-test("theme toggle persists across client navigation, reload, and toggles back", async ({ app, screen, browser }) => {
+test("site stays light-only even with a legacy stored dark theme and renders no toggle", async ({ app, browser }) => {
+  await browser.addInitScript(() => window.localStorage.setItem("curation-theme", "dark"));
   await app.open("/curation");
-  const initial = (await readTheme(browser)).dataset;
-  await expect(screen.getByRole("button", labelFor(initial), { exact: false })).toBeVisible();
+  await expect(browser.locator("main")).toBeVisible();
 
-  await screen.getByRole("button", labelFor(initial), { exact: false }).click();
-  const switched = flip(initial);
-  await expect.poll(async () => (await readTheme(browser)).dataset).toBe(switched);
-  expect((await readTheme(browser)).stored).toBe(switched);
-  await expect(screen.getByRole("button", labelFor(switched), { exact: false })).toBeVisible();
+  // 旧版存储的深色偏好不再生效：无主题属性、底面保持浅色。
+  expect(await browser.evaluate(() => document.documentElement.dataset.curationTheme ?? null)).toBe(null);
+  await expect.poll(() => browser.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(255, 255, 255)");
+
+  // 主题切换按钮已删除：列表与详情都不再渲染。
+  await expect(browser.locator(".curation-theme-toggle")).toHaveCount(0);
 
   const detailLink = browser.locator('.curation-home__feed a[href^="/curation/"]').first();
+  // 列表同样经流式骨架进场：等首条详情链接渲染出来再导航。
+  await expect.poll(async () => await browser.locator('.curation-home__feed a[href^="/curation/"]').count()).toBeGreaterThan(0);
   const detailHref = await detailLink.getAttribute("href");
   expect(detailHref ?? "", "列表必须渲染剪报详情链接").toMatch(/^\/curation\//u);
   await detailLink.click();
   await expect(browser).toHaveURL(new RegExp(`${detailHref}$`, "u"));
   await expect(browser.locator("article h1")).toBeVisible();
-  const detailTitle = (await browser.locator("article h1").textContent())?.trim() ?? "";
-  expect(detailTitle, "详情标题必须非空").not.toBe("");
-  await expect.poll(async () => (await readTheme(browser)).dataset).toBe(switched);
-  await expect(screen.getByRole("button", labelFor(switched), { exact: false })).toBeVisible();
-
-  await browser.reload();
-  await expect(browser).toHaveURL(new RegExp(`${detailHref}$`, "u"));
-  await expect(browser.locator("article h1")).toHaveText(detailTitle);
-  await expect.poll(async () => (await readTheme(browser)).dataset).toBe(switched);
-  expect((await readTheme(browser)).stored).toBe(switched);
-  const toggle = screen.getByRole("button", labelFor(switched), { exact: false });
-  await expect(toggle).toBeVisible();
-
-  await toggle.click();
-  await expect.poll(async () => (await readTheme(browser)).dataset).toBe(initial);
-  expect((await readTheme(browser)).stored).toBe(initial);
-  await expect(screen.getByRole("button", labelFor(initial), { exact: false })).toBeVisible();
+  await expect(browser.locator(".curation-theme-toggle")).toHaveCount(0);
+  expect(await browser.evaluate(() => document.documentElement.dataset.curationTheme ?? null)).toBe(null);
 });
 
 test("About dialog shows the biography, dismisses on Escape, returns focus, and releases background scroll", async ({ app, screen, browser }) => {

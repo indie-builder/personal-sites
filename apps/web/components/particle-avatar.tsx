@@ -650,11 +650,6 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
     observer.observe(button);
     document.addEventListener("visibilitychange", onVisibility);
     reducedQuery.addEventListener("change", onReducedChange);
-    // 定格状态下切主题立即换墨色重绘，不打断进行中的序列。
-    const themeObserver = new MutationObserver((records) => {
-      if (records.some((r) => r.attributeName === "data-curation-theme")) void paint();
-    });
-    themeObserver.observe(document.documentElement, { attributes: true });
     const intersection = new IntersectionObserver((entries) => {
       visibleRef.current = entries.at(-1)?.isIntersecting ?? true;
       if (visibleRef.current) {
@@ -720,7 +715,6 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       cancelSequence();
       observer.disconnect();
       intersection.disconnect();
-      themeObserver.disconnect();
       reducedQuery.removeEventListener("change", onReducedChange);
       document.removeEventListener("visibilitychange", onVisibility);
     };

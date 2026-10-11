@@ -56,7 +56,7 @@ test("curation detail gives its return link a mobile touch target", async ({ app
   await expectTouchTargets(back);
 });
 
-test("open-source document tabs and GitHub CTA keep sticky, dark mobile controls", async ({ app, screen, browser }) => {
+test("open-source document tabs and GitHub CTA keep sticky mobile controls", async ({ app, screen, browser }) => {
   await browser.setViewport(MOBILE_VIEWPORT);
   await app.open("/open-source");
   await browser.locator('a[href^="/open-source/"]').first().click();
@@ -74,19 +74,12 @@ test("open-source document tabs and GitHub CTA keep sticky, dark mobile controls
     const header = headings[0].parentElement;
     if (!header) throw new Error("仓库文档 heading has no parent");
     return {
-      backgroundColor: getComputedStyle(header).backgroundColor,
       borderBottomWidth: getComputedStyle(header).borderBottomWidth,
       position: getComputedStyle(header).position,
     };
   });
   await expect.poll(async () => (await readDocumentHeaderStyle()).position).toBe("sticky");
   await expect.poll(async () => (await readDocumentHeaderStyle()).borderBottomWidth).toBe("1px");
-
-  await screen.getByRole("button", /切换为.+主题/u).click();
-  await expect(browser.locator("html")).toHaveAttribute("data-curation-theme", "dark");
-  await expectTouchTargets(tabs);
-  await expectTouchTargets(github);
-  await expect.poll(async () => (await readDocumentHeaderStyle()).backgroundColor).toBe("rgb(24, 24, 24)");
   await expectNoHorizontalOverflow(browser);
 
   await browser.setViewport(DESKTOP_VIEWPORT);

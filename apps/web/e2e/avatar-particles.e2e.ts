@@ -201,7 +201,7 @@ test("keyboard activation shows the instant still mascot and the next press retu
   }, { timeout: 3_000 }).toBe(true);
 });
 
-test("avatar ink follows the curation theme", async ({ app, browser }) => {
+test("avatar ink stays dark on the light-only surface", async ({ app, browser }) => {
   await skipOpeningLoader(browser);
   await app.open("/");
   await expect.poll(async () => {
@@ -212,12 +212,6 @@ test("avatar ink follows the curation theme", async ({ app, browser }) => {
   const lightInk = await readInkBrightness(browser);
   expect(lightInk).not.toBeNull();
   expect(lightInk!).toBeLessThan(120);
-
-  await browser.locator(".curation-theme-toggle").click();
-  await expect.poll(() => readInkBrightness(browser), { timeout: 5_000 }).toBeGreaterThan(200);
-
-  await browser.locator(".curation-theme-toggle").click();
-  await expect.poll(() => readInkBrightness(browser), { timeout: 5_000 }).toBeLessThan(120);
 });
 
 test("mobile profile flight ghost falls back to the static stipple", async ({ app, screen, browser }) => {
