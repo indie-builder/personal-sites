@@ -16,13 +16,12 @@ const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; la
 ];
 
 const homeSection = { href: "/" as Route, id: "home" as const, label: "首页" };
-const portfolioSection = { href: "/portfolio" as Route, id: "portfolio" as const, label: "作品集" };
 
 export function MobileSectionNavigation({ current }: { current: SiteSection }) {
   return (
     <div className={styles.mobileNavigation} data-mobile-navigation>
       <nav aria-label="内容导航" className={styles.navigation}>
-        {[homeSection, ...siblingSections, portfolioSection].map((section) => (
+        {[homeSection, ...siblingSections].map((section) => (
           <SectionNavigationLink
             aria-current={current === section.id ? "page" : undefined}
             className={styles.link}
