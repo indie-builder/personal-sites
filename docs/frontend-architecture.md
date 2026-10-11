@@ -21,7 +21,7 @@ RootLayout
    ├─ /open-source              开源关注版块（ISR，revalidate = 300）
    │  ├─ Profile rail（与首页相同）
    │  └─ 内容导航 + 公开资料问答（个人简介、每日关注、开源关注）
-   ├─ /portfolio                作品集总览，七个产品的圆角展示卡（作品集专属卡片例外）
+   ├─ /portfolio                作品集总览，按真实日期升序的纵向时间线（七个作品）
    ├─ /products/*               作品内页，复用身份轨与作用域样式
    ├─ /api/portfolio/*          Web 与原生客户端共享的作品公开 GET API
    ├─ /api/ai-chat              作品聊天，独立于站点 Ask

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default async function PortfolioPage() {
   const musePreviews = await Effect.runPromise(readMusePreviews(getPortfolioDatabase(), 4));
   return (
-    <PortfolioShell label="作品集">
+    <PortfolioShell hideMasthead label="作品集">
       <PortfolioOverview musePreviews={musePreviews} />
     </PortfolioShell>
   );

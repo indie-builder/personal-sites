@@ -7,7 +7,7 @@ type PortfolioShellProps = {
   children: ReactNode;
   /** 顶部当前作品名；缺省显示「作品集」。 */
   label?: string;
-  /** 详情等次级页面隐藏刊名行，由产品自身提供返回导航。 */
+  /** 总览与详情页隐藏刊名行：模式切换只在左侧身份轨，右栏直接进入内容。 */
   hideMasthead?: boolean;
 };
 

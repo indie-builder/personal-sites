@@ -1,88 +1,149 @@
-/* 作品集总览：右栏窄列展示卡（用户明确允许作品集使用卡片）。形态只在本模块内，
-   不改信息流样式；颜色全部走 .portfolio-scope 的明暗 token。 */
+/* 作品集总览：右栏纵向时间线（源站首页横向时间轴的窄栏改写）。
+   真实日期节点 + 连续竖线串起七段作品；同日作品共用日期节点，以短刻度衔接。
+   形态只在本模块内，不改信息流样式；颜色全部走 .portfolio-scope 的明暗 token。 */
 
-.gallery {
-  display: grid;
+.timeline {
   max-width: 660px;
-  margin: 1.5rem 0 0;
+  margin: 0;
   padding: 0;
-  gap: 1.1rem;
   list-style: none;
 }
 
-.card {
-  display: grid;
-  grid-template-areas: "head" "media" "copy";
-  grid-template-columns: minmax(0, 1fr);
-  row-gap: 0.9rem;
-  padding: 1.1rem;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-panel);
-  background: var(--color-paper);
-  /* 书架卡的翻书动效允许溢出媒体面，但不得在窄屏撑出横向滚动。 */
-  overflow: clip;
-  text-decoration: none;
-  transition: border-color var(--dur-fast) ease;
+.stop {
+  position: relative;
+  padding-bottom: 3.25rem;
+  padding-left: 2rem;
 }
 
-.card[data-compact] {
-  grid-template-areas: "head head" "copy media";
+/* 轨迹竖线：从本停靠的节点延伸到下一停靠；停靠间无外距，线因此连续。 */
+.stop::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 10px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-hairline-strong);
+}
+
+.node {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-ink);
+}
+
+/* 同日续作：不重复日期，用横跨轨迹的短刻度标记（源站轨中刻度的竖排对应）。 */
+.tick {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 7px;
+  height: 1px;
+  background: var(--color-hairline-strong);
+}
+
+.date {
+  display: block;
+  margin: 0 0 0.8rem;
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
+/* 末端开口：通向「未完待续」的最后一段为虚线，节点空心（源站收尾语言）。 */
+.future {
+  padding-bottom: 0;
+}
+
+.future::before {
+  top: 0;
+  bottom: auto;
+  width: 0;
+  height: 10px;
+  background: none;
+  border-left: 1px dashed var(--color-hairline-strong);
+}
+
+.future .node {
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink-soft);
+}
+
+.work {
+  display: grid;
+  /* 书架的翻书动效允许升出媒体面（溢入简介区），但不得在窄屏撑出横向滚动。 */
+  overflow: clip;
+  gap: 0.3rem;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.work[data-compact] {
+  grid-template-areas: "title media" "tagline media";
   grid-template-columns: minmax(0, 1fr) 15rem;
-  align-items: center;
+  align-content: center;
   column-gap: 1.1rem;
 }
 
-.head {
-  grid-area: head;
+.work:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 4px;
+}
+
+.title {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 }
 
-.mark {
-  display: grid;
-  place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-card);
-  background: var(--color-plate);
+.name {
   color: var(--color-ink);
+  font-size: 1.15rem;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tagline {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 
 .enter {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--color-ink);
-  color: var(--color-paper);
-  transition: transform var(--dur-base) var(--ease-out);
+  flex: none;
+  color: var(--color-ink-soft);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    color var(--dur-fast) ease;
 }
 
-.card:hover,
-.card:focus-visible {
-  border-color: var(--color-border-hover);
+.work:hover .enter,
+.work:focus-visible .enter {
+  color: var(--color-ink);
+  transform: translateX(4px);
 }
 
-.card:hover .enter,
-.card:focus-visible .enter {
-  transform: translate(2px, -2px);
-}
-
-.card:focus-visible {
-  outline: 2px solid var(--color-ink);
-  outline-offset: 2px;
+.work:active {
+  transform: scale(0.985);
+  transition-duration: 70ms;
 }
 
 .media {
   position: relative;
   display: flex;
-  grid-area: media;
+  margin-top: 0.55rem;
   overflow: hidden;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-md);
   background: var(--color-plate);
 }
 
@@ -98,53 +159,29 @@
 
 .mediaChat,
 .mediaShelf {
-  height: 12.5rem;
+  height: 13.5rem;
 }
 
-.mediaGraph,
-.mediaTools {
-  height: 10.5rem;
+.work[data-compact] .media {
+  height: 11rem;
+  margin-top: 0;
 }
 
-/* 书架卡：封面翻出书架需要溢出可见，媒体面由书架自身的板沿承担。 */
+/* 书架停靠：封面翻出书架需要溢出可见，媒体面由书架自身的板沿承担。 */
 .mediaShelf {
   align-items: flex-end;
   overflow: visible;
-  border: 0;
+  border-radius: 0;
   background: transparent;
 }
 
-.copy {
-  grid-area: copy;
-  display: grid;
-  min-width: 0;
-  gap: 0.25rem;
-}
-
-.card[data-compact] .copy {
-  align-content: center;
-}
-
-.name {
-  color: var(--color-ink);
-  font-size: 1.05rem;
-  font-weight: 620;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-}
-
-.tagline {
-  color: var(--color-ink-soft);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-
-/* 个人网站卡：迷你浏览器窗口包住本站截图。 */
+/* 个人网站停靠：迷你浏览器窗口包住本站截图。 */
 .siteWindow {
   display: grid;
   width: 100%;
   height: 100%;
   grid-template-rows: auto 1fr;
+  border: 1px solid var(--color-hairline);
 }
 
 .siteBar {
@@ -197,7 +234,7 @@
   object-fit: cover;
 }
 
-/* 词典卡：静态知识网（SVG），不加载外部图谱运行时。 */
+/* 词典停靠：静态知识网（SVG），不加载外部图谱运行时。 */
 .graph {
   width: 100%;
   height: 100%;
@@ -221,7 +258,7 @@
   font: 500 9px var(--font-sans);
 }
 
-/* 工具目录卡：2×2 收录格，可见时轮流点亮。 */
+/* 工具目录停靠：2×2 收录格，可见时轮流点亮。 */
 .toolGrid {
   display: grid;
   width: 100%;
@@ -300,7 +337,7 @@
   font-weight: 400;
 }
 
-/* 布局图鉴卡：书架预览的翻书动效（源站首页同款，键帧与支点在此模块内）。 */
+/* 书架停靠：书架预览的翻书动效（源站首页同款，键帧与支点在此模块内）。 */
 .bookMotion {
   width: 100%;
 }
@@ -407,19 +444,29 @@
   letter-spacing: 0;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    transition: none;
+  }
+
+  .work:hover .enter,
+  .work:focus-visible .enter {
+    transform: none;
+  }
+
+  .work:active {
+    transform: none;
+  }
+}
+
 @media (max-width: 560px) {
-  .gallery {
-    gap: 0.9rem;
+  .stop {
+    padding-bottom: 2.6rem;
+    padding-left: 1.4rem;
   }
 
-  .card {
-    padding: 0.9rem;
-  }
-
-  .card[data-compact] {
-    grid-template-areas: "head" "copy" "media";
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
+  .name {
+    font-size: 1.05rem;
   }
 
   .mediaArcade,
@@ -430,11 +477,16 @@
 
   .mediaChat,
   .mediaShelf {
-    height: 11.5rem;
+    height: 12rem;
   }
 
-  .mediaGraph,
-  .mediaTools {
-    height: 9.5rem;
+  .work[data-compact] {
+    grid-template-areas: "title" "tagline" "media";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .work[data-compact] .media {
+    height: 10rem;
+    margin-top: 0.55rem;
   }
 }

@@ -1,17 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Effect } from "effect";
-import {
-  ArrowUpRight,
-  Gamepad2,
-  Globe,
-  Images,
-  Library,
-  MessageCircle,
-  Network,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import {
   portfolioProducts,
@@ -29,16 +19,6 @@ import styles from "./portfolio-overview.module.css";
 
 export type MusePreview = { src: string; alt: string; videoSrc?: string };
 
-const marks: Record<string, LucideIcon> = {
-  "word-arcade": Gamepad2,
-  "ai-chat": MessageCircle,
-  "ai-coding-dictionary": Network,
-  "personal-sites": Globe,
-  "design-engineer-tools": Wrench,
-  muse: Images,
-  "layout-compositions": Library,
-};
-
 const mediaShapes: Record<string, string> = {
   "word-arcade": styles.mediaArcade,
   "ai-chat": styles.mediaChat,
@@ -49,7 +29,7 @@ const mediaShapes: Record<string, string> = {
   "design-engineer-tools": styles.mediaTools,
 };
 
-/** 图谱与工具目录用横向紧凑卡，其余媒体整幅，形成参考站的错落节奏。 */
+/** 图谱与工具目录用左文右图的紧凑停靠，其余媒体整幅，保持轨迹的错落节奏。 */
 const compactSlugs = new Set(["ai-coding-dictionary", "design-engineer-tools"]);
 
 const graphNodes = [
@@ -137,42 +117,50 @@ function previewFor(
   }
 }
 
-// 七个作品的展示卡列（参考 pawr.link 的窄列卡片节奏）：整卡可点、无嵌套交互、
-// 不带日期与长简介；卡片形态是作品集专属例外，不向信息流扩散。
+// 总览时间线：源站首页横向作品时间轴的窄栏改写。按真实日期升序排开，
+// 日期节点与连续竖线让七段作品读成一条成长轨迹；同日作品共用日期节点，以短刻度衔接。
+// 整段作品是一枚链接（无嵌套交互），可访问名保持「打开${name}」；不虚构阶段与数据。
 export function PortfolioOverview({ musePreviews }: { musePreviews: readonly MusePreview[] }) {
   const layoutCategories = Effect.runSync(readLayoutCategories());
-  const products = [...portfolioProducts].reverse();
+  const stops = portfolioProducts.map((product, index) => ({
+    product,
+    continues: index > 0 && portfolioProducts[index - 1]?.date === product.date,
+  }));
   return (
-    <ul className={styles.gallery}>
-      {products.map((product) => {
-        const Mark = marks[product.slug];
-        return (
-          <li key={product.slug}>
-            <Link
-              aria-label={`打开${product.name}`}
-              className={styles.card}
-              data-compact={compactSlugs.has(product.slug) || undefined}
-              href={product.href as Route}
-            >
-              <span aria-hidden="true" className={styles.head}>
-                <span className={styles.mark}>
-                  <Mark size={16} strokeWidth={1.7} />
-                </span>
-                <span className={styles.enter}>
-                  <ArrowUpRight size={14} strokeWidth={2} />
-                </span>
-              </span>
-              <span className={`${styles.media} ${mediaShapes[product.slug] ?? ""}`}>
-                {previewFor(product, musePreviews, layoutCategories)}
-              </span>
-              <span className={styles.copy}>
-                <span className={styles.name}>{product.name}</span>
-                <span className={styles.tagline}>{product.tagline}</span>
-              </span>
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <ol className={styles.timeline}>
+      {stops.map(({ product, continues }) => (
+        <li className={styles.stop} data-continue={continues || undefined} key={product.slug}>
+          {continues ? (
+            <span aria-hidden="true" className={styles.tick} />
+          ) : (
+            <>
+              <span aria-hidden="true" className={styles.node} />
+              <time className={styles.date} dateTime={product.date}>
+                {product.date.replaceAll("-", ".")}
+              </time>
+            </>
+          )}
+          <Link
+            aria-label={`打开${product.name}`}
+            className={styles.work}
+            data-compact={compactSlugs.has(product.slug) || undefined}
+            href={product.href as Route}
+          >
+            <span className={styles.title}>
+              <span className={styles.name}>{product.name}</span>
+              <ArrowRight aria-hidden="true" className={styles.enter} size={17} strokeWidth={1.6} />
+            </span>
+            <span className={styles.tagline}>{product.tagline}</span>
+            <span className={`${styles.media} ${mediaShapes[product.slug] ?? ""}`}>
+              {previewFor(product, musePreviews, layoutCategories)}
+            </span>
+          </Link>
+        </li>
+      ))}
+      <li className={`${styles.stop} ${styles.future}`}>
+        <span aria-hidden="true" className={styles.node} />
+        <span className={styles.date}>未完待续</span>
+      </li>
+    </ol>
   );
 }
