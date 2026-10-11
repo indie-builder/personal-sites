@@ -86,13 +86,8 @@ export function buildMascotTargets(count: number): MascotTargets | null {
   return [poses[0], poses[1]];
 }
 
-// 伙伴节拍：落形（feetA）→ 迈步（feetB）→ 回正（feetA），末段停留结束后
-// 循环回迈步段，只有 B↔A 原地踏步，永不出伙伴。
+// 落形/返回节拍：冒险的入场复用头像序列的落形语汇，返回沿用原节奏。
 export const ARRIVAL_MORPH_MS = 520;
 export const ARRIVAL_STAGGER = 60;
-export const ARRIVAL_DWELL_MS = 140;
-export const STEP_MORPH_MS = 180;
-export const STEP_DWELL_MS = 110;
-export const STEP_BACK_DWELL_MS = 140;
 export const RETURN_MORPH_MS = 600;
 export const RETURN_STAGGER = 100;

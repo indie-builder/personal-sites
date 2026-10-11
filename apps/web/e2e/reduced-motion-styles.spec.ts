@@ -51,11 +51,16 @@ test("repository panel transitions are neutralized under reduced motion once dat
 });
 
 // 头像粒子的契约：粒子接管后静态点描只在 ghost 克隆兜底；reduce 下（含
-// 会话中途开启）点击直接落到静止伙伴帧/头像；会话中途开启 reduce 把已选中
-// 的伙伴定格为静止帧并保留选择，关闭后只续播指针选中的循环；触屏点按播放
-// 伙伴踏步循环。e2e 运行器无 emulateMedia 与 hasTouch 设备仿真，留 Playwright
-//（会话中途切换依赖 emulateMedia 派发的 change 事件，运行器的 matchMedia 补丁做不到）。
+// 会话中途开启）点击直接落到静止可读冒险帧（首段中途，data-avatar-chapter
+// 为 hurdle、data-avatar-round 为 1）/头像；会话中途开启 reduce 把已选中的
+// 冒险定格为静止帧并保留选择与段落键，关闭后只续播指针选中的冒险；键盘
+// 定格的静止帧跨 reduce 往返保持静止；触屏点按播放伙伴冒险循环。回到头像
+// 后段落属性一并消失。e2e 运行器无 emulateMedia 与 hasTouch 设备仿真，留
+// Playwright（会话中途切换依赖 emulateMedia 派发的 change 事件，运行器的
+// matchMedia 补丁做不到）。
 const skipOpeningLoader = (page: Page) => page.addInitScript(() => window.sessionStorage.setItem("personal-site:opening-loader-played", "true"));
+
+const adventureChapter = /^(hurdle|gap|stairs|bump|pushbox|lift|movingplatform|crouch|spring|gate)$/;
 
 // 成像态脸占据中心：中心 40% 方框的墨点像素占比。
 const readCenterDensity = (page: Page) => page.evaluate(() => {
@@ -118,18 +123,23 @@ test("avatar rests on the portrait and a click shows the still mascot under redu
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 
   await avatar.click();
-  // reduce 下点击直接落到静止伙伴帧，不播动画。
+  // reduce 下点击直接落到静止可读冒险帧（首段中途），不播动画。
   await expect(avatar).toHaveAttribute("aria-label", "回到陈远的点描头像");
   await expect(avatar).toHaveAttribute("data-avatar-state", "static");
   await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  await expect(avatar).toHaveAttribute("data-avatar-chapter", "hurdle");
+  await expect(avatar).toHaveAttribute("data-avatar-round", "1");
+  expect(await readCenterDensity(page)).toBeGreaterThan(0.02);
   const still = await readCanvasDataUrl(page);
   await page.waitForTimeout(300);
   expect(await readCanvasDataUrl(page)).toBe(still);
 
-  // 再点回到头像成像终态。
+  // 再点回到头像成像终态，段落属性一并消失。
   await avatar.click();
   await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 2_000 });
   await expect(avatar).toHaveAttribute("data-avatar-shape", "portrait");
+  await expect(avatar).not.toHaveAttribute("data-avatar-chapter");
+  await expect(avatar).not.toHaveAttribute("data-avatar-round");
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 });
 
@@ -144,6 +154,8 @@ for (const disableWhileHidden of [false, true]) {
     await avatar.click();
     await expect(avatar).toHaveAttribute("data-avatar-state", "static");
     await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+    await expect(avatar).toHaveAttribute("data-avatar-chapter", "hurdle");
+    await expect(avatar).toHaveAttribute("data-avatar-round", "1");
     const still = await readCanvasDataUrl(page);
     expect(still).not.toBe(portrait);
 
@@ -164,6 +176,9 @@ for (const disableWhileHidden of [false, true]) {
     }
     await expect(avatar).toHaveAttribute("data-avatar-state", "mascot");
     await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+    // 指针来源续播冒险：段落与轮数仍在，画面重新动起来。
+    await expect(avatar).toHaveAttribute("data-avatar-chapter", adventureChapter);
+    await expect(avatar).toHaveAttribute("data-avatar-round", "1");
     await expect.poll(async () => {
       const first = await readCanvasDataUrl(page);
       await page.waitForTimeout(250);
@@ -188,14 +203,18 @@ test("reduced motion landing mid-mascot freezes the still frame and turning it o
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(avatar).toHaveAttribute("data-avatar-state", "static", { timeout: 2_000 });
   await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  // 定格保留当前段落键与轮数：静止帧仍是可读的冒险画面。
+  await expect(avatar).toHaveAttribute("data-avatar-chapter", adventureChapter);
+  await expect(avatar).toHaveAttribute("data-avatar-round", "1");
   const still = await readCanvasDataUrl(page);
   await page.waitForTimeout(300);
   expect(await readCanvasDataUrl(page)).toBe(still);
 
-  // 关闭 reduce：指针选中的伙伴续播循环，画面重新动起来。
+  // 关闭 reduce：指针选中的冒险续播，画面重新动起来。
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(avatar).toHaveAttribute("data-avatar-state", "mascot", { timeout: 2_000 });
   await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  await expect(avatar).toHaveAttribute("data-avatar-chapter", adventureChapter);
   await expect.poll(async () => {
     const first = await readCanvasDataUrl(page);
     await page.waitForTimeout(250);
@@ -213,23 +232,27 @@ test("a keyboard-still mascot stays still across a reduced-motion round trip", a
   const avatar = page.locator(".curation-home__avatar");
   await expect(avatar).toHaveAttribute("data-particles", "on", { timeout: 10_000 });
 
-  // 键盘路径定格静止伙伴帧。
+  // 键盘路径定格静止冒险帧（首段中途）。
   await avatar.focus();
   await page.keyboard.press("Enter");
   await expect(avatar).toHaveAttribute("data-avatar-state", "static", { timeout: 2_000 });
   await expect(avatar).toHaveAttribute("data-avatar-shape", "mascot");
+  await expect(avatar).toHaveAttribute("data-avatar-chapter", "hurdle");
+  await expect(avatar).toHaveAttribute("data-avatar-round", "1");
   const still = await readCanvasDataUrl(page);
 
-  // 开启再关闭 reduce：键盘定格的选择不续播循环，画面保持静止帧。
+  // 开启再关闭 reduce：键盘定格的选择不续播冒险，画面与段落键保持静止帧。
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(() => readCanvasDataUrl(page), { timeout: 2_000 }).toBe(still);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.waitForTimeout(600);
   await expect(avatar).toHaveAttribute("data-avatar-state", "static");
+  await expect(avatar).toHaveAttribute("data-avatar-chapter", "hurdle");
   expect(await readCanvasDataUrl(page)).toBe(still);
 
   await page.keyboard.press("Enter");
   await expect(avatar).toHaveAttribute("data-avatar-state", "idle", { timeout: 2_000 });
+  await expect(avatar).not.toHaveAttribute("data-avatar-chapter");
   expect(await readCenterDensity(page)).toBeGreaterThan(0.03);
 });
 
