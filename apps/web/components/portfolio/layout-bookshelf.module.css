@@ -24,6 +24,13 @@
   .matchList button:hover > svg { transform:translateX(3px); color:var(--color-ink); }
 }
 .reader { margin:12px auto 0; max-width:1160px; outline:none; }
+.reader[data-compact] .bookStage { padding:4px 0 8px; }
+.reader[data-compact] .readerHeading { margin:0 0 20px; }
+.reader[data-compact] .spread { aspect-ratio:.72; min-height:340px; max-height:none; }
+.reader[data-compact] .spread::after { display:none; }
+.reader[data-compact] .page { width:100%; border-radius:4px; }
+.singleNavigation { display:flex; justify-content:space-between; }
+@media(max-width:600px) { .library { padding-inline:0; } }
 .readerHeading { display:flex; justify-content:space-between; align-items:center; margin:0 56px 24px; transition:opacity var(--dur-fast) var(--ease-out); }
 .readerHeading h2 { font-size:20px; font-weight:500; }
 

@@ -137,8 +137,6 @@ export const uiExamples = [
 
 const FORM_STATE_LIMIT = 60000;
 
-// 表单体积上限在解码后校验（见 validateFormSizes），schema 只描述结构。
-// OpenUI 的 content/context 信封把展示文本与模型上下文分开。
 export const memorySchema = Schema.Struct({
   summary: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(12000)),
   throughId: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100)),
@@ -152,7 +150,11 @@ export const messageSchema = Schema.Struct({
       submission: Schema.optional(
         Schema.Struct({
           formName: Schema.optional(Schema.String.check(Schema.isMaxLength(200))),
-          formState: Schema.Record(Schema.String, Schema.Unknown),
+          formState: Schema.Record(Schema.String, Schema.Unknown).check(
+            Schema.makeFilter((state) => !formStateTooLarge(state), {
+              message: "表单内容必须可以序列化且不超过 60000 字符。",
+            }),
+          ),
         }),
       ),
       uiState: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
@@ -209,9 +211,12 @@ export function parseMessage(input: unknown): ChatMessage {
   return Schema.decodeUnknownSync(messageSchema)(input);
 }
 
-/** 表单提交体积上限（等价源 schema 的 refine 约束）。 */
 export function formStateTooLarge(state: unknown): boolean {
-  return JSON.stringify(state).length > FORM_STATE_LIMIT;
+  try {
+    return (JSON.stringify(state)?.length ?? 0) > FORM_STATE_LIMIT;
+  } catch {
+    return true;
+  }
 }
 
 // OpenUI's content/context envelope keeps display text separate from model context.

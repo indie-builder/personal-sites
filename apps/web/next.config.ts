@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const workspaceRoot = path.resolve(import.meta.dirname, "../..");
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
   outputFileTracingRoot: workspaceRoot,
   turbopack: { root: workspaceRoot },
   outputFileTracingExcludes: {

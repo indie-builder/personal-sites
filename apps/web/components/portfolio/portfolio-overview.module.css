@@ -15,6 +15,7 @@
 .rowLink {
   display: grid;
   grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+  grid-template-areas: "meta preview" "meta copy";
   column-gap: clamp(1.25rem, 2.5vw, 2rem);
   align-items: start;
   padding: 1.6rem 0;
@@ -22,6 +23,7 @@
 }
 
 .meta {
+  grid-area: meta;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -32,6 +34,7 @@
 }
 
 .previews {
+  grid-area: preview;
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
@@ -62,6 +65,7 @@
 }
 
 .copy {
+  grid-area: copy;
   display: grid;
   min-width: 0;
   gap: 0.3rem;
@@ -125,6 +129,8 @@
 @media (max-width: 900px) {
   .rowLink {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "meta" "preview" "copy";
+    row-gap: 0.6rem;
   }
 
   .meta {

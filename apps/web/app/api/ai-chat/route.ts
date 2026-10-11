@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
 
-import { formStateTooLarge, requestSchema } from "@/lib/portfolio/chat/model";
+import { requestSchema } from "@/lib/portfolio/chat/model";
 import {
   chatErrorMessage,
   ConversationFormatError,
@@ -55,16 +55,11 @@ export async function POST(request: Request) {
       try: () => JSON.parse(Buffer.concat(chunks).toString("utf8")),
       catch: (cause) => new RequestFormatError({ cause }),
     });
-    const parsed = Schema.decodeUnknownResult(requestSchema)(payload);
+    const parsed = yield* Effect.try({
+      try: () => Schema.decodeUnknownResult(requestSchema)(payload),
+      catch: () => new ConversationFormatError(),
+    });
     if (parsed._tag !== "Success" || parsed.success.messages.at(-1)?.role !== "user") {
-      return yield* Effect.fail(new ConversationFormatError());
-    }
-    if (
-      parsed.success.messages.some(
-        (message) =>
-          message.role === "user" && formStateTooLarge(message.metadata?.submission?.formState),
-      )
-    ) {
       return yield* Effect.fail(new ConversationFormatError());
     }
     if (!process.env.BIGMODEL_API_KEY) {

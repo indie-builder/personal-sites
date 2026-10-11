@@ -98,7 +98,7 @@ xcrun simctl launch <UDID> cn.lovemyrmb.personalsite
 
 `Data/PortfolioAPI.swift` 只读统一站点的 `/api/portfolio`（与 `SiteAPI` 同基座），不打包内容快照、不解析 HTML、无 WebView。仅原作、工具官网和“打开网站”保留明确外链。图鉴手机端采用分类/主题筛选与图片列表，未搬用桌面双页书籍动画。元数据在线加载，离线显示可重试错误。
 
-接口契约的历史文档位于 personal-design 仓库 `docs/portfolio-api.md`；作品集接口已并入站点服务，Release 与站点同域。本地 Debug 可用 `PORTFOLIO_BASE_URL` 覆盖联调，生产包不会读取该覆盖值。
+接口契约见本仓库 [作品集公开 API](../docs/portfolio-api.md)；作品集接口已并入站点服务，Release 与站点同域。本地 Debug 可用 `PORTFOLIO_BASE_URL` 覆盖联调，生产包不会读取该覆盖值。
 
 本地启动站点服务后：
 

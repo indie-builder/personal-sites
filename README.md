@@ -20,7 +20,7 @@ Read any section from the home page. To try Ask (问一问), tap the pixel chara
 | Open source | `/open-source` | GitHub stars chosen for publication, with the original README or repository tree, a Chinese reading edition, and personal commentary |
 | About me and Ask (问一问) | profile area | An in-site printable resume; tapping the pixel character opens anonymous Q&A over public material. There is no standalone `/ask` page |
 
-The profile area also links GitHub, Yuque, and an external portfolio. Daily updates filter by featured or category, open source filters by topic, the content flow reads by date with loading more, and detail pages keep their source exits.
+The profile area links GitHub, Yuque, and the in-site [portfolio](https://default-coder.lovemyrmb.cn/portfolio). Switch between the information feed and portfolio to browse seven working products in the same site. Daily updates filter by featured or category, open source filters by topic, the content flow reads by date with loading more, and detail pages keep their source exits.
 
 Public discovery endpoints are `/sitemap.xml`, `/robots.txt`, `/feed.xml`, and site-wide Open Graph images. The RSS feed aggregates the latest updates from daily updates, daily curation, and open source.
 

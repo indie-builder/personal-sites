@@ -42,7 +42,7 @@ type ConversionResult = 'converted' | 'skipped' | 'missing' | 'failed';
 type Source = { image: string; sha256: string | null };
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(MODULE_DIR, '../../../..');
+const REPO_ROOT = path.resolve(MODULE_DIR, '../../../../..');
 
 const execFileAsync = promisify(execFile);
 

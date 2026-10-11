@@ -49,7 +49,7 @@ export function ConversationView({
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   useEffect(() => {
     const sync = () =>
-      setMode(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+      setMode(document.documentElement.dataset.curationTheme === 'dark' ? 'dark' : 'light');
     sync();
     const observer = new MutationObserver(sync);
     observer.observe(document.documentElement, {

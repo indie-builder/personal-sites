@@ -1,8 +1,4 @@
-// 灵感集（Muse）公开读取：查 data/portfolio.sqlite 的 muse_posts / muse_media。
-// 去重与媒体地址在离线投影时物化；这里只读公开列，不做文件系统探测。
-
 import Database from "better-sqlite3";
-import { existsSync } from "node:fs";
 
 import { attempt } from "@site/effect";
 import { Schema } from "effect";
@@ -19,9 +15,6 @@ import {
 export const PORTFOLIO_DATABASE_FILENAME = "portfolio.sqlite";
 
 export function openPortfolioDatabase(filename = PORTFOLIO_DATABASE_FILENAME, { fileMustExist = true } = {}) {
-  if (fileMustExist && !existsSync(filename)) {
-    throw new Error(`缺少 ${filename}；请先运行作品集公开投影（portfolio:project）。`);
-  }
   return new Database(filename, { fileMustExist, readonly: true });
 }
 
@@ -185,15 +178,13 @@ export function readMuseBrowseWindow(db, slug) {
       db.prepare(`SELECT ${REF_COLUMNS} FROM muse_posts ORDER BY created_at DESC`).all().map(toRef),
       slug,
     );
-    const sameCategory = windowed(
-      db
-        .prepare(
-          `SELECT ${REF_COLUMNS} FROM muse_posts WHERE (category IS NULL OR category = ?) ORDER BY created_at DESC`,
+    const sameCategory = current.category
+      ? windowed(
+          db.prepare(`SELECT ${REF_COLUMNS} FROM muse_posts WHERE category = ? ORDER BY created_at DESC`)
+            .all(current.category).map(toRef),
+          slug,
         )
-        .all(current.category)
-        .map(toRef),
-      slug,
-    );
+      : all;
     const browse = {
       currentHref: `/products/muse/${slug}`,
       browseEntries: all.map((entry) => ({

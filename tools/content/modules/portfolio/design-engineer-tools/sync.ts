@@ -16,7 +16,7 @@ type SourceTool = { name: string; url: string };
 export type ToolCategory = { id: string; tools: { name: string; url: string }[] };
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(MODULE_DIR, '../../../..');
+const REPO_ROOT = path.resolve(MODULE_DIR, '../../../../..');
 const sourceUrl = 'https://designengineer.tools/';
 const retrySchedule = Schedule.upTo(Schedule.exponential(1000, 2), { times: 2 });
 

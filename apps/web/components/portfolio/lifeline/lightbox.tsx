@@ -69,7 +69,7 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
               aria-label={active.item.alt}
               tabIndex={-1}
               className={styles.surface}
-              onKeyDown={onDialogKeyDown}
+              onKeyDownCapture={onDialogKeyDown}
             >
               {/* 遮罩：毛玻璃 + 加深，明暗两种背景下都能分离层次。
              灯箱是恒定暗房表面（不随主题翻转），色值取自暗色 palette 原值而非 token */}
@@ -88,7 +88,7 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
                 ref={swipeRef}
                 className="absolute inset-0 touch-pan-y"
                 {...swipeHandlers}
-                onClick={(event) => {
+                onClickCapture={(event) => {
                   if (consumeClickSuppression()) return;
                   if (event.target === event.currentTarget) close();
                 }}

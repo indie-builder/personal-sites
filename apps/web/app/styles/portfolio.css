@@ -41,7 +41,7 @@
   line-height: 1.75;
 }
 
-:global(html[data-curation-theme="dark"]) .portfolio-scope {
+html[data-curation-theme="dark"] .portfolio-scope {
   --color-workspace: #202020;
   --color-paper: #202020;
   --color-plate: #353535;
@@ -58,9 +58,9 @@
 }
 
 /* 键盘操作即时完成，不等待视觉过渡（源站输入契约）。 */
-:global(html[data-input="keyboard"]) .portfolio-scope *,
-:global(html[data-input="keyboard"]) .portfolio-scope *::before,
-:global(html[data-input="keyboard"]) .portfolio-scope *::after {
+html[data-input="keyboard"] .portfolio-scope *,
+html[data-input="keyboard"] .portfolio-scope *::before,
+html[data-input="keyboard"] .portfolio-scope *::after {
   transition: none !important;
   animation-duration: 0s !important;
   animation-delay: 0s !important;
@@ -71,7 +71,7 @@
 .portfolio-home__content {
   width: 100%;
   min-width: 0;
-  padding: 2rem 0 4rem;
+  padding: 2rem 1.875rem 4rem 0;
 }
 
 .portfolio-home__mode {
@@ -84,7 +84,7 @@
 }
 
 .portfolio-home__mode-label {
-  color: var(--ink);
+  color: var(--color-ink);
   font-size: 0.95rem;
   font-weight: 620;
   letter-spacing: -0.035em;

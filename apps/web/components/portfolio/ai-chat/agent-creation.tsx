@@ -32,7 +32,7 @@ export function AgentCreationScreen({
       id="agent-creation"
       className={styles.createScreen}
       aria-labelledby="agent-creation-title"
-      onKeyDown={(event) => {
+      onKeyDownCapture={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
           onBack();

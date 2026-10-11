@@ -35,7 +35,7 @@ function resolveRemotionCli() {
     const manifest = require(manifestPath);
     const bin = typeof manifest.bin === "string" ? manifest.bin : manifest.bin?.remotion;
     if (!bin) throw new Error("@remotion/cli 缺少 remotion bin 声明");
-    return [process.execPath, path.join(path.dirname(manifestPath), bin)];
+    return [process.execPath, [path.join(path.dirname(manifestPath), bin)]];
   } catch {
     return ["remotion", []];
   }

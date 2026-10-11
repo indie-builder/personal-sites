@@ -207,6 +207,22 @@ test("浏览窗口与总览预览：同分类窗口、视频预览置前", async
   read.close();
 });
 
+test("详情分类导航不混入未分类内容，未分类详情保留全库导航", async (t) => {
+  const { db, filename } = fixtureDatabase(t);
+  insertPost(db, { id: "1", slug: "motion", title: "动效", category: "Motion", createdAt: "2026-09-03" });
+  insertPost(db, { id: "2", slug: "uncategorized", title: "未分类", createdAt: "2026-09-02" });
+  insertPost(db, { id: "3", slug: "web", title: "网页", category: "Web", createdAt: "2026-09-01" });
+  db.close();
+  const read = openPortfolioDatabase(filename);
+  t.after(() => read.close());
+  const categorized = await Effect.runPromise(readMuseBrowseWindow(read, "motion"));
+  assert.deepEqual(categorized.entries.map((entry) => entry.href), ["/products/muse/motion"]);
+  const uncategorized = await Effect.runPromise(readMuseBrowseWindow(read, "uncategorized"));
+  assert.deepEqual(uncategorized.entries.map((entry) => entry.href), [
+    "/products/muse/motion", "/products/muse/uncategorized", "/products/muse/web",
+  ]);
+});
+
 test("作品注册表与目录投影契约：七个产品、350 图鉴、8 分类 33 主题、工具目录", () => {
   assert.equal(portfolioProducts.length, 7);
   assert.deepEqual(

@@ -1,2 +1,2 @@
-.page { position:fixed; inset:0; z-index:30; background:var(--color-paper); }
+.page { position:relative; width:100%; height:max(28rem,calc(100dvh - 10rem)); background:var(--color-paper); }
 .frame { display:block; width:100%; height:100%; border:0; }

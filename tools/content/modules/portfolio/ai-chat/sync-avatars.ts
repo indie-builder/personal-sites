@@ -14,7 +14,7 @@ class AvatarInputError extends Data.TaggedError('AvatarInput')<{
 }> {}
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(MODULE_DIR, '../../../..');
+const REPO_ROOT = path.resolve(MODULE_DIR, '../../../../..');
 
 const metadataSchema = Schema.Struct({
   images: Schema.Array(

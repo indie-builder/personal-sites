@@ -58,6 +58,7 @@
     "portfolio:sync": "pnpm --filter @site/content portfolio:sync",
     "portfolio:project": "pnpm --filter @site/content portfolio:project",
     "portfolio:render": "pnpm --filter @site/content portfolio:render",
+    "portfolio:openui": "pnpm --filter @site/web portfolio:openui",
     "github:starred:run": "pnpm --filter @site/content github:starred:run"
   },
   "devDependencies": {

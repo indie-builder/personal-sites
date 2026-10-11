@@ -1,8 +1,6 @@
 .canvasBar {
-  position: fixed;
-  z-index: 40;
-  top: 0;
-  left: 0;
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: flex-start;
   pointer-events: none;

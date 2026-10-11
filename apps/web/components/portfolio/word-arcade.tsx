@@ -434,7 +434,7 @@ export function WordArcade() {
           ? '已暂停'
           : '';
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <div className={styles.choices} role="group" aria-label="选择小游戏">
         {games.map((game) => (
           <button
@@ -455,7 +455,7 @@ export function WordArcade() {
       <div
         ref={stage}
         className={styles.stage}
-        role="region"
+        role="application"
         aria-label={`${active.name}游戏区域`}
         aria-describedby="arcade-instructions"
         tabIndex={0}
@@ -531,6 +531,6 @@ export function WordArcade() {
         ，剩余 {status.remaining} 字，得分 {status.score}
         {kind !== 'snake' ? `，剩余 ${status.lives} 次机会` : ''}。
       </p>
-    </main>
+    </div>
   );
 }

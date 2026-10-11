@@ -17,7 +17,7 @@ export function PortfolioOverview({ products }: { products: readonly PortfolioOv
     <ul className={styles.list}>
       {products.map((product) => (
         <li className={styles.row} key={product.slug}>
-          <Link className={styles.rowLink} href={product.href as Route}>
+          <Link aria-label={`打开${product.name}`} className={styles.rowLink} href={product.href as Route}>
             <span className={styles.meta}>
               <time dateTime={product.date}>{product.date.slice(0, 10).replace(/-/g, ".")}</time>
               <span>{product.dateLabel}</span>

@@ -30,20 +30,32 @@ export function BookReader({
     0,
     pages.findIndex((page) => page.id === initialId),
   );
-  const [spread, setSpread] = useState(Math.floor(initial / 2) * 2);
+  const [selectedPage, setSelectedPage] = useState(initial);
+  const [compact, setCompact] = useState(false);
+  const spread = compact ? selectedPage : Math.floor(selectedPage / 2) * 2;
   const [turn, setTurn] = useState<{ from: number; to: number; direction: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reader = useRef<HTMLDivElement>(null);
   const pointer = useRef<number | null>(null);
   const swiped = useRef(false);
   useEffect(() => {
-    reader.current?.focus({ preventScroll: true });
+    const element = reader.current;
+    if (!element) return;
+    element.focus({ preventScroll: true });
+    const resize = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const singlePage = entry.contentRect.width < 520;
+      setCompact(singlePage);
+      setTurn(null);
+    });
+    resize.observe(element);
+    return () => resize.disconnect();
   }, []);
   useEffect(() => {
     if (!turn) return;
     const finish = () => {
       clearTimeout(timer.current);
-      setSpread(turn.to);
+      setSelectedPage(turn.to);
       setTurn(null);
     };
     timer.current = setTimeout(finish, 680);
@@ -77,16 +89,16 @@ export function BookReader({
     if (index < 0) return;
     clearTimeout(timer.current);
     setTurn(null);
-    setSpread(Math.floor(index / 2) * 2);
+    setSelectedPage(index);
     onPage(id);
   }
   function go(direction: number) {
     if (turn) return;
-    const next = spread + direction * 2;
+    const next = spread + direction * (compact ? 1 : 2);
     if (next < 0 || next >= pages.length) return;
     onPage(pages[next]!.id);
-    if (instantMotion()) {
-      setSpread(next);
+    if (compact || instantMotion()) {
+      setSelectedPage(next);
       return;
     }
     setTurn({ from: spread, to: next, direction });
@@ -111,7 +123,7 @@ export function BookReader({
       <Button
         variant="ghost"
         data-direction="next"
-        disabled={spread + 2 >= pages.length || !!turn}
+        disabled={spread + (compact ? 1 : 2) >= pages.length || !!turn}
         onClick={() => go(1)}
         aria-label="下一页"
       >
@@ -123,10 +135,12 @@ export function BookReader({
     <div
       ref={reader}
       className={styles.reader}
+      data-compact={compact || undefined}
       inert={closing}
       tabIndex={-1}
+      role="region"
       aria-label={`${categoryLabel(name)}画册`}
-      onKeyDown={(event) => {
+      onKeyDownCapture={(event) => {
         if (
           event.target instanceof HTMLElement &&
           event.target.closest('[aria-busy="true"]') &&
@@ -162,10 +176,10 @@ export function BookReader({
         <p
           className={styles.readingStatus}
           role="status"
-          aria-label={`第${spread + 1}至${Math.min(spread + 2, pages.length)}页，共${pages.length}页`}
+          aria-label={`第${spread + 1}至${Math.min(spread + (compact ? 1 : 2), pages.length)}页，共${pages.length}页`}
         >
           {spread + 1}
-          {spread + 1 < pages.length ? `–${Math.min(spread + 2, pages.length)}` : ''}
+          {!compact && spread + 1 < pages.length ? `–${Math.min(spread + 2, pages.length)}` : ''}
           <span> / {pages.length}</span>
         </p>
       </div>
@@ -197,17 +211,17 @@ export function BookReader({
         <div className={styles.spread} data-book-spread>
           <div className={`${styles.page} ${styles.left}`}>
             <PageContent key={pages[left]?.id ?? 'end-left'} item={pages[left]} number={left + 1} />
-            {previousFooter}
+            {compact ? <div className={styles.singleNavigation}>{previousFooter}{nextFooter}</div> : previousFooter}
           </div>
-          <div className={`${styles.page} ${styles.right}`}>
+          {!compact && <div className={`${styles.page} ${styles.right}`}>
             <PageContent
               key={pages[right]?.id ?? 'end-right'}
               item={pages[right]}
               number={right + 1}
             />
             {nextFooter}
-          </div>
-          {turn && (
+          </div>}
+          {!compact && turn && (
             <div
               className={`${styles.leaf} ${turn.direction === 1 ? styles.forward : styles.backward}`}
               aria-hidden

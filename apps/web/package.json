@@ -10,7 +10,8 @@
     "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
     "test": "node scripts/prepare-data.mjs && vitest run",
     "test:e2e": "pnpm build && node scripts/e2e-agent-run.mjs",
-    "test:e2e:touch": "playwright test"
+    "test:e2e:touch": "playwright test",
+    "portfolio:openui": "node scripts/generate-portfolio-openui-prompt.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.77",

@@ -29,7 +29,7 @@ export function AiChat() {
   const [headerHidden, setHeaderHidden] = useState(false);
   const [agentDraft, setAgentDraft] = useState({ name: '', prompt: '' });
   const [formError, setFormError] = useState('');
-  const page = useRef<HTMLElement>(null);
+  const page = useRef<HTMLDivElement>(null);
   const creationEntry = useRef<Animation | null>(null);
   const creationExit = useRef<ReturnType<typeof playExit> | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -69,10 +69,7 @@ export function AiChat() {
     const viewport = window.visualViewport;
     const fitCreation = () => {
       if (panel !== 'create' || !viewport) return;
-      const headerHeight = surface
-        ? Number.parseFloat(getComputedStyle(surface).getPropertyValue('--ai-header-height')) || 0
-        : 0;
-      const visibleTop = Math.max(0, headerHeight - viewport.offsetTop);
+      const visibleTop = Math.max(0, (surface?.getBoundingClientRect().top ?? 0) - viewport.offsetTop);
       editor?.style.setProperty(
         '--create-visible-height',
         `${Math.max(0, viewport.height - visibleTop)}px`,
@@ -90,6 +87,29 @@ export function AiChat() {
       dropdown?.hidePopover();
     };
   }, [panel]);
+
+  useEffect(() => {
+    const surface = page.current;
+    if (!surface) return;
+    const viewport = window.visualViewport;
+    const fit = () => {
+      const rect = surface.getBoundingClientRect();
+      const height = Math.max(280, (viewport?.height ?? window.innerHeight) - Math.max(0, rect.top) - 16);
+      surface.style.setProperty('--chat-visible-height', `${height}px`);
+      surface.style.setProperty('--chat-left', `${rect.left}px`);
+      surface.style.setProperty('--chat-top', `${rect.top}px`);
+      surface.style.setProperty('--chat-width', `${rect.width}px`);
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    window.addEventListener('scroll', fit, { passive: true });
+    viewport?.addEventListener('resize', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('scroll', fit);
+      viewport?.removeEventListener('resize', fit);
+    };
+  }, []);
 
   useEffect(
     () =>
@@ -215,7 +235,7 @@ export function AiChat() {
   }
 
   return (
-    <main ref={page} className={styles.page}>
+    <div ref={page} className={styles.page}>
       <div
         className={styles.chatSurface}
         inert={panel === 'create'}
@@ -311,7 +331,7 @@ export function AiChat() {
         role="dialog"
         aria-label="选择智能体"
         className={styles.agentPopover}
-        onKeyDown={(event) => {
+        onKeyDownCapture={(event) => {
           if (event.key === 'Escape') {
             event.preventDefault();
             closePanel();
@@ -360,7 +380,7 @@ export function AiChat() {
           event.preventDefault();
           closePanel();
         }}
-        onClick={(event) => {
+        onClickCapture={(event) => {
           if (event.target === dialog.current) closePanel();
         }}
       >
@@ -400,6 +420,6 @@ export function AiChat() {
           </nav>
         </div>
       </dialog>
-    </main>
+    </div>
   );
 }

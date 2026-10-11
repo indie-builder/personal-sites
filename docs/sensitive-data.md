@@ -18,6 +18,7 @@
 | `data/sensitive/portfolio/` | 作品集离线工作库（inspora.db、上游 tarball、截图素材与宣传片成片）；安全公开的图鉴目录/修正表以 `tools/content/modules/portfolio` 内的跟踪种子为准 | 仅本机保存，禁止 Git |
 | `data/ai-news.sqlite` | 每日动态已公开投影的历史归档（不含原始载荷） | 随代码提交；仅部署端只读查询 |
 | `data/curation.sqlite` | 已审核公开的每日关注、开源关注与 Ask 文本投影 | 随代码提交；仅部署端只读查询 |
+| `data/portfolio.sqlite` | 灵感作品公开投影、媒体地址及公开检索字段 | 随代码提交；仅部署端只读查询 |
 | `data/sensitive/local-vectors.sqlite` | 本地文档与公开投影的 sqlite-vec 混合检索索引 | 仅本机保存，禁止 Git |
 | `knowledge/sensitive/` | 私有知识库及其个人来源分区 | 仅本机保存，禁止 Git |
 | `tools/smaug/.state/` | 抓取游标、待处理书签和运行状态 | 仅本机保存，禁止 Git |

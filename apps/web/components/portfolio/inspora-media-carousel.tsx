@@ -114,7 +114,7 @@ function Carousel({ media }: { media: CarouselMedia[] }) {
         <div
           ref={trackRef}
           className={styles.track}
-          tabIndex={0}
+          tabIndex={-1}
           role="region"
           aria-roledescription="轮播"
           aria-label="作品媒体"
@@ -128,7 +128,7 @@ function Carousel({ media }: { media: CarouselMedia[] }) {
             setCurrent(next);
             setDestination(next);
           }}
-          onKeyDown={(event) => {
+          onKeyDownCapture={(event) => {
             if (event.target !== event.currentTarget) return;
             if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
               event.preventDefault();

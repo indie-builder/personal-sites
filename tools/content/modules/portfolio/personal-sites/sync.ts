@@ -10,7 +10,7 @@ import path from 'node:path';
 // 更换 assets/home.jpg 后重跑即可更新本地预览，不读取原项目私有数据。
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(MODULE_DIR, '../../../..');
+const REPO_ROOT = path.resolve(MODULE_DIR, '../../../../..');
 
 export interface SiteSyncOptions {
   /** 原始素材目录；默认 data/sensitive/portfolio/personal-sites。 */
