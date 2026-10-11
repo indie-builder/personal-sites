@@ -118,37 +118,51 @@ function previewFor(
   }
 }
 
-// 总览图版流：源站首页横向作品时间轴在右栏的纵向改写。每段作品以真实预览为主体，
-// 日期与名称作为图版题注，按日期升序读成一条成长轨迹；整段是一枚链接（无嵌套交互），
-// 可访问名保持「打开${name}」；不虚构阶段与数据。
+// 总览时间线：源站首页横向作品时间轴的窄栏改写。按真实日期升序排开，
+// 日期节点与连续竖线让七段作品读成一条成长轨迹；同日作品共用日期节点，以短刻度衔接。
+// 整段作品是一枚链接（无嵌套交互），可访问名保持「打开${name}」；不虚构阶段与数据。
 export function PortfolioOverview({ musePreviews }: { musePreviews: readonly MusePreview[] }) {
   const layoutCategories = Effect.runSync(readLayoutCategories());
+  const stops = portfolioProducts.map((product, index) => ({
+    product,
+    continues: index > 0 && portfolioProducts[index - 1]?.date === product.date,
+  }));
   return (
     <PreviewPlaybackScope>
     <ol className={styles.timeline}>
-      {portfolioProducts.map((product) => (
-        <li className={styles.stop} key={product.slug}>
+      {stops.map(({ product, continues }) => (
+        <li className={styles.stop} data-continue={continues || undefined} key={product.slug}>
+          {continues ? (
+            <span aria-hidden="true" className={styles.tick} />
+          ) : (
+            <>
+              <span aria-hidden="true" className={styles.node} />
+              <time className={styles.date} dateTime={product.date}>
+                {product.date.replaceAll("-", ".")}
+              </time>
+            </>
+          )}
           <Link
             aria-label={`打开${product.name}`}
             className={styles.work}
             data-compact={compactSlugs.has(product.slug) || undefined}
             href={product.href as Route}
           >
+            <span className={styles.title}>
+              <span className={styles.name}>{product.name}</span>
+              <ArrowRight aria-hidden="true" className={styles.enter} size={17} strokeWidth={1.6} />
+            </span>
+            <span className={styles.tagline}>{product.tagline}</span>
             <span className={`${styles.media} ${mediaShapes[product.slug] ?? ""}`}>
               {previewFor(product, musePreviews, layoutCategories)}
             </span>
-            <span className={styles.caption}>
-              <span className={styles.name}>{product.name}</span>
-              <time className={styles.date} dateTime={product.date}>
-                {product.date.replaceAll("-", ".")}
-              </time>
-              <ArrowRight aria-hidden="true" className={styles.enter} size={18} strokeWidth={1.6} />
-            </span>
-            <span className={styles.tagline}>{product.tagline}</span>
           </Link>
         </li>
       ))}
-      <li className={styles.future}>未完待续</li>
+      <li className={`${styles.stop} ${styles.future}`}>
+        <span aria-hidden="true" className={styles.node} />
+        <span className={styles.date}>未完待续</span>
+      </li>
     </ol>
     </PreviewPlaybackScope>
   );

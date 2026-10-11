@@ -31,25 +31,19 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-describe("作品集总览图版流", () => {
-  it("按日期升序排开作品，每段图版带自己的日期题注", () => {
+describe("作品集总览时间线", () => {
+  it("按日期升序排开作品，同日作品共用一个日期节点", () => {
     const { container } = render(<PortfolioOverview musePreviews={[{ src: "/muse.webp", alt: "" }]} />);
 
     const dates = [...container.querySelectorAll("time")].map((node) => node.dateTime);
-    expect(dates).toEqual(portfolioProducts.map((product) => product.date));
-    expect(dates).toEqual([...dates].sort());
+    const uniqueDates = [...new Set(portfolioProducts.map((product) => product.date))].sort();
+    expect(dates).toEqual(uniqueDates);
 
     const hrefs = portfolioProducts.map((product) => product.href);
     const links = portfolioProducts.map((product) => screen.getByRole("link", { name: `打开${product.name}` }));
     expect(links.map((link) => link.getAttribute("href"))).toEqual(hrefs);
     // 可见顺序即时间顺序：DOM 中链接按注册表（日期升序）先后排开。
     expect([...container.querySelectorAll("a")].map((link) => link.getAttribute("href"))).toEqual(hrefs);
-    // 预览在题注之前：媒体是图版主体，名称与日期是其题注。
-    for (const link of links) {
-      const [first, second] = [...(link?.children ?? [])];
-      expect(first?.className).toContain("media");
-      expect(second?.className).toContain("caption");
-    }
   });
 
   it("轨迹以「未完待续」收尾", () => {
