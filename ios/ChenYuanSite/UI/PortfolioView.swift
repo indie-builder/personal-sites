@@ -116,7 +116,7 @@ private struct PortfolioProductRow: View {
                     .foregroundStyle(SiteTheme.ink)
                 Text(product.summary).siteSummaryStyle().fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 6) {
-                    Text("\(product.date) · \(product.dateLabel)")
+                    Text(product.date)
                     Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
                 }
                 .siteMetaStyle().padding(.top, 3)

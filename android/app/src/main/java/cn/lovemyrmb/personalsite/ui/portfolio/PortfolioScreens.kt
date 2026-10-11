@@ -145,7 +145,7 @@ fun PortfolioScreen(
                                         Text(product.name, style = SiteText.title, color = SiteTheme.colors.ink)
                                         Text(product.summary, style = SiteText.summary, color = SiteTheme.colors.muted)
                                         Text(
-                                            product.date + " · " + product.dateLabel,
+                                            product.date,
                                             style = SiteText.meta,
                                             color = SiteTheme.colors.quiet,
                                         )

@@ -231,7 +231,8 @@ test("作品注册表与目录投影契约：七个产品、350 图鉴、8 分�
   );
   for (const product of portfolioProducts) {
     assert.match(product.href, /^\/products\/[a-z-]+$/);
-    assert.ok(["上线", "收录"].includes(product.dateLabel));
+    assert.match(product.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal("dateLabel" in product, false);
   }
   assert.equal(layoutEntries.length, 350);
   const categories = Effect.runSync(readLayoutCategories());

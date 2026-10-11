@@ -73,7 +73,6 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
         summary: product.tagline,
         description: product.description,
         date: product.date,
-        dateLabel: product.dateLabel,
         cover: absolute(product.cover),
       })),
     });

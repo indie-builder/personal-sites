@@ -106,7 +106,6 @@ export const portfolioProductSchema = Schema.Struct({
   tagline: Schema.String,
   description: Schema.String,
   date: Schema.String,
-  dateLabel: Schema.String,
   href: Schema.String,
   cover: Schema.String,
 });

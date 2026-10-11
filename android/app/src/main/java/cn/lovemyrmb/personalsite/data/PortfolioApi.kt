@@ -19,7 +19,6 @@ data class PortfolioProduct(
     val name: String = "",
     val summary: String = "",
     val date: String = "",
-    val dateLabel: String = "",
     val cover: String = "",
 )
 

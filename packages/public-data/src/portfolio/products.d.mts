@@ -6,7 +6,6 @@ export type PortfolioProduct = {
   tagline: string;
   description: string;
   date: string;
-  dateLabel: string;
   href: string;
   cover: string;
 };
