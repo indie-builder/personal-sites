@@ -7,7 +7,7 @@ export const ADVENTURE_CHAPTERS = ["hurdle", "gap", "stairs", "bump", "pushbox",
 export type AdventureChapter = (typeof ADVENTURE_CHAPTERS)[number];
 const CHAPTER_COUNT = ADVENTURE_CHAPTERS.length;
 
-export const ADVENTURE_CHAPTER_SECONDS = 10;
+const ADVENTURE_CHAPTER_SECONDS = 10;
 export const ADVENTURE_LOOP_SECONDS = ADVENTURE_CHAPTER_SECONDS * CHAPTER_COUNT;
 // 减少/键盘定格取第一段 5s：助跑已过、跨栏动作正中的可读帧。
 export const ADVENTURE_STATIC_TIME = 5;
@@ -45,7 +45,7 @@ function chapterAt(index: number): AdventureChapter {
   return ADVENTURE_CHAPTERS[((index % CHAPTER_COUNT) + CHAPTER_COUNT) % CHAPTER_COUNT];
 }
 
-export type AdventureMascotState = {
+type AdventureMascotState = {
   chapter: AdventureChapter;
   x: number;
   y: number;
@@ -338,7 +338,7 @@ function pushScenery(index: number, p: number, camera: number) {
   }
 }
 
-export type AdventureScene = { chapter: AdventureChapter; round: number; points: number };
+type AdventureScene = { chapter: AdventureChapter; round: number; points: number };
 
 // time→帧：自然点复用模块缓冲、视口裁剪后按 count 取模填满 out（不足则
 // 重复点位，视觉等价、点数恒定），坐标归一到 [0,1)。

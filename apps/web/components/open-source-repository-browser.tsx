@@ -247,9 +247,9 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
           仓库文件较多，当前仅展示前 6,000 项；可在 GitHub 查看完整结构。
         </p>
       ) : null}
-      {treeError ? <p className={styles.repositoryBrowserError}>{treeError}</p> : null}
+      {treeError ? <p className={styles.repositoryBrowserError} role="alert">{treeError}</p> : null}
       {!tree && !treeError ? (
-        <p className={styles.repositoryBrowserLoading}>
+        <p className={styles.repositoryBrowserLoading} role="status">
           <RepositoryLoadingIcon /> 正在读取原始仓库结构…
         </p>
       ) : null}
@@ -266,11 +266,11 @@ export function OpenSourceRepositoryBrowser({ active, repository, repositoryUrl,
           </aside>
           <section aria-label="原始文件内容" className={styles.repositoryFilePane}>
             {loadingFile ? (
-              <p className={styles.repositoryBrowserLoading}>
+              <p className={styles.repositoryBrowserLoading} role="status">
                 <RepositoryLoadingIcon /> 正在读取 {selectedPath}…
               </p>
             ) : null}
-            {!loadingFile && fileError ? <p className={styles.repositoryBrowserError}>{fileError}</p> : null}
+            {!loadingFile && fileError ? <p className={styles.repositoryBrowserError} role="alert">{fileError}</p> : null}
             {!loadingFile && !fileError && !file ? (
               <p className={styles.repositoryFileEmpty}>从左侧文件树选择一个文本文件查看原始内容。</p>
             ) : null}

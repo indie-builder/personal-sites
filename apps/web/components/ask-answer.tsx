@@ -1,5 +1,8 @@
 "use client";
 
+// 随 Ask 面板的懒加载 chunk 一起下发，避免首屏全局 CSS 多背约 34KB(gzip)。
+import "@openuidev/react-ui/components.css";
+
 import { Renderer, type ActionEvent, type OpenUIError, type ParseResult } from "@openuidev/react-lang";
 import { ThemeProvider, safeOpenUrl, type Theme } from "@openuidev/react-ui";
 import { openuiLibrary } from "@openuidev/react-ui/genui-lib";

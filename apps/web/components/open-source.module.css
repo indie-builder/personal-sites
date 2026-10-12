@@ -206,6 +206,7 @@
 }
 
 .documentTab {
+  min-height: 1.5rem;
   border: 0;
   background: transparent;
   color: #6f6f72;

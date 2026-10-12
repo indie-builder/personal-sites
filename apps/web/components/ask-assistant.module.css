@@ -157,7 +157,7 @@
 }
 .loading {
   margin: auto;
-  color: #8c8c8c;
+  color: #656568;
   font-size: 14px;
 }
 :global(body[data-assistant-open="true"]) {
