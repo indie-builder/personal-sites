@@ -302,6 +302,9 @@ html[data-profile-transition] {
   color: var(--ink);
   transform: translateX(.1rem);
 }
+.curation-home__external-links a:active:not(:focus-visible) {
+  transform: translateX(.1rem) scale(.97);
+}
 .curation-home__external-links svg {
   width: .8rem;
   height: .8rem;
@@ -634,6 +637,18 @@ html[data-profile-transition] {
   color: inherit;
   padding: 1.5rem 0;
   text-decoration: none;
+  transition: transform 120ms var(--ease-out);
+}
+.curation-home__stream > li > a:active:not(:focus-visible) {
+  transform: scale(.985);
+}
+@media (prefers-reduced-motion:reduce) {
+  .curation-home__stream > li > a {
+    transition: none;
+  }
+  .curation-home__stream > li > a:active:not(:focus-visible) {
+    transform: none;
+  }
 }
 .curation-home__stream-meta {
   display: flex;
@@ -708,6 +723,15 @@ html[data-profile-transition] {
 }
 .curation-home__stream-status button:active:not(:focus-visible) {
   transform: scale(.97);
+}
+/* 完成文案（"已加载全部…"）在流末尾补进 DOM，用 @starting-style 淡入与详情/表头入场对齐。 */
+.curation-home__stream-status > span {
+  transition: opacity 200ms ease-out;
+}
+@starting-style {
+  .curation-home__stream-status > span {
+    opacity: 0;
+  }
 }
 
 /* 剪报摘录：判断流里的"原文声音"，1px 左引线 + 降调灰阶与解析区分，两行裁切。 */
@@ -843,7 +867,8 @@ html[data-profile-transition] {
 }
 @media (prefers-reduced-motion:reduce) {
   .about-modal__close,
-  .curation-home__stream-status button {
+  .curation-home__stream-status button,
+  .curation-home__stream-status > span {
     transition: none;
   }
   .curation-home__about-trigger:active:not(:focus-visible),
@@ -906,6 +931,17 @@ html[data-profile-transition] {
   max-width: 50rem;
   min-width: 0;
   padding: 1.5rem 1.875rem 6rem 0;
+  transition: opacity 180ms var(--ease-stream);
+}
+@starting-style {
+  .curation-detail__article {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .curation-detail__article {
+    transition: none;
+  }
 }
 .curation-detail__back {
   display: flex;
@@ -927,6 +963,9 @@ html[data-profile-transition] {
 .curation-detail__back a:focus-visible {
   color: var(--ink);
   transform: translateX(-.18rem);
+}
+.curation-detail__back a:active:not(:focus-visible) {
+  transform: translateX(-.18rem) scale(.97);
 }
 .curation-detail__back svg {
   width: .86rem;

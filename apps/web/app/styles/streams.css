@@ -61,6 +61,15 @@
   margin: 0 0 .4rem;
   gap: .6rem;
 }
+@starting-style {
+  .ai-news__day-heading {
+    opacity: 0;
+    transform: translateY(.3rem);
+  }
+}
+.ai-news__day-heading {
+  transition: opacity 240ms var(--ease-stream),transform 240ms var(--ease-stream);
+}
 .ai-news__day-label {
   font-size: .95rem;
   font-weight: 620;
@@ -87,6 +96,10 @@
   color: inherit;
   padding: 1.5rem 0;
   text-decoration: none;
+  transition: transform 120ms var(--ease-out);
+}
+.ai-news__entry:active:not(:focus-visible) {
+  transform: scale(.985);
 }
 .ai-news__entry h3 {
   margin: 0;
@@ -158,6 +171,15 @@
 }
 .ai-news__status button:active:not(:focus-visible) {
   transform: scale(.97);
+}
+/* 完成文案（"已加载全部…"）在流末尾补进 DOM，用 @starting-style 淡入与策展流一致。 */
+.ai-news__status > span {
+  transition: opacity 200ms ease-out;
+}
+@starting-style {
+  .ai-news__status > span {
+    opacity: 0;
+  }
 }
 
 
@@ -322,12 +344,16 @@ button.ai-news-detail__cta {
   .ai-news__category-select,
   .ai-news__status button,
   .ai-news-detail__cta,
-  .ai-news-detail__article--resolved {
+  .ai-news-detail__article--resolved,
+  .ai-news__day-heading,
+  .ai-news__entry,
+  .ai-news__status > span {
     transition: none;
   }
   .ai-news__category-select:active:not(:focus-visible),
   .ai-news__status button:active:not(:focus-visible),
-  .ai-news-detail__cta:active:not(:focus-visible) {
+  .ai-news-detail__cta:active:not(:focus-visible),
+  .ai-news__entry:active:not(:focus-visible) {
     transform: none;
   }
 }

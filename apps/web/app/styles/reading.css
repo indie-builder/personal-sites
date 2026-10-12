@@ -139,6 +139,17 @@
 
 .curation-open-source-detail .curation-detail__article {
   padding-top: 1.5rem;
+  transition: opacity 180ms var(--ease-stream);
+}
+@starting-style {
+  .curation-open-source-detail .curation-detail__article {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .curation-open-source-detail .curation-detail__article {
+    transition: none;
+  }
 }
 .curation-open-source-detail .curation-detail__header,
 .curation-open-source-detail .curation-detail__section {
@@ -411,7 +422,9 @@
     transform: none;
   }
   .ai-news-detail__cta:active:not(:focus-visible),
-  .curation-open-source-detail .curation-detail__cta:active:not(:focus-visible) {
+  .curation-open-source-detail .curation-detail__cta:active:not(:focus-visible),
+  .curation-home__external-links a:active:not(:focus-visible),
+  .curation-detail__back a:active:not(:focus-visible) {
     transform: none;
   }
   .curation-detail__media img,
