@@ -31,7 +31,7 @@ export function search(query) {
             .map((row) => [row.key, row.value]),
         );
         if (metadata.model !== MODEL_ID || Number(metadata.dimensions) !== VECTOR_DIMENSIONS) {
-          throw new Error("索引模型配置已变化，请先重新运行 pnpm vectors:index。");
+          throw new Error("索引模型配置已变化，请先重新运行 bun run vectors:index。");
         }
 
         const candidateCount = 32;

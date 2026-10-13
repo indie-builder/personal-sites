@@ -3,5 +3,5 @@
 set -eu
 
 repo_root=$(git rev-parse --show-toplevel)
-node "$repo_root/scripts/verify-git-safety.mjs" \
+bun "$repo_root/scripts/verify-git-safety.mjs" \
   --repo "$repo_root"

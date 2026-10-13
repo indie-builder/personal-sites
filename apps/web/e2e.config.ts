@@ -20,8 +20,8 @@ export default {
       app: {
         url: "http://127.0.0.1:7100/curation",
         command: {
-          executable: "pnpm",
-          args: ["start", "--port", "7100"],
+          executable: "bun",
+          args: ["run", "start", "--port", "7100"],
           // 不复用 7100 上已在跑的服务器：冒烟必须验证当前构建，端口被占就以 APP_ALREADY_RUNNING 显式失败。
           // 运行器给自起进程的只有 INHERITED_ENV 白名单环境；feed.xml 的每日动态增量请求期要读
           // Supabase 公开投影，SUPABASE_* 必须显式透传（本地来自 .env.local，CI 来自 step 环境）。

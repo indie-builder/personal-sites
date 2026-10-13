@@ -48,12 +48,12 @@ test("navigation documents resolve their explicit local links and source paths",
   }
 });
 
-test("documented root pnpm scripts exist and the verification skill stays executable", () => {
+test("documented root bun scripts exist and the verification skill stays executable", () => {
   const { scripts } = JSON.parse(text("package.json"));
-  const builtins = new Set(["install", "exec", "outdated", "audit", "view"]);
+  const builtins = new Set(["run", "install", "x", "update", "outdated", "audit", "add", "remove", "publish"]);
   for (const file of documents) {
-    for (const [, command] of authoredText(file).matchAll(/(?:`|^)(?:PLAYWRIGHT_REUSE_BUILD=1 )?pnpm ([a-z][\w:-]*)/gm)) {
-      assert.ok(command in scripts || builtins.has(command), `${file}: pnpm ${command}`);
+    for (const [, command] of authoredText(file).matchAll(/(?:`|^)(?:PLAYWRIGHT_REUSE_BUILD=1 )?bun (?:run )?([a-z][\w:-]*)/gm)) {
+      assert.ok(command in scripts || builtins.has(command), `${file}: bun ${command}`);
     }
   }
   for (const file of ["README.md", "docs/monorepo.md"]) {
@@ -61,4 +61,11 @@ test("documented root pnpm scripts exist and the verification skill stays execut
       assert.ok(existsSync(path.join(root, "apps/web", spec)), `${file}: ${spec}`);
     }
   }
+});
+
+test("the workspace is pinned to Bun and carries no pnpm artifacts", () => {
+  assert.ok(existsSync(path.join(root, "bun.lock")), "bun.lock must be committed");
+  assert.ok(!existsSync(path.join(root, "pnpm-workspace.yaml")), "pnpm-workspace.yaml must stay removed");
+  assert.ok(!existsSync(path.join(root, "pnpm-lock.yaml")), "pnpm-lock.yaml must stay removed");
+  assert.equal(JSON.parse(text("package.json")).packageManager, "bun@1.4.2");
 });

@@ -17,7 +17,7 @@
 首次初始化会读取当前全部 GitHub Star、保留本地敏感副本，并默认使用 Pi / 智谱 GLM 解析每个仓库：
 
 ```bash
-pnpm github:starred:init
+bun run github:starred:init
 ```
 
 初始化可以中断后重跑：内容 SHA 未变化的仓库会复用本地中文阅读版和一句话简介。单次模型请求默认最多等待 4 分钟；超时仓库会记录失败但不会阻塞其余批次，下次运行可以继续处理。
@@ -25,7 +25,7 @@ pnpm github:starred:init
 每日增量任务会先分页读取当前 Star 元数据；仅新出现的仓库、默认分支变化的仓库，或 GitHub `updatedAt` 变化的仓库，才会重新读取 README。它会解析这些变更仓库，并自动补偿此前未完成或失败的历史解析；已完成且未变化的仓库不会再次调用所选模型：
 
 ```bash
-pnpm github:starred:daily
+bun run github:starred:daily
 ```
 
 该任务必须在保存 GitHub 登录态和 `BIGMODEL_API_KEY` 的本机环境执行；不要放进前端或 Vercel。默认解析15并发，可用 `--concurrency 2` 降低并发；`--limit 20` 用于小范围验证，`--only owner/repository` 重试单个仓库。
@@ -35,9 +35,9 @@ pnpm github:starred:daily
 默认路径经 Pi 运行时使用统一智谱端点与 `BIGMODEL_API_KEY`；CLI 适配器仅保留为显式选项。翻译提示、本地私有落盘与 SQLite 发布逻辑不变。
 
 ```bash
-pnpm github:starred:analyze
-pnpm github:starred:analyze:pi
-pnpm github:starred:analyze:pi -- --only owner/repository
+bun run github:starred:analyze
+bun run github:starred:analyze:pi
+bun run github:starred:analyze:pi -- --only owner/repository
 ```
 
 可在 `config/github-sync.json` 的 `analysis.codex_cli` 中设置 Codex 并发与超时。显式使用 Pi 时需要 `BIGMODEL_API_KEY`，默认 15 并发；两种方式都会把待处理的公开 README/仓库结构发送给所选模型。

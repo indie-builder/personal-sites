@@ -17,23 +17,24 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6.1.0
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: pnpm
+          package-manager-cache: false
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
       - name: Typecheck
-        run: pnpm typecheck
+        run: bun run typecheck
       - name: Lint all code
-        run: pnpm lint
+        run: bun run lint
       - name: Test
-        run: pnpm test
+        run: bun run test
       - name: Install Chromium and system dependencies
-        run: pnpm --filter @site/web exec playwright install --with-deps chromium
+        working-directory: apps/web
+        run: bunx playwright install --with-deps chromium
       - name: Build and test public Web flows
         # No production secrets: the fixture serves empty news increments over the committed SQLite archive.
         # Keep build and E2E in one step so the fixture is ready first and always cleaned up.
@@ -41,17 +42,17 @@ jobs:
           SUPABASE_URL: http://127.0.0.1:7101
           SUPABASE_PUBLISHABLE_KEY: ci-public-data
         run: |
-          node apps/web/scripts/ci-public-data.mjs > ci-public-data.log 2>&1 &
+          bun apps/web/scripts/ci-public-data.mjs > ci-public-data.log 2>&1 &
           fixture_pid=$!
           trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
           curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:7101/rest/v1/ai_news_public_items
-          pnpm build
-          PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch --pass-with-no-tests
+          bun run build
+          PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch --pass-with-no-tests
           # e2e 运行器自起 7100 生产服务器，复用上面的构建；CI 无 BigModel key，locator 用例
           # 全量收集，agent 冒烟在注册期跳过（缺 key 时 wrapper 的 --pass-with-no-tests 对
           # 全量收集恒有用例，不改变结果）。admin 标签用例（public-discovery 的管理端健康
           # 断言）依赖 SUPABASE_SERVICE_ROLE_KEY，CI 按设计无此凭据，排除（本地全量）。
-          E2E_TELEMETRY_DISABLED=1 pnpm --filter @site/web exec e2e run --exclude-tag admin
+          cd apps/web && E2E_TELEMETRY_DISABLED=1 bunx e2e run --exclude-tag admin
       - name: Upload Web E2E failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
