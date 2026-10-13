@@ -485,10 +485,11 @@
   font: 400 13px/20px var(--font-sans);
 }
 .drawerInput::placeholder {
-  color: #8d8d8d;
+  color: #767676;
 }
 .drawerInput:focus-visible {
-  outline: none;
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 .drawerActions {
   display: flex;

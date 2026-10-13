@@ -284,6 +284,7 @@ html[data-profile-transition] {
 .curation-home__external-links a {
   display: inline-flex;
   align-items: center;
+  min-height: 1.5rem;
   color: #6f6f72;
   font-size: .76rem;
   font-weight: 500;
@@ -393,6 +394,7 @@ html[data-profile-transition] {
 .curation-home__about-trigger {
   display: inline-flex;
   align-items: center;
+  min-height: 1.5rem;
   border: 0;
   background: transparent;
   color: #6f6f72;
@@ -446,8 +448,8 @@ html[data-profile-transition] {
 }
 .about-modal__close {
   display: grid;
-  width: 1.4rem;
-  height: 1.4rem;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   margin-left: auto;
   flex: 0 0 auto;
   place-items: center;
