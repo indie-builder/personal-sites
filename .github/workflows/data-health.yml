@@ -19,10 +19,7 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
       - name: Require three consecutive healthy probes
-        run: node scripts/check-production-health.mjs
+        run: bun scripts/check-production-health.mjs
