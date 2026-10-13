@@ -49,6 +49,12 @@
       "skillPath": "skills/ask-sonner/SKILL.md",
       "computedHash": "8bd257b845985f4b35b603b510a126604176521094af79c4b7347ffeb8a8f7ab"
     },
+    "better-readme": {
+      "source": "tommy0103/better-readme-skill",
+      "sourceType": "github",
+      "skillPath": "skills/better-readme/SKILL.md",
+      "computedHash": "c969ecaca264e462a9a05d2d47117c2be955ee12c774fe6fe5cd7729698d70b1"
+    },
     "canvas-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
@@ -458,6 +464,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/to-tickets/SKILL.md",
       "computedHash": "bf5e6ebcb4f1272de0c188d5b3901f265a03d1fa9935a21a7a56938e21e2e761"
+    },
+    "transitions-ui-generation": {
+      "source": "Jakubantalik/transitions.dev",
+      "sourceType": "github",
+      "skillPath": "skills/transitions-ui-generation/SKILL.md",
+      "computedHash": "673170706a8635e97a1876e8e4ff179915a451b1b7ab88837e8e880a1a79ba07"
     },
     "triage": {
       "source": "mattpocock/skills",
