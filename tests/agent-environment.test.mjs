@@ -67,5 +67,5 @@ test("the workspace is pinned to Bun and carries no pnpm artifacts", () => {
   assert.ok(existsSync(path.join(root, "bun.lock")), "bun.lock must be committed");
   assert.ok(!existsSync(path.join(root, "pnpm-workspace.yaml")), "pnpm-workspace.yaml must stay removed");
   assert.ok(!existsSync(path.join(root, "pnpm-lock.yaml")), "pnpm-lock.yaml must stay removed");
-  assert.equal(JSON.parse(text("package.json")).packageManager, "bun@1.4.3");
+  assert.equal(JSON.parse(text("package.json")).packageManager, "bun@1.4.2");
 });
