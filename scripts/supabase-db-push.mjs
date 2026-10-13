@@ -14,11 +14,10 @@ if (!process.env.SUPABASE_DB_URL) {
   throw new Error("缺少 SUPABASE_DB_URL；请仅在 Git 忽略的 .env.local 中配置。");
 }
 
-const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const extraArguments = process.argv.slice(2).filter((argument) => argument !== "--");
 const child = spawn(
-  command,
-  ["dlx", "supabase", "db", "push", "--db-url", process.env.SUPABASE_DB_URL, "--include-all", ...extraArguments],
+  "bunx",
+  ["supabase", "db", "push", "--db-url", process.env.SUPABASE_DB_URL, "--include-all", ...extraArguments],
   { cwd: repoRoot, env: process.env, stdio: "inherit" },
 );
 

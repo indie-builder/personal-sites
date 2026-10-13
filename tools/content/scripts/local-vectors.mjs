@@ -11,8 +11,8 @@ import { search } from "../modules/local-vectors/search.mjs";
 
 function printHelp() {
   console.log(`用法：
-  pnpm vectors:index [项目内目录或文件 ...]
-  pnpm vectors:search <查询内容>
+  bun run vectors:index [项目内目录或文件 ...]
+  bun run vectors:search <查询内容>
 
 默认索引：${defaultInputs.join("、")}
 本地数据库：${path.relative(repoRoot, databasePath)}`);

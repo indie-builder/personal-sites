@@ -26,22 +26,22 @@ Public discovery endpoints are `/sitemap.xml`, `/robots.txt`, `/feed.xml`, and s
 
 ## Run it locally
 
-Requires Node.js `>=24.21.0 <25` and pnpm 12.10.1, pinned in `package.json`.
+Requires Bun `1.4.2` (package manager and default script/test runtime, pinned via `packageManager`) plus Node.js `>=24.21.0 <25` for the Next.js build/start launchers and the Vercel runtime.
 
 ```bash
 git clone https://github.com/indie-builder/personal-sites.git
 cd personal-sites
-pnpm install
+bun install
 cp .env.example .env.local
 ```
 
 Fill in root `.env.local` using [`.env.example`](.env.example). Supabase enables fresh daily updates; Ask needs model and session credentials. Deployment and sync need additional server-side credentials documented in the example. Keep credentials in ignored local files, never under a `NEXT_PUBLIC_` prefix.
 
 ```bash
-pnpm dev:domain
+bun run dev:domain
 ```
 
-Open https://personal-site.localhost. Use `pnpm dev` instead for a local-port server.
+Open https://personal-site.localhost. Use `bun run dev` instead for a local-port server.
 
 Build, test, and browser e2e commands are in [workspace notes](docs/monorepo.md). Data operations and health checks are in [data sync](docs/data-sync.md).
 
@@ -57,7 +57,7 @@ Public data splits in two. Daily updates merge the read-only `data/ai-news.sqlit
 
 ## Tech stack
 
-Next.js (App Router) with React, Tailwind CSS, and Motion on Vercel; Effect for business I/O; Supabase and read-only SQLite snapshots for public data; Zhipu GLM streaming for Ask; Vitest, Playwright, and the e2e runner for tests. The dated version baseline and open audit items are recorded in [tech-stack maintenance](docs/tech-stack-maintenance.md); exact dependencies live in each workspace `package.json`, `pnpm-lock.yaml`, and `android/gradle/libs.versions.toml`.
+Next.js (App Router) with React, Tailwind CSS, and Motion on Vercel; Effect for business I/O; Supabase and read-only SQLite snapshots for public data; Zhipu GLM streaming for Ask; Vitest, Playwright, and the e2e runner for tests. The dated version baseline and open audit items are recorded in [tech-stack maintenance](docs/tech-stack-maintenance.md); exact dependencies live in each workspace `package.json`, `bun.lock`, and `android/gradle/libs.versions.toml`.
 
 ## Documentation
 

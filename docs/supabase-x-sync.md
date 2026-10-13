@@ -22,7 +22,7 @@ BIGMODEL_API_KEY=<bigmodel-key>
 
 抓取后的分析采用可版本化阶段：确定性事实提取、视觉理解、策展解析与设计分类分别记录状态、输入 hash、模型和版本。事实层不调用模型；视觉 OCR/场景、隐藏检索信号与编辑结果写回私有队列，公开投影只携带可公开的派生字段。相同媒体输入在条目内重跑时会复用已持久化的视觉事实。
 
-私有队列与生成备份使用临时文件原子替换，进程中止不会截断现有 JSON。如果队列本身已经丢失或损坏，可在确认公开生成备份与原始证据完整后执行 `pnpm curation:recover -- --force` 重建；恢复命令默认拒绝覆盖非空队列。
+私有队列与生成备份使用临时文件原子替换，进程中止不会截断现有 JSON。如果队列本身已经丢失或损坏，可在确认公开生成备份与原始证据完整后执行 `bun run curation:recover -- --force` 重建；恢复命令默认拒绝覆盖非空队列。
 
 ## 初始化与同步
 
@@ -30,23 +30,23 @@ BIGMODEL_API_KEY=<bigmodel-key>
 
 ```bash
 # 默认 Pi / 智谱 GLM（15 并发）
-pnpm curation:sync
+bun run curation:sync
 
 # 同一智谱路径的显式快捷命令
-pnpm curation:sync:glm
+bun run curation:sync:glm
 
 # 只补“已有策展、缺少设计判断”的历史条目，不改写原解析
-pnpm curation:classify-design
+bun run curation:classify-design
 
 # 分批刷新旧条目的新版检索信号与视觉事实
-pnpm curation:enrich -- --refresh --limit 20
+bun run curation:enrich -- --refresh --limit 20
 ```
 
-同步命令可以在 `--` 后继续传 `--source`、`--limit`、`--design-concurrency` 或 `--no-media` 等公共参数，例如 `pnpm curation:sync -- --source bookmarks --limit 20`。媒体元数据默认抓取，供设计分类与站内视频播放使用；Codex 的历史设计回填默认使用已验证的 40 并发，可通过 `--design-concurrency` 降档。
+同步命令可以在 `--` 后继续传 `--source`、`--limit`、`--design-concurrency` 或 `--no-media` 等公共参数，例如 `bun run curation:sync -- --source bookmarks --limit 20`。媒体元数据默认抓取，供设计分类与站内视频播放使用；Codex 的历史设计回填默认使用已验证的 40 并发，可通过 `--design-concurrency` 降档。
 
 1. 执行其中一个同步命令：抓取媒体与正文 → 为新条目生成完整策展及设计分类 → 只为已有解析但缺分类的历史条目补设计判断 → 本地敏感生成备份 → 生成 `data/curation.sqlite`。历史补分类不会重写已有标题、摘要、标签或深度解析。底层仍保留 `--engine codex-cli|pi`，用于显式切换解析引擎。
-2. 只暂存 `data/curation.sqlite` 与本次明确的代码/文档变更，运行 `pnpm git:safety` 后提交并推送；Vercel 的 Git 集成会创建新部署。
-3. `pnpm curation:publish` 只重建 SQLite，不会访问远端数据库；结束时固定报告设计收录、排除、未分类及可播放视频数量。
+2. 只暂存 `data/curation.sqlite` 与本次明确的代码/文档变更，运行 `bun run git:safety` 后提交并推送；Vercel 的 Git 集成会创建新部署。
+3. `bun run curation:publish` 只重建 SQLite，不会访问远端数据库；结束时固定报告设计收录、排除、未分类及可播放视频数量。
 
 全量策展、项目档案和 GitHub Star 三个公开 SQLite 写入口共享压实规则：空闲页达到 32 页时才执行 `VACUUM`，减少 Git 二进制与部署体积，同时避免每次微小更新都重写数据库。
 

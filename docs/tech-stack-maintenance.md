@@ -45,13 +45,13 @@
 
 核查以下层次，而非只运行一次 outdated：
 
-- 根 Node / pnpm / Turbo / TypeScript / lint 工具链，以及所有 workspace 的声明与锁定依赖。
+- 根 Node / Bun / Turbo / TypeScript / lint 工具链，以及所有 workspace 的声明与锁定依赖。
 - Web 框架、组件、动画、数据、模型 SDK 和测试工具；内容管道及共享包依赖。
 - Android 版本目录、Gradle wrapper、JDK / SDK；iOS 的 Xcode / Swift 编译器、语言模式和部署目标。
 - 存在时检查 `video-promo/remotion` 等独立工程及独立锁文件。忽略目录内结果只能标为本地变更，不能强制加入仓库。
 - 直接依赖、间接依赖、安全公告、弃用状态和相关 CI 工具。
 
-JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`、`pnpm audit --json` 辅助检查；独立工程从自己的目录运行。非零退出码可能表示发现告警，要解析结果；网络或解析失败应标为“未核实”，不能报全部最新。
+JS 使用 `bun outdated`、`bun audit --json` 辅助检查（Bun 无 `--prod` / `--recursive` 变体，dev 与各 workspace 从各自目录运行）；独立工程从自己的目录运行。非零退出码可能表示发现告警，要解析结果；网络或解析失败应标为“未核实”，不能报全部最新。pnpm 时代的 `minimumReleaseAge` 发布冷却期门禁已随包管理器迁移移除：版本由 `bun.lock` 全量锁定，升级时人工核对发布时间与变更面。
 
 优先查询官方 npm registry、Google Maven、Maven Central、运行时发布计划和官方迁移指南。区分稳定版、LTS、Current、RC / beta。证书或网络失败可以改用正常验证 TLS 的客户端；不关闭 TLS 验证。远端服务的实际运行版本未经访问验证时明确标为未知。
 
@@ -74,12 +74,12 @@ JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`
 
 ### 5. 验证结果
 
-应用代码或配置变更按根 `AGENTS.md` 运行 `pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm build`，并执行受影响端的验证。纯文档 / Skill 指令变更核对路径、链接、参数语义和 `git diff --check`，无需应用构建。
+应用代码或配置变更按根 `AGENTS.md` 运行 `bun run typecheck`、`bun run lint`、`bun run test`、`bun run build`，并执行受影响端的验证。纯文档 / Skill 指令变更核对路径、链接、参数语义和 `git diff --check`，无需应用构建。
 
 | 范围 | 额外验证 |
 | --- | --- |
 | 依赖与锁文件 | 验证冻结锁文件安装；检查实际解析版本和必要的原生构建脚本 |
-| Web UI / 缓存 | 相关浏览器 e2e 回归（`pnpm test:e2e`）；用 ego lite 检查真实页面、编译问题和浏览器错误；缓存变更验证生产路由分类及 MISS / HIT |
+| Web UI / 缓存 | 相关浏览器 e2e 回归（`bun run test:e2e`）；用 ego lite 检查真实页面、编译问题和浏览器错误；缓存变更验证生产路由分类及 MISS / HIT |
 | Android | 按 README 构建 Debug、运行 JVM 单测和仪器测试；核对实际 Kotlin / 插件版本 |
 | iOS | 按 README 构建并运行相关测试；不把语言模式当编译器版本 |
 | Remotion | 类型检查、Remotion 子包版本一致、实际渲染；渲染器 / 媒体处理升级比较帧数、音轨、节拍同步与已验收产物 |
@@ -89,7 +89,7 @@ JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`
 
 ### 6. PR 与合并
 
-- 审查完整 diff，运行 `git diff --check`、`pnpm git:safety`，只暂存本轮已审查路径。
+- 审查完整 diff，运行 `git diff --check`、`bun run git:safety`，只暂存本轮已审查路径。
 - 按中文 Conventional Commits 提交，并使用执行 Agent 的实际模型署名。PR 描述写清问题、最终行为、验证和剩余限制。
 - 本地工程不进入 Git；没有仓库变更时不要创建空 PR。用户只要 check 或只建 PR 时在对应边界停止。
 - 等待 PR 对应提交的相关远程检查全部通过，不能只检查 required 子集后忽略其他失败。记录 head SHA；有新提交则重新验证。
@@ -117,12 +117,12 @@ JS 使用 `pnpm outdated --recursive --format json`、`pnpm audit --prod --json`
 
 ## 版本基线（2026-10-09）
 
-README 只保留栈型概述。下表是当日核对的全量版本快照，仅作参考；维护时仍按本文流程从仓库与官方发布源实时核对，精确依赖以各工作区 `package.json`、`pnpm-lock.yaml` 和 `android/gradle/libs.versions.toml` 为准。
+README 只保留栈型概述。下表是当日核对的全量版本快照，仅作参考；维护时仍按本文流程从仓库与官方发布源实时核对，精确依赖以各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml` 为准。
 
 | 层 | 版本 |
 | --- | --- |
 | Web | Next.js 16.4.0（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.4 / `@shadcn/react` 0.3.1、Radix UI 1.7.0、Motion 14.0.0、Lucide 1.52.0；部署在 Vercel |
-| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，Vercel 支持上限 24.x）、pnpm 12.10.1、TypeScript 7.0.2、Effect 4.0.1、Turbo 2.11.7、oxlint 1.87.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.3 与 Playwright 1.63.0 |
+| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，Vercel 支持上限 24.x）、Bun 1.4.2（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、Effect 4.0.1、Turbo 2.11.7、oxlint 1.87.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.3 与 Playwright 1.63.0 |
 | 数据与 AI | Supabase JS 2.117.3、better-sqlite3 13.0.3、AI SDK 7.0.134 / Anthropic 4.0.77、Pi 1.0.4、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
 | 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
 | 原生客户端（iOS） | Swift 6 语言模式、SwiftUI、iOS 26+，无第三方依赖 |

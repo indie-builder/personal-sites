@@ -51,7 +51,7 @@ export function parseArgs(args) {
   if (extra.length > 0) throw new Error("sync 不接受额外参数。");
   if (options.stage !== "sync") {
     throw new Error(
-      "用法：pnpm douyin:curation -- sync --manifest <download_manifest.jsonl> [--dry-run] [--refresh-only] [--limit n] [--engine zcode|codex-cli|pi]",
+      "用法：bun run douyin:curation -- sync --manifest <download_manifest.jsonl> [--dry-run] [--refresh-only] [--limit n] [--engine zcode|codex-cli|pi]",
     );
   }
   if (!options.manifest && !(options.dryRun || options.refreshOnly)) {
@@ -243,7 +243,7 @@ function sync(options, config) {
       version: 1,
     });
     console.log(
-      `抖音关注同步完成：成功 ${completed} 条，失败 ${failures.length} 条；队列条目将随下一次 pnpm curation:publish 发布。`,
+      `抖音关注同步完成：成功 ${completed} 条，失败 ${failures.length} 条；队列条目将随下一次 bun run curation:publish 发布。`,
     );
     const grouped = new Map();
     for (const { error } of failures) {

@@ -80,11 +80,11 @@ function readSmaugCredentials(configPath) {
 }
 
 function printUsage() {
-  console.log(`用法：pnpm curation:sync -- [选项]
+  console.log(`用法：bun run curation:sync -- [选项]
 
 快捷入口：
-  pnpm curation:sync              Pi / 智谱 GLM（默认）
-  pnpm curation:sync:glm -- [选项]  显式改用 Pi Coding Agent + 智谱 GLM
+  bun run curation:sync              Pi / 智谱 GLM（默认）
+  bun run curation:sync:glm -- [选项]  显式改用 Pi Coding Agent + 智谱 GLM
 
 选项：
   --source bookmarks|likes|both  抓取来源，默认 both
@@ -148,7 +148,7 @@ function main() {
       return yield* Effect.fail(new Error("缺少 tools/smaug/smaug.config.json；请在该目录完成本机 X 登录态配置。"));
     }
     if (!process.env.BIRD_PATH && !existsSync(path.join(repoRoot, "tools/content/node_modules/.bin/bird"))) {
-      return yield* Effect.fail(new Error("缺少本地 bird 依赖；请先执行 pnpm install。"));
+      return yield* Effect.fail(new Error("缺少本地 bird 依赖；请先执行 bun install。"));
     }
     const credentials = readSmaugCredentials(smaugConfig);
 

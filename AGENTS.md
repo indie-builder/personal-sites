@@ -35,19 +35,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Package Manager and Checks
 
-- Use `pnpm` with Node.js `>=24.21.0 <25` (major capped at Vercel's max supported 24.x); the package manager is pinned in `package.json`.
-- Default dev startup is domain-based via portless: `pnpm dev:domain` dispatches to `apps/web` and serves `https://personal-site.localhost` (fixed app port 3000). Plain `pnpm dev` stays available for raw-port use.
-- For app code or configuration changes, run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. For documentation-only changes, verify referenced commands/paths and run `git diff --check`; no app build is required.
-- `pnpm test` runs package tests through Turborepo (Vitest and Node); browser E2E is separate: `pnpm test:e2e` drives the e2e runner over `apps/web/e2e/*.e2e.ts`, and `pnpm test:e2e:touch` drives Playwright over the `*.spec.ts` holdouts (touch-device and `prefers-reduced-motion` CSS cases). Run relevant browser regressions for changed UI flows in addition to live verification below.
-- Keep the intentional TS7 setup in `scripts/tsc7.mjs` and the peer exceptions in `pnpm-workspace.yaml`; lint uses oxlint/oxc-parser. Do not downgrade TypeScript to satisfy the unused typescript-eslint fallback's peer cap.
-- Reuse the running Web dev server: Next allows one dev instance per app directory. Browser E2E owns port 7100 and builds by default (`pnpm test:e2e` builds, then the runner starts the production server); after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch` reuses it for the Playwright holdouts.
+- Use Bun (`bun@1.4.2`, pinned via `packageManager`) as the package manager and the default script/test runtime: install with `bun install`, run scripts with `bun run <script>`. Node.js `>=24.21.0 <25` remains required for the Next.js `build`/`start` launchers, the three `node --test` holdout suites in `tools/content`, and the Vercel serving runtime (major capped at Vercel's max supported 24.x).
+- Default dev startup is domain-based via portless: `bun run dev:domain` dispatches to `apps/web` and serves `https://personal-site.localhost` (fixed app port 3000). Plain `bun run dev` stays available for raw-port use.
+- For app code or configuration changes, run `bun run typecheck`, `bun run lint`, `bun run test`, and `bun run build`. For documentation-only changes, verify referenced commands/paths and run `git diff --check`; no app build is required.
+- `bun run test` runs package tests through Turborepo (`bun test` suites plus apps/web Vitest); `tools/content` keeps three `*.node-test.mjs` suites on `node --test` because Bun lacks `node:module`'s `registerHooks`. Browser E2E is separate: `bun run test:e2e` drives the e2e runner over `apps/web/e2e/*.e2e.ts`, and `bun run test:e2e:touch` drives Playwright over the `*.spec.ts` holdouts (touch-device and `prefers-reduced-motion` CSS cases). Run relevant browser regressions for changed UI flows in addition to live verification below.
+- Keep the intentional TS7 setup in `scripts/tsc7.mjs`; lint uses oxlint/oxc-parser. Do not downgrade TypeScript to satisfy the unused typescript-eslint fallback's peer cap. Bun only warns on peer-range mismatches, so the old pnpm peer-exception list is gone with `pnpm-workspace.yaml`.
+- Reuse the running Web dev server: Next allows one dev instance per app directory. Browser E2E owns port 7100 and builds by default (`bun run test:e2e` builds, then the runner starts the production server); after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch` reuses it for the Playwright holdouts.
 
 ## File-Scoped Commands
 
 | Task | Command |
 | --- | --- |
-| Lint one file | `pnpm exec oxlint apps/web/path/to/file.tsx` |
-| Run one Vitest file | `pnpm --filter @site/web exec vitest run tests/file.test.ts` |
+| Lint one file | `bunx oxlint apps/web/path/to/file.tsx` |
+| Run one Vitest file | `cd apps/web && bunx vitest run tests/file.test.ts` |
 
 ## Frontend
 
@@ -62,13 +62,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Read `docs/sensitive-data.md` before touching curation inputs or credentials. Never stage, publish, render, screenshot, or expose `data/sensitive/`, `knowledge/sensitive/`, local credentials, or `tools/smaug/.state/`.
 - Public content comes from approved projections: X/Douyin/GitHub content and the local Ask index use the bundled, runtime-read-only `data/curation.sqlite`; AI news merges bundled `data/ai-news.sqlite` history with Supabase `ai_news_public_items` updates. Never fall back to sensitive local data. Service-role keys never belong in `NEXT_PUBLIC_*` variables.
 - Keep public curation detail reads cacheable with ISR (`revalidate = 300`) and loading states. SQLite content changes require rebuilding the public projection and redeploying; ISR does not refresh the bundled data. For cache changes, verify production route classification and `x-nextjs-cache` MISS then HIT behavior.
-- Treat `curation:*`, `douyin:*`, `github:starred:*`, `ai-news:sync`, `ai-news:backfill`, `ai-news:archive`, `ai-news:prune`, and `supabase:push` as data operations, not validation commands. Follow `docs/supabase-x-sync.md`, `docs/douyin-curation.md`, `docs/github-starred-sync.md`, and `docs/ai-news-sync.md`; run `pnpm supabase:push -- --dry-run` before a database write.
+- Treat `curation:*`, `douyin:*`, `github:starred:*`, `ai-news:sync`, `ai-news:backfill`, `ai-news:archive`, `ai-news:prune`, and `supabase:push` as data operations, not validation commands. Follow `docs/supabase-x-sync.md`, `docs/douyin-curation.md`, `docs/github-starred-sync.md`, and `docs/ai-news-sync.md`; run `bun run supabase:push -- --dry-run` before a database write.
 - Run daily Star syncs one at a time and report partial results until the process exits. For AI news, Supabase Cron calls `/api/cron/ai-news` every 5 minutes; GitHub Actions handles daily backfill/manual recovery. Verify actual run results before reporting success.
 
 ## Git and Commits
 
 - Inspect `git status` before editing or staging. Stage only agreed paths; `tools/smaug` is a nested repository and must stay out of outer-repo commits.
-- Run `pnpm git:safety` before commits that could touch content or configuration. Do not bypass the pre-push guard or rewrite history without explicit approval.
+- Run `bun run git:safety` before commits that could touch content or configuration. Do not bypass the pre-push guard or rewrite history without explicit approval.
 - For routine changes, create a topic branch, review the diff, commit, push, and open a PR. A PR is not permission to merge: merging, force-pushing, and pushing directly to the default branch require the user's explicit request.
 - Use Chinese Conventional Commit subjects for project changes.
 

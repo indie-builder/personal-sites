@@ -1,6 +1,10 @@
 import { registerHooks } from "node:module";
 
 /**
+ * 依赖 node:module 的同步 registerHooks；Bun 尚未实现该 API，运行时插件也无法
+ * 拦截裸包说明符，因此使用本助手的三个 *.node-test.mjs 套件由 `node --test` 执行，
+ * 其余测试全部走 `bun test`（见 package.json 的 test 脚本）。
+ *
  * CLI 入口测试共用的模块 mock 机制：resolve 命中 matches(parentURL, specifier) 且
  * 说明符在 mockExports 中时，重写到 `${scheme}:${key}/…` 合成模块；合成导出从
  * globalThis[key] 读取，missingName 为 state 缺失的导出生成兜底表达式；

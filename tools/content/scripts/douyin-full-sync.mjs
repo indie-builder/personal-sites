@@ -62,9 +62,9 @@ function main() {
     if (options.dryRun) {
       const pending = yield* pendingVideoCount();
       console.log(`[dry-run] 收藏索引待下载 ${pending} 条；分析阶段计划如下，不重新发现收藏页、不下载、不调用模型。`);
-      const args = ["douyin:curation", "--", "sync", "--dry-run"];
+      const args = ["run", "douyin:curation", "--", "sync", "--dry-run"];
       if (existsSync(manifest)) args.push("--manifest", manifest);
-      yield* runCommand("pnpm", args, { cwd: repoRoot });
+      yield* runCommand("bun", args, { cwd: repoRoot });
       return;
     }
 
@@ -89,12 +89,12 @@ function main() {
     }
 
     if (options.analyze) {
-      const args = ["douyin:curation", "--", "sync", "--manifest", manifest, "--engine", options.engine];
+      const args = ["run", "douyin:curation", "--", "sync", "--manifest", manifest, "--engine", options.engine];
       if (options.concurrency !== null) args.push("--concurrency", String(options.concurrency));
       if (options.analyzerConcurrency !== null)
         args.push("--analyzer-concurrency", String(options.analyzerConcurrency));
       if (options.analyzeLimit !== null) args.push("--limit", String(options.analyzeLimit));
-      yield* runCommand("pnpm", args, {
+      yield* runCommand("bun", args, {
         cwd: repoRoot,
         env: {
           WHISPER_BIN: path.join(sidecar, ".venv/bin/whisper-ctranslate2"),

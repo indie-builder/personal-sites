@@ -26,22 +26,22 @@
 
 ## 本地运行
 
-使用 Node.js `>=24.21.0 <25` 与 `package.json` 指定的 pnpm 12.10.1。
+使用 Bun `1.4.2`（包管理器与默认脚本/测试运行时，经 `packageManager` 锁定），另需 Node.js `>=24.21.0 <25` 负责 Next.js 构建启动与 Vercel 线上运行时。
 
 ```bash
 git clone https://github.com/indie-builder/personal-sites.git
 cd personal-sites
-pnpm install
+bun install
 cp .env.example .env.local
 ```
 
 参照 [`.env.example`](.env.example) 填写根目录 `.env.local`。Supabase 用于获取最新每日动态，问一问需要模型与会话凭据；部署和同步所需的其他服务端凭据见示例文件。凭据只放在被 Git 忽略的本机文件中，不使用 `NEXT_PUBLIC_` 前缀。
 
 ```bash
-pnpm dev:domain
+bun run dev:domain
 ```
 
-打开 https://personal-site.localhost。不使用本地域名时，改用 `pnpm dev` 启动端口服务。
+打开 https://personal-site.localhost。不使用本地域名时，改用 `bun run dev` 启动端口服务。
 
 构建、测试和浏览器 e2e 命令见[工作区说明](docs/monorepo.md)，数据操作与健康检查见[数据同步总览](docs/data-sync.md)。
 
@@ -57,7 +57,7 @@ pnpm dev:domain
 
 ## 技术栈
 
-Next.js（App Router）配 React、Tailwind CSS 与 Motion，部署在 Vercel；业务 I/O 使用 Effect；公开数据来自 Supabase 与只读 SQLite 快照；问一问由智谱 GLM 流式输出；测试使用 Vitest、Playwright 与 e2e 运行器。带日期的版本基线与遗留审计项记录在[技术栈维护](docs/tech-stack-maintenance.md)；精确依赖见各工作区 `package.json`、`pnpm-lock.yaml` 和 `android/gradle/libs.versions.toml`。
+Next.js（App Router）配 React、Tailwind CSS 与 Motion，部署在 Vercel；业务 I/O 使用 Effect；公开数据来自 Supabase 与只读 SQLite 快照；问一问由智谱 GLM 流式输出；测试使用 Vitest、Playwright 与 e2e 运行器。带日期的版本基线与遗留审计项记录在[技术栈维护](docs/tech-stack-maintenance.md)；精确依赖见各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml`。
 
 ## 文档
 

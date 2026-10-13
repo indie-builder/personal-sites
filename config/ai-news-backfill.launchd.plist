@@ -6,7 +6,7 @@
   <string>site.personal.ai-news-backfill</string>
   <key>ProgramArguments</key>
   <array>
-    <string>__NODE_BIN__/node</string>
+    <string>__BUN_BIN__/bun</string>
     <string>__REPO_ROOT__/tools/content/scripts/ai-news-sync.mjs</string>
     <string>--backfill</string>
   </array>

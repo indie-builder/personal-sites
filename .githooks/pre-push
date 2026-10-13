@@ -9,7 +9,7 @@ while read -r _local_ref local_sha _remote_ref _remote_sha; do
     *[!0]*) ;;
     *) continue ;;
   esac
-  node "$repo_root/scripts/verify-git-safety.mjs" \
+  bun "$repo_root/scripts/verify-git-safety.mjs" \
     --repo "$repo_root" \
     --range "$local_sha"
 done

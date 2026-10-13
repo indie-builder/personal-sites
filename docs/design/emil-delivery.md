@@ -81,12 +81,12 @@
 
 | 检查 | 结果 |
 | --- | --- |
-| pnpm typecheck | 通过 |
-| pnpm lint | 通过 |
-| pnpm test | 29 个 Vitest 文件 / 103 项 + Node 81 项通过 |
-| pnpm build | 通过，策展与设计详情保持 ISR 分类 |
+| bun run typecheck | 通过 |
+| bun run lint | 通过 |
+| bun run test | 29 个 Vitest 文件 / 103 项 + Node 81 项通过 |
+| bun run build | 通过，策展与设计详情保持 ISR 分类 |
 | Playwright | 全量第二轮 33/35，通过修复后的灯箱专项 1/1；合计 34 个场景已通过，剩余 1 项数据健康告警 |
-| pnpm git:safety | 通过，0 violations |
+| bun run git:safety | 通过，0 violations |
 | git diff --check | 通过 |
 
 全量回归剩余失败为 `public discovery endpoints remain machine readable` 中的数据健康 HTTP 断言。原因：X 策展超过 72 小时未更新，健康端点按既有规则返回 503；数据库 quick_check、FTS 一致性、每日动态、开源和构建均健康。本轮没有同步或发布数据，也没有放宽健康断言。RSS、sitemap 等检查在该失败断言之前通过。

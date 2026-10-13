@@ -110,7 +110,7 @@ test("sync pipeline passes the captured X list order to the queue preparation st
   );
 });
 
-test("sync arguments accept pnpm's -- separator", () => {
+test("sync arguments accept the -- separator", () => {
   assert.deepEqual(parseSyncArgs(["--", "--source=bookmarks", "--fetch-only"]), {
     source: "bookmarks",
     limit: null,

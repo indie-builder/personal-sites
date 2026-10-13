@@ -5,11 +5,11 @@
 ## 命令
 
 ```bash
-pnpm test:e2e                                  # 总入口：先构建，再跑 e2e 运行器全套
-PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e:touch   # Playwright 留守件（须先有成功构建，命令才复用；缺省自建）
+bun run test:e2e                                  # 总入口：先构建，再跑 e2e 运行器全套
+PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch   # Playwright 留守件（须先有成功构建，命令才复用；缺省自建）
 ```
 
-- `test:e2e` 永远先构建（`apps/web` 的 `pnpm build`），用生产构建起 7100 端口专享服务器；`PLAYWRIGHT_REUSE_BUILD` 只对 touch 套件生效。
+- `test:e2e` 永远先构建（`apps/web` 的 `bun run build`），用生产构建起 7100 端口专享服务器；`PLAYWRIGHT_REUSE_BUILD` 只对 touch 套件生效。
 - `e2e/agent/` 冒烟用例需要 `BIGMODEL_API_KEY`，缺 key 时注册期跳过；`public-discovery` 的 admin 标签用例需要 `SUPABASE_SERVICE_ROLE_KEY`，CI 以 `--exclude-tag admin` 排除。
 - 定向运行：`cd apps/web && node scripts/e2e-agent-run.mjs <文件名...>`（位置参数转发给 e2e CLI，同样走当前构建）。
 

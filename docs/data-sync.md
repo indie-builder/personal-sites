@@ -4,10 +4,10 @@
 
 | 来源 | 手动入口 | 更新路径 |
 | --- | --- | --- |
-| 每日动态 | `pnpm ai-news:sync` / `pnpm ai-news:backfill` | 24 小时增量或 7 天回填，直接写 Supabase；[同步说明](ai-news-sync.md) |
-| X 书签与点赞 | `pnpm curation:sync` | 抓取、解析、设计分类并重建本地公开 SQLite；[同步说明](supabase-x-sync.md) |
-| 抖音收藏 | `pnpm douyin:sync`，然后 `pnpm curation:publish` | 发现、下载、转写/OCR、策展；成功入队的条目在重建 SQLite 后公开；[同步说明](douyin-curation.md) |
-| GitHub Star | `pnpm github:starred:daily` | 增量检查、补齐中文阅读版并更新本地 SQLite；`github:starred:sync` 仅同步来源；[同步说明](github-starred-sync.md) |
+| 每日动态 | `bun run ai-news:sync` / `bun run ai-news:backfill` | 24 小时增量或 7 天回填，直接写 Supabase；[同步说明](ai-news-sync.md) |
+| X 书签与点赞 | `bun run curation:sync` | 抓取、解析、设计分类并重建本地公开 SQLite；[同步说明](supabase-x-sync.md) |
+| 抖音收藏 | `bun run douyin:sync`，然后 `bun run curation:publish` | 发现、下载、转写/OCR、策展；成功入队的条目在重建 SQLite 后公开；[同步说明](douyin-curation.md) |
+| GitHub Star | `bun run github:starred:daily` | 增量检查、补齐中文阅读版并更新本地 SQLite；`github:starred:sync` 仅同步来源；[同步说明](github-starred-sync.md) |
 
 ## 定时调度
 
@@ -18,7 +18,7 @@
 
 各来源的失败分别记录，不阻止其他来源继续运行。每日动态的租约、健康状态与本机 launchd 恢复手段见[每日动态同步说明](ai-news-sync.md)。
 
-本机健康入口：`pnpm focus:status` 汇总同步状态、公开 SQLite 与 Ask 索引健康度；`pnpm health:production` 探测线上统一健康端点，失败时最多尝试三次。提交内容或配置前先跑 `pnpm git:safety` 检查敏感数据边界。
+本机健康入口：`bun run focus:status` 汇总同步状态、公开 SQLite 与 Ask 索引健康度；`bun run health:production` 探测线上统一健康端点，失败时最多尝试三次。提交内容或配置前先跑 `bun run git:safety` 检查敏感数据边界。
 
 ## 归档与云端清理
 

@@ -8,9 +8,9 @@
     "./cli": "./src/cli.mjs"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/tsc7.mjs --noEmit",
+    "typecheck": "bun ../../scripts/tsc7.mjs --noEmit",
     "lint": "oxlint --deny-warnings src tests",
-    "test": "node --test tests/*.test.mjs"
+    "test": "bun test tests/"
   },
   "dependencies": {
     "effect": "4.0.1"
