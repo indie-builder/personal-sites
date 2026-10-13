@@ -35,7 +35,7 @@ export JAVA_HOME=/Users/xbjt/Library/Java/JavaVirtualMachines/jdk-17.0.20.1+1/Co
 
 ## 工程结构
 
-全应用字体与间距规范见 [typography-and-spacing.md](docs/typography-and-spacing.md)。统一角色由 `SiteText` / `SiteTypography` / `SiteSpace` 提供，运行 `node scripts/check-typography.mjs` 防止页面新增独立字体覆盖。
+全应用字体与间距规范见 [typography-and-spacing.md](docs/typography-and-spacing.md)。统一角色由 `SiteText` / `SiteTypography` / `SiteSpace` 提供，运行 `bun scripts/check-typography.mjs` 防止页面新增独立字体覆盖。
 
 ```
 app/src/main/java/cn/lovemyrmb/personalsite/

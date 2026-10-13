@@ -23,10 +23,8 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
       - name: Set up Gradle caching
         uses: gradle/actions/setup-gradle@v6
         with:
@@ -40,13 +38,13 @@ jobs:
         run: ./gradlew :app:assembleDebug :app:testDebugUnitTest --console=plain
       - name: Check centralized typography
         working-directory: android
-        run: node scripts/check-typography.mjs
+        run: bun scripts/check-typography.mjs
       - name: Install ffmpeg
         # 首跑发现 ubuntu-latest 镜像不含 ffmpeg（check-opening-frames 依赖）。
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Check opening GIF frames
         working-directory: android
-        run: node scripts/check-opening-frames.mjs
+        run: bun scripts/check-opening-frames.mjs
       - name: Enable KVM group perms
         # 首跑发现 runner 用户无 /dev/kvm 权限，模拟器回退 TCG 软件仿真启动超时。
         run: |
