@@ -26,7 +26,7 @@
 
 ## 本地运行
 
-使用 Bun `1.4.3`（包管理器与默认脚本/测试运行时，经 `packageManager` 锁定），另需 Node.js `>=24.21.0 <25` 负责 Next.js 构建启动与 Vercel 线上运行时。
+使用 Bun `1.4.2`（包管理器与默认脚本/测试运行时，经 `packageManager` 锁定），另需 Node.js `>=24.21.0 <25` 负责 Next.js 构建启动与 Vercel 线上运行时。
 
 ```bash
 git clone https://github.com/indie-builder/personal-sites.git
