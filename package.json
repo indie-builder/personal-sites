@@ -18,16 +18,6 @@
     "onnxruntime-node",
     "sharp"
   ],
-  "overrides": {
-    "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0",
-    "adm-zip": "0.6.1",
-    "brace-expansion": "5.0.12",
-    "fast-uri": "3.1.8",
-    "ip-address": "10.7.3",
-    "qs": "6.16.0",
-    "sharp": "0.35.5"
-  },
   "portless": {
     "name": "personal-site",
     "script": "dev",
@@ -84,8 +74,8 @@
     "@types/node": "26.6.5",
     "@typescript/native": "npm:typescript@7.0.2",
     "oxlint": "^1.88.0",
-    "portless": "^0.15.7",
+    "portless": "^0.15.8",
     "typescript": "7.0.2",
-    "turbo": "2.11.7"
+    "turbo": "2.11.8"
   }
 }
