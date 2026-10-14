@@ -52,4 +52,4 @@ b="$(echo "$about" | sed -E 's/.*\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\].*/\4
 "$ADB_BIN" shell input tap "$(( (l + r) / 2 ))" "$(( (t + b) / 2 ))"
 sleep 1
 export ADB="$ADB_BIN"
-node scripts/check-greeting-layout.mjs
+bun scripts/check-greeting-layout.mjs
