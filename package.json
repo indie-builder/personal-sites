@@ -83,7 +83,7 @@
   },
   "devDependencies": {
     "@shadcn/lint": "^0.2.1",
-    "@types/node": "26.6.4",
+    "@types/node": "26.6.5",
     "@typescript/native": "npm:typescript@7.0.2",
     "oxlint": "^1.88.0",
     "portless": "^0.15.7",

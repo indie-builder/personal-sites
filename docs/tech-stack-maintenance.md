@@ -115,15 +115,15 @@ JS 使用 `bun outdated`、`bun audit --json` 辅助检查（Bun 无 `--prod` / 
 
 报告保持简洁，提供必要的文件或 PR 链接。版本检查失败、无补丁公告和停止维护的依赖都要保留在结果里。不要承诺会自动定期执行；需要持久调度时另行配置 GitHub Actions 等服务，复用本 SOP 的规则。
 
-## 版本基线（2026-10-09）
+## 版本基线（2026-10-14）
 
 README 只保留栈型概述。下表是当日核对的全量版本快照，仅作参考；维护时仍按本文流程从仓库与官方发布源实时核对，精确依赖以各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml` 为准。
 
 | 层 | 版本 |
 | --- | --- |
-| Web | Next.js 16.4.0（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.4 / `@shadcn/react` 0.3.1、Radix UI 1.7.0、Motion 14.0.0、Lucide 1.52.0；部署在 Vercel |
-| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，Vercel 支持上限 24.x）、Bun 1.4.2（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、Effect 4.0.1、Turbo 2.11.7、oxlint 1.87.0、Portless 0.15.7；测试使用 Vitest 5.0.3、Vite 8.3.3 与 Playwright 1.63.0 |
-| 数据与 AI | Supabase JS 2.117.3、better-sqlite3 13.0.3、AI SDK 7.0.134 / Anthropic 4.0.77、Pi 1.0.4、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
+| Web | Next.js 16.4.0（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.4 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.1.0（14.2.0 使每个入场元素产生两次 WAAPI `animate` 调用，被 `open-source-motion` E2E 断言拦截，升级前需专项调查）、Lucide 1.56.0；部署在 Vercel |
+| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，Vercel 支持上限 24.x）、Bun 1.4.2（包管理器与默认脚本/测试运行时；本机开发已用 1.4.3，仓库锁定跟随 Vercel/CI 的 1.4.2 约定）、TypeScript 7.0.2、Effect 4.0.4、Turbo 2.11.7、oxlint 1.88.0、Portless 0.15.7；测试使用 Vitest 5.0.4、Vite 8.3.4 与 Playwright 1.64.0 |
+| 数据与 AI | Supabase JS 2.117.3、better-sqlite3 13.0.3、AI SDK 7.0.139 / Anthropic 4.0.79、Pi 1.2.0、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
 | 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
 | 原生客户端（iOS） | Swift 6 语言模式、SwiftUI、iOS 26+，无第三方依赖 |
 
