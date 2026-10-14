@@ -26,7 +26,7 @@ Public discovery endpoints are `/sitemap.xml`, `/robots.txt`, `/feed.xml`, and s
 
 ## Run it locally
 
-Requires Bun `1.4.2` (package manager and default script/test runtime, pinned via `packageManager`) plus Node.js `>=24.21.0 <25` for the Next.js build/start launchers and the Vercel runtime.
+Requires Bun `1.4.3` (package manager and default script/test runtime, pinned via `packageManager`) plus Node.js `>=24.21.0 <25` for the Next.js build/start launchers and the Vercel runtime.
 
 ```bash
 git clone https://github.com/indie-builder/personal-sites.git
