@@ -2,15 +2,12 @@
 
 import { Dialog } from "radix-ui";
 import { PanelRightClose, X } from "lucide-react";
-import dynamic from "next/dynamic";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AssistantSprite, SpriteWalker } from "./assistant-sprite";
 import { STREAM_EASE_CSS } from "./motion-tokens";
 import styles from "./ask-assistant.module.css";
 
-const AskChat = dynamic(() => import("./ask-chat").then((module) => module.AskChat), {
-  loading: () => <p className={styles.loading} role="status">正在打开问一问…</p>,
-});
+const AskChat = lazy(() => import("./ask-chat").then((module) => ({ default: module.AskChat })));
 type Phase = "closed" | "sinking" | "open" | "closing";
 
 export function AskAssistant() {
@@ -184,7 +181,9 @@ export function AskAssistant() {
           <Dialog.Title className="sr-only">问一问</Dialog.Title>
           <Dialog.Description className="sr-only">基于陈远公开资料的 AI 助手</Dialog.Description>
           <button className={styles.close} aria-label="关闭问一问" type="button" onClick={close}><PanelRightClose className={styles.desktopClose} size={16} /><X className={styles.mobileClose} size={20} /></button>
-          <AskChat />
+          <Suspense fallback={<p className={styles.loading} role="status">正在打开问一问…</p>}>
+            <AskChat />
+          </Suspense>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

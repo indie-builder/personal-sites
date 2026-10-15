@@ -1,0 +1,1 @@
+import{i as e,t}from"./react-DB-4Zxce.js";var n=e(t(),1),r=()=>()=>{};function i(){return(0,n.useSyncExternalStore)(r,()=>!0,()=>!1)}export{i as n,r as t};

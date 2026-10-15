@@ -1,4 +1,5 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import tailwindcss from "@tailwindcss/vite";
 import { nitro } from "nitro/vite";
 import path from "node:path";
 import { defineConfig } from "vite";
@@ -19,6 +20,8 @@ export default defineConfig({
     // tanstackStart 必须在 viteReact 之前；nitro 负责服务端打包与各部署目标适配。
     tanstackStart(),
     nitro(),
+    // Tailwind v4 走原生 Vite 插件：PostCSS 方案在 SSR 环境会把 @import "tailwindcss" 解析成相对路径。
+    tailwindcss(),
     viteReact(),
   ],
 });

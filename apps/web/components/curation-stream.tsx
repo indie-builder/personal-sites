@@ -10,9 +10,8 @@
  * FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
  */
 
+import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import type { Route } from "next";
-import Link from "next/link";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
@@ -162,7 +161,7 @@ export function CurationStream({
               </div>
               <div className="curation-home__stream-copy">
                 <h3>
-                  <Link data-content-id={item.id} href={`/design/${item.id}` as Route}>{item.title}</Link>
+                  <Link data-content-id={item.id} params={{ id: item.id }} to="/design/$id">{item.title}</Link>
                 </h3>
                 <p>{item.summary}</p>
                 {playableMedia.length > 0 ? (
@@ -184,7 +183,7 @@ export function CurationStream({
               </div>
             </article>
           ) : (
-          <Link data-content-id={item.id} href={`/curation/${item.id}` as Route}>
+          <Link data-content-id={item.id} params={{ id: item.id }} to="/curation/$id">
             <div className="curation-home__stream-meta">
               <time dateTime={item.collectedAt ?? item.publishedAt ?? undefined}>{formatCurationDate(item)}</time>
               <span>{item.source.platform === "x" ? `X · @${item.author.handle}` : `抖音 · ${item.author.name}`}</span>

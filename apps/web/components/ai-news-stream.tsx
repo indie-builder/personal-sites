@@ -1,8 +1,7 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import type { Route } from "next";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AI_NEWS_PAGE_SIZE, formatAiNewsClock, getAiNewsCategoryLabel, groupAiNewsByDay, listAiNewsCategories } from "@/lib/ai-news-types";
@@ -155,7 +154,7 @@ export function AiNewsStream({ initialHasMore, initialItems }: {
                   }}
                 >
                   {/* 动态页默认不预取；单条动态内容不可变，显式预取让点击即时打开。 */}
-                  <Link className="ai-news__entry" data-content-id={item.id} href={`/ai-news/${item.id}` as Route} prefetch={true}>
+                  <Link className="ai-news__entry" data-content-id={item.id} params={{ id: item.id }} preload="intent" to="/ai-news/$id">
                     <div className="ai-news__entry-meta">
                       <time dateTime={item.publishedAt ?? undefined}>{formatAiNewsClock(item.publishedAt)}</time>
                       {/* 登记列只保留出处名；(@handle) 会撑高左栏，详情页仍展示完整出处。 */}

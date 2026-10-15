@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";

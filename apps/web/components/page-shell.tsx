@@ -1,6 +1,5 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import type { Route } from "next";
 import { Suspense, type ReactNode } from "react";
 
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
@@ -45,16 +44,19 @@ export function DetailPage({ children, mainClassName = "curation-home curation-d
   );
 }
 
+/** 详情页返回链接的合法目标：各板块列表页与首页。 */
+export type SiteBackHref = "/" | "/ai-news" | "/curation" | "/design" | "/douyin" | "/open-source";
+
 /** 详情页顶部的返回导航（真实返回链接）。 */
 export function DetailTopbar({ backClassName, backHref, backLabel, className = "curation-detail__back" }: {
   backClassName?: string;
-  backHref: string;
+  backHref: SiteBackHref;
   backLabel: string;
   className?: string;
 }) {
   return (
     <nav aria-label="返回" className={className}>
-      <Link className={backClassName} href={backHref as Route}>
+      <Link className={backClassName} to={backHref}>
         <ArrowLeft aria-hidden="true" />
         {backLabel}
       </Link>

@@ -9,38 +9,516 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiNewsRouteImport } from './routes/ai-news'
+import { Route as CurationRouteImport } from './routes/curation'
+import { Route as DesignRouteImport } from './routes/design'
+import { Route as DouyinRouteImport } from './routes/douyin'
+import { Route as FeedDotxmlRouteImport } from './routes/feed[.]xml'
+import { Route as OpenSourceRouteImport } from './routes/open-source'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AiNewsIdRouteImport } from './routes/ai-news/$id'
+import { Route as ApiAiNewsRouteImport } from './routes/api/ai-news'
+import { Route as ApiAskRouteImport } from './routes/api/ask'
+import { Route as ApiCurationRouteImport } from './routes/api/curation'
+import { Route as ApiDesignRouteImport } from './routes/api/design'
+import { Route as ApiDouyinRouteImport } from './routes/api/douyin'
+import { Route as ApiOpenSourceRouteImport } from './routes/api/open-source'
+import { Route as ApiXMediaRouteImport } from './routes/api/x-media'
+import { Route as CurationIdRouteImport } from './routes/curation/$id'
+import { Route as DesignIdRouteImport } from './routes/design/$id'
+import { Route as OpenSourceSlugRouteImport } from './routes/open-source/$slug'
+import { Route as ApiAiNewsIdRouteImport } from './routes/api/ai-news/$id'
+import { Route as ApiCronAiNewsRouteImport } from './routes/api/cron/ai-news'
 import { Route as ApiHealthDataRouteImport } from './routes/api/health/data'
+import { Route as ApiHealthAiNewsArchiveRouteImport } from './routes/api/health/ai-news/archive'
+import { Route as ApiOpenSourceSlugRepositoryFileRouteImport } from './routes/api/open-source/$slug/repository/file'
+import { Route as ApiOpenSourceSlugRepositoryTreeRouteImport } from './routes/api/open-source/$slug/repository/tree'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiNewsRoute = AiNewsRouteImport.update({
+  id: '/ai-news',
+  path: '/ai-news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CurationRoute = CurationRouteImport.update({
+  id: '/curation',
+  path: '/curation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesignRoute = DesignRouteImport.update({
+  id: '/design',
+  path: '/design',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DouyinRoute = DouyinRouteImport.update({
+  id: '/douyin',
+  path: '/douyin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedDotxmlRoute = FeedDotxmlRouteImport.update({
+  id: '/feed.xml',
+  path: '/feed.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenSourceRoute = OpenSourceRouteImport.update({
+  id: '/open-source',
+  path: '/open-source',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiNewsIdRoute = AiNewsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AiNewsRoute,
+} as any)
+const ApiAiNewsRoute = ApiAiNewsRouteImport.update({
+  id: '/api/ai-news',
+  path: '/api/ai-news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAskRoute = ApiAskRouteImport.update({
+  id: '/api/ask',
+  path: '/api/ask',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCurationRoute = ApiCurationRouteImport.update({
+  id: '/api/curation',
+  path: '/api/curation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignRoute = ApiDesignRouteImport.update({
+  id: '/api/design',
+  path: '/api/design',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDouyinRoute = ApiDouyinRouteImport.update({
+  id: '/api/douyin',
+  path: '/api/douyin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenSourceRoute = ApiOpenSourceRouteImport.update({
+  id: '/api/open-source',
+  path: '/api/open-source',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiXMediaRoute = ApiXMediaRouteImport.update({
+  id: '/api/x-media',
+  path: '/api/x-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CurationIdRoute = CurationIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CurationRoute,
+} as any)
+const DesignIdRoute = DesignIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => DesignRoute,
+} as any)
+const OpenSourceSlugRoute = OpenSourceSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => OpenSourceRoute,
+} as any)
+const ApiAiNewsIdRoute = ApiAiNewsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAiNewsRoute,
+} as any)
+const ApiCronAiNewsRoute = ApiCronAiNewsRouteImport.update({
+  id: '/api/cron/ai-news',
+  path: '/api/cron/ai-news',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthDataRoute = ApiHealthDataRouteImport.update({
   id: '/api/health/data',
   path: '/api/health/data',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthAiNewsArchiveRoute = ApiHealthAiNewsArchiveRouteImport.update({
+  id: '/api/health/ai-news/archive',
+  path: '/api/health/ai-news/archive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenSourceSlugRepositoryFileRoute =
+  ApiOpenSourceSlugRepositoryFileRouteImport.update({
+    id: '/$slug/repository/file',
+    path: '/$slug/repository/file',
+    getParentRoute: () => ApiOpenSourceRoute,
+  } as any)
+const ApiOpenSourceSlugRepositoryTreeRoute =
+  ApiOpenSourceSlugRepositoryTreeRouteImport.update({
+    id: '/$slug/repository/tree',
+    path: '/$slug/repository/tree',
+    getParentRoute: () => ApiOpenSourceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/ai-news': typeof AiNewsRouteWithChildren
+  '/curation': typeof CurationRouteWithChildren
+  '/design': typeof DesignRouteWithChildren
+  '/douyin': typeof DouyinRoute
+  '/feed.xml': typeof FeedDotxmlRoute
+  '/open-source': typeof OpenSourceRouteWithChildren
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ai-news/$id': typeof AiNewsIdRoute
+  '/api/ai-news': typeof ApiAiNewsRouteWithChildren
+  '/api/ask': typeof ApiAskRoute
+  '/api/curation': typeof ApiCurationRoute
+  '/api/design': typeof ApiDesignRoute
+  '/api/douyin': typeof ApiDouyinRoute
+  '/api/open-source': typeof ApiOpenSourceRouteWithChildren
+  '/api/x-media': typeof ApiXMediaRoute
+  '/curation/$id': typeof CurationIdRoute
+  '/design/$id': typeof DesignIdRoute
+  '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/api/ai-news/$id': typeof ApiAiNewsIdRoute
+  '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
+  '/api/health/ai-news/archive': typeof ApiHealthAiNewsArchiveRoute
+  '/api/open-source/$slug/repository/file': typeof ApiOpenSourceSlugRepositoryFileRoute
+  '/api/open-source/$slug/repository/tree': typeof ApiOpenSourceSlugRepositoryTreeRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/ai-news': typeof AiNewsRouteWithChildren
+  '/curation': typeof CurationRouteWithChildren
+  '/design': typeof DesignRouteWithChildren
+  '/douyin': typeof DouyinRoute
+  '/feed.xml': typeof FeedDotxmlRoute
+  '/open-source': typeof OpenSourceRouteWithChildren
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ai-news/$id': typeof AiNewsIdRoute
+  '/api/ai-news': typeof ApiAiNewsRouteWithChildren
+  '/api/ask': typeof ApiAskRoute
+  '/api/curation': typeof ApiCurationRoute
+  '/api/design': typeof ApiDesignRoute
+  '/api/douyin': typeof ApiDouyinRoute
+  '/api/open-source': typeof ApiOpenSourceRouteWithChildren
+  '/api/x-media': typeof ApiXMediaRoute
+  '/curation/$id': typeof CurationIdRoute
+  '/design/$id': typeof DesignIdRoute
+  '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/api/ai-news/$id': typeof ApiAiNewsIdRoute
+  '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
+  '/api/health/ai-news/archive': typeof ApiHealthAiNewsArchiveRoute
+  '/api/open-source/$slug/repository/file': typeof ApiOpenSourceSlugRepositoryFileRoute
+  '/api/open-source/$slug/repository/tree': typeof ApiOpenSourceSlugRepositoryTreeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/ai-news': typeof AiNewsRouteWithChildren
+  '/curation': typeof CurationRouteWithChildren
+  '/design': typeof DesignRouteWithChildren
+  '/douyin': typeof DouyinRoute
+  '/feed.xml': typeof FeedDotxmlRoute
+  '/open-source': typeof OpenSourceRouteWithChildren
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ai-news/$id': typeof AiNewsIdRoute
+  '/api/ai-news': typeof ApiAiNewsRouteWithChildren
+  '/api/ask': typeof ApiAskRoute
+  '/api/curation': typeof ApiCurationRoute
+  '/api/design': typeof ApiDesignRoute
+  '/api/douyin': typeof ApiDouyinRoute
+  '/api/open-source': typeof ApiOpenSourceRouteWithChildren
+  '/api/x-media': typeof ApiXMediaRoute
+  '/curation/$id': typeof CurationIdRoute
+  '/design/$id': typeof DesignIdRoute
+  '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/api/ai-news/$id': typeof ApiAiNewsIdRoute
+  '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
+  '/api/health/ai-news/archive': typeof ApiHealthAiNewsArchiveRoute
+  '/api/open-source/$slug/repository/file': typeof ApiOpenSourceSlugRepositoryFileRoute
+  '/api/open-source/$slug/repository/tree': typeof ApiOpenSourceSlugRepositoryTreeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/api/health/data'
+  fullPaths:
+    | '/'
+    | '/ai-news'
+    | '/curation'
+    | '/design'
+    | '/douyin'
+    | '/feed.xml'
+    | '/open-source'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/ai-news/$id'
+    | '/api/ai-news'
+    | '/api/ask'
+    | '/api/curation'
+    | '/api/design'
+    | '/api/douyin'
+    | '/api/open-source'
+    | '/api/x-media'
+    | '/curation/$id'
+    | '/design/$id'
+    | '/open-source/$slug'
+    | '/api/ai-news/$id'
+    | '/api/cron/ai-news'
+    | '/api/health/data'
+    | '/api/health/ai-news/archive'
+    | '/api/open-source/$slug/repository/file'
+    | '/api/open-source/$slug/repository/tree'
   fileRoutesByTo: FileRoutesByTo
-  to: '/api/health/data'
-  id: '__root__' | '/api/health/data'
+  to:
+    | '/'
+    | '/ai-news'
+    | '/curation'
+    | '/design'
+    | '/douyin'
+    | '/feed.xml'
+    | '/open-source'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/ai-news/$id'
+    | '/api/ai-news'
+    | '/api/ask'
+    | '/api/curation'
+    | '/api/design'
+    | '/api/douyin'
+    | '/api/open-source'
+    | '/api/x-media'
+    | '/curation/$id'
+    | '/design/$id'
+    | '/open-source/$slug'
+    | '/api/ai-news/$id'
+    | '/api/cron/ai-news'
+    | '/api/health/data'
+    | '/api/health/ai-news/archive'
+    | '/api/open-source/$slug/repository/file'
+    | '/api/open-source/$slug/repository/tree'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai-news'
+    | '/curation'
+    | '/design'
+    | '/douyin'
+    | '/feed.xml'
+    | '/open-source'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/ai-news/$id'
+    | '/api/ai-news'
+    | '/api/ask'
+    | '/api/curation'
+    | '/api/design'
+    | '/api/douyin'
+    | '/api/open-source'
+    | '/api/x-media'
+    | '/curation/$id'
+    | '/design/$id'
+    | '/open-source/$slug'
+    | '/api/ai-news/$id'
+    | '/api/cron/ai-news'
+    | '/api/health/data'
+    | '/api/health/ai-news/archive'
+    | '/api/open-source/$slug/repository/file'
+    | '/api/open-source/$slug/repository/tree'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  AiNewsRoute: typeof AiNewsRouteWithChildren
+  CurationRoute: typeof CurationRouteWithChildren
+  DesignRoute: typeof DesignRouteWithChildren
+  DouyinRoute: typeof DouyinRoute
+  FeedDotxmlRoute: typeof FeedDotxmlRoute
+  OpenSourceRoute: typeof OpenSourceRouteWithChildren
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAiNewsRoute: typeof ApiAiNewsRouteWithChildren
+  ApiAskRoute: typeof ApiAskRoute
+  ApiCurationRoute: typeof ApiCurationRoute
+  ApiDesignRoute: typeof ApiDesignRoute
+  ApiDouyinRoute: typeof ApiDouyinRoute
+  ApiOpenSourceRoute: typeof ApiOpenSourceRouteWithChildren
+  ApiXMediaRoute: typeof ApiXMediaRoute
+  ApiCronAiNewsRoute: typeof ApiCronAiNewsRoute
   ApiHealthDataRoute: typeof ApiHealthDataRoute
+  ApiHealthAiNewsArchiveRoute: typeof ApiHealthAiNewsArchiveRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-news': {
+      id: '/ai-news'
+      path: '/ai-news'
+      fullPath: '/ai-news'
+      preLoaderRoute: typeof AiNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/curation': {
+      id: '/curation'
+      path: '/curation'
+      fullPath: '/curation'
+      preLoaderRoute: typeof CurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/design': {
+      id: '/design'
+      path: '/design'
+      fullPath: '/design'
+      preLoaderRoute: typeof DesignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/douyin': {
+      id: '/douyin'
+      path: '/douyin'
+      fullPath: '/douyin'
+      preLoaderRoute: typeof DouyinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed.xml': {
+      id: '/feed.xml'
+      path: '/feed.xml'
+      fullPath: '/feed.xml'
+      preLoaderRoute: typeof FeedDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/open-source': {
+      id: '/open-source'
+      path: '/open-source'
+      fullPath: '/open-source'
+      preLoaderRoute: typeof OpenSourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-news/$id': {
+      id: '/ai-news/$id'
+      path: '/$id'
+      fullPath: '/ai-news/$id'
+      preLoaderRoute: typeof AiNewsIdRouteImport
+      parentRoute: typeof AiNewsRoute
+    }
+    '/api/ai-news': {
+      id: '/api/ai-news'
+      path: '/api/ai-news'
+      fullPath: '/api/ai-news'
+      preLoaderRoute: typeof ApiAiNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ask': {
+      id: '/api/ask'
+      path: '/api/ask'
+      fullPath: '/api/ask'
+      preLoaderRoute: typeof ApiAskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/curation': {
+      id: '/api/curation'
+      path: '/api/curation'
+      fullPath: '/api/curation'
+      preLoaderRoute: typeof ApiCurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/design': {
+      id: '/api/design'
+      path: '/api/design'
+      fullPath: '/api/design'
+      preLoaderRoute: typeof ApiDesignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/douyin': {
+      id: '/api/douyin'
+      path: '/api/douyin'
+      fullPath: '/api/douyin'
+      preLoaderRoute: typeof ApiDouyinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/open-source': {
+      id: '/api/open-source'
+      path: '/api/open-source'
+      fullPath: '/api/open-source'
+      preLoaderRoute: typeof ApiOpenSourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/x-media': {
+      id: '/api/x-media'
+      path: '/api/x-media'
+      fullPath: '/api/x-media'
+      preLoaderRoute: typeof ApiXMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/curation/$id': {
+      id: '/curation/$id'
+      path: '/$id'
+      fullPath: '/curation/$id'
+      preLoaderRoute: typeof CurationIdRouteImport
+      parentRoute: typeof CurationRoute
+    }
+    '/design/$id': {
+      id: '/design/$id'
+      path: '/$id'
+      fullPath: '/design/$id'
+      preLoaderRoute: typeof DesignIdRouteImport
+      parentRoute: typeof DesignRoute
+    }
+    '/open-source/$slug': {
+      id: '/open-source/$slug'
+      path: '/$slug'
+      fullPath: '/open-source/$slug'
+      preLoaderRoute: typeof OpenSourceSlugRouteImport
+      parentRoute: typeof OpenSourceRoute
+    }
+    '/api/ai-news/$id': {
+      id: '/api/ai-news/$id'
+      path: '/$id'
+      fullPath: '/api/ai-news/$id'
+      preLoaderRoute: typeof ApiAiNewsIdRouteImport
+      parentRoute: typeof ApiAiNewsRoute
+    }
+    '/api/cron/ai-news': {
+      id: '/api/cron/ai-news'
+      path: '/api/cron/ai-news'
+      fullPath: '/api/cron/ai-news'
+      preLoaderRoute: typeof ApiCronAiNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health/data': {
       id: '/api/health/data'
       path: '/api/health/data'
@@ -48,11 +526,122 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthDataRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health/ai-news/archive': {
+      id: '/api/health/ai-news/archive'
+      path: '/api/health/ai-news/archive'
+      fullPath: '/api/health/ai-news/archive'
+      preLoaderRoute: typeof ApiHealthAiNewsArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/open-source/$slug/repository/file': {
+      id: '/api/open-source/$slug/repository/file'
+      path: '/$slug/repository/file'
+      fullPath: '/api/open-source/$slug/repository/file'
+      preLoaderRoute: typeof ApiOpenSourceSlugRepositoryFileRouteImport
+      parentRoute: typeof ApiOpenSourceRoute
+    }
+    '/api/open-source/$slug/repository/tree': {
+      id: '/api/open-source/$slug/repository/tree'
+      path: '/$slug/repository/tree'
+      fullPath: '/api/open-source/$slug/repository/tree'
+      preLoaderRoute: typeof ApiOpenSourceSlugRepositoryTreeRouteImport
+      parentRoute: typeof ApiOpenSourceRoute
+    }
   }
 }
 
+interface AiNewsRouteChildren {
+  AiNewsIdRoute: typeof AiNewsIdRoute
+}
+
+const AiNewsRouteChildren: AiNewsRouteChildren = {
+  AiNewsIdRoute: AiNewsIdRoute,
+}
+
+const AiNewsRouteWithChildren =
+  AiNewsRoute._addFileChildren(AiNewsRouteChildren)
+
+interface CurationRouteChildren {
+  CurationIdRoute: typeof CurationIdRoute
+}
+
+const CurationRouteChildren: CurationRouteChildren = {
+  CurationIdRoute: CurationIdRoute,
+}
+
+const CurationRouteWithChildren = CurationRoute._addFileChildren(
+  CurationRouteChildren,
+)
+
+interface DesignRouteChildren {
+  DesignIdRoute: typeof DesignIdRoute
+}
+
+const DesignRouteChildren: DesignRouteChildren = {
+  DesignIdRoute: DesignIdRoute,
+}
+
+const DesignRouteWithChildren =
+  DesignRoute._addFileChildren(DesignRouteChildren)
+
+interface OpenSourceRouteChildren {
+  OpenSourceSlugRoute: typeof OpenSourceSlugRoute
+}
+
+const OpenSourceRouteChildren: OpenSourceRouteChildren = {
+  OpenSourceSlugRoute: OpenSourceSlugRoute,
+}
+
+const OpenSourceRouteWithChildren = OpenSourceRoute._addFileChildren(
+  OpenSourceRouteChildren,
+)
+
+interface ApiAiNewsRouteChildren {
+  ApiAiNewsIdRoute: typeof ApiAiNewsIdRoute
+}
+
+const ApiAiNewsRouteChildren: ApiAiNewsRouteChildren = {
+  ApiAiNewsIdRoute: ApiAiNewsIdRoute,
+}
+
+const ApiAiNewsRouteWithChildren = ApiAiNewsRoute._addFileChildren(
+  ApiAiNewsRouteChildren,
+)
+
+interface ApiOpenSourceRouteChildren {
+  ApiOpenSourceSlugRepositoryFileRoute: typeof ApiOpenSourceSlugRepositoryFileRoute
+  ApiOpenSourceSlugRepositoryTreeRoute: typeof ApiOpenSourceSlugRepositoryTreeRoute
+}
+
+const ApiOpenSourceRouteChildren: ApiOpenSourceRouteChildren = {
+  ApiOpenSourceSlugRepositoryFileRoute: ApiOpenSourceSlugRepositoryFileRoute,
+  ApiOpenSourceSlugRepositoryTreeRoute: ApiOpenSourceSlugRepositoryTreeRoute,
+}
+
+const ApiOpenSourceRouteWithChildren = ApiOpenSourceRoute._addFileChildren(
+  ApiOpenSourceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AiNewsRoute: AiNewsRouteWithChildren,
+  CurationRoute: CurationRouteWithChildren,
+  DesignRoute: DesignRouteWithChildren,
+  DouyinRoute: DouyinRoute,
+  FeedDotxmlRoute: FeedDotxmlRoute,
+  OpenSourceRoute: OpenSourceRouteWithChildren,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAiNewsRoute: ApiAiNewsRouteWithChildren,
+  ApiAskRoute: ApiAskRoute,
+  ApiCurationRoute: ApiCurationRoute,
+  ApiDesignRoute: ApiDesignRoute,
+  ApiDouyinRoute: ApiDouyinRoute,
+  ApiOpenSourceRoute: ApiOpenSourceRouteWithChildren,
+  ApiXMediaRoute: ApiXMediaRoute,
+  ApiCronAiNewsRoute: ApiCronAiNewsRoute,
   ApiHealthDataRoute: ApiHealthDataRoute,
+  ApiHealthAiNewsArchiveRoute: ApiHealthAiNewsArchiveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

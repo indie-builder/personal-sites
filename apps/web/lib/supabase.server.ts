@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 

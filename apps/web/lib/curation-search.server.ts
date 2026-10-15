@@ -1,5 +1,5 @@
 import { DateTimeString } from "@site/effect/schema";
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { statSync } from "node:fs";
 import { Schema } from "effect";

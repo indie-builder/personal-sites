@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText, streamText, type ModelMessage } from "ai";

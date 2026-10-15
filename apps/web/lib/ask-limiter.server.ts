@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { attempt, io } from "@site/effect";
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createHmac } from "node:crypto";
 
