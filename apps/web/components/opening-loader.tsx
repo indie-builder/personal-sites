@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { subscribeToNothing, useHasMounted } from "@/components/use-mounted";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -118,7 +117,7 @@ export function OpeningLoader() {
           <span className="opening-loader__battery-terminal" />
         </motion.div>
         {mounted ? (
-          <Image
+          <img
             alt=""
             aria-hidden="true"
             className="opening-loader__character"
