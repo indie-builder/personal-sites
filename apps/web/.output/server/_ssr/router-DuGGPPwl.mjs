@@ -1,4 +1,6 @@
 import { __toESM } from "../_runtime.mjs";
+import { ArraySchema, Boolean as Boolean$1, Literals, NullOr, Number as Number$1, NumberFromString, String as String$1, Struct, TaggedError, Trim, acquireRelease, acquireUseRelease, addFinalizer, catchCause, catch_, check, currentTimeMillis, decodeUnknownEffect, decodeUnknownResult, decodeUnknownSync, fail, flatMap, forEach, fromAsyncIterable, gen, interruptible, isFailure as isFailure$1, isFailure$1 as isFailure, isFinite, isGreaterThanOrEqualTo, isInt, isLessThanOrEqualTo, isMaxLength, isMinLength, isPattern, makeUnsafe, map, mutable, optional, runForEach, runPromise, scoped, squash, sync, timeoutOrElse, try_, uninterruptible, uninterruptibleMask, void_, withDecodingDefaultType } from "../_libs/effect.mjs";
+import { DateTimeString, OperationError, archiveMetadata, attempt, getAdminSupabaseClient, getAiNewsArchive, getAiNewsItem, getAiNewsPage, getCurationPage, getDesignCurationPage, getDouyinCurationPage, getOpenSourceEntry, getOpenSourcePage, getPublicDatabase, io, requiredEnv, resolveBundledFontFile, resolvePublicDataFile, searchAiNewsDocuments } from "./open-source-DgxG6IN-.mjs";
 import { require_react } from "../_libs/@floating-ui/react-dom+[...].mjs";
 import { HeadContent, Link, Outlet, Scripts, createFileRoute, createRootRoute, createRouter, lazyRouteComponent, notFound, useRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { require_jsx_runtime } from "../_libs/@openuidev/react-headless+[...].mjs";
@@ -6,9 +8,7 @@ import { TSS_SERVER_FUNCTION, createServerFn, getServerFnById } from "./ssr.mjs"
 import { ArrowLeft, ArrowUpRight, BookOpen, BriefcaseBusiness, CircleCheck, GitBranch, LoaderCircle, PanelRightClose, Play, Printer, X } from "../_libs/lucide-react.mjs";
 import { AnimatePresence, animate, useInView, useMotionValue, useReducedMotion, useSpring } from "../_libs/framer-motion+[...].mjs";
 import { motion } from "../_libs/motion.mjs";
-import { ArraySchema, Boolean as Boolean$1, Literals, NullOr, Number as Number$1, NumberFromString, String as String$1, Struct, TaggedError, Trim, acquireRelease, acquireUseRelease, addFinalizer, catchCause, catch_, check, currentTimeMillis, decodeUnknownEffect, decodeUnknownResult, decodeUnknownSync, fail, flatMap, forEach, fromAsyncIterable, gen, interruptible, isFailure as isFailure$1, isFailure$1 as isFailure, isFinite, isGreaterThanOrEqualTo, isInt, isLessThanOrEqualTo, isMaxLength, isMinLength, isPattern, makeUnsafe, map, mutable, optional, runForEach, runPromise, scoped, squash, sync, timeoutOrElse, try_, uninterruptible, uninterruptibleMask, void_, withDecodingDefaultType } from "../_libs/effect.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger, Markdown, remarkGfm } from "../_libs/@openuidev/react-ui+[...].mjs";
-import { DateTimeString, OperationError, archiveMetadata, attempt, getAdminSupabaseClient, getAiNewsArchive, getAiNewsItem, getAiNewsPage, getCurationPage, getDesignCurationPage, getDouyinCurationPage, getOpenSourceEntry, getOpenSourcePage, getPublicDatabase, io, requiredEnv, resolveBundledFontFile, resolvePublicDataFile, searchAiNewsDocuments } from "./open-source-DgxG6IN-.mjs";
 import { createClient } from "../_libs/supabase__supabase-js.mjs";
 import { PS } from "../_libs/satori.mjs";
 import { createAnthropic } from "../_libs/@ai-sdk/anthropic+[...].mjs";
@@ -18,8 +18,16 @@ import path from "node:path";
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { Resvg } from "@resvg/resvg-js";
-//#region node_modules/.nitro/vite/services/ssr/assets/use-media-query-CBlZ44P6.js
+//#region node_modules/.nitro/vite/services/ssr/assets/use-mounted-PT8zrxXM.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
+/** useSyncExternalStore 的占位订阅：不订阅任何来源，仅用于区分 SSR 与客户端渲染。 */
+var subscribeToNothing = () => () => {};
+/** 水合前为 false、水合后为 true；用于只能在客户端渲染的分支，避免 SSR 不一致。 */
+function useHasMounted() {
+	return (0, import_react.useSyncExternalStore)(subscribeToNothing, () => true, () => false);
+}
+//#endregion
+//#region node_modules/.nitro/vite/services/ssr/assets/use-media-query-CBlZ44P6.js
 var import_jsx_runtime = require_jsx_runtime();
 var ask_assistant_module_default = {
 	launcher: "_launcher_14e2h_2",
@@ -383,7 +391,7 @@ function useMediaQuery(query) {
 	return (0, import_react.useSyncExternalStore)(subscribe, snapshot, serverSnapshot);
 }
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/content-DOyNlWx-.js
+//#region node_modules/.nitro/vite/services/ssr/assets/content-DNOK95I7.js
 var OPENING_PLAYED_KEY = "personal-site:opening-loader-played";
 var OPENING_REVEAL_EVENT = "site:opening-reveal";
 var openingRevealAt = null;
@@ -1107,7 +1115,7 @@ function AboutPrint() {
 		})]
 	});
 }
-var AskChat = (0, import_react.lazy)(() => import("./ask-chat-CQKpXI9Q.mjs").then((module) => ({ default: module.AskChat })));
+var AskChat = (0, import_react.lazy)(() => import("./ask-chat-HG6bhxlt.mjs").then((module) => ({ default: module.AskChat })));
 function AskAssistant() {
 	const [phase, setPhase] = (0, import_react.useState)("closed");
 	const [instant, setInstant] = (0, import_react.useState)(false);
@@ -3616,14 +3624,6 @@ var fetchCurationEntry = createServerFn({ method: "GET" }).validator((input) => 
 	id: String$1
 }))(input)).handler(createSsrRpc("15e027738148afc6dd5ac09918f45c3d72c76be6893863d22ac19ffce269c55f"));
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/use-mounted-PT8zrxXM.js
-/** useSyncExternalStore 的占位订阅：不订阅任何来源，仅用于区分 SSR 与客户端渲染。 */
-var subscribeToNothing = () => () => {};
-/** 水合前为 false、水合后为 true；用于只能在客户端渲染的分支，避免 SSR 不一致。 */
-function useHasMounted() {
-	return (0, import_react.useSyncExternalStore)(subscribeToNothing, () => true, () => false);
-}
-//#endregion
 //#region node_modules/.nitro/vite/services/ssr/assets/curation-format-BGT4JrwF.js
 var X_HOSTS = /* @__PURE__ */ new Set([
 	"x.com",
@@ -3747,7 +3747,7 @@ function formatCurationClip(text) {
 	return text.replace(TCO_URL_PATTERN, "").replace(/\s+/gu, " ").trim();
 }
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/curation-entry-ItgzGiWS.js
+//#region node_modules/.nitro/vite/services/ssr/assets/curation-entry-CjKyHGUV.js
 /** 剪报簿族（/curation/$id 与 /design/$id）详情页的导航加载占位。 */
 function CurationEntryLoading() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailPage, {
@@ -4040,7 +4040,7 @@ function CurationEntryView({ context, entry }) {
 	});
 }
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/router-D7Io2iE5.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-DuGGPPwl.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
 	let target = {};
@@ -4419,7 +4419,7 @@ function RootComponent() {
 		] })]
 	});
 }
-var $$splitComponentImporter$9 = () => import("./routes-GxCQZOd9.mjs");
+var $$splitComponentImporter$9 = () => import("./routes-CC4KPvh1.mjs");
 var Route$26 = createFileRoute("/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(60) }),
 	loader: () => ({ feed: fetchAiNewsPage({ data: {
@@ -4429,7 +4429,7 @@ var Route$26 = createFileRoute("/")({
 	head: () => ({ links: canonicalLinks("/") }),
 	component: lazyRouteComponent($$splitComponentImporter$9, "component")
 });
-var $$splitComponentImporter$8 = () => import("./douyin-CPLZQAE7.mjs");
+var $$splitComponentImporter$8 = () => import("./douyin-CrPuMV9D.mjs");
 var Route$25 = createFileRoute("/douyin")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ douyinPage: fetchDouyinPage({ data: {
@@ -4701,7 +4701,7 @@ ${[...staticPaths.map((path, index) => ({
 		"Content-Type": "application/xml; charset=utf-8"
 	} });
 } } } });
-var $$splitComponentImporter$7 = () => import("./ai-news-BnF31JZr.mjs");
+var $$splitComponentImporter$7 = () => import("./ai-news-Dx8I2S32.mjs");
 var Route$20 = createFileRoute("/ai-news/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(60) }),
 	loader: () => ({ feed: fetchAiNewsPage({ data: {
@@ -4816,7 +4816,7 @@ function AiNewsDetailLoading() {
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteProfile, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AiNewsDetailSkeleton, {})]
 	});
 }
-var $$splitComponentImporter$6 = () => import("../_id-CfPCd7VB.mjs");
+var $$splitComponentImporter$6 = () => import("../_id-C-3Y9EAZ.mjs");
 var Route$19 = createFileRoute("/ai-news/$id")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -5488,7 +5488,7 @@ var Route$12 = createFileRoute("/api/x-media")({ server: { handlers: {
 	GET: ({ request }) => proxyMedia(request, "GET"),
 	HEAD: ({ request }) => proxyMedia(request, "HEAD")
 } } });
-var $$splitComponentImporter$5 = () => import("./curation-Br4i_H_4.mjs");
+var $$splitComponentImporter$5 = () => import("./curation-DN1ffEAj.mjs");
 var Route$11 = createFileRoute("/curation/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ feed: fetchCurationFeed({ data: {
@@ -5504,7 +5504,7 @@ var Route$11 = createFileRoute("/curation/")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$5, "component")
 });
-var $$splitComponentImporter$4 = () => import("../_id--CXjkSOp.mjs");
+var $$splitComponentImporter$4 = () => import("../_id-CZAvlLaH.mjs");
 var Route$10 = createFileRoute("/curation/$id")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -5522,7 +5522,7 @@ var Route$10 = createFileRoute("/curation/$id")({
 	pendingComponent: CurationEntryLoading,
 	component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-var $$splitComponentImporter$3 = () => import("./design-BQHaPZgw.mjs");
+var $$splitComponentImporter$3 = () => import("./design-h4BYfO64.mjs");
 var Route$9 = createFileRoute("/design/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ designPage: fetchDesignPage({ data: {
@@ -5538,7 +5538,7 @@ var Route$9 = createFileRoute("/design/")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$3, "component")
 });
-var $$splitComponentImporter$2 = () => import("../_id-DbEQ-J4g.mjs");
+var $$splitComponentImporter$2 = () => import("../_id-DKfwgoLn.mjs");
 var Route$8 = createFileRoute("/design/$id")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -5556,7 +5556,7 @@ var Route$8 = createFileRoute("/design/$id")({
 	pendingComponent: DesignEntryLoading,
 	component: lazyRouteComponent($$splitComponentImporter$2, "component")
 });
-var $$splitComponentImporter$1 = () => import("./open-source-BqXYvtgG.mjs");
+var $$splitComponentImporter$1 = () => import("./open-source-C6dxuk7O.mjs");
 var Route$7 = createFileRoute("/open-source/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ entries: fetchOpenSourceEntries() }),
@@ -5569,7 +5569,7 @@ var Route$7 = createFileRoute("/open-source/")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("../_slug-BPlCu7p3.mjs");
+var $$splitComponentImporter = () => import("../_slug-C_EDwQt2.mjs");
 var Route$6 = createFileRoute("/open-source/$slug")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -6481,7 +6481,8 @@ var router_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter })
 function getRouter() {
 	return createRouter({
 		routeTree,
-		scrollRestoration: true
+		scrollRestoration: false,
+		defaultStaleTime: 3e4
 	});
 }
 //#endregion

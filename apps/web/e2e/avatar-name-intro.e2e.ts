@@ -224,6 +224,13 @@ test("glyph sampling finishing during the curtain lift still plays the sequence"
   });
   await app.clearState();
   await app.open("/");
+  // TanStack 下 runner 的 open 要等整个开演仪式落定才返回，leaving 相在 open 期间
+  // 就结束了。清掉会话标记原地重放一次仪式，让下面的 poll 在重放期间捕捉离场相。
+  await browser.evaluate(() => {
+    sessionStorage.clear();
+    location.reload();
+    return null;
+  });
   // 帘进入离场相（类名携带 leaving）立即放行字体，采样将在帘 DOM 尚在时完成。
   await expect.poll(() => browser.evaluate(() => document.querySelector(".opening-loader")?.className ?? ""), { timeout: 20_000 }).toContain("opening-loader--leaving");
   await browser.evaluate(() => {
@@ -383,8 +390,26 @@ test("a late first-visit glyph load must not overwrite a newly settled static fo
   });
   await app.clearState();
   await app.open("/");
-  const armed = await browser.evaluate(() => (window as typeof window & { __fontsArmed?: boolean }).__fontsArmed === true);
-  expect(armed).toBe(true);
+  // 与上一用例同理：open 会等仪式落定，清标记原地重放，让字形采样的竞态发生在
+  // 观察窗内。重放后 init script 重新安装，武装标记与字体门闸仍然生效。
+  await browser.evaluate(() => {
+    sessionStorage.clear();
+    location.reload();
+    return null;
+  });
+  const armed = await expect
+    .poll(async () => {
+      try {
+        return await browser.evaluate(
+          () => (window as typeof window & { __fontsArmed?: boolean }).__fontsArmed === true
+            && document.readyState === "complete",
+        );
+      } catch {
+        // location.reload 进行中，evaluate 的执行上下文暂时不可用，下一轮重试。
+        return false;
+      }
+    }, { timeout: 15_000 })
+    .toBe(true);
   // 粒子接管且首字的 load 确实被扣住（全站只有序列采样调用 fonts.load）。
   await expect.poll(() => browser.evaluate(() => ({
     particles: document.querySelector<HTMLButtonElement>(".curation-home__avatar")?.dataset.particles === "on",

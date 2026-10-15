@@ -11,7 +11,14 @@ export const LOADER_PLAYED_KEY = "personal-site:opening-loader-played";
  */
 export const test = base.extend({
   openingLoaderPlayed: async ({ browser }, use) => {
-    await browser.addInitScript((key: string) => window.sessionStorage.setItem(key, "true"), LOADER_PLAYED_KEY);
+    // init script 会在 about:blank 等中间文档上执行：sessionStorage 访问受限时按未标注处理。
+    await browser.addInitScript((key: string) => {
+      try {
+        window.sessionStorage.setItem(key, "true");
+      } catch {
+        // 非 app 文档，忽略。
+      }
+    }, LOADER_PLAYED_KEY);
     await use(undefined);
   },
 });

@@ -1,8 +1,8 @@
+import { formatAiNewsRelativeTime, formatAiNewsTime, getAiNewsCategoryLabel, getAiNewsOriginalAction, getAiNewsUrlHost } from "./_ssr/open-source-DgxG6IN-.mjs";
 import { require_jsx_runtime } from "./_libs/@openuidev/react-headless+[...].mjs";
 import { ArrowUpRight } from "./_libs/lucide-react.mjs";
-import { formatAiNewsRelativeTime, formatAiNewsTime, getAiNewsCategoryLabel, getAiNewsOriginalAction, getAiNewsUrlHost } from "./_ssr/open-source-DgxG6IN-.mjs";
-import { AiNewsDetailArticle, DetailPage, DetailTopbar, Route$19, useHasMounted } from "./_ssr/router-D7Io2iE5.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/_id-CfPCd7VB.js
+import { AiNewsDetailArticle, DetailPage, DetailTopbar, Route$19, useHasMounted } from "./_ssr/router-DuGGPPwl.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/_id-C-3Y9EAZ.js
 var import_jsx_runtime = require_jsx_runtime();
 /** 静态详情页的相对时间：服务端渲染为空态，水合后再计算，避免缓存页里的时间过期。 */
 function AiNewsRelativeTime({ publishedAt }) {

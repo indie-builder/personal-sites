@@ -1,7 +1,7 @@
 import { __toESM } from "../_runtime.mjs";
-import { require_react } from "../_libs/@floating-ui/react-dom+[...].mjs";
 import { ArraySchema, Boolean, NullOr, Number, String, Struct, catch_, check, decodeUnknownResult, fail, isFailure$1 as isFailure, isFinite, isGreaterThanOrEqualTo, isMinLength, mutable, runPromise, succeed, timeoutOrElse } from "../_libs/effect.mjs";
 import { aiNewsListRowSchema, curationListItemSchema, io } from "./open-source-DgxG6IN-.mjs";
+import { require_react } from "../_libs/@floating-ui/react-dom+[...].mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/use-stream-feed-Crck_SP5.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var MAX_SNAPSHOT_ITEMS = 400;

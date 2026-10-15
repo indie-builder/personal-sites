@@ -1,8 +1,8 @@
 import { Await } from "../_libs/@tanstack/react-router+[...].mjs";
 import { require_jsx_runtime } from "../_libs/@openuidev/react-headless+[...].mjs";
-import { FeedPage, Route$25 } from "./router-D7Io2iE5.mjs";
-import { CurationStream } from "./curation-stream-CPUtP0Uk.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/douyin-CPLZQAE7.js
+import { FeedPage, Route$25 } from "./router-DuGGPPwl.mjs";
+import { CurationStream } from "./curation-stream-DSYfwspl.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/douyin-CrPuMV9D.js
 var import_jsx_runtime = require_jsx_runtime();
 function DouyinPage() {
 	const { douyinPage } = Route$25.useLoaderData();
