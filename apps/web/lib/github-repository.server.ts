@@ -79,7 +79,6 @@ function githubFetch(pathname: string, init: RequestInit = {}) {
         ...init,
         headers,
         signal,
-        next: { revalidate: 600 },
       }),
     );
     if (response.status === 404)

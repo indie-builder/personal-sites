@@ -11,7 +11,7 @@ import { fetchDouyinPage } from "@/src/functions/content";
 // 缓存只对页面外壳有意义，内容更新以重新部署为准。
 export const Route = createFileRoute("/douyin")({
   headers: () => ({ "Cache-Control": pageCacheControl(300) }),
-  loader: () => fetchDouyinPage({ data: { limit: CURATION_PAGE_SIZE, offset: 0 } }),
+  loader: () => ({ douyinPage: fetchDouyinPage({ data: { limit: CURATION_PAGE_SIZE, offset: 0 } }) }),
   head: () => ({
     links: canonicalLinks("/douyin"),
     meta: [

@@ -22,7 +22,7 @@ export const Route = createFileRoute("/sitemap.xml")({
     handlers: {
       GET: async () => {
         const dynamic = await Effect.runPromise(getSitemapRecords());
-        const entries = [
+        const entries: Array<{ changeFrequency: string; lastModified?: string; priority: number; url: string }> = [
           ...staticPaths.map((path, index) => ({
             changeFrequency: path === "" ? "daily" : "hourly",
             priority: path === "" ? 1 : index <= 2 ? 0.9 : 0.7,
@@ -41,7 +41,7 @@ ${entries
   .map(
     (entry) => `  <url>
     <loc>${escapeXml(entry.url)}</loc>
-    ${"lastModified" in entry ? `<lastmod>${new Date(entry.lastModified).toISOString()}</lastmod>` : ""}
+    ${entry.lastModified ? `<lastmod>${new Date(entry.lastModified).toISOString()}</lastmod>` : ""}
     <changefreq>${entry.changeFrequency}</changefreq>
     <priority>${entry.priority}</priority>
   </url>`,

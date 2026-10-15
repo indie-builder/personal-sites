@@ -16,7 +16,7 @@ export const Route = createFileRoute("/design/$id")({
     if (!entry) throw notFound();
     return { entry };
   },
-  head: ({ loaderData }) => buildCurationEntryHead({ context: "design", entry: loaderData.entry }),
+  head: ({ loaderData }) => (loaderData ? buildCurationEntryHead({ context: "design", entry: loaderData.entry }) : {}),
   pendingComponent: DesignEntryLoading,
   component: DesignEntryPage,
 });

@@ -15,7 +15,7 @@ import { fetchAiNewsPage } from "@/src/functions/content";
 // 缓存 60 秒，过期后由下一次请求触发后台合并 SQLite 历史与 Supabase 增量。
 export const Route = createFileRoute("/")({
   headers: () => ({ "Cache-Control": pageCacheControl(60) }),
-  loader: () => fetchAiNewsPage({ data: { limit: AI_NEWS_PAGE_SIZE, offset: 0 } }),
+  loader: () => ({ feed: fetchAiNewsPage({ data: { limit: AI_NEWS_PAGE_SIZE, offset: 0 } }) }),
   head: () => ({ links: canonicalLinks("/") }),
   component: HomePage,
 });

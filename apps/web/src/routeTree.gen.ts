@@ -10,14 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AiNewsRouteImport } from './routes/ai-news'
-import { Route as CurationRouteImport } from './routes/curation'
-import { Route as DesignRouteImport } from './routes/design'
 import { Route as DouyinRouteImport } from './routes/douyin'
 import { Route as FeedDotxmlRouteImport } from './routes/feed[.]xml'
-import { Route as OpenSourceRouteImport } from './routes/open-source'
+import { Route as OpengraphImageRouteImport } from './routes/opengraph-image'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AiNewsIndexRouteImport } from './routes/ai-news/index'
 import { Route as AiNewsIdRouteImport } from './routes/ai-news/$id'
 import { Route as ApiAiNewsRouteImport } from './routes/api/ai-news'
 import { Route as ApiAskRouteImport } from './routes/api/ask'
@@ -26,8 +24,11 @@ import { Route as ApiDesignRouteImport } from './routes/api/design'
 import { Route as ApiDouyinRouteImport } from './routes/api/douyin'
 import { Route as ApiOpenSourceRouteImport } from './routes/api/open-source'
 import { Route as ApiXMediaRouteImport } from './routes/api/x-media'
+import { Route as CurationIndexRouteImport } from './routes/curation/index'
 import { Route as CurationIdRouteImport } from './routes/curation/$id'
+import { Route as DesignIndexRouteImport } from './routes/design/index'
 import { Route as DesignIdRouteImport } from './routes/design/$id'
+import { Route as OpenSourceIndexRouteImport } from './routes/open-source/index'
 import { Route as OpenSourceSlugRouteImport } from './routes/open-source/$slug'
 import { Route as ApiAiNewsIdRouteImport } from './routes/api/ai-news/$id'
 import { Route as ApiCronAiNewsRouteImport } from './routes/api/cron/ai-news'
@@ -41,21 +42,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AiNewsRoute = AiNewsRouteImport.update({
-  id: '/ai-news',
-  path: '/ai-news',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CurationRoute = CurationRouteImport.update({
-  id: '/curation',
-  path: '/curation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignRoute = DesignRouteImport.update({
-  id: '/design',
-  path: '/design',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DouyinRoute = DouyinRouteImport.update({
   id: '/douyin',
   path: '/douyin',
@@ -66,9 +52,9 @@ const FeedDotxmlRoute = FeedDotxmlRouteImport.update({
   path: '/feed.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OpenSourceRoute = OpenSourceRouteImport.update({
-  id: '/open-source',
-  path: '/open-source',
+const OpengraphImageRoute = OpengraphImageRouteImport.update({
+  id: '/opengraph-image',
+  path: '/opengraph-image',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -81,10 +67,15 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiNewsIndexRoute = AiNewsIndexRouteImport.update({
+  id: '/ai-news/',
+  path: '/ai-news/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiNewsIdRoute = AiNewsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AiNewsRoute,
+  id: '/ai-news/$id',
+  path: '/ai-news/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiNewsRoute = ApiAiNewsRouteImport.update({
   id: '/api/ai-news',
@@ -121,20 +112,35 @@ const ApiXMediaRoute = ApiXMediaRouteImport.update({
   path: '/api/x-media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CurationIndexRoute = CurationIndexRouteImport.update({
+  id: '/curation/',
+  path: '/curation/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CurationIdRoute = CurationIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => CurationRoute,
+  id: '/curation/$id',
+  path: '/curation/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesignIndexRoute = DesignIndexRouteImport.update({
+  id: '/design/',
+  path: '/design/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DesignIdRoute = DesignIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => DesignRoute,
+  id: '/design/$id',
+  path: '/design/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenSourceIndexRoute = OpenSourceIndexRouteImport.update({
+  id: '/open-source/',
+  path: '/open-source/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OpenSourceSlugRoute = OpenSourceSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => OpenSourceRoute,
+  id: '/open-source/$slug',
+  path: '/open-source/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiNewsIdRoute = ApiAiNewsIdRouteImport.update({
   id: '/$id',
@@ -171,12 +177,9 @@ const ApiOpenSourceSlugRepositoryTreeRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/ai-news': typeof AiNewsRouteWithChildren
-  '/curation': typeof CurationRouteWithChildren
-  '/design': typeof DesignRouteWithChildren
   '/douyin': typeof DouyinRoute
   '/feed.xml': typeof FeedDotxmlRoute
-  '/open-source': typeof OpenSourceRouteWithChildren
+  '/opengraph-image': typeof OpengraphImageRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ai-news/$id': typeof AiNewsIdRoute
@@ -190,6 +193,10 @@ export interface FileRoutesByFullPath {
   '/curation/$id': typeof CurationIdRoute
   '/design/$id': typeof DesignIdRoute
   '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/ai-news/': typeof AiNewsIndexRoute
+  '/curation/': typeof CurationIndexRoute
+  '/design/': typeof DesignIndexRoute
+  '/open-source/': typeof OpenSourceIndexRoute
   '/api/ai-news/$id': typeof ApiAiNewsIdRoute
   '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
@@ -199,12 +206,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/ai-news': typeof AiNewsRouteWithChildren
-  '/curation': typeof CurationRouteWithChildren
-  '/design': typeof DesignRouteWithChildren
   '/douyin': typeof DouyinRoute
   '/feed.xml': typeof FeedDotxmlRoute
-  '/open-source': typeof OpenSourceRouteWithChildren
+  '/opengraph-image': typeof OpengraphImageRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ai-news/$id': typeof AiNewsIdRoute
@@ -218,6 +222,10 @@ export interface FileRoutesByTo {
   '/curation/$id': typeof CurationIdRoute
   '/design/$id': typeof DesignIdRoute
   '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/ai-news': typeof AiNewsIndexRoute
+  '/curation': typeof CurationIndexRoute
+  '/design': typeof DesignIndexRoute
+  '/open-source': typeof OpenSourceIndexRoute
   '/api/ai-news/$id': typeof ApiAiNewsIdRoute
   '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
@@ -228,12 +236,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/ai-news': typeof AiNewsRouteWithChildren
-  '/curation': typeof CurationRouteWithChildren
-  '/design': typeof DesignRouteWithChildren
   '/douyin': typeof DouyinRoute
   '/feed.xml': typeof FeedDotxmlRoute
-  '/open-source': typeof OpenSourceRouteWithChildren
+  '/opengraph-image': typeof OpengraphImageRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/ai-news/$id': typeof AiNewsIdRoute
@@ -247,6 +252,10 @@ export interface FileRoutesById {
   '/curation/$id': typeof CurationIdRoute
   '/design/$id': typeof DesignIdRoute
   '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/ai-news/': typeof AiNewsIndexRoute
+  '/curation/': typeof CurationIndexRoute
+  '/design/': typeof DesignIndexRoute
+  '/open-source/': typeof OpenSourceIndexRoute
   '/api/ai-news/$id': typeof ApiAiNewsIdRoute
   '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
@@ -258,12 +267,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/ai-news'
-    | '/curation'
-    | '/design'
     | '/douyin'
     | '/feed.xml'
-    | '/open-source'
+    | '/opengraph-image'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/ai-news/$id'
@@ -277,6 +283,10 @@ export interface FileRouteTypes {
     | '/curation/$id'
     | '/design/$id'
     | '/open-source/$slug'
+    | '/ai-news/'
+    | '/curation/'
+    | '/design/'
+    | '/open-source/'
     | '/api/ai-news/$id'
     | '/api/cron/ai-news'
     | '/api/health/data'
@@ -286,12 +296,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/ai-news'
-    | '/curation'
-    | '/design'
     | '/douyin'
     | '/feed.xml'
-    | '/open-source'
+    | '/opengraph-image'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/ai-news/$id'
@@ -305,6 +312,10 @@ export interface FileRouteTypes {
     | '/curation/$id'
     | '/design/$id'
     | '/open-source/$slug'
+    | '/ai-news'
+    | '/curation'
+    | '/design'
+    | '/open-source'
     | '/api/ai-news/$id'
     | '/api/cron/ai-news'
     | '/api/health/data'
@@ -314,12 +325,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/ai-news'
-    | '/curation'
-    | '/design'
     | '/douyin'
     | '/feed.xml'
-    | '/open-source'
+    | '/opengraph-image'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/ai-news/$id'
@@ -333,6 +341,10 @@ export interface FileRouteTypes {
     | '/curation/$id'
     | '/design/$id'
     | '/open-source/$slug'
+    | '/ai-news/'
+    | '/curation/'
+    | '/design/'
+    | '/open-source/'
     | '/api/ai-news/$id'
     | '/api/cron/ai-news'
     | '/api/health/data'
@@ -343,14 +355,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AiNewsRoute: typeof AiNewsRouteWithChildren
-  CurationRoute: typeof CurationRouteWithChildren
-  DesignRoute: typeof DesignRouteWithChildren
   DouyinRoute: typeof DouyinRoute
   FeedDotxmlRoute: typeof FeedDotxmlRoute
-  OpenSourceRoute: typeof OpenSourceRouteWithChildren
+  OpengraphImageRoute: typeof OpengraphImageRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AiNewsIdRoute: typeof AiNewsIdRoute
   ApiAiNewsRoute: typeof ApiAiNewsRouteWithChildren
   ApiAskRoute: typeof ApiAskRoute
   ApiCurationRoute: typeof ApiCurationRoute
@@ -358,6 +368,13 @@ export interface RootRouteChildren {
   ApiDouyinRoute: typeof ApiDouyinRoute
   ApiOpenSourceRoute: typeof ApiOpenSourceRouteWithChildren
   ApiXMediaRoute: typeof ApiXMediaRoute
+  CurationIdRoute: typeof CurationIdRoute
+  DesignIdRoute: typeof DesignIdRoute
+  OpenSourceSlugRoute: typeof OpenSourceSlugRoute
+  AiNewsIndexRoute: typeof AiNewsIndexRoute
+  CurationIndexRoute: typeof CurationIndexRoute
+  DesignIndexRoute: typeof DesignIndexRoute
+  OpenSourceIndexRoute: typeof OpenSourceIndexRoute
   ApiCronAiNewsRoute: typeof ApiCronAiNewsRoute
   ApiHealthDataRoute: typeof ApiHealthDataRoute
   ApiHealthAiNewsArchiveRoute: typeof ApiHealthAiNewsArchiveRoute
@@ -370,27 +387,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai-news': {
-      id: '/ai-news'
-      path: '/ai-news'
-      fullPath: '/ai-news'
-      preLoaderRoute: typeof AiNewsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/curation': {
-      id: '/curation'
-      path: '/curation'
-      fullPath: '/curation'
-      preLoaderRoute: typeof CurationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design': {
-      id: '/design'
-      path: '/design'
-      fullPath: '/design'
-      preLoaderRoute: typeof DesignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/douyin': {
@@ -407,11 +403,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/open-source': {
-      id: '/open-source'
-      path: '/open-source'
-      fullPath: '/open-source'
-      preLoaderRoute: typeof OpenSourceRouteImport
+    '/opengraph-image': {
+      id: '/opengraph-image'
+      path: '/opengraph-image'
+      fullPath: '/opengraph-image'
+      preLoaderRoute: typeof OpengraphImageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -428,12 +424,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-news/': {
+      id: '/ai-news/'
+      path: '/ai-news'
+      fullPath: '/ai-news/'
+      preLoaderRoute: typeof AiNewsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai-news/$id': {
       id: '/ai-news/$id'
-      path: '/$id'
+      path: '/ai-news/$id'
       fullPath: '/ai-news/$id'
       preLoaderRoute: typeof AiNewsIdRouteImport
-      parentRoute: typeof AiNewsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/ai-news': {
       id: '/api/ai-news'
@@ -484,26 +487,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiXMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/curation/': {
+      id: '/curation/'
+      path: '/curation'
+      fullPath: '/curation/'
+      preLoaderRoute: typeof CurationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/curation/$id': {
       id: '/curation/$id'
-      path: '/$id'
+      path: '/curation/$id'
       fullPath: '/curation/$id'
       preLoaderRoute: typeof CurationIdRouteImport
-      parentRoute: typeof CurationRoute
+      parentRoute: typeof rootRouteImport
+    }
+    '/design/': {
+      id: '/design/'
+      path: '/design'
+      fullPath: '/design/'
+      preLoaderRoute: typeof DesignIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/design/$id': {
       id: '/design/$id'
-      path: '/$id'
+      path: '/design/$id'
       fullPath: '/design/$id'
       preLoaderRoute: typeof DesignIdRouteImport
-      parentRoute: typeof DesignRoute
+      parentRoute: typeof rootRouteImport
+    }
+    '/open-source/': {
+      id: '/open-source/'
+      path: '/open-source'
+      fullPath: '/open-source/'
+      preLoaderRoute: typeof OpenSourceIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/open-source/$slug': {
       id: '/open-source/$slug'
-      path: '/$slug'
+      path: '/open-source/$slug'
       fullPath: '/open-source/$slug'
       preLoaderRoute: typeof OpenSourceSlugRouteImport
-      parentRoute: typeof OpenSourceRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/ai-news/$id': {
       id: '/api/ai-news/$id'
@@ -550,52 +574,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AiNewsRouteChildren {
-  AiNewsIdRoute: typeof AiNewsIdRoute
-}
-
-const AiNewsRouteChildren: AiNewsRouteChildren = {
-  AiNewsIdRoute: AiNewsIdRoute,
-}
-
-const AiNewsRouteWithChildren =
-  AiNewsRoute._addFileChildren(AiNewsRouteChildren)
-
-interface CurationRouteChildren {
-  CurationIdRoute: typeof CurationIdRoute
-}
-
-const CurationRouteChildren: CurationRouteChildren = {
-  CurationIdRoute: CurationIdRoute,
-}
-
-const CurationRouteWithChildren = CurationRoute._addFileChildren(
-  CurationRouteChildren,
-)
-
-interface DesignRouteChildren {
-  DesignIdRoute: typeof DesignIdRoute
-}
-
-const DesignRouteChildren: DesignRouteChildren = {
-  DesignIdRoute: DesignIdRoute,
-}
-
-const DesignRouteWithChildren =
-  DesignRoute._addFileChildren(DesignRouteChildren)
-
-interface OpenSourceRouteChildren {
-  OpenSourceSlugRoute: typeof OpenSourceSlugRoute
-}
-
-const OpenSourceRouteChildren: OpenSourceRouteChildren = {
-  OpenSourceSlugRoute: OpenSourceSlugRoute,
-}
-
-const OpenSourceRouteWithChildren = OpenSourceRoute._addFileChildren(
-  OpenSourceRouteChildren,
-)
-
 interface ApiAiNewsRouteChildren {
   ApiAiNewsIdRoute: typeof ApiAiNewsIdRoute
 }
@@ -624,14 +602,12 @@ const ApiOpenSourceRouteWithChildren = ApiOpenSourceRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AiNewsRoute: AiNewsRouteWithChildren,
-  CurationRoute: CurationRouteWithChildren,
-  DesignRoute: DesignRouteWithChildren,
   DouyinRoute: DouyinRoute,
   FeedDotxmlRoute: FeedDotxmlRoute,
-  OpenSourceRoute: OpenSourceRouteWithChildren,
+  OpengraphImageRoute: OpengraphImageRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AiNewsIdRoute: AiNewsIdRoute,
   ApiAiNewsRoute: ApiAiNewsRouteWithChildren,
   ApiAskRoute: ApiAskRoute,
   ApiCurationRoute: ApiCurationRoute,
@@ -639,6 +615,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDouyinRoute: ApiDouyinRoute,
   ApiOpenSourceRoute: ApiOpenSourceRouteWithChildren,
   ApiXMediaRoute: ApiXMediaRoute,
+  CurationIdRoute: CurationIdRoute,
+  DesignIdRoute: DesignIdRoute,
+  OpenSourceSlugRoute: OpenSourceSlugRoute,
+  AiNewsIndexRoute: AiNewsIndexRoute,
+  CurationIndexRoute: CurationIndexRoute,
+  DesignIndexRoute: DesignIndexRoute,
+  OpenSourceIndexRoute: OpenSourceIndexRoute,
   ApiCronAiNewsRoute: ApiCronAiNewsRoute,
   ApiHealthDataRoute: ApiHealthDataRoute,
   ApiHealthAiNewsArchiveRoute: ApiHealthAiNewsArchiveRoute,

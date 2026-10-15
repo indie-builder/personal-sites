@@ -17,6 +17,7 @@ export const Route = createFileRoute("/open-source/$slug")({
     return { entry };
   },
   head: ({ loaderData }) => {
+    if (!loaderData) return {};
     const { entry } = loaderData;
     const title = `${entry.repository}｜开源关注`;
     const description = entry.personalNote || entry.repository;

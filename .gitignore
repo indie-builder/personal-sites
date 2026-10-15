@@ -59,3 +59,6 @@ test-results/
 /apps/web/var/
 # e2e agent 冒烟运行产物（报告、回放缓存、应用日志）。
 /apps/web/.e2e/
+
+# nitro server assets 构建输入（prepare-data 生成的部署副本）。
+/apps/web/assets/data/

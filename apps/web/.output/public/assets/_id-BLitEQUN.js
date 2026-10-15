@@ -1,1 +1,0 @@
-import{Kt as e}from"./use-media-query-DlwQrUB6.js";import{i as t,n}from"./index-B5DgINRq.js";var r=e();function i(){let{entry:e}=n.useLoaderData();return(0,r.jsx)(t,{context:`design`,entry:e})}export{i as component};

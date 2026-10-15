@@ -1,20 +1,15 @@
 import "@tanstack/react-start/server-only";
 
 import Database from "better-sqlite3";
-import { existsSync } from "node:fs";
-import path from "node:path";
 import { Schema } from "effect";
 
-export const PUBLIC_DATABASE_PATH = path.join(process.cwd(), "data/curation.sqlite");
+import { resolvePublicDataFile } from "@/lib/bundled-file";
 
 export const contentJsonRowSchema = Schema.Struct({ content_json: Schema.String.check(Schema.isMinLength(1)) });
 
 let database: Database.Database | undefined;
 
 export function getPublicDatabase() {
-  if (!existsSync(PUBLIC_DATABASE_PATH)) {
-    throw new Error("缺少 data/curation.sqlite；请先生成本地公开投影。");
-  }
-  database ??= new Database(PUBLIC_DATABASE_PATH, { fileMustExist: true, readonly: true });
+  database ??= new Database(resolvePublicDataFile("curation.sqlite"), { fileMustExist: true, readonly: true });
   return database;
 }

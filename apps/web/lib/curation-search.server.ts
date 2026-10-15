@@ -4,7 +4,8 @@ import "@tanstack/react-start/server-only";
 import { statSync } from "node:fs";
 import { Schema } from "effect";
 
-import { getPublicDatabase, PUBLIC_DATABASE_PATH } from "@/lib/public-database";
+import { getPublicDatabase } from "@/lib/public-database";
+import { resolvePublicDataFile } from "@/lib/bundled-file";
 import type { AskDocumentScope, AskSource } from "@/lib/ask-types";
 
 /** 统计已归一为小写的文本中，needle 不重叠的出现次数。 */
@@ -54,7 +55,7 @@ type DailySearchCorpusEntry = Omit<LocalAskDocument, "score"> & {
 let dailySearchCorpusCache: { entries: DailySearchCorpusEntry[]; mtimeMs: number } | undefined;
 
 function getDailySearchCorpus(): DailySearchCorpusEntry[] {
-  const mtimeMs = statSync(PUBLIC_DATABASE_PATH).mtimeMs;
+  const mtimeMs = statSync(resolvePublicDataFile("curation.sqlite")).mtimeMs;
   if (dailySearchCorpusCache?.mtimeMs === mtimeMs) return dailySearchCorpusCache.entries;
 
   const entries = getPublicDatabase()

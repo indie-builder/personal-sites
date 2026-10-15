@@ -3814,7 +3814,7 @@ var HEADERS = { TSS_SHELL: "X-TSS_SHELL" };
 * the dev styles URL for route-scoped CSS collection.
 */
 async function getStartManifest(matchedRoutes) {
-	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-CdMaV4hq.mjs");
+	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-BU7HyrsR.mjs");
 	const startManifest = tsrStartManifest();
 	let routes = startManifest.routes;
 	routes[rootRouteId];
@@ -3836,35 +3836,35 @@ async function getStartManifest(matchedRoutes) {
 var manifest = {
 	"15e027738148afc6dd5ac09918f45c3d72c76be6893863d22ac19ffce269c55f": {
 		functionName: "fetchCurationEntry_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"4f3963247b12f02090fa3da8be4d5199ea1c85a10c96c6a37de7a1408f20dc3d": {
 		functionName: "fetchAiNewsItem_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"7b0c716ecadd5492215c4fee7b1ab979be78c28d88456ad752c0674d360362a5": {
 		functionName: "fetchOpenSourceEntry_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"8eb68cef1317990e5e52949743be9622d519c7bee590de89732a896e02fa78b0": {
 		functionName: "fetchOpenSourceEntries_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"986a875b84db8e5a9a1cf6a05227d62c5eb5069d82992b8ced169e5726267167": {
 		functionName: "fetchDesignPage_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"9f96209fcd0c2e871ad5c0af35101fe12be312aab649c067eb545e4c600552f7": {
 		functionName: "fetchCurationFeed_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"a39971a6ee6f0199e3064e88f67135247797ed64388161f9ea80f23a537cbdda": {
 		functionName: "fetchDouyinPage_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	},
 	"c2be3c536d048567dcb0bad67d089668b85517c332ca44b1f7dc66a1a1e9e607": {
 		functionName: "fetchAiNewsPage_createServerFn_handler",
-		importer: () => import("./content-BaKX1IOm.mjs")
+		importer: () => import("./content-BGXYvSPP.mjs")
 	}
 };
 async function getServerFnById(id, access) {
@@ -6533,7 +6533,7 @@ var getBaseManifest = getProdBaseManifest;
 var createEarlyHintsForRequest = createEarlyHintsCollector;
 async function loadEntries() {
 	const [routerEntry, startEntry, pluginAdapters] = await Promise.all([
-		import("./router-C2oYZlh0.mjs").then((n) => n.router_exports),
+		import("./router-CHLaDmxj.mjs").then((n) => n.router_exports),
 		import("./start-BlFrwt6L.mjs"),
 		import("./empty-plugin-adapters-DsGbq68A.mjs")
 	]);

@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 
 import { AiNewsRelativeTime } from "@/components/ai-news-relative-time";
-import { AiNewsDetailSkeleton } from "@/components/ai-news-detail-skeleton";
+import AiNewsDetailLoading from "@/components/ai-news-detail-skeleton";
 import { AiNewsDetailArticle } from "@/components/ai-news-detail-entrance";
 import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import {
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/ai-news/$id")({
     return { item };
   },
   head: ({ loaderData }) => {
+    if (!loaderData) return {};
     const { item } = loaderData;
     const title = `${item.title}｜每日动态`;
     const description = item.summary || item.title;
