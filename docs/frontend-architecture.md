@@ -42,10 +42,10 @@ RootLayout
 
 | 区域 | 主文件 | 责任 | 不应承担的责任 |
 |---|---|---|---|
-| 全局壳 | `apps/web/app/layout.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
-| 首页 | `apps/web/app/page.tsx` | 稳定输出身份轨、刊头与每日动态列表，保留数据 Suspense 边界 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
-| 版块页 | `apps/web/app/ai-news/page.tsx`、`apps/web/app/curation/page.tsx`、`apps/web/app/design/page.tsx`、`apps/web/app/douyin/page.tsx`、`apps/web/app/open-source/page.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
-| 详情页 | `apps/web/app/curation/[id]/page.tsx`、`apps/web/app/design/[id]/page.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
+| 全局壳 | `apps/web/src/routes/__root.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
+| 首页 | `apps/web/src/routes/index.tsx` | 稳定输出身份轨、刊头与每日动态列表，保留数据 Suspense 边界 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
+| 版块页 | `apps/web/src/routes/ai-news/index.tsx`、`apps/web/src/routes/curation/index.tsx`、`apps/web/src/routes/design/index.tsx`、`apps/web/src/routes/douyin.tsx`、`apps/web/src/routes/open-source/index.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
+| 详情页 | `apps/web/src/routes/curation/$id.tsx`、`apps/web/src/routes/design/$id.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
 | Loading | `apps/web/components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
 | 个人简介 | `apps/web/components/profile-introduction.tsx`、`apps/web/components/profile-typewriter.ts`、`apps/web/components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
 | 内容导航 | `apps/web/components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
@@ -53,7 +53,7 @@ RootLayout
 | 策展数据 | `apps/web/lib/curation.ts` | Effect Schema 校验、Effect 查询、日期格式化 | 页面布局、问答检索 |
 | 本地问答检索 | `apps/web/lib/curation-search.server.ts` | 公开 SQLite 语料缓存、全文匹配与排序 | 策展页面查询 |
 | 公开发现 | `apps/web/lib/discovery.server.ts` | 汇总公开 SQLite 与 Supabase，生成 Sitemap/RSS 数据 | 私有原始资料或运行时写入 |
-| 数据健康 | `apps/web/app/api/health/data/route.ts` + `packages/public-data/src/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
+| 数据健康 | `apps/web/src/routes/api/health/data.ts` + `packages/public-data/src/data-health/status.mjs` | 汇总远端同步状态与本地公开投影，通过一个接口应用新鲜度规则 | 数据抓取、自动修复或暴露私有洞察 |
 
 统一健康状态会执行 SQLite `quick_check`，并按 `rowid` 双向核对 `ask_documents` 与 FTS5，而不是只比较总数；数据库损坏、缺失索引行或孤儿索引行都会让健康端点返回 503。
 
@@ -155,7 +155,7 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 
 - 同级栏目链接直接提交 Next 路由，键盘导航不经过退出动效；手机身份展开/收拢保留现有桥接。之前描述的桌面淡入换页已被这一规则取代。
 - 问答输入统一 16px，主要控件统一 44px。
-- `apps/web/app/not-found.tsx` 为缺失页面提供共享身份轨与真实阅读出口。
+- `apps/web/components/route-fallbacks.tsx` 为缺失页面提供共享身份轨与真实阅读出口。
 
 
 ## 2026-09-09 构建功能下线

@@ -21,7 +21,10 @@ vi.mock("@/lib/supabase.server", () => ({ getAdminSupabaseClient: () => ({ stora
 }) } }) }));
 
 import { streamAskAnswer } from "@/lib/ask-session.server";
-import { POST } from "@/app/api/ask/route";
+import { Route } from "../src/routes/api/ask";
+
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const POST = (Route.options.server?.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
 
 const request = { conversationId: "fixture", visitorId: "fixture", question: "问题", sources: [], onText: vi.fn() };
 const usage = {
@@ -114,7 +117,7 @@ it("cancels the real SDK model transport through the POST response reader", asyn
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ visitorId: "visitor-1234567890", conversationId: "conversation-1234567890", question: "公开资料", scope: "all" }),
   });
-  const response = await POST(request);
+  const response = await POST({ request });
   const modelSignal = await fixture.ready;
   const reader = response.body?.getReader();
   expect(reader).toBeDefined();

@@ -1,8 +1,8 @@
 import { Await } from "../_libs/@tanstack/react-router+[...].mjs";
 import { require_jsx_runtime } from "../_libs/@openuidev/react-headless+[...].mjs";
-import { FeedPage, Route$9 } from "./router-BKZi6fNy.mjs";
-import { CurationStream } from "./curation-stream-Chw6yC0q.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/design-gaxYH8WH.js
+import { FeedPage, Route$9 } from "./router-D7Io2iE5.mjs";
+import { CurationStream } from "./curation-stream-CPUtP0Uk.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/design-BQHaPZgw.js
 var import_jsx_runtime = require_jsx_runtime();
 function DesignPage() {
 	const { designPage } = Route$9.useLoaderData();

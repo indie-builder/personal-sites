@@ -6,13 +6,13 @@ export const RSS_FEED_PATH = "/feed.xml";
 type HeadLink = { rel: string; href: string; type?: string };
 
 /**
- * 页面级 canonical 与 RSS 订阅链接：原 Next 的 withCanonical().alternates 等价物。
- * 相对路径会整体替换布局层，因此每个页面都要带上 RSS 标注，避免列表与详情页丢失。
+ * 页面级 canonical（原 Next withCanonical().alternates 的等价物）。
+ * TanStack 的 head links 按路由合并且不去重，根布局已提供唯一的 RSS 订阅标注，
+ * 页面级只补 canonical，避免详情页出现两条订阅链接。
  */
 export function canonicalLinks(canonicalPath: string): Array<HeadLink> {
   return [
     { rel: "canonical", href: `${SITE_URL}${canonicalPath}` },
-    { rel: "alternate", type: "application/rss+xml", href: RSS_FEED_PATH },
   ];
 }
 

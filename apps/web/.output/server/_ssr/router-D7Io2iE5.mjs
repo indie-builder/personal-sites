@@ -383,7 +383,7 @@ function useMediaQuery(query) {
 	return (0, import_react.useSyncExternalStore)(subscribe, snapshot, serverSnapshot);
 }
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/content-_qHkhIPY.js
+//#region node_modules/.nitro/vite/services/ssr/assets/content-DOyNlWx-.js
 var OPENING_PLAYED_KEY = "personal-site:opening-loader-played";
 var OPENING_REVEAL_EVENT = "site:opening-reveal";
 var openingRevealAt = null;
@@ -1107,7 +1107,7 @@ function AboutPrint() {
 		})]
 	});
 }
-var AskChat = (0, import_react.lazy)(() => import("./ask-chat-CZOmI3zL.mjs").then((module) => ({ default: module.AskChat })));
+var AskChat = (0, import_react.lazy)(() => import("./ask-chat-CQKpXI9Q.mjs").then((module) => ({ default: module.AskChat })));
 function AskAssistant() {
 	const [phase, setPhase] = (0, import_react.useState)("closed");
 	const [instant, setInstant] = (0, import_react.useState)(false);
@@ -3476,20 +3476,15 @@ function DetailLoadingChrome({ backLabel, loadingLabel }) {
 }
 var SITE_NAME = "陈远｜运行中的工程档案";
 var SITE_URL = "https://default-coder.lovemyrmb.cn";
-/** 全站 RSS 订阅标注（原 Next alternates.types 的等价物）。 */
-var RSS_FEED_PATH = "/feed.xml";
 /**
-* 页面级 canonical 与 RSS 订阅链接：原 Next 的 withCanonical().alternates 等价物。
-* 相对路径会整体替换布局层，因此每个页面都要带上 RSS 标注，避免列表与详情页丢失。
+* 页面级 canonical（原 Next withCanonical().alternates 的等价物）。
+* TanStack 的 head links 按路由合并且不去重，根布局已提供唯一的 RSS 订阅标注，
+* 页面级只补 canonical，避免详情页出现两条订阅链接。
 */
 function canonicalLinks(canonicalPath) {
 	return [{
 		rel: "canonical",
 		href: `${SITE_URL}${canonicalPath}`
-	}, {
-		rel: "alternate",
-		type: "application/rss+xml",
-		href: RSS_FEED_PATH
 	}];
 }
 var SITE_OG_IMAGE = {
@@ -3752,7 +3747,7 @@ function formatCurationClip(text) {
 	return text.replace(TCO_URL_PATTERN, "").replace(/\s+/gu, " ").trim();
 }
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/curation-entry-Kh_44h_t.js
+//#region node_modules/.nitro/vite/services/ssr/assets/curation-entry-ItgzGiWS.js
 /** 剪报簿族（/curation/$id 与 /design/$id）详情页的导航加载占位。 */
 function CurationEntryLoading() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailPage, {
@@ -4045,7 +4040,7 @@ function CurationEntryView({ context, entry }) {
 	});
 }
 //#endregion
-//#region node_modules/.nitro/vite/services/ssr/assets/router-BKZi6fNy.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-D7Io2iE5.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
 	let target = {};
@@ -4424,7 +4419,7 @@ function RootComponent() {
 		] })]
 	});
 }
-var $$splitComponentImporter$9 = () => import("./routes-CJJ6QI6J.mjs");
+var $$splitComponentImporter$9 = () => import("./routes-GxCQZOd9.mjs");
 var Route$26 = createFileRoute("/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(60) }),
 	loader: () => ({ feed: fetchAiNewsPage({ data: {
@@ -4434,7 +4429,7 @@ var Route$26 = createFileRoute("/")({
 	head: () => ({ links: canonicalLinks("/") }),
 	component: lazyRouteComponent($$splitComponentImporter$9, "component")
 });
-var $$splitComponentImporter$8 = () => import("./douyin-DZ89xsSF.mjs");
+var $$splitComponentImporter$8 = () => import("./douyin-CPLZQAE7.mjs");
 var Route$25 = createFileRoute("/douyin")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ douyinPage: fetchDouyinPage({ data: {
@@ -4706,7 +4701,7 @@ ${[...staticPaths.map((path, index) => ({
 		"Content-Type": "application/xml; charset=utf-8"
 	} });
 } } } });
-var $$splitComponentImporter$7 = () => import("./ai-news-qEuEYrRg.mjs");
+var $$splitComponentImporter$7 = () => import("./ai-news-BnF31JZr.mjs");
 var Route$20 = createFileRoute("/ai-news/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(60) }),
 	loader: () => ({ feed: fetchAiNewsPage({ data: {
@@ -4821,7 +4816,7 @@ function AiNewsDetailLoading() {
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteProfile, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AiNewsDetailSkeleton, {})]
 	});
 }
-var $$splitComponentImporter$6 = () => import("../_id-C1g_bfp7.mjs");
+var $$splitComponentImporter$6 = () => import("../_id-CfPCd7VB.mjs");
 var Route$19 = createFileRoute("/ai-news/$id")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -5493,7 +5488,7 @@ var Route$12 = createFileRoute("/api/x-media")({ server: { handlers: {
 	GET: ({ request }) => proxyMedia(request, "GET"),
 	HEAD: ({ request }) => proxyMedia(request, "HEAD")
 } } });
-var $$splitComponentImporter$5 = () => import("./curation-BbEBc_jn.mjs");
+var $$splitComponentImporter$5 = () => import("./curation-Br4i_H_4.mjs");
 var Route$11 = createFileRoute("/curation/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ feed: fetchCurationFeed({ data: {
@@ -5509,7 +5504,7 @@ var Route$11 = createFileRoute("/curation/")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$5, "component")
 });
-var $$splitComponentImporter$4 = () => import("../_id-BwuahVeQ.mjs");
+var $$splitComponentImporter$4 = () => import("../_id--CXjkSOp.mjs");
 var Route$10 = createFileRoute("/curation/$id")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -5527,7 +5522,7 @@ var Route$10 = createFileRoute("/curation/$id")({
 	pendingComponent: CurationEntryLoading,
 	component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-var $$splitComponentImporter$3 = () => import("./design-gaxYH8WH.mjs");
+var $$splitComponentImporter$3 = () => import("./design-BQHaPZgw.mjs");
 var Route$9 = createFileRoute("/design/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ designPage: fetchDesignPage({ data: {
@@ -5543,7 +5538,7 @@ var Route$9 = createFileRoute("/design/")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$3, "component")
 });
-var $$splitComponentImporter$2 = () => import("../_id-CwqEXo1j.mjs");
+var $$splitComponentImporter$2 = () => import("../_id-DbEQ-J4g.mjs");
 var Route$8 = createFileRoute("/design/$id")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {
@@ -5561,7 +5556,7 @@ var Route$8 = createFileRoute("/design/$id")({
 	pendingComponent: DesignEntryLoading,
 	component: lazyRouteComponent($$splitComponentImporter$2, "component")
 });
-var $$splitComponentImporter$1 = () => import("./open-source-DZj08lZc.mjs");
+var $$splitComponentImporter$1 = () => import("./open-source-BqXYvtgG.mjs");
 var Route$7 = createFileRoute("/open-source/")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: () => ({ entries: fetchOpenSourceEntries() }),
@@ -5574,7 +5569,7 @@ var Route$7 = createFileRoute("/open-source/")({
 	}),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("../_slug-twEHePW0.mjs");
+var $$splitComponentImporter = () => import("../_slug-BPlCu7p3.mjs");
 var Route$6 = createFileRoute("/open-source/$slug")({
 	headers: () => ({ "Cache-Control": pageCacheControl(300) }),
 	loader: async ({ params }) => {

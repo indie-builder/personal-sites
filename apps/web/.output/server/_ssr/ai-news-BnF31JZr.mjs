@@ -1,8 +1,8 @@
 import { Await } from "../_libs/@tanstack/react-router+[...].mjs";
 import { require_jsx_runtime } from "../_libs/@openuidev/react-headless+[...].mjs";
-import { FeedPage, Route$20 } from "./router-BKZi6fNy.mjs";
-import { AiNewsStream } from "./ai-news-stream-Dx2VksnS.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/ai-news-qEuEYrRg.js
+import { FeedPage, Route$20 } from "./router-D7Io2iE5.mjs";
+import { AiNewsStream } from "./ai-news-stream-D3-aXruy.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/ai-news-BnF31JZr.js
 var import_jsx_runtime = require_jsx_runtime();
 function AiNewsPage() {
 	const { feed } = Route$20.useLoaderData();

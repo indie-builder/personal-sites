@@ -1,9 +1,11 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 const { getCurationPage, getCurationTags } = await import("../lib/curation");
-const { GET } = await import("../app/api/curation/route");
+const { Route } = await import("../src/routes/api/curation");
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const GET = (Route.options.server?.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
 
 describe("curation topic filters", () => {
   it("counts the full X corpus and paginates within a tag", async () => {
@@ -57,18 +59,18 @@ describe("curation topic filters", () => {
   });
 
   it("filters the API before pagination and retains public cache headers", async () => {
-    const response = await GET(new Request("http://localhost/api/curation?tag=%E6%8F%90%E7%A4%BA%E8%AF%8D&offset=20"));
+    const response = await GET({ request: new Request("http://localhost/api/curation?tag=%E6%8F%90%E7%A4%BA%E8%AF%8D&offset=20") });
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("s-maxage=300");
     expect(await response.json()).toEqual(await Effect.runPromise(getCurationPage(20, 20, "提示词")));
-    const unfiltered = await GET(new Request("http://localhost/api/curation"));
+    const unfiltered = await GET({ request: new Request("http://localhost/api/curation") });
     expect(await unfiltered.json()).toEqual(await Effect.runPromise(getCurationPage()));
   });
 
   it("handles unknown tags as empty and validates untrusted input", async () => {
     expect(await Effect.runPromise(getCurationPage(0, 20, "' OR 1=1 --"))).toEqual({ hasMore: false, items: [] });
     for (const query of ["tag=", `tag=${"a".repeat(41)}`, "offset=-1", "tag=%E6%8F%90%E7%A4%BA%E8%AF%8D&limit=51"]) {
-      expect((await GET(new Request(`http://localhost/api/curation?${query}`))).status).toBe(400);
+      expect((await GET({ request: new Request(`http://localhost/api/curation?${query}`) })).status).toBe(400);
     }
   });
 });

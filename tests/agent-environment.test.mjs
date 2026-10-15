@@ -15,6 +15,7 @@ const authoredText = (file) => text(file).replace(/<!-- BEGIN:[\s\S]*?<!-- END:[
 const nonSourcePaths = new Set([
   "apps/web/node_modules/next/dist/docs/",
   "apps/web/data/",
+  "apps/web/assets/data/",
   "tools/smaug/.state/",
   "tools/smaug/smaug.config.json",
   "tools/smaug/bookmarks.md",

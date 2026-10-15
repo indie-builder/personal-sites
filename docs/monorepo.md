@@ -73,6 +73,6 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 项目 Root Directory 改为 `apps/web`，开启构建时包含根目录之外的源文件（公共包、根配置和两份 SQLite）。`apps/web/vercel.json` 固定 Install Command 为 `bun install --frozen-lockfile`（整仓安装，Bun 的 isolated 布局不影响构建产物）；Build Command 使用 `bun run build`（此目录下为 Web 包脚本），不声明 Framework（Vercel 平台的 `VERCEL=1` 环境让 Nitro 自动选择 Vercel preset，产物为 `.output/`）。线上函数运行时仍由 `engines.node` 锁定为 Node 24.x。
 
-`vite.config.ts` 的 nitro 插件经 routeRules 下发全站安全头与 `/images` 缓存；页面级 CDN 缓存由各路由的 `Cache-Control`（`s-maxage` + `stale-while-revalidate`，见 `apps/web/lib/page-cache.ts`）承担，替代原 Next ISR。`scripts/bundle-server-assets.mjs` 在构建后把两份公开 SQLite 与 OG 字体拷进 `.output/server/`，函数运行时经 `apps/web/lib/bundled-file.ts` 定位，不依赖函数 cwd。环境变量继续保存在现有 Vercel 项目中。
+`vite.config.ts` 的 nitro 插件经 routeRules 下发全站安全头与 `/images` 缓存；页面级 CDN 缓存由各路由的 `Cache-Control`（`s-maxage` + `stale-while-revalidate`，见 `apps/web/lib/page-cache.ts`）承担，替代原 Next ISR。`apps/web/scripts/bundle-server-assets.mjs` 在构建后把两份公开 SQLite 与 OG 字体拷进 `.output/server/`，函数运行时经 `apps/web/lib/bundled-file.ts` 定位，不依赖函数 cwd。环境变量继续保存在现有 Vercel 项目中。
 
 这是部署项目设置的迁移条件；在旧代码仍为默认分支时不要提前修改生产项目的 Root Directory。合并迁移与切换 Root Directory 需一并安排。本机可以通过 `bun run build` 和 `bun run --filter @site/web start` 验证迁移后的完整应用；首次 Vercel 部署后需验证页面缓存头（`Cache-Control` MISS→HIT）与 `/api` 契约。

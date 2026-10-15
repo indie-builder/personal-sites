@@ -5,9 +5,9 @@ import { require_jsx_runtime } from "../_libs/@openuidev/react-headless+[...].mj
 import { useReducedMotion } from "../_libs/framer-motion+[...].mjs";
 import { motion } from "../_libs/motion.mjs";
 import { getOpenSourceCategoryLabel, getOpenSourceDimensionLabel, openSourceCategories } from "./open-source-DgxG6IN-.mjs";
-import { FeedPage, Route$7, STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, open_source_module_default, staggerDelay } from "./router-BKZi6fNy.mjs";
+import { FeedPage, Route$7, STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, open_source_module_default, staggerDelay } from "./router-D7Io2iE5.mjs";
 import { StreamFilterMenu, useStickyToolbarOffset } from "./stream-filter-menu-RoVngBkI.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/open-source-DZj08lZc.js
+//#region node_modules/.nitro/vite/services/ssr/assets/open-source-BqXYvtgG.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function OpenSourceStream({ entries }) {

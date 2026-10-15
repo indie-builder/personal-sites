@@ -28,7 +28,10 @@ vi.mock("@/lib/ask-session.server", () => ({ streamAskAnswer: () => {
   return blocked();
 } }));
 
-import { POST } from "@/app/api/ask/route";
+import { Route } from "../src/routes/api/ask";
+
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const POST = (Route.options.server?.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
 
 beforeEach(() => {
   mocks.ready = Promise.withResolvers<AbortSignal>();
@@ -42,7 +45,7 @@ it.each([false, true])("cancelling the SSE body interrupts the producer while se
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ visitorId: "visitor-1234567890", conversationId: "conversation-1234567890", question: "公开资料", scope: "all" }),
   });
-  const response = await POST(request);
+  const response = await POST({ request });
   const producerSignal = await mocks.ready.promise;
   const reader = response.body?.getReader();
   expect(reader).toBeDefined();
