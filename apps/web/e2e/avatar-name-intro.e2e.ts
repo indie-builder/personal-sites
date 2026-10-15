@@ -397,7 +397,7 @@ test("a late first-visit glyph load must not overwrite a newly settled static fo
     location.reload();
     return null;
   });
-  const armed = await expect
+  await expect
     .poll(async () => {
       try {
         return await browser.evaluate(

@@ -20,7 +20,7 @@ const publicEvidence = () => ({
 
 const { Route } = await import("@/src/routes/api/health/data");
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const GET = (Route.options.server?.handlers as { GET: () => Response | Promise<Response> }).GET;
+const GET = (Route.options.server!.handlers as { GET: () => Response | Promise<Response> }).GET;
 
 describe("unified data health", () => {
   beforeEach(() => {

@@ -4,7 +4,7 @@ import { Route } from "../src/routes/api/x-media";
 
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
 type MediaHandler = (ctx: { request: Request }) => Response | Promise<Response>;
-const { GET, HEAD } = Route.options.server?.handlers as { GET: MediaHandler; HEAD: MediaHandler };
+const { GET, HEAD } = Route.options.server!.handlers as { GET: MediaHandler; HEAD: MediaHandler };
 
 const videoUrl = "https://video.twimg.com/amplify_video/1/vid/avc1/1280x720/video.mp4?tag=1";
 
@@ -181,7 +181,7 @@ describe("x-media route error contract", () => {
   });
 
   it("returns the same JSON error contract for HEAD requests", async () => {
-    const { HEAD } = (await import("../src/routes/api/x-media")).Route.options.server?.handlers as { HEAD: MediaHandler };
+    const { HEAD } = (await import("../src/routes/api/x-media")).Route.options.server!.handlers as { HEAD: MediaHandler };
     const response = await HEAD({ request: new Request("http://localhost/api/x-media?url=https%3A%2F%2Fexample.com%2Ffile.mp4") });
 
     expect(response.status).toBe(400);

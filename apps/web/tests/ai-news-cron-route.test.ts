@@ -9,7 +9,7 @@ vi.mock("@/lib/ai-news-sync.server", () => ({
 const syncModule = await import("@/lib/ai-news-sync.server");
 const { Route } = await import("../src/routes/api/cron/ai-news");
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const POST = (Route.options.server?.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
+const POST = (Route.options.server!.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
 
 const authorizeMock = vi.mocked(syncModule.authorizeAiNewsCron);
 const runMock = vi.mocked(syncModule.runAiNewsCron);

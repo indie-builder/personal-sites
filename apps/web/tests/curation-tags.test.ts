@@ -5,7 +5,7 @@ vi.mock("@tanstack/react-start/server-only", () => ({}));
 const { getCurationPage, getCurationTags } = await import("../lib/curation");
 const { Route } = await import("../src/routes/api/curation");
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const GET = (Route.options.server?.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
+const GET = (Route.options.server!.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
 
 describe("curation topic filters", () => {
   it("counts the full X corpus and paginates within a tag", async () => {

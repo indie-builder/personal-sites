@@ -5,7 +5,7 @@ import { Route } from "../src/routes/api/ai-news/$id";
 import type { AiNewsItem } from "../lib/ai-news-types";
 
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const GET = (Route.options.server?.handlers as {
+const GET = (Route.options.server!.handlers as {
   GET: (ctx: { request: Request; params: { id: string } }) => Response | Promise<Response>;
 }).GET;
 

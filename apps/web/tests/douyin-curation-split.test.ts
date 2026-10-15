@@ -7,7 +7,7 @@ vi.mock("@tanstack/react-start/server-only", () => ({}));
 const { getCurationNeighbors, getCurationPage, getDouyinCurationPage } = await import("../lib/curation");
 const { Route } = await import("../src/routes/api/douyin");
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const GET = (Route.options.server?.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
+const GET = (Route.options.server!.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
 
 // 集成测试直接读随仓库打包的公开投影 data/curation.sqlite（当前含 5 条抖音条目）。
 describe("douyin curation split", () => {

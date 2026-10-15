@@ -62,7 +62,7 @@ describe("open-source public API", () => {
   it("serves pages through the shared feed skeleton with cache headers", async () => {
     const { Route } = await import("../src/routes/api/open-source");
     // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-    const GET = (Route.options.server?.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
+    const GET = (Route.options.server!.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
 
     const response = await GET({ request: new Request("http://localhost/api/open-source?offset=0&limit=20") });
 
@@ -76,7 +76,7 @@ describe("open-source public API", () => {
 
   it("rejects invalid pagination params before touching sqlite", async () => {
     const { Route } = await import("../src/routes/api/open-source");
-    const GET = (Route.options.server?.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
+    const GET = (Route.options.server!.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
 
     const response = await GET({ request: new Request("http://localhost/api/open-source?limit=999") });
 

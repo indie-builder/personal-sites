@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Route } from "../src/routes/opengraph-image";
 
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const GET = (Route.options.server?.handlers as { GET: () => Response | Promise<Response> }).GET;
+const GET = (Route.options.server!.handlers as { GET: () => Response | Promise<Response> }).GET;
 
 describe("opengraph-image route", () => {
   it("renders the site share card as PNG from the bundled font without network access", async () => {

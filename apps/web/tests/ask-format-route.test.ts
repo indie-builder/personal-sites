@@ -13,7 +13,7 @@ vi.mock("@/lib/ask-session.server", () => ({ streamAskAnswer: (options: { onText
 import { Route } from "../src/routes/api/ask";
 
 // vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
-const POST = (Route.options.server?.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
+const POST = (Route.options.server!.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
 
 beforeEach(() => { mocks.sources = []; mocks.answer.mockClear(); });
 const request = (format?: string) => new Request("http://localhost/api/ask", {
