@@ -1,6 +1,6 @@
 import { require_jsx_runtime } from "./_libs/@openuidev/react-headless+[...].mjs";
-import { CurationEntryView, Route$10 } from "./_ssr/router-CHLaDmxj.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/_id-D3p1UwpJ.js
+import { CurationEntryView, Route$10 } from "./_ssr/router-BKZi6fNy.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/_id-BwuahVeQ.js
 var import_jsx_runtime = require_jsx_runtime();
 function CurationEntryPage() {
 	const { entry } = Route$10.useLoaderData();

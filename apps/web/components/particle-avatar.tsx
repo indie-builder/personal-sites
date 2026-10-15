@@ -733,6 +733,7 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       onClick={onActivate}
       type="button"
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- 点描头像的静态兜底图，无需优化器 */}
       <img
         alt=""
         className="curation-home__avatar-stipple"

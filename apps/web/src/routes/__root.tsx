@@ -1,5 +1,4 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 
 import { OpeningLoader } from "@/components/opening-loader";
 import { RouteError, RouteNotFound } from "@/components/route-fallbacks";
@@ -50,6 +49,8 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <html data-scroll-behavior="smooth" lang="zh-CN">
+      {/* TanStack Start 的文档约定就是真实 <head> + HeadContent，不适用 next/head 规则。 */}
+      {/* eslint-disable-next-line next/no-head-element -- TanStack Start 根文档 */}
       <head>
         <HeadContent />
       </head>

@@ -1,13 +1,14 @@
 import { Effect } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../lib/ai-news-sync.server", () => ({
+vi.mock("@/lib/ai-news-sync.server", () => ({
   authorizeAiNewsCron: vi.fn(),
   runAiNewsCron: vi.fn(),
 }));
 
-const syncModule = await import("../lib/ai-news-sync.server");
-const { POST } = await import("../app/api/cron/ai-news/route");
+const syncModule = await import("@/lib/ai-news-sync.server");
+const { Route } = await import("../src/routes/api/cron/ai-news");
+const POST = Route.server.handlers.POST;
 
 const authorizeMock = vi.mocked(syncModule.authorizeAiNewsCron);
 const runMock = vi.mocked(syncModule.runAiNewsCron);
@@ -17,7 +18,7 @@ describe("AI news Cron routes", () => {
 
   it("rejects requests without the Vault-backed bearer token", async () => {
     authorizeMock.mockReturnValue(Effect.succeed(false));
-    const response = await POST(new Request("https://example.com/api/cron/ai-news", { method: "POST" }));
+    const response = await POST({ request: new Request("https://example.com/api/cron/ai-news", { method: "POST" }) });
 
     expect(response.status).toBe(401);
     expect(runMock).not.toHaveBeenCalled();
@@ -33,8 +34,8 @@ describe("AI news Cron routes", () => {
         skipped: false,
       }),
     );
-    const response = await POST(
-      new Request("https://example.com/api/cron/ai-news", {
+    const response = await POST({
+      request: new Request("https://example.com/api/cron/ai-news", {
         body: JSON.stringify({ backfill: false }),
         headers: {
           authorization: "Bearer cron-secret",
@@ -42,7 +43,7 @@ describe("AI news Cron routes", () => {
         },
         method: "POST",
       }),
-    );
+    });
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");

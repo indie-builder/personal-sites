@@ -117,6 +117,7 @@ export function OpeningLoader() {
           <span className="opening-loader__battery-terminal" />
         </motion.div>
         {mounted ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- 开机动画的静态序列图，无需优化器 */
           <img
             alt=""
             aria-hidden="true"

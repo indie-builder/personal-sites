@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-BU7HyrsR.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-_lwQz31G.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/__root.tsx",
@@ -34,7 +34,7 @@ var tsrStartManifest = () => ({ routes: {
 			"/assets/index-DzGI_Psn.css"
 		],
 		preloads: [
-			"/assets/index-D9CUdvMZ.js",
+			"/assets/index-CUVOssDW.js",
 			"/assets/react-DB-4Zxce.js",
 			"/assets/use-media-query-DlwQrUB6.js",
 			"/assets/content-Dfe6ojZq.js",
@@ -49,19 +49,19 @@ var tsrStartManifest = () => ({ routes: {
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-D9CUdvMZ.js"
+			src: "/assets/index-CUVOssDW.js"
 		} }]
 	},
 	"/": {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/index.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/routes-BkkcXyCC.js",
-			"/assets/ai-news-stream-D_vKxQFl.js",
+			"/assets/routes-C83ekGBH.js",
+			"/assets/ai-news-stream-5O9wp0ns.js",
 			"/assets/stream-filter-menu-CyVp0xZo.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/dist-fF7pai-Z.js",
-			"/assets/use-stream-feed-CjKf7oSQ.js",
+			"/assets/use-stream-feed-CNmX2ER8.js",
 			"/assets/src-Bn09e5kW.js"
 		]
 	},
@@ -69,35 +69,35 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/douyin.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/douyin-4EQN8nwt.js",
-			"/assets/curation-stream-CKRedTnx.js",
+			"/assets/douyin-4HinQq9b.js",
+			"/assets/curation-stream-BJQz5sJy.js",
 			"/assets/stream-filter-menu-CyVp0xZo.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/dist-fF7pai-Z.js",
-			"/assets/use-stream-feed-CjKf7oSQ.js",
+			"/assets/use-stream-feed-CNmX2ER8.js",
 			"/assets/src-Bn09e5kW.js"
 		]
 	},
 	"/ai-news/$id": {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/ai-news/$id.tsx",
 		children: void 0,
-		preloads: ["/assets/_id-CAulwsb4.js"]
+		preloads: ["/assets/_id-CbNfY7Zu.js"]
 	},
 	"/curation/$id": {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/curation/$id.tsx",
 		children: void 0,
-		preloads: ["/assets/_id-CJAttg0P.js"]
+		preloads: ["/assets/_id-DQ6rqtiC.js"]
 	},
 	"/design/$id": {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/design/$id.tsx",
 		children: void 0,
-		preloads: ["/assets/_id-CGKeJnFq.js"]
+		preloads: ["/assets/_id-CC2b0eO5.js"]
 	},
 	"/open-source/$slug": {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/open-source/$slug.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/_slug-BKD2wduQ.js",
+			"/assets/_slug-DZ41fXlv.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/src-Bn09e5kW.js"
 		]
@@ -106,12 +106,12 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/ai-news/index.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/ai-news-DvxzaHG3.js",
-			"/assets/ai-news-stream-D_vKxQFl.js",
+			"/assets/ai-news-3buvFquj.js",
+			"/assets/ai-news-stream-5O9wp0ns.js",
 			"/assets/stream-filter-menu-CyVp0xZo.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/dist-fF7pai-Z.js",
-			"/assets/use-stream-feed-CjKf7oSQ.js",
+			"/assets/use-stream-feed-CNmX2ER8.js",
 			"/assets/src-Bn09e5kW.js"
 		]
 	},
@@ -119,12 +119,12 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/curation/index.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/curation-CRs9nHly.js",
-			"/assets/curation-stream-CKRedTnx.js",
+			"/assets/curation-nwQZMwsh.js",
+			"/assets/curation-stream-BJQz5sJy.js",
 			"/assets/stream-filter-menu-CyVp0xZo.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/dist-fF7pai-Z.js",
-			"/assets/use-stream-feed-CjKf7oSQ.js",
+			"/assets/use-stream-feed-CNmX2ER8.js",
 			"/assets/src-Bn09e5kW.js"
 		]
 	},
@@ -132,12 +132,12 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/design/index.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/design-CnExKhi4.js",
-			"/assets/curation-stream-CKRedTnx.js",
+			"/assets/design-BRjVE_cg.js",
+			"/assets/curation-stream-BJQz5sJy.js",
 			"/assets/stream-filter-menu-CyVp0xZo.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/dist-fF7pai-Z.js",
-			"/assets/use-stream-feed-CjKf7oSQ.js",
+			"/assets/use-stream-feed-CNmX2ER8.js",
 			"/assets/src-Bn09e5kW.js"
 		]
 	},
@@ -145,7 +145,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/Users/xbjt/Documents/myself/personal-sites-tanstack/apps/web/src/routes/open-source/index.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/open-source-BmQoWDQN.js",
+			"/assets/open-source-Yk0EzMST.js",
 			"/assets/stream-filter-menu-CyVp0xZo.js",
 			"/assets/chevron-down-CldiQq9u.js",
 			"/assets/dist-fF7pai-Z.js"

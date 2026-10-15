@@ -1,8 +1,8 @@
-import { formatAiNewsRelativeTime, formatAiNewsTime, getAiNewsCategoryLabel, getAiNewsOriginalAction, getAiNewsUrlHost } from "./_ssr/open-source-DgxG6IN-.mjs";
 import { require_jsx_runtime } from "./_libs/@openuidev/react-headless+[...].mjs";
 import { ArrowUpRight } from "./_libs/lucide-react.mjs";
-import { AiNewsDetailArticle, DetailTopbar, Route$19, useHasMounted } from "./_ssr/router-CHLaDmxj.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/_id-Cymm6pnn.js
+import { formatAiNewsRelativeTime, formatAiNewsTime, getAiNewsCategoryLabel, getAiNewsOriginalAction, getAiNewsUrlHost } from "./_ssr/open-source-DgxG6IN-.mjs";
+import { AiNewsDetailArticle, DetailPage, DetailTopbar, Route$19, useHasMounted } from "./_ssr/router-BKZi6fNy.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/_id-C1g_bfp7.js
 var import_jsx_runtime = require_jsx_runtime();
 /** 静态详情页的相对时间：服务端渲染为空态，水合后再计算，避免缓存页里的时间过期。 */
 function AiNewsRelativeTime({ publishedAt }) {
@@ -12,7 +12,7 @@ function AiNewsRelativeTime({ publishedAt }) {
 }
 function AiNewsDetailPage() {
 	const { item } = Route$19.useLoaderData();
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AiNewsDetailArticle, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailPage, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AiNewsDetailArticle, {
 		contentId: item.id,
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailTopbar, {
@@ -72,7 +72,7 @@ function AiNewsDetailPage() {
 				})]
 			})
 		]
-	});
+	}) });
 }
 //#endregion
 export { AiNewsDetailPage as component };

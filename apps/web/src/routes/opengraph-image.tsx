@@ -4,7 +4,6 @@ import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
 import { resolveBundledFontFile } from "@/lib/bundled-file";
-import { SITE_NAME } from "@/lib/site";
 
 const SIZE = { width: 1200, height: 630 } as const;
 
@@ -54,7 +53,7 @@ export const Route = createFileRoute("/opengraph-image")({
         try {
           const png = await renderOpenGraphImage();
           // 图片内容随部署冻结：长 CDN 缓存 + 后台再生窗口。
-          return new Response(png, {
+          return new Response(new Uint8Array(png), {
             headers: {
               "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
               "Content-Type": "image/png",

@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { Effect, Schema } from "effect";
 
 import { getAiNewsItem, getAiNewsPage } from "@/lib/ai-news";
-import { AI_NEWS_PAGE_SIZE } from "@/lib/ai-news-types";
 import {
   findCurationItem,
   getCurationNeighbors,
