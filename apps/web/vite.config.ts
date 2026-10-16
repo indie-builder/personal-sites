@@ -22,6 +22,8 @@ export default defineConfig({
     // tanstackStart 必须在 viteReact 之前；nitro 负责服务端打包与各部署目标适配。
     tanstackStart(),
     nitro({
+      // 函数冷启动预热内联数据（Vercel 无 cwd 数据，字节模式开库）。
+      plugins: [path.resolve(import.meta.dirname, "server/init-data.ts")],
       // 全站安全响应头与 /images 静态缓存（原 next.config headers()）。
       routeRules: {
         "/**": { headers: SECURITY_HEADERS },

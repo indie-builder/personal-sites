@@ -11,6 +11,11 @@ export function archiveCutoff(now = new Date()) {
   return new Date(Math.floor((now.getTime() + 8 * 3600000) / DAY_MS) * DAY_MS - 8 * 3600000).toISOString();
 }
 
+/**
+ * 打开每日动态归档。
+ * @param {string | Buffer} [filename] 归档路径或包含 SQLite 数据的 Buffer（部署函数内的内联字节）。
+ * @param {boolean} [readonly] 默认只读打开。
+ */
 export function openArchive(filename = ARCHIVE_PATH, readonly = true) {
   const db = new Database(filename, { readonly, fileMustExist: readonly });
   try {

@@ -1,15 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
-import { resolveBundledFontFile } from "@/lib/bundled-file";
+import { bundledFont } from "@/lib/bundled-file";
 
 const SIZE = { width: 1200, height: 630 } as const;
 
-// 内嵌字体的运行时读取：dev 与产物分别按定位链找到磁盘路径。
+// 内嵌字体的运行时读取：函数运行时走启动插件预热的内联字节，dev 落回磁盘路径。
 async function loadOgFont(): Promise<Buffer> {
-  return readFile(resolveBundledFontFile("noto-sans-sc-og.ttf"));
+  const bundled = bundledFont();
+  if (bundled) return bundled;
+  return readFile(path.join(process.cwd(), "assets/fonts/noto-sans-sc-og.ttf"));
 }
 
 // 原 next/og ImageResponse 的等价物：satori 出 SVG，resvg 栅格化为 PNG。

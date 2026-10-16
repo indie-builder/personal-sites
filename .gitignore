@@ -61,4 +61,9 @@ test-results/
 /apps/web/.e2e/
 
 # nitro server assets 构建输入（prepare-data 生成的部署副本）。
-/apps/web/assets/data/
+/apps/web/assets/bundle/
+
+# Web 构建产物（Vite/Nitro）与 Vercel 本地链接。
+/apps/web/.output/
+/apps/web/dist/
+/apps/web/.vercel/

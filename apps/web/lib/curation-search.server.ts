@@ -5,7 +5,7 @@ import { statSync } from "node:fs";
 import { Schema } from "effect";
 
 import { getPublicDatabase } from "@/lib/public-database";
-import { resolvePublicDataFile } from "@/lib/bundled-file";
+import { resolveLocalDataFile } from "@/lib/bundled-file";
 import type { AskDocumentScope, AskSource } from "@/lib/ask-types";
 
 /** 统计已归一为小写的文本中，needle 不重叠的出现次数。 */
@@ -50,12 +50,14 @@ type DailySearchCorpusEntry = Omit<LocalAskDocument, "score"> & {
 };
 
 // 语料随部署冻结（curation.sqlite 打包进产物）：按 DB 文件 mtime 做模块级缓存，
-// 小写文本只预处理一次，避免每次提问都全表 SELECT + 逐行 Schema decode + 三次 lowercase
+// 字节模式（函数运行时）没有文件，用常量 0 等价表达「每进程一份」。小写文本只
+// 预处理一次，避免每次提问都全表 SELECT + 逐行 Schema decode + 三次 lowercase
 //（检索的 fallback 路径下单次提问会重复调用本函数多次）。
 let dailySearchCorpusCache: { entries: DailySearchCorpusEntry[]; mtimeMs: number } | undefined;
 
 function getDailySearchCorpus(): DailySearchCorpusEntry[] {
-  const mtimeMs = statSync(resolvePublicDataFile("curation.sqlite")).mtimeMs;
+  const localFile = resolveLocalDataFile("curation.sqlite");
+  const mtimeMs = localFile ? statSync(localFile).mtimeMs : 0;
   if (dailySearchCorpusCache?.mtimeMs === mtimeMs) return dailySearchCorpusCache.entries;
 
   const entries = getPublicDatabase()

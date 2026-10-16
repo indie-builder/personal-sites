@@ -1,1 +1,0 @@
-import{C as e,F as t}from"./Effect-DCwJN2_T.js";var n=class extends t(`OperationError`){constructor(e,t){super({operation:e,cause:t,message:t instanceof Error?t.message:String(t)})}},r=(t,r)=>e({try:e=>Promise.resolve(r(e)),catch:e=>new n(t,e)});export{r as t};
