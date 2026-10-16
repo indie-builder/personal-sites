@@ -120,7 +120,9 @@ describe("fetchCurationEntry", () => {
     });
     curationMocks.findCurationItem.mockReturnValueOnce(Effect.succeed(excluded));
     await expect(callFetchCurationEntry({ context: "design", id: excluded.id })).resolves.toBeNull();
-    expect(curationMocks.getCurationNeighbors).not.toHaveBeenCalled();
+    // 条目与相邻剪报已并行化：被排除条目允许并发发出的相邻查询（有索引，成本一次
+    // 查询换取详情视图少一串行往返），契约只要求最终结果仍为 null。
+    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(excluded.id, true);
 
     const included = fixtureItem({
       design: {
