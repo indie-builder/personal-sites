@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { cache } from "react";
 

@@ -1,7 +1,7 @@
 import { attempt } from "@site/effect";
 import { Effect } from "effect";
 
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { searchAiNewsDocuments } from "@/lib/ai-news";
 import { getAskSearchFallbackTerms } from "@/lib/ask-search-terms";

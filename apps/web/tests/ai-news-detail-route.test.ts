@@ -1,8 +1,13 @@
 import { Effect } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "../app/api/ai-news/[id]/route";
+import { Route } from "../src/routes/api/ai-news/$id";
 import type { AiNewsItem } from "../lib/ai-news-types";
+
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const GET = (Route.options.server!.handlers as {
+  GET: (ctx: { request: Request; params: { id: string } }) => Response | Promise<Response>;
+}).GET;
 
 vi.mock("../lib/ai-news", () => ({
   getAiNewsItem: vi.fn(),
@@ -32,8 +37,9 @@ describe("GET /api/ai-news/[id]", () => {
   it("serves the full item payload with the public cache header", async () => {
     getAiNewsItemMock.mockReturnValue(Effect.succeed(sampleItem));
 
-    const response = await GET(new Request("http://localhost/api/ai-news/x"), {
-      params: Promise.resolve({ id: sampleItem.id }),
+    const response = await GET({
+      request: new Request("http://localhost/api/ai-news/x"),
+      params: { id: sampleItem.id },
     });
 
     expect(response.status).toBe(200);
@@ -45,8 +51,9 @@ describe("GET /api/ai-news/[id]", () => {
   it("returns a JSON 404 when the id is unknown", async () => {
     getAiNewsItemMock.mockReturnValue(Effect.succeed(null));
 
-    const response = await GET(new Request("http://localhost/api/ai-news/missing"), {
-      params: Promise.resolve({ id: "missing" }),
+    const response = await GET({
+      request: new Request("http://localhost/api/ai-news/missing"),
+      params: { id: "missing" },
     });
 
     expect(response.status).toBe(404);
@@ -57,8 +64,9 @@ describe("GET /api/ai-news/[id]", () => {
     getAiNewsItemMock.mockReturnValue(Effect.fail(new Error("supabase down")));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const response = await GET(new Request("http://localhost/api/ai-news/x"), {
-      params: Promise.resolve({ id: "x" }),
+    const response = await GET({
+      request: new Request("http://localhost/api/ai-news/x"),
+      params: { id: "x" },
     });
 
     expect(response.status).toBe(500);

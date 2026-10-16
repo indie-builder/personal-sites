@@ -1,21 +1,22 @@
-import type { Route } from "next";
-
 import { SectionNavigationLink } from "@/components/section-navigation-link";
 
 import styles from "./site-section-navigation.module.css";
 
 export type SiteSection = "home" | "ai-news" | "daily" | "design" | "douyin" | "open-source";
 
+/** 版块导航的合法目标路径，TanStack 路由按字面量类型校验。 */
+export type SiteSectionHref = "/" | "/ai-news" | "/curation" | "/design" | "/douyin" | "/open-source";
+
 // 刊头只包含阅读版块；问答由个人简介中的角色打开。
-const siblingSections: Array<{ href: Route; id: Exclude<SiteSection, "home">; label: string }> = [
+const siblingSections: Array<{ href: SiteSectionHref; id: Exclude<SiteSection, "home">; label: string }> = [
   { href: "/ai-news", id: "ai-news", label: "每日动态" },
   { href: "/curation", id: "daily", label: "每日关注" },
-  { href: "/design" as Route, id: "design", label: "设计收藏" },
+  { href: "/design", id: "design", label: "设计收藏" },
   { href: "/douyin", id: "douyin", label: "抖音收藏" },
   { href: "/open-source", id: "open-source", label: "开源关注" },
 ];
 
-const homeSection = { href: "/" as Route, id: "home" as const, label: "首页" };
+const homeSection = { href: "/" as const, id: "home" as const, label: "首页" };
 
 export function MobileSectionNavigation({ current }: { current: SiteSection }) {
   return (

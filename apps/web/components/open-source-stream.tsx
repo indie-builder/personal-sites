@@ -1,7 +1,7 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { FILTER_REVEAL_COUNT, STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, staggerDelay } from "@/components/motion-tokens";
@@ -75,7 +75,7 @@ export function OpenSourceStream({ entries }: OpenSourceStreamProps) {
                 ease: STREAM_EASE,
               }}
             >
-              <Link href={`/open-source/${entry.slug}`}>
+              <Link params={{ slug: entry.slug }} to="/open-source/$slug">
                 <div className={styles.meta}>
                   <span>{getOpenSourceCategoryLabel(entry.category)}</span>
                   <span>{entry.status}</span>

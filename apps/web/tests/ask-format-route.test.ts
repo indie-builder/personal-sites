@@ -10,7 +10,10 @@ vi.mock("@/lib/ask-session.server", () => ({ streamAskAnswer: (options: { onText
   options.onText(options.format === "openui" ? 'root = Stack([TextContent("回答")])' : "回答");
 }) }));
 
-import { POST } from "@/app/api/ask/route";
+import { Route } from "../src/routes/api/ask";
+
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const POST = (Route.options.server!.handlers as { POST: (ctx: { request: Request }) => Response | Promise<Response> }).POST;
 
 beforeEach(() => { mocks.sources = []; mocks.answer.mockClear(); });
 const request = (format?: string) => new Request("http://localhost/api/ask", {
@@ -19,7 +22,7 @@ const request = (format?: string) => new Request("http://localhost/api/ask", {
 });
 
 it.each([undefined, "openui"])("formats the no-results response for %s without calling a model", async (format) => {
-  const response = await POST(request(format));
+  const response = await POST({ request: request(format) });
   const text = await response.text();
   expect(text.includes("root = Stack")).toBe(format === "openui");
   expect(text).toContain("现有公开资料不足以确认");
@@ -37,7 +40,7 @@ it.each([undefined, "openui"])("formats the no-results response for %s without c
 
 it.each([undefined, "openui"])("preserves the requested output format and SSE order for %s", async (format) => {
   mocks.sources = [{ id: "public-source", title: "公开来源" }];
-  const response = await POST(request(format));
+  const response = await POST({ request: request(format) });
   const text = await response.text();
   expect(mocks.answer).toHaveBeenCalledWith(format);
   expect(text.includes("root = Stack")).toBe(format === "openui");
@@ -46,5 +49,5 @@ it.each([undefined, "openui"])("preserves the requested output format and SSE or
 });
 
 it("rejects unknown output formats", async () => {
-  expect((await POST(request("html"))).status).toBe(400);
+  expect((await POST({ request: request("html") })).status).toBe(400);
 });

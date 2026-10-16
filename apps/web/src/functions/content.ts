@@ -1,0 +1,71 @@
+import { createServerFn } from "@tanstack/react-start";
+import { Effect, Schema } from "effect";
+
+import { getAiNewsItem, getAiNewsPage } from "@/lib/ai-news";
+import {
+  findCurationItem,
+  getCurationNeighbors,
+  getCurationPage,
+  getCurationTags,
+  getDesignCurationPage,
+  getDouyinCurationPage,
+} from "@/lib/curation";
+import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
+import { getOpenSourceEntry, getOpenSourceListEntries } from "@/lib/open-source";
+
+// 页面数据的全部服务端读取集中在这组 server functions：loader 在浏览器端也会执行，
+// 这里是 SQLite/Supabase 读取与客户端 bundle 之间唯一的合法边界。
+
+const pageInput = Schema.Struct({
+  limit: Schema.optional(Schema.Number),
+  offset: Schema.optional(Schema.Number),
+  tag: Schema.optional(Schema.NullOr(Schema.String)),
+});
+
+/** 每日动态分页（首页与 /ai-news 首屏；合并 SQLite 历史与 Supabase 增量）。 */
+export const fetchAiNewsPage = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ offset: Schema.Number, limit: Schema.Number }))(input ?? {}))
+  .handler(async ({ data }) => Effect.runPromise(getAiNewsPage(data.offset, data.limit)));
+
+/** 每日动态单条详情。 */
+export const fetchAiNewsItem = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ id: Schema.String }))(input))
+  .handler(async ({ data }) => Effect.runPromise(getAiNewsItem(data.id)));
+
+/** 每日关注首屏：分页 + 全部标签（TaggedCurationStream 的筛选菜单数据）。 */
+export const fetchCurationFeed = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(pageInput)(input ?? {}))
+  .handler(async ({ data }) =>
+    Effect.runPromise(Effect.all({
+      page: getCurationPage(data.offset ?? 0, data.limit ?? CURATION_PAGE_SIZE, data.tag ?? null),
+      tags: getCurationTags(),
+    })));
+
+/** 设计收藏首屏分页。 */
+export const fetchDesignPage = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ offset: Schema.Number, limit: Schema.Number }))(input ?? {}))
+  .handler(async ({ data }) => Effect.runPromise(getDesignCurationPage(data.offset, data.limit)));
+
+/** 抖音收藏首屏分页。 */
+export const fetchDouyinPage = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ offset: Schema.Number, limit: Schema.Number }))(input ?? {}))
+  .handler(async ({ data }) => Effect.runPromise(getDouyinCurationPage(data.offset, data.limit)));
+
+/** 开源关注列表全量条目。 */
+export const fetchOpenSourceEntries = createServerFn({ method: "GET" })
+  .handler(() => Effect.runPromise(getOpenSourceListEntries()));
+
+/** 开源关注单条详情（含解析文档）。 */
+export const fetchOpenSourceEntry = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ slug: Schema.String }))(input))
+  .handler(async ({ data }) => Effect.runPromise(getOpenSourceEntry(data.slug)));
+
+/** 剪报详情（curation 与 design 板块共用，design 只放行 include 状态条目）。 */
+export const fetchCurationEntry = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ context: Schema.Literals(["curation", "design"]), id: Schema.String }))(input))
+  .handler(async ({ data }) => {
+    const item = await Effect.runPromise(findCurationItem(data.id));
+    if (!item || (data.context === "design" && item.design?.status !== "include")) return null;
+    const neighbors = await Effect.runPromise(getCurationNeighbors(data.id, data.context === "design"));
+    return { item, neighbors };
+  });

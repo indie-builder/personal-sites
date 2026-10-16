@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -734,11 +733,12 @@ export function ParticleAvatar({ name }: ParticleAvatarProps) {
       onClick={onActivate}
       type="button"
     >
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element -- 点描头像的静态兜底图，无需优化器 */}
+      <img
         alt=""
         className="curation-home__avatar-stipple"
+        fetchPriority="high"
         height={105}
-        preload
         src={STIPPLE_FALLBACK_SRC}
         width={105}
       />

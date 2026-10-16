@@ -1,25 +1,24 @@
-import { Effect } from "effect";
-import type { Metadata, Route } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Play } from "lucide-react";
 
 import { ArticleMarkdown } from "@/components/article-markdown";
 import { DetailPage, DetailTopbar } from "@/components/page-shell";
 import { XAppLink } from "@/components/x-app-link";
 import { XVideoPlayer } from "@/components/x-video-player";
-import { findCurationItem, getCurationNeighbors } from "@/lib/curation";
 import { formatCurationDate, formatCurationMediaAlt, formatOriginalPublicationDate } from "@/lib/curation-format";
 import type { CurationItem } from "@/lib/curation-types";
-import { entryShareMetadata, withCanonical } from "@/lib/metadata";
+import { canonicalLinks, entryShareMeta } from "@/lib/metadata";
+import type { fetchCurationEntry } from "@/src/functions/content";
 
 type CurationEntryContext = "curation" | "design";
+
+export type CurationEntryData = NonNullable<Awaited<ReturnType<typeof fetchCurationEntry>>>;
 
 /** 板块归属：详情返回链接、页面标题共用同一份解析。 */
 const SECTION_BY_CONTEXT: Record<
   CurationEntryContext,
   (item: CurationItem) => {
-    backHref: string;
+    backHref: "/curation" | "/design" | "/douyin";
     backLabel: string;
     label: string;
   }
@@ -49,44 +48,31 @@ function linkifyText(text: string, links: CurationItem["links"]) {
   });
 }
 
-async function getCurationEntryMetadata(id: string, context: CurationEntryContext): Promise<Metadata> {
-  const item = await Effect.runPromise(findCurationItem(id));
-  if (!item || (context === "design" && item.design?.status !== "include")) return {};
-  const section = SECTION_BY_CONTEXT[context](item);
-  const title = `${item.title}｜${section.label}`;
-  // /design/<id> 与 /curation/<id> 是同一条目：sitemap 只收录 /curation 路径，
-  // 两个路径的 canonical 都指向它，把搜索信号归一到收录 URL。
-  const canonicalPath = `/curation/${encodeURIComponent(id)}`;
+/**
+ * 详情页分享卡 + canonical。/design/<id> 与 /curation/<id> 是同一条目：
+ * sitemap 只收录 /curation 路径，两个路径的 canonical 都指向它，把搜索信号
+ * 归一到收录 URL（原 generateMetadata 的等价物）。
+ */
+export function buildCurationEntryHead({ context, entry }: { context: CurationEntryContext; entry: CurationEntryData }) {
+  const section = SECTION_BY_CONTEXT[context](entry.item);
+  const title = `${entry.item.title}｜${section.label}`;
+  const canonicalPath = `/curation/${encodeURIComponent(entry.item.id)}`;
   return {
-    alternates: withCanonical(canonicalPath),
-    description: item.summary,
-    ...entryShareMetadata({ canonicalPath, description: item.summary, title }),
-    title,
+    links: canonicalLinks(canonicalPath),
+    meta: [
+      { title },
+      { name: "description", content: entry.item.summary },
+      ...entryShareMeta({ canonicalPath, description: entry.item.summary, title }).meta,
+    ],
   };
 }
 
-/**
- * /curation/[id] 与 /design/[id] 是同一条目在不同板块的路由声明；
- * 路由文件各自 re-export 这里的页面与元数据，板块差异全部由 context 承载。
- */
-export function createCurationEntryRoute(context: CurationEntryContext) {
-  async function EntryPage({ params }: { params: Promise<{ id: string }> }) {
-    return <CurationEntry context={context} id={(await params).id} />;
-  }
-  async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-    return getCurationEntryMetadata((await params).id, context);
-  }
-  return { EntryPage, generateMetadata };
-}
-
-async function CurationEntry({ context, id }: { context: CurationEntryContext; id: string }) {
-  const item = await Effect.runPromise(findCurationItem(id));
-  if (!item || (context === "design" && item.design?.status !== "include")) notFound();
+/** 详情页主体：板块差异全部由 context 承载（原 createCurationEntryRoute 的视图半边）。 */
+export function CurationEntryView({ context, entry }: { context: CurationEntryContext; entry: CurationEntryData }) {
+  const { item, neighbors } = entry;
   const designContext = context === "design";
-  const neighbors = await Effect.runPromise(getCurationNeighbors(id, designContext));
   const section = SECTION_BY_CONTEXT[context](item);
-  const neighborHref = (neighborId: string) =>
-    (designContext ? `/design/${neighborId}` : `/curation/${neighborId}`) as Route;
+  const neighborTo = designContext ? ("/design/$id" as const) : ("/curation/$id" as const);
 
   return (
     <DetailPage mainClassName="curation-home curation-detail curation-detail--spread">
@@ -206,13 +192,13 @@ async function CurationEntry({ context, id }: { context: CurationEntryContext; i
         {neighbors.newer || neighbors.older ? (
           <nav aria-label="相邻剪报" className="curation-detail__neighbors">
             {neighbors.newer ? (
-              <Link data-dir="newer" href={neighborHref(neighbors.newer.id)}>
+              <Link data-dir="newer" params={{ id: neighbors.newer.id }} to={neighborTo}>
                 <span>上一则 · 较新收录</span>
                 <strong>{neighbors.newer.title}</strong>
               </Link>
             ) : null}
             {neighbors.older ? (
-              <Link data-dir="older" href={neighborHref(neighbors.older.id)}>
+              <Link data-dir="older" params={{ id: neighbors.older.id }} to={neighborTo}>
                 <span>下一则 · 较早收录</span>
                 <strong>{neighbors.older.title}</strong>
               </Link>

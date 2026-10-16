@@ -5,6 +5,7 @@ export default defineConfig({
     alias: {
       "@": new URL("./", import.meta.url).pathname,
       "server-only": new URL("./tests/support/server-only-stub.ts", import.meta.url).pathname,
+      "@tanstack/react-start/server-only": new URL("./tests/support/server-only-stub.ts", import.meta.url).pathname,
     },
   },
   test: {

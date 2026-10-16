@@ -1,20 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 
-import OpenGraphImage from "@/app/opengraph-image";
+import { Route } from "../src/routes/opengraph-image";
 
-describe("OpenGraphImage", () => {
-  it("renders with the bundled font without external network access", async () => {
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const GET = (Route.options.server!.handlers as { GET: () => Response | Promise<Response> }).GET;
+
+describe("opengraph-image route", () => {
+  it("renders the site share card as PNG from the bundled font without network access", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network disabled"));
-
-    const response = await OpenGraphImage();
-    // Vitest/JSDOM cannot pass next/og's internal SVG Uint8Array to Sharp;
-    // consuming the stream still exercises font resolution, while Playwright
-    // verifies the real route returns a PNG.
-    await response.arrayBuffer().catch(() => undefined);
-
-    expect(response.headers.get("content-type")).toBe("image/png");
-    const externalCalls = fetchSpy.mock.calls.filter(([input]) => /^https?:/u.test(String(input)));
-    expect(externalCalls).toEqual([]);
-    fetchSpy.mockRestore();
+    try {
+      const response = await GET();
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/png");
+      const body = await response.arrayBuffer();
+      expect(body.byteLength).toBeGreaterThan(0);
+      const externalCalls = fetchSpy.mock.calls.filter(([input]) => /^https?:/u.test(String(input)));
+      expect(externalCalls).toEqual([]);
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });

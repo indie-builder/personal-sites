@@ -2,10 +2,12 @@ import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
 // lib/curation 顶部 import "server-only" 只面向 RSC 边界；测试里替换为空实现。
-vi.mock("server-only", () => ({}));
+vi.mock("@tanstack/react-start/server-only", () => ({}));
 
 const { getCurationNeighbors, getCurationPage, getDouyinCurationPage } = await import("../lib/curation");
-const { GET } = await import("../app/api/douyin/route");
+const { Route } = await import("../src/routes/api/douyin");
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+const GET = (Route.options.server!.handlers as { GET: (ctx: { request: Request }) => Response | Promise<Response> }).GET;
 
 // 集成测试直接读随仓库打包的公开投影 data/curation.sqlite（当前含 5 条抖音条目）。
 describe("douyin curation split", () => {
@@ -45,7 +47,7 @@ describe("douyin curation split", () => {
   });
 
   it("/api/douyin 只返回抖音条目并带公开缓存头", async () => {
-    const response = await GET(new Request("http://localhost/api/douyin?offset=0&limit=20"));
+    const response = await GET({ request: new Request("http://localhost/api/douyin?offset=0&limit=20") });
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("s-maxage=300");
     const payload = await response.json();
@@ -56,7 +58,7 @@ describe("douyin curation split", () => {
   });
 
   it("/api/douyin 拒绝非法分页参数", async () => {
-    const response = await GET(new Request("http://localhost/api/douyin?offset=-1"));
+    const response = await GET({ request: new Request("http://localhost/api/douyin?offset=-1") });
     expect(response.status).toBe(400);
   });
 });

@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { attempt } from "@site/effect";
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { getAdminSupabaseClient } from "@/lib/supabase.server";
 import { syncAiNews } from "@site/public-data/ai-news/sync.mjs";

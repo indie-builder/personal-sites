@@ -1,18 +1,15 @@
-"use client";
-
-import Link from "next/link";
-import type { Route } from "next";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, useRouter } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 import { beginProfileTransition } from "@/components/profile-transition-state";
+import type { SiteSectionHref } from "@/components/site-section-navigation";
 
 type SectionNavigationLinkProps = {
   "aria-current"?: "page";
   children: ReactNode;
   className: string;
   from: string;
-  href: Route;
+  href: SiteSectionHref;
   to: string;
 };
 
@@ -20,17 +17,16 @@ type SectionNavigationLinkProps = {
 // 缩短等待让路由渲染与退出动画重叠，压缩 ghost 悬停的空白窗口。
 const mobileProfileExitDuration = 60;
 
-// 同路径导航（如在目标页上再次点击其导航项）不需要 RSC 请求，用 history.pushState
-// 完成即可——否则 slow network 下 ghost 会悬停数百毫秒等待 payload，飞行前的冻结窗口
-// 全部来自这里。Next.js 会将 pushState 同步进 useSearchParams，浏览器前进/后退同样生效。
-function commitNavigation(router: ReturnType<typeof useRouter>, href: Route) {
+// 同路径导航（如在目标页上再次点击其导航项）不触发路由跳转，回到顶部即可；
+// Next 时代这里用 history.pushState 让 useSearchParams 同步，TanStack 的
+// 路由状态由框架持有，同路径无需任何状态写入。
+function commitNavigation(router: ReturnType<typeof useRouter>, href: SiteSectionHref) {
   const destination = new URL(href, window.location.origin);
   if (destination.pathname === window.location.pathname) {
-    window.history.pushState(null, "", href);
     window.scrollTo(0, 0);
     return;
   }
-  router.push(href);
+  void router.navigate({ to: href });
 }
 
 export function SectionNavigationLink({
@@ -71,37 +67,41 @@ export function SectionNavigationLink({
     return () => observer.disconnect();
   }, [ariaCurrent]);
 
+  const handleNavigate = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (isNavigating) return;
+
+    const destination = new URL(href, window.location.origin);
+    if (destination.pathname === window.location.pathname) {
+      event.preventDefault();
+      commitNavigation(router, href);
+      return;
+    }
+    const isMobileProfileTransition = (from === "home" || to === "home")
+      && window.matchMedia("(max-width: 900px)").matches;
+    if (!isMobileProfileTransition || keyboardNavigation.current
+      || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    event.preventDefault();
+    setIsNavigating(true);
+    if (!beginProfileTransition(from, to)) {
+      commitNavigation(router, href);
+      return;
+    }
+    timeout.current = window.setTimeout(() => {
+      commitNavigation(router, href);
+    }, mobileProfileExitDuration);
+  };
+
   return (
     <Link
       {...props}
       className={className}
       data-transitioning={isNavigating ? "true" : undefined}
-      href={href}
+      to={href}
       ref={link}
-      onClick={(event) => { keyboardNavigation.current = event.detail === 0; }}
-      onNavigate={(event) => {
-        if (isNavigating) return;
-
-        const destination = new URL(href, window.location.origin);
-        if (destination.pathname === window.location.pathname) {
-          event.preventDefault();
-          commitNavigation(router, href);
-          return;
-        }
-        const isMobileProfileTransition = (from === "home" || to === "home")
-          && window.matchMedia("(max-width: 900px)").matches;
-        if (!isMobileProfileTransition || keyboardNavigation.current
-          || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-        event.preventDefault();
-        setIsNavigating(true);
-        if (!beginProfileTransition(from, to)) {
-          commitNavigation(router, href);
-          return;
-        }
-        timeout.current = window.setTimeout(() => {
-          commitNavigation(router, href);
-        }, mobileProfileExitDuration);
+      onClick={(event) => {
+        keyboardNavigation.current = event.detail === 0;
+        handleNavigate(event);
       }}
     >
       {children}

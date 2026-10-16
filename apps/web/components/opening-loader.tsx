@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { subscribeToNothing, useHasMounted } from "@/components/use-mounted";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -118,7 +117,8 @@ export function OpeningLoader() {
           <span className="opening-loader__battery-terminal" />
         </motion.div>
         {mounted ? (
-          <Image
+          /* eslint-disable-next-line @next/next/no-img-element -- 开机动画的静态序列图，无需优化器 */
+          <img
             alt=""
             aria-hidden="true"
             className="opening-loader__character"

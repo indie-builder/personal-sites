@@ -1,6 +1,6 @@
 import { Cause, Data, Effect } from "effect";
 import { io } from "@site/effect";
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { Result, Schema } from "effect";
 
@@ -79,7 +79,6 @@ function githubFetch(pathname: string, init: RequestInit = {}) {
         ...init,
         headers,
         signal,
-        next: { revalidate: 600 },
       }),
     );
     if (response.status === 404)

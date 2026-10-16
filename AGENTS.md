@@ -1,13 +1,3 @@
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
-
 # Project Instructions
 
 - Prefer the simplest implementation that meets the current need; reuse existing code before adding abstractions or dependencies.
@@ -16,10 +6,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Workspace
 
-- `apps/web` owns Next.js, UI and HTTP APIs; `tools/content` owns offline pipelines; `packages/public-data` owns shared public schemas, SQLite helpers and news synchronization.
-- Next.js guides resolve from `apps/web/node_modules/next/dist/docs/`. Keep shared packages independent of apps and offline tool dependencies.
-- Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/`. Do not copy sensitive directories.
-- Data operations bypass Turbo caching; Web build caching stays disabled while prerendering reads Supabase. See `docs/monorepo.md`.
+- `apps/web` owns the web app (TanStack Start on Vite + Nitro), UI and HTTP APIs; `tools/content` owns offline pipelines; `packages/public-data` owns shared public schemas, SQLite helpers and news synchronization.
+- TanStack Start guides resolve from the installed packages' bundled `skills/` docs (`apps/web/node_modules/@tanstack/react-start/skills/`); loaders run on both server and client, so all SQLite/Supabase reads must go through `createServerFn` (see `apps/web/src/functions/`). Keep shared packages independent of apps and offline tool dependencies.
+- Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/` (runtime reads) and `apps/web/assets/data/` (bundled deployment copy). Do not copy sensitive directories.
+- Data operations bypass Turbo caching. Page-level caching is CDN-driven: routes declare `Cache-Control` (`s-maxage` + `stale-while-revalidate`) instead of a framework ISR API; see `apps/web/lib/page-cache.ts` and `docs/monorepo.md`.
 
 ## Task and Domain Context
 
@@ -35,12 +25,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Package Manager and Checks
 
-- Use Bun (`bun@1.4.3`, pinned via `packageManager`) as the package manager and the default script/test runtime: install with `bun install`, run scripts with `bun run <script>`. Node.js `>=24.21.0 <25` remains required for the Next.js `build`/`start` launchers, the three `node --test` holdout suites in `tools/content`, and the Vercel serving runtime (major capped at Vercel's max supported 24.x).
+- Use Bun (`bun@1.4.3`, pinned via `packageManager`) as the package manager and the default script/test runtime: install with `bun install`, run scripts with `bun run <script>`. Node.js `>=24.21.0 <25` remains required for the web `build`/`start` launchers (`node --import ./scripts/load-env.mjs ...`, aligned with the Vercel serving runtime), the three `node --test` holdout suites in `tools/content`, and Vercel Functions (major capped at Vercel's max supported 24.x).
 - Default dev startup is domain-based via portless: `bun run dev:domain` dispatches to `apps/web` and serves `https://personal-site.localhost` (fixed app port 3000). Plain `bun run dev` stays available for raw-port use.
 - For app code or configuration changes, run `bun run typecheck`, `bun run lint`, `bun run test`, and `bun run build`. For documentation-only changes, verify referenced commands/paths and run `git diff --check`; no app build is required.
 - `bun run test` runs package tests through Turborepo (`bun test` suites plus apps/web Vitest); `tools/content` keeps three `*.node-test.mjs` suites on `node --test` because Bun lacks `node:module`'s `registerHooks`. Browser E2E is separate: `bun run test:e2e` drives the e2e runner over `apps/web/e2e/*.e2e.ts`, and `bun run test:e2e:touch` drives Playwright over the `*.spec.ts` holdouts (touch-device and `prefers-reduced-motion` CSS cases). Run relevant browser regressions for changed UI flows in addition to live verification below.
 - Keep the intentional TS7 setup in `scripts/tsc7.mjs`; lint uses oxlint/oxc-parser. Do not downgrade TypeScript to satisfy the unused typescript-eslint fallback's peer cap. Bun only warns on peer-range mismatches, so the old pnpm peer-exception list is gone with `pnpm-workspace.yaml`.
-- Reuse the running Web dev server: Next allows one dev instance per app directory. Browser E2E owns port 7100 and builds by default (`bun run test:e2e` builds, then the runner starts the production server); after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch` reuses it for the Playwright holdouts.
+- Reuse the running Web dev server: Vite serves one dev instance per app directory (fixed port 3000). Browser E2E owns port 7100 and builds by default (`bun run test:e2e` builds, then the runner starts the production server); after a successful build of unchanged sources, `PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch` reuses it for the Playwright holdouts.
 
 ## File-Scoped Commands
 
@@ -55,13 +45,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Preserve the desktop-first identity rail plus continuous content-flow layout. Do not restore the legacy knowledge/workspace shell or introduce card grids, glass, heavy shadows, or broad accent colors.
 - Reuse the identity rail on detail pages. New motion needs cleanup, a stable final state, and a `prefers-reduced-motion` path.
 - Mobile browsers are a supported product surface: verify narrow screens (320/390px), landscape layouts, touch targets, detail reading, and the Ask composer alongside desktop.
-- For UI changes, use ego lite to verify the running Next app: compiler issues, routes, console/network errors, and rendered interactions. Keep automated browser regressions in `apps/web/e2e/`; live inspection and regression tests serve different purposes.
+- For UI changes, use ego lite to verify the running web app: compiler issues, routes, console/network errors, and rendered interactions. Keep automated browser regressions in `apps/web/e2e/`; live inspection and regression tests serve different purposes.
 
 ## Data, Privacy, and Caching
 
 - Read `docs/sensitive-data.md` before touching curation inputs or credentials. Never stage, publish, render, screenshot, or expose `data/sensitive/`, `knowledge/sensitive/`, local credentials, or `tools/smaug/.state/`.
 - Public content comes from approved projections: X/Douyin/GitHub content and the local Ask index use the bundled, runtime-read-only `data/curation.sqlite`; AI news merges bundled `data/ai-news.sqlite` history with Supabase `ai_news_public_items` updates. Never fall back to sensitive local data. Service-role keys never belong in `NEXT_PUBLIC_*` variables.
-- Keep public curation detail reads cacheable with ISR (`revalidate = 300`) and loading states. SQLite content changes require rebuilding the public projection and redeploying; ISR does not refresh the bundled data. For cache changes, verify production route classification and `x-nextjs-cache` MISS then HIT behavior.
+- Keep public curation detail reads CDN-cacheable with per-route `Cache-Control` (`s-maxage=300`, see `apps/web/lib/page-cache.ts`) and loading states. SQLite content changes require rebuilding the public projection and redeploying; page caches do not refresh the bundled data. For cache changes, verify the response `Cache-Control` header and CDN MISS→HIT behavior.
 - Treat `curation:*`, `douyin:*`, `github:starred:*`, `ai-news:sync`, `ai-news:backfill`, `ai-news:archive`, `ai-news:prune`, and `supabase:push` as data operations, not validation commands. Follow `docs/supabase-x-sync.md`, `docs/douyin-curation.md`, `docs/github-starred-sync.md`, and `docs/ai-news-sync.md`; run `bun run supabase:push -- --dry-run` before a database write.
 - Run daily Star syncs one at a time and report partial results until the process exits. For AI news, Supabase Cron calls `/api/cron/ai-news` every 5 minutes; GitHub Actions handles daily backfill/manual recovery. Verify actual run results before reporting success.
 

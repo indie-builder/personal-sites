@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AiNewsDetailArticle, AiNewsDetailFallbackPainted } from "@/app/ai-news/[id]/detail-entrance";
+import { AiNewsDetailArticle, AiNewsDetailFallbackPainted } from "@/components/ai-news-detail-entrance";
 
 const FALLBACK_PAINTED_KEY = "personal-site:ai-news-fallback-painted";
 const FRESH_MS = 3000;

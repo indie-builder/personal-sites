@@ -5,7 +5,7 @@ import type { AiNewsItem } from "./content.ts";
 export type ArchiveMetadata = { cutoff: string; capturedAt: string; count: number; digest: string };
 export const ARCHIVE_PATH: string;
 export function archiveCutoff(now?: Date): string;
-export function openArchive(filename?: string, readonly?: boolean): Database.Database;
+export function openArchive(filename?: string | Buffer, readonly?: boolean): Database.Database;
 export function archiveMetadata(db: Database.Database): ArchiveMetadata | null;
 export function readArchivedItem(db: Database.Database, id: string): AiNewsItem | null;
 export function readArchivedPage(

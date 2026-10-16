@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GET, HEAD } from "../app/api/x-media/route";
+import { Route } from "../src/routes/api/x-media";
+
+// vitest 不经过 TanStack 的 vite 插件：server handlers 挂在 route options 上。
+type MediaHandler = (ctx: { request: Request }) => Response | Promise<Response>;
+const { GET, HEAD } = Route.options.server!.handlers as { GET: MediaHandler; HEAD: MediaHandler };
 
 const videoUrl = "https://video.twimg.com/amplify_video/1/vid/avc1/1280x720/video.mp4?tag=1";
 
@@ -18,7 +22,7 @@ function upstreamBody(status: number, location?: string) {
 it.each([null, "https://evil.example.com/file.mp4"])("cancels a rejected redirect body for location %s", async (location) => {
   const first = upstreamBody(302, location ?? undefined);
   const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(first.response);
-  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  const response = await GET({ request: new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`) });
   expect(response.status).toBe(502);
   expect(first.cancel).toHaveBeenCalledTimes(1);
   expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -31,7 +35,7 @@ it("cancels the first redirect before following it and leaves the returned body 
     expect(first.cancel).toHaveBeenCalledTimes(1);
     return second.response;
   });
-  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  const response = await GET({ request: new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`) });
   expect(response.status).toBe(200);
   expect(second.cancel).not.toHaveBeenCalled();
   const reader = response.body?.getReader();
@@ -45,7 +49,7 @@ it("cancels both discarded bodies when the second hop also redirects", async () 
   const first = upstreamBody(302, videoUrl);
   const second = upstreamBody(307, videoUrl);
   vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(first.response).mockResolvedValueOnce(second.response);
-  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  const response = await GET({ request: new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`) });
   expect(response.status).toBe(502);
   expect(first.cancel).toHaveBeenCalledTimes(1);
   expect(second.cancel).toHaveBeenCalledTimes(1);
@@ -61,7 +65,7 @@ it("keeps the request signal attached to the actual fetch after headers arrive",
     return upstream.response;
   });
   const controller = new AbortController();
-  const response = await GET(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`, { signal: controller.signal }));
+  const response = await GET({ request: new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`, { signal: controller.signal }) });
   expect(upstream.cancel).not.toHaveBeenCalled();
   controller.abort();
   expect(transportSignal?.aborted).toBe(true);
@@ -71,7 +75,7 @@ it("keeps the request signal attached to the actual fetch after headers arrive",
 
 it("preserves successful HEAD responses without cancelling a nonexistent body", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { headers: { "content-length": "10" } }));
-  const response = await HEAD(new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`));
+  const response = await HEAD({ request: new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`) });
   expect(response.status).toBe(200);
   expect(response.body).toBeNull();
   expect(response.headers.get("content-length")).toBe("10");
@@ -93,7 +97,7 @@ describe("x-media route", () => {
       headers: { range: "bytes=0-9" },
     });
 
-    const response = await GET(request);
+    const response = await GET({ request });
 
     expect(response.status).toBe(206);
     expect(response.headers.get("content-type")).toBe("video/mp4");
@@ -108,7 +112,7 @@ describe("x-media route", () => {
   });
 
   it("rejects any URL outside the allowlisted X video CDN with a JSON body", async () => {
-    const response = await GET(new Request("http://localhost/api/x-media?url=https%3A%2F%2Fexample.com%2Ffile.mp4"));
+    const response = await GET({ request: new Request("http://localhost/api/x-media?url=https%3A%2F%2Fexample.com%2Ffile.mp4") });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "不支持的视频地址。" });
@@ -122,7 +126,7 @@ describe("x-media route error contract", () => {
       .mockResolvedValueOnce(new Response("video-bytes", { headers: { "content-type": "video/mp4" }, status: 200 }));
     const request = new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`);
 
-    const response = await GET(request);
+    const response = await GET({ request });
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -135,7 +139,7 @@ describe("x-media route error contract", () => {
     );
     const request = new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`);
 
-    const response = await GET(request);
+    const response = await GET({ request });
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: "视频地址的重定向目标不受支持。" });
@@ -146,7 +150,7 @@ describe("x-media route error contract", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"));
     const request = new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`);
 
-    const response = await GET(request);
+    const response = await GET({ request });
 
     expect(response.status).toBe(502);
     expect(response.headers.get("content-type")).toContain("application/json");
@@ -163,7 +167,7 @@ describe("x-media route error contract", () => {
         }),
       );
       const request = new Request(`http://localhost/api/x-media?url=${encodeURIComponent(videoUrl)}`);
-      const pending = GET(request);
+      const pending = GET({ request });
 
       await vi.advanceTimersByTimeAsync(15_000);
       const response = await pending;
@@ -177,8 +181,8 @@ describe("x-media route error contract", () => {
   });
 
   it("returns the same JSON error contract for HEAD requests", async () => {
-    const { HEAD } = await import("../app/api/x-media/route");
-    const response = await HEAD(new Request("http://localhost/api/x-media?url=https%3A%2F%2Fexample.com%2Ffile.mp4"));
+    const { HEAD } = (await import("../src/routes/api/x-media")).Route.options.server!.handlers as { HEAD: MediaHandler };
+    const response = await HEAD({ request: new Request("http://localhost/api/x-media?url=https%3A%2F%2Fexample.com%2Ffile.mp4") });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "不支持的视频地址。" });

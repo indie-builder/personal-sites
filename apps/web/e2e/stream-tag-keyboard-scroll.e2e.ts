@@ -23,6 +23,13 @@ test("curation tag keyboard switch lands instantly at top while pointer selectio
   ).__tagScrollBehaviors ?? []);
 
   await app.open("/curation");
+  // TanStack 在水合完成后的首次 resolve 会做一次滚动归零（Next 没有）；记录器在
+  // 开场后清零，只观察标签切换发起的调用。
+  await browser.evaluate(() => {
+    const w = window as typeof window & { __tagScrollBehaviors: string[] };
+    w.__tagScrollBehaviors.length = 0;
+    return null;
+  });
   const trigger = screen.getByRole("button", "筛选每日关注：全部主题", { exact: false });
   await expect(trigger).toBeVisible();
 

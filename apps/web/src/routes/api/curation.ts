@@ -1,0 +1,28 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { Result, Schema } from "effect";
+
+import { getCurationPage } from "@/lib/curation";
+import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
+import { createPaginatedFeedRoute } from "@/lib/paginated-route";
+
+// 读随部署打包的本地 sqlite（不经任何框架缓存层）；分页档位固定为客户端的
+// CURATION_PAGE_SIZE，与 /api/ai-news 的参数语义保持一致。客户端按 id 去重，
+// 取整带来的重复条目会被丢弃。
+export const Route = createFileRoute("/api/curation")({
+  server: {
+    handlers: {
+      GET: ({ request }) => {
+        const tag = Schema.decodeUnknownResult(Schema.NullOr(Schema.Trim.pipe(Schema.check(Schema.isMinLength(1)), Schema.check(Schema.isMaxLength(40)))))(
+          new URL(request.url).searchParams.get("tag"),
+        );
+        if (Result.isFailure(tag)) return Response.json({ error: "分类参数无效。" }, { status: 400 });
+        return createPaginatedFeedRoute({
+          label: "策展内容",
+          maxLimit: 50,
+          pageStep: CURATION_PAGE_SIZE,
+          readPage: (offset, limit) => getCurationPage(offset, limit, tag.success),
+        })(request);
+      },
+    },
+  },
+});

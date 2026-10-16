@@ -1,8 +1,9 @@
 "use client";
 
-import { catchError, type ErrorInfo } from "next/error";
 import {
+  Component,
   createContext,
+  type ErrorInfo,
   type ReactNode,
   useCallback,
   useContext,
@@ -27,12 +28,11 @@ type FeedErrorFallbackProps = {
 
 type FeedRetryContextValue = Pick<FeedErrorFallbackProps, "onRetrySettled" | "retryPhase">;
 
+type FeedErrorInfo = { error: Error; retry: () => void };
+
 const FeedRetryContext = createContext<FeedRetryContextValue | null>(null);
 
-function FeedErrorFallback(
-  props: FeedErrorFallbackProps,
-  { error, retry }: Pick<ErrorInfo, "error" | "retry">,
-) {
+function FeedErrorFallback({ error, retry, ...props }: FeedErrorFallbackProps & FeedErrorInfo) {
   return <FeedErrorState {...props} error={error} retry={retry} />;
 }
 
@@ -43,7 +43,7 @@ export function FeedErrorState({
   onRetryStart,
   retry,
   retryPhase,
-}: FeedErrorFallbackProps & Pick<ErrorInfo, "error" | "retry">) {
+}: FeedErrorFallbackProps & FeedErrorInfo) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const firstErrorEffectRef = useRef(true);
   const previousErrorRef = useRef(error);
@@ -97,9 +97,46 @@ export function FeedErrorState({
   );
 }
 
-const CaughtFeedErrorBoundary = catchError(FeedErrorFallback);
+// 原 next/error 的 catchError 等价物：类边界捕获子树渲染错误，
+// retry 通过清空错误状态重新挂载子树（客户端流自行重新请求）。
+// onRetry 允许调用方在重挂载前先失效 loader 缓存（router.invalidate()），
+// 让被序列化的失败 promise 可以真正重试。
+type CaughtBoundaryProps = FeedErrorFallbackProps & { children: ReactNode; onRetry?: () => void };
 
-export function FeedErrorBoundary({ children, label }: FeedErrorBoundaryProps) {
+class CaughtFeedErrorBoundary extends Component<
+  CaughtBoundaryProps,
+  { error: Error | null }
+> {
+  override state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[feed-error]", error, info.componentStack);
+  }
+
+  override render() {
+    const { error } = this.state;
+    const { children, onRetry, ...fallbackProps } = this.props;
+    if (error) {
+      return (
+        <FeedErrorFallback
+          {...fallbackProps}
+          error={error}
+          retry={() => {
+            onRetry?.();
+            this.setState({ error: null });
+          }}
+        />
+      );
+    }
+    return children;
+  }
+}
+
+export function FeedErrorBoundary({ children, label, onRetry }: FeedErrorBoundaryProps & { onRetry?: () => void }) {
   const [retryPhase, setRetryPhase] = useState<RetryPhase>("idle");
   const onRetryStart = useCallback(() => setRetryPhase("retrying"), []);
   const onRetrySettled = useCallback(() => setRetryPhase("idle"), []);
@@ -108,6 +145,7 @@ export function FeedErrorBoundary({ children, label }: FeedErrorBoundaryProps) {
     <FeedRetryContext.Provider value={{ onRetrySettled, retryPhase }}>
       <CaughtFeedErrorBoundary
         label={label}
+        onRetry={onRetry}
         onRetrySettled={onRetrySettled}
         onRetryStart={onRetryStart}
         retryPhase={retryPhase}
