@@ -3,7 +3,7 @@ import "@tanstack/react-start/server-only";
 import { noul, TypeSafeClient } from "@typesafe-ai/sdk";
 import { Effect } from "effect";
 
-import { io } from "@site/effect";
+import { attempt, io } from "@site/effect";
 
 /**
  * TypeSafe SDK 的 bufferResponse 会同时持有 response.clone() 与原始 body 的
@@ -68,18 +68,17 @@ const REASONS: readonly GuardrailReason[] = ["jailbreak", "sensitive", "offtopic
 const THRESHOLD = 0.7;
 
 let client: TypeSafeClient | undefined;
-function getClient() {
-  // 护栏不值得重试：失败即放行，重试只会拖慢回答。
-  return (client ??= new TypeSafeClient({ fetch: bunSafeFetch, retry: { maxRetries: 0 }, timeout: 4_000 }));
-}
 
 /**
  * 判定一条提问是否越狱、索取私密数据或离题。调用方须 fail-open：
  * 本 Effect 失败时放行并记录，不阻断问答。
  */
 export function checkAskGuardrail(question: string, injectedClient?: TypeSafeClient) {
-  const active = injectedClient ?? getClient();
   return Effect.gen(function* () {
+    // client 创建须在 Effect 内：缺 key 时 SDK 构造函数同步抛错，若在 Effect 外
+    // 调用会绕过调用方的 fail-open（catch）直接冒泡，无 key 环境（如 CI）全挂。
+    const active = injectedClient ?? (yield* attempt("ask.guardrail.client", () =>
+      client ??= new TypeSafeClient({ fetch: bunSafeFetch, retry: { maxRetries: 0 }, timeout: 4_000 })));
     const { answers } = yield* io("ask.guardrail", (signal) =>
       active.systemOne({ state: { question, site: SITE_CORPUS }, questions: QUESTIONS }, { signal }),
     );
