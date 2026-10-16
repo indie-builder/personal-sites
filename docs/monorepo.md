@@ -54,10 +54,10 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 ## 数据与环境变量
 
-- 根 `data/curation.sqlite` 和 `data/ai-news.sqlite` 是唯一提交的公开快照。`apps/web/scripts/prepare-data.mjs` 在 dev/build/test 前将这两个明确列出的文件复制到被忽略的 `apps/web/data/`（dev/vitest 运行时读取）与 `apps/web/assets/data/`（部署打包输入）；缺少任一文件就失败。不会递归复制 `data/`，也不会打包敏感目录。
+- 根 `data/curation.sqlite` 和 `data/ai-news.sqlite` 是唯一提交的公开快照。`apps/web/scripts/prepare-data.mjs` 在 dev/build/test/typecheck 前将这两个明确列出的文件复制到被忽略的 `apps/web/data/`（dev/vitest 运行时读取），并生成被忽略的 `apps/web/assets/bundle/` 内联 base64 模块（部署打包输入，连同 OG 字体）；缺少任一文件就失败。不会递归复制 `data/`，也不会打包敏感目录。
 - Web 运行时按定位链读取数据文件（cwd 相对 `data/` → 部署产物内副本，见 `apps/web/lib/bundled-file.ts`）；修改根快照后要重新启动 dev 或重新 build/deploy。
 - 根 `.env.local` 继续作为本机配置。Web 命令在启动前通过 `--import ./scripts/load-env.mjs` 复用现有 env loader 加载，线上使用平台注入的环境变量；内容脚本继续使用现有本机 env loader。凭据不复制到 apps/packages，也不进入 Git 或缓存输出。
-- 本机 Ask 历史继续使用根 `var/ask-sessions/`，保留既有会话；线上仍使用 Supabase Storage。部署产物只显式包含两份公开 SQLite 与 OG 字体（`apps/web/scripts/bundle-server-assets.mjs`），私有数据、会话和 Smaug 目录不会进入产物。
+- 本机 Ask 历史继续使用根 `var/ask-sessions/`，保留既有会话；线上仍使用 Supabase Storage。部署产物以内联字节只携带两份公开 SQLite 与 OG 字体（`apps/web/assets/bundle/` 内联模块），私有数据、会话和 Smaug 目录不会进入产物。
 - 内容脚本从自身路径计算仓库根目录，发布、队列、配置、Smaug 嵌套仓库仍使用原来的根目录位置。
 
 ## 缓存与 CI
@@ -73,6 +73,6 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 项目 Root Directory 改为 `apps/web`，开启构建时包含根目录之外的源文件（公共包、根配置和两份 SQLite）。`apps/web/vercel.json` 固定 Install Command 为 `bun install --frozen-lockfile`（整仓安装，Bun 的 isolated 布局不影响构建产物）；Build Command 使用 `bun run build`（此目录下为 Web 包脚本），不声明 Framework（Vercel 平台的 `VERCEL=1` 环境让 Nitro 自动选择 Vercel preset，产物为 `.output/`）。线上函数运行时仍由 `engines.node` 锁定为 Node 24.x。
 
-`vite.config.ts` 的 nitro 插件经 routeRules 下发全站安全头与 `/images` 缓存；页面级 CDN 缓存由各路由的 `Cache-Control`（`s-maxage` + `stale-while-revalidate`，见 `apps/web/lib/page-cache.ts`）承担，替代原 Next ISR。`apps/web/scripts/bundle-server-assets.mjs` 在构建后把两份公开 SQLite 与 OG 字体拷进 `.output/server/`，函数运行时经 `apps/web/lib/bundled-file.ts` 定位，不依赖函数 cwd。环境变量继续保存在现有 Vercel 项目中。
+`vite.config.ts` 的 nitro 插件经 routeRules 下发全站安全头与 `/images` 缓存；页面级 CDN 缓存由各路由的 `Cache-Control`（`s-maxage` + `stale-while-revalidate`，见 `apps/web/lib/page-cache.ts`）承担，替代原 Next ISR。两份公开 SQLite 与 OG 字体由 `apps/web/scripts/prepare-data.mjs` 生成内联 base64 模块（`apps/web/assets/bundle/`），nitro 构建时打进 server 产物，函数运行时经 `apps/web/lib/bundled-file.ts` 定位（本地 dev 落回磁盘文件），不依赖函数 cwd。环境变量继续保存在现有 Vercel 项目中。
 
 这是部署项目设置的迁移条件；在旧代码仍为默认分支时不要提前修改生产项目的 Root Directory。合并迁移与切换 Root Directory 需一并安排。本机可以通过 `bun run build` 和 `bun run --filter @site/web start` 验证迁移后的完整应用；首次 Vercel 部署后需验证页面缓存头（`Cache-Control` MISS→HIT）与 `/api` 契约。

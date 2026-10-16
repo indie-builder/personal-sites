@@ -9,6 +9,9 @@ test("Web preparation copies only approved snapshots from any working directory 
   const root = mkdtempSync(path.join(tmpdir(), "site-workspace-"));
   try {
     mkdirSync(path.join(root, "apps/web/scripts"), { recursive: true });
+    mkdirSync(path.join(root, "apps/web/assets/fonts"), { recursive: true });
+    // prepare-data 还会读取 OG 字体生成内联模块，沙箱必须提供夹具。
+    writeFileSync(path.join(root, "apps/web/assets/fonts/noto-sans-sc-og.ttf"), "font");
     mkdirSync(path.join(root, "data/sensitive"), { recursive: true });
     writeFileSync(path.join(root, "data/sensitive/private.txt"), "must stay out");
     for (const name of ["curation.sqlite", "ai-news.sqlite"]) writeFileSync(path.join(root, "data", name), name);

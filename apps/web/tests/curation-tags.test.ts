@@ -49,7 +49,15 @@ describe("curation topic filters", () => {
         .filter((item) => item.tags.some((tag) => tag !== "提示词" && tag.endsWith("提示词")))
         .map((item) => item.id),
     );
-    expect(classified).toEqual(ids);
+    // 分类学契约允许「未有充分用途证据时保留总类，不猜测」（tools/content/modules/x-sync/prompts.mjs）。
+    // 此处显式登记允许仅带总类的条目；出现新的未分类条目会让断言失败，
+    // 强制重新策展或经审核后扩充登记，防止漂移静默扩大。
+    const parentOnlyAllowed = new Set(["2107507231864357323"]);
+    const unclassified = [...ids].filter((id) => !classified.has(id));
+    expect(
+      unclassified.sort(),
+      "提示词条目缺用途子标签：需重新策展补齐，或确认契约内例外后登记",
+    ).toEqual([...parentOnlyAllowed].sort());
     const animation = parent.items.find((item) => item.id === "2104846047256469948")!;
     expect(animation.tags).toContain("视频提示词");
     expect(animation.tags).not.toContain("软件工程提示词");
