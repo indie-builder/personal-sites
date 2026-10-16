@@ -51,6 +51,14 @@ describe("Ask guardrail", () => {
     expect(result._tag).toBe("Failure");
   });
 
+  it("fails into the Effect channel (not a throw) when no API key is configured", async () => {
+    // 回归：client 构造缺 key 时同步抛错，若在 Effect 外创建会绕过 fail-open。
+    vi.stubEnv("TYPESAFE_API_KEY", "");
+    const result = await Effect.runPromise(Effect.result(checkAskGuardrail("问题")));
+    expect(result._tag).toBe("Failure");
+    vi.unstubAllEnvs();
+  });
+
   it("gives offtopic its own next-step message", () => {
     expect(guardrailMessage("offtopic")).toContain("公开资料");
     expect(guardrailMessage("jailbreak")).not.toBe(guardrailMessage("offtopic"));
