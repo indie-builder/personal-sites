@@ -8,7 +8,7 @@
 
 - `apps/web` owns the web app (TanStack Start on Vite + Nitro), UI and HTTP APIs; `tools/content` owns offline pipelines; `packages/public-data` owns shared public schemas, SQLite helpers and news synchronization.
 - TanStack Start guides resolve from the installed packages' bundled `skills/` docs (`apps/web/node_modules/@tanstack/react-start/skills/`); loaders run on both server and client, so all SQLite/Supabase reads must go through `createServerFn` (see `apps/web/src/functions/`). Keep shared packages independent of apps and offline tool dependencies.
-- Canonical SQLite snapshots stay in root `data/`. Web build/dev copies only the two approved files into ignored `apps/web/data/` (runtime reads) and `apps/web/assets/data/` (bundled deployment copy). Do not copy sensitive directories.
+- Canonical SQLite snapshots stay in root `data/`. Web dev/build/test/typecheck runs `apps/web/scripts/prepare-data.mjs` first, which copies only the two approved files into ignored `apps/web/data/` (runtime reads) and generates ignored `apps/web/assets/bundle/` (inline base64 for the deployment bundle, with the OG font). Do not copy sensitive directories.
 - Data operations bypass Turbo caching. Page-level caching is CDN-driven: routes declare `Cache-Control` (`s-maxage` + `stale-while-revalidate`) instead of a framework ISR API; see `apps/web/lib/page-cache.ts` and `docs/monorepo.md`.
 
 ## Task and Domain Context
