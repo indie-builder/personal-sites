@@ -23,6 +23,7 @@
     "@supabase/supabase-js": "2.117.3",
     "@tanstack/react-router": "^1.170.44",
     "@tanstack/react-start": "^1.169.2",
+    "@typesafe-ai/sdk": "^0.7.0",
     "ai": "7.0.140",
     "better-sqlite3": "^13.0.3",
     "clsx": "2.1.1",

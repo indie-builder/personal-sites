@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Effect } from "effect";
 import { Result, Schema } from "effect";
 
+import { checkAskGuardrail, guardrailMessage } from "@/lib/ask-guardrail.server";
 import { checkAskRateLimit } from "@/lib/ask-limiter.server";
 import { searchAskDocuments } from "@/lib/ask-search.server";
 import { streamAskAnswer } from "@/lib/ask-session.server";
@@ -52,6 +53,20 @@ export const Route = createFileRoute("/api/ask")({
 
         const parsed = Schema.decodeUnknownResult(requestSchema)(await request.json().catch(() => null));
         if (Result.isFailure(parsed)) return Response.json({ error: "问题、范围或浏览器会话标识无效。" }, { status: 400 });
+
+        // 护栏：越狱 / 索取私密数据 / 离题。失败即放行（个人站宁可漏放不可误拦），
+        // 只记录不阻断；判定本身也带超时与零重试。
+        const verdict = await Effect.runPromise(
+          checkAskGuardrail(parsed.success.question).pipe(
+            Effect.catch((error) => {
+              console.error("Public ask guardrail failed", error);
+              return Effect.succeed({ action: "pass" } as const);
+            }),
+          ),
+        );
+        if (verdict.action === "block") {
+          return Response.json({ error: guardrailMessage(verdict.reason) }, { status: 400 });
+        }
 
         const encoder = new TextEncoder();
         const cancellation = new AbortController();
