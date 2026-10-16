@@ -7,7 +7,7 @@
     "build": "node scripts/prepare-data.mjs && node --import ./scripts/load-env.mjs node_modules/vite/bin/vite.js build",
     "start": "node --import ./scripts/load-env.mjs scripts/start-server.mjs",
     "lint": "oxlint --deny-warnings app src components e2e lib scripts tests '*.config.{js,mjs,ts}'",
-    "typecheck": "bun ../../scripts/tsc7.mjs --noEmit",
+    "typecheck": "bun scripts/prepare-data.mjs && bun ../../scripts/tsc7.mjs --noEmit",
     "test": "bun scripts/prepare-data.mjs && vitest run",
     "test:e2e": "bun run build && bun scripts/e2e-agent-run.mjs",
     "test:e2e:touch": "playwright test"
