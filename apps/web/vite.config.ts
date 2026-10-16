@@ -18,6 +18,8 @@ export default defineConfig({
     port: 3000,
     host: "127.0.0.1",
   },
+  // resvg 带原生 .node 二进制，Vite dev 预打包会因非 UTF-8 报错；交由运行时直接加载。
+  optimizeDeps: { exclude: ["@resvg/resvg-js"] },
   plugins: [
     // tanstackStart 必须在 viteReact 之前；nitro 负责服务端打包与各部署目标适配。
     tanstackStart(),
