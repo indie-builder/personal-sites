@@ -35,10 +35,12 @@ function makeUpstreamItem(id) {
   return { ...upstreamItem, id, links: { original: `https://example.com/${id}` } };
 }
 
-// 内存版公开表，并在每次写操作后取样 selected 集合：`observed` 就是同步期间对外可读的中间态序列。
+// 内存版公开表，并在每次写操作后取样 selected 集合：`observed` 就是同步期间对外可读的中间态序列，
+// `flagWrites` 记录对 selected 标记的写操作目标。
 function createSelectedFlagProbe(initialRows, { failFlagWrite = false } = {}) {
   const store = new Map(initialRows.map((row) => [row.id, { ...row }]));
   const observed = [];
+  const flagWrites = [];
   const selectedIds = () =>
     [...store.values()]
       .filter((row) => row.selected)
@@ -70,6 +72,7 @@ function createSelectedFlagProbe(initialRows, { failFlagWrite = false } = {}) {
               .split(",")
               .filter(Boolean),
           );
+          flagWrites.push({ op: "not-in", excluded: [...excluded].sort() });
           for (const row of store.values()) {
             if (row[column] === value && !excluded.has(row.id)) Object.assign(row, patch);
           }
@@ -78,6 +81,7 @@ function createSelectedFlagProbe(initialRows, { failFlagWrite = false } = {}) {
         },
       }),
       in: async (_column, ids) => {
+        flagWrites.push({ op: "in", ids: [...ids].sort() });
         if (failFlagWrite) return { error: { message: "模拟写入失败" } };
         for (const id of ids) {
           const row = store.get(id);
@@ -97,6 +101,7 @@ function createSelectedFlagProbe(initialRows, { failFlagWrite = false } = {}) {
 
   return {
     client: abortableFake({ from: (table) => (table === "ai_news_public_items" ? publicTable : inertTable) }),
+    flagWrites,
     observed,
     selectedIds,
   };
@@ -153,8 +158,9 @@ describe("ai news sync", () => {
     assert.equal(publicRows[0].selected, true);
     assert.equal(publicRows[0].content.url, "https://mp.weixin.qq.com/s/example");
 
+    // all feed 不得携带 selected 列，否则 upsert 会抹掉同 id 行的精选标记。
     const allFeed = buildSyncRows([upstreamItem], "all", "2026-08-14T13:00:00.000Z");
-    assert.equal(allFeed.publicRows[0].selected, false);
+    assert.equal("selected" in allFeed.publicRows[0], false);
   });
 
   it("keeps non-public items out of the public rows but in the private backup", () => {
@@ -344,10 +350,43 @@ describe("ai news sync", () => {
     assert.deepEqual(emptied, [], "同步过程中公开表不得出现零精选的可读中间态");
   });
 
+  it("resets only the entries that dropped out of the selected feed", async () => {
+    const probe = createSelectedFlagProbe([
+      { id: "keep-x", selected: true },
+      { id: "stale-y", selected: true },
+    ]);
+    const fetchImpl = async () => {
+      const items = [makeUpstreamItem("keep-x")];
+      return new Response(
+        JSON.stringify({ items, page: { count: items.length, hasMore: false, nextCursor: null } }),
+        { status: 200 },
+      );
+    };
+
+    await Effect.runPromise(
+      syncAiNews({
+        backfill: true,
+        clientFactory: () => probe.client,
+        env: { SUPABASE_SERVICE_ROLE_KEY: "test", SUPABASE_URL: "https://example.supabase.co" },
+        fetchImpl,
+        stateStore: availableStateStore(),
+      }),
+    );
+
+    assert.deepEqual(probe.selectedIds(), ["keep-x"]);
+    // 只复位掉出精选的条目：不存在"先清全表再点亮"的第二段写入，也不拼 not.in 列表。
+    assert.deepEqual(probe.flagWrites, [{ op: "in", ids: ["stale-y"] }]);
+  });
+
   it("keeps the current selection when the selected flag write fails", async () => {
-    const probe = createSelectedFlagProbe([{ id: "keep-x", selected: true }], { failFlagWrite: true });
-    const fetchImpl = async (url) => {
-      if (new URL(url).searchParams.get("mode") === "selected") return new Response(null, { status: 304 });
+    const probe = createSelectedFlagProbe(
+      [
+        { id: "keep-x", selected: true },
+        { id: "stale-y", selected: true },
+      ],
+      { failFlagWrite: true },
+    );
+    const fetchImpl = async () => {
       const items = [makeUpstreamItem("keep-x")];
       return new Response(
         JSON.stringify({ items, page: { count: items.length, hasMore: false, nextCursor: null } }),
@@ -366,7 +405,7 @@ describe("ai news sync", () => {
     );
 
     assert.equal(exit._tag, "Failure");
-    assert.deepEqual(probe.selectedIds(), ["keep-x"], "精选标记写入失败不得让仍应精选的条目失去标记");
+    assert.deepEqual(probe.selectedIds(), ["keep-x", "stale-y"], "复位失败只留下过期的精选，不得让仍应精选的条目失去标记");
   });
 
   it("skips before fetching when another sync holds the shared lease", async () => {
