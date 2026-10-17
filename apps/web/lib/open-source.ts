@@ -4,7 +4,6 @@ import "@tanstack/react-start/server-only";
 
 import { Schema } from "effect";
 
-import { cachedRequest } from "@/lib/cached-request";
 import { openSourceEntrySchema } from "@/lib/open-source-schema";
 import { OPEN_SOURCE_PAGE_SIZE, toOpenSourceListEntry } from "@/lib/open-source-types";
 import type { OpenSourceEntry } from "@/lib/open-source-types";
@@ -36,10 +35,10 @@ export function getOpenSourcePage(offset = 0, limit = OPEN_SOURCE_PAGE_SIZE) {
   });
 }
 
-export const getOpenSourceEntry = cachedRequest((slug: string) =>
-  attempt("open-source.detail", () => {
+export function getOpenSourceEntry(slug: string) {
+  return attempt("open-source.detail", () => {
     if (!/^[\w-]+$/u.test(slug)) return null;
     const row = getPublicDatabase().prepare("SELECT content_json FROM open_source_items WHERE slug = ?").get(slug);
     return row ? parseEntry(Schema.decodeUnknownSync(contentJsonRowSchema)(row).content_json) : null;
-  }),
-);
+  });
+}

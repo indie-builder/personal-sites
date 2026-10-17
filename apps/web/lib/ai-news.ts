@@ -5,7 +5,6 @@ import "@tanstack/react-start/server-only";
 import { Schema } from "effect";
 
 import { AI_NEWS_PAGE_SIZE, aiNewsItemContentSchema, aiNewsListRowSchema } from "@/lib/ai-news-types";
-import { cachedRequest } from "@/lib/cached-request";
 import { getPublicSupabaseClient } from "@/lib/supabase.server";
 import { getAiNewsArchive } from "@/lib/ai-news-archive.server";
 import {
@@ -27,14 +26,14 @@ const listSelect =
 
 // Read changes since this deployment's snapshot, including late arrivals and corrections to old items.
 // ponytail: merge the small live window in memory; use a server-side cursor if its volume becomes large.
-const readLiveList = cachedRequest(() =>
-  Effect.gen(function* () {
+function readLiveList() {
+  return Effect.gen(function* () {
     const client = yield* attempt("ai-news.client", getPublicAiNewsClient);
     const metadata = yield* attempt("ai-news.archive", () => archiveMetadata(getAiNewsArchive()));
     const rows = yield* readPublicRows(client, { select: listSelect, changedSince: metadata });
     return yield* Schema.decodeUnknownEffect(Schema.Array(aiNewsListRowSchema).pipe(Schema.mutable))(rows);
-  }),
-);
+  });
+}
 
 export function getAiNewsPage(offset = 0, limit = AI_NEWS_PAGE_SIZE) {
   return Effect.gen(function* () {
@@ -58,8 +57,8 @@ export function getAiNewsPage(offset = 0, limit = AI_NEWS_PAGE_SIZE) {
   });
 }
 
-export const getAiNewsItem = cachedRequest((id: string) =>
-  Effect.gen(function* () {
+export function getAiNewsItem(id: string) {
+  return Effect.gen(function* () {
     const archive = yield* attempt("ai-news.archive", getAiNewsArchive);
     const archived = yield* attempt("ai-news.item", () => readArchivedItem(archive, id));
     const metadata = yield* attempt("ai-news.metadata", () => archiveMetadata(archive));
@@ -71,8 +70,8 @@ export const getAiNewsItem = cachedRequest((id: string) =>
     if (!data) return archived;
     const row = yield* Schema.decodeUnknownEffect(aiNewsRowSchema)(data);
     return { ...row.content, selected: row.selected };
-  }),
-);
+  });
+}
 
 const aiNewsSearchRowSchema = Schema.Struct({
   id: Schema.String,
