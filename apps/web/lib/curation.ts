@@ -3,7 +3,6 @@ import "@tanstack/react-start/server-only";
 
 import { Schema } from "effect";
 
-import { cachedRequest } from "@/lib/cached-request";
 import { CURATION_PAGE_SIZE, curationItemSchema } from "@/lib/curation-types";
 import type { CurationItem, CurationListItem } from "@/lib/curation-types";
 import { contentJsonRowSchema, getPublicDatabase } from "@/lib/public-database";
@@ -158,10 +157,10 @@ export function getCurationNeighbors(id: string, designOnly = false) {
   });
 }
 
-export const findCurationItem = cachedRequest((id: string) =>
-  attempt("curation.detail", () => {
+export function findCurationItem(id: string) {
+  return attempt("curation.detail", () => {
     const row = getPublicDatabase().prepare("SELECT content_json FROM curation_items WHERE id = ?").get(id);
     if (!row) return null;
     return parseCurationItem(Schema.decodeUnknownSync(contentJsonRowSchema)(row).content_json);
-  }),
-);
+  });
+}
