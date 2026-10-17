@@ -31,6 +31,77 @@ const upstreamItem = {
   title: "dots3-note Preview 开源",
 };
 
+function makeUpstreamItem(id) {
+  return { ...upstreamItem, id, links: { original: `https://example.com/${id}` } };
+}
+
+// 内存版公开表，并在每次写操作后取样 selected 集合：`observed` 就是同步期间对外可读的中间态序列。
+function createSelectedFlagProbe(initialRows, { failFlagWrite = false } = {}) {
+  const store = new Map(initialRows.map((row) => [row.id, { ...row }]));
+  const observed = [];
+  const selectedIds = () =>
+    [...store.values()]
+      .filter((row) => row.selected)
+      .map((row) => row.id)
+      .sort();
+  const snapshot = () => observed.push(selectedIds());
+
+  const publicTable = {
+    select: () => ({
+      eq: async (column, value) => {
+        snapshot();
+        return {
+          data: [...store.values()].filter((row) => row[column] === value).map((row) => ({ id: row.id })),
+          error: null,
+        };
+      },
+    }),
+    upsert: async (rows) => {
+      for (const row of rows) store.set(row.id, { ...store.get(row.id), ...row });
+      snapshot();
+      return { error: null };
+    },
+    update: (patch) => ({
+      eq: (column, value) => ({
+        not: async (_column, _op, listLiteral) => {
+          const excluded = new Set(
+            listLiteral
+              .replace(/^\(|\)$/g, "")
+              .split(",")
+              .filter(Boolean),
+          );
+          for (const row of store.values()) {
+            if (row[column] === value && !excluded.has(row.id)) Object.assign(row, patch);
+          }
+          snapshot();
+          return { error: null };
+        },
+      }),
+      in: async (_column, ids) => {
+        if (failFlagWrite) return { error: { message: "模拟写入失败" } };
+        for (const id of ids) {
+          const row = store.get(id);
+          if (row) Object.assign(row, patch);
+        }
+        snapshot();
+        return { error: null };
+      },
+    }),
+    delete: () => ({ or: async () => ({ error: null }) }),
+  };
+  const inertTable = {
+    delete: () => ({ or: async () => ({ error: null }) }),
+    select: () => ({ eq: async () => ({ data: [], error: null }) }),
+    upsert: async () => ({ error: null }),
+  };
+
+  return {
+    client: abortableFake({ from: (table) => (table === "ai_news_public_items" ? publicTable : inertTable) }),
+    observed,
+    selectedIds,
+  };
+}
+
 describe("ai news sync", () => {
   const availableStateStore = () => ({
     acquire: () => Effect.succeed({ acquired: true, etags: {}, token: {} }),
@@ -243,6 +314,59 @@ describe("ai news sync", () => {
     assert.equal(store.get("keep-x").selected, true);
     assert.equal(store.get("fresh-z").selected, true);
     assert.deepEqual(cleanupTables, ["ai_news_items"], "同步不得按年龄直接删除公开历史");
+  });
+
+  it("never lets the public table read as having no selected item during a sync", async () => {
+    // selected feed 未变（304）而 all feed 有更新时，all 的 upsert 会碰到当前精选行。
+    // 站点与归档任务在同步期间读到的是这里的中间态，所以逐个写操作后取样。
+    const probe = createSelectedFlagProbe([{ id: "keep-x", selected: true }]);
+    const fetchImpl = async (url) => {
+      if (new URL(url).searchParams.get("mode") === "selected") return new Response(null, { status: 304 });
+      const items = [makeUpstreamItem("keep-x")];
+      return new Response(
+        JSON.stringify({ items, page: { count: items.length, hasMore: false, nextCursor: null } }),
+        { status: 200 },
+      );
+    };
+
+    await Effect.runPromise(
+      syncAiNews({
+        backfill: true,
+        clientFactory: () => probe.client,
+        env: { SUPABASE_SERVICE_ROLE_KEY: "test", SUPABASE_URL: "https://example.supabase.co" },
+        fetchImpl,
+        stateStore: availableStateStore(),
+      }),
+    );
+
+    assert.deepEqual(probe.selectedIds(), ["keep-x"]);
+    const emptied = probe.observed.filter((ids) => ids.length === 0);
+    assert.deepEqual(emptied, [], "同步过程中公开表不得出现零精选的可读中间态");
+  });
+
+  it("keeps the current selection when the selected flag write fails", async () => {
+    const probe = createSelectedFlagProbe([{ id: "keep-x", selected: true }], { failFlagWrite: true });
+    const fetchImpl = async (url) => {
+      if (new URL(url).searchParams.get("mode") === "selected") return new Response(null, { status: 304 });
+      const items = [makeUpstreamItem("keep-x")];
+      return new Response(
+        JSON.stringify({ items, page: { count: items.length, hasMore: false, nextCursor: null } }),
+        { status: 200 },
+      );
+    };
+
+    const exit = await Effect.runPromiseExit(
+      syncAiNews({
+        backfill: true,
+        clientFactory: () => probe.client,
+        env: { SUPABASE_SERVICE_ROLE_KEY: "test", SUPABASE_URL: "https://example.supabase.co" },
+        fetchImpl,
+        stateStore: availableStateStore(),
+      }),
+    );
+
+    assert.equal(exit._tag, "Failure");
+    assert.deepEqual(probe.selectedIds(), ["keep-x"], "精选标记写入失败不得让仍应精选的条目失去标记");
   });
 
   it("skips before fetching when another sync holds the shared lease", async () => {
