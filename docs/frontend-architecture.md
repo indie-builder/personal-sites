@@ -7,25 +7,25 @@
 ## 页面骨架
 
 ```text
-RootLayout
+根路由（`apps/web/src/routes/__root.tsx`）
 ├─ OpeningLoader（全屏遮罩，每个浏览器会话的首次完整页面加载播放）
 └─ 路由页面
-   ├─ /                         首页（ISR，revalidate = 60）
+   ├─ /                         首页（CDN 缓存，s-maxage = 60）
    │  ├─ Profile rail（sticky，位于数据 Suspense 外）
    │  └─ 右侧每日动态列表（保留 Suspense 边界）
-   ├─ /ai-news                  每日动态版块（ISR，revalidate = 60）
-   ├─ /curation                 每日关注版块（仅 X 来源，ISR，revalidate = 300）
-   ├─ /design                   设计收藏版块（X 高置信设计相关内容，ISR，视频站内播放）
-   ├─ /design/[id]              设计收藏详情（ISR，复用策展详情骨架与设计子集相邻导航）
-   ├─ /douyin                   抖音收藏版块（仅抖音来源，ISR，revalidate = 300）
-   ├─ /open-source              开源关注版块（ISR，revalidate = 300）
+   ├─ /ai-news                  每日动态版块（CDN 缓存，s-maxage = 60）
+   ├─ /curation                 每日关注版块（仅 X 来源，CDN 缓存，s-maxage = 300）
+   ├─ /design                   设计收藏版块（X 高置信设计相关内容，CDN 缓存，视频站内播放）
+   ├─ /design/[id]              设计收藏详情（CDN 缓存，复用策展详情骨架与设计子集相邻导航）
+   ├─ /douyin                   抖音收藏版块（仅抖音来源，CDN 缓存，s-maxage = 300）
+   ├─ /open-source              开源关注版块（CDN 缓存，s-maxage = 300）
    │  ├─ Profile rail（与首页相同）
    │  └─ 内容导航 + 公开资料问答（个人简介、每日关注、开源关注）
    ├─ /feed.xml                 最近公开内容的 RSS 2.0 聚合
    ├─ /sitemap.xml              栏目与公开详情页索引
    ├─ /robots.txt               搜索引擎抓取规则
    ├─ /api/health/data          全部公开数据面与部署修订的统一健康状态
-   ├─ /curation/[id]            详情页（ISR，revalidate = 300）
+   ├─ /curation/[id]            详情页（CDN 缓存，s-maxage = 300）
    │  ├─ Profile rail（与首页相同）
    │  └─ Curation article
    │     ├─ Back navigation
@@ -33,19 +33,19 @@ RootLayout
    │     ├─ Original source and media
    │     ├─ Markdown analysis
    │     └─ Source links
-   └─ /open-source/[slug]       开源详情页（ISR，revalidate = 300）
+   └─ /open-source/[slug]       开源详情页（CDN 缓存，s-maxage = 300）
       ├─ Profile rail（与首页相同）
       └─ 文档版本切换为客户端状态，中文阅读版服务端渲染
 ```
 
-首页与每日动态版块在预渲染和再验证时合并 SQLite 历史与 Supabase 增量。命中页面缓存时，首屏直接使用缓存内容，无需每次请求都等待 Supabase。缓存超过 60 秒后，下一次请求仍返回旧页面，并触发后台再验证；成功后，后续请求使用新页面。60 秒是再验证间隔，不是内容陈旧时间的上限。两页保留数据 Suspense 边界与加载状态。分页 API 沿用自身的 HTTP 缓存策略，不受页面 `revalidate` 配置控制。
+首页与每日动态版块由 TanStack Start 路由 loader 通过 `createServerFn`（`apps/web/src/functions/content.ts`）读取数据，合并 SQLite 历史与 Supabase 增量。loader 在服务端与浏览器端都会执行，SQLite / Supabase 读取只允许经过 server functions。页面响应由各路由的 `headers()` 声明 CDN `Cache-Control`：`public, s-maxage=N, stale-while-revalidate=86400`（见 `apps/web/lib/page-cache.ts`）。CDN 命中时直接返回缓存页面，无需等待数据读取；超过 `s-maxage` 后，下一次请求仍返回旧页面并触发后台再验证，成功后后续请求使用新页面。`s-maxage` 是 CDN 新鲜期，不是内容陈旧时间的上限。两页保留数据 Suspense 边界与加载状态。分页 API 沿用自身的 `PUBLIC_FEED_CACHE_CONTROL`（`s-maxage=300`、`stale-while-revalidate=600`），不受页面缓存头控制。
 
 | 区域 | 主文件 | 责任 | 不应承担的责任 |
 |---|---|---|---|
 | 全局壳 | `apps/web/src/routes/__root.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
 | 首页 | `apps/web/src/routes/index.tsx` | 稳定输出身份轨、刊头与每日动态列表，保留数据 Suspense 边界 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
-| 版块页 | `apps/web/src/routes/ai-news/index.tsx`、`apps/web/src/routes/curation/index.tsx`、`apps/web/src/routes/design/index.tsx`、`apps/web/src/routes/douyin.tsx`、`apps/web/src/routes/open-source/index.tsx` | 单版块的 ISR 列表页，复用身份轨与刊头 | 第二套侧栏语言 |
-| 详情页 | `apps/web/src/routes/curation/$id.tsx`、`apps/web/src/routes/design/$id.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免 ISR 页面读取请求期 query | 第二套个人侧栏 |
+| 版块页 | `apps/web/src/routes/ai-news/index.tsx`、`apps/web/src/routes/curation/index.tsx`、`apps/web/src/routes/design/index.tsx`、`apps/web/src/routes/douyin.tsx`、`apps/web/src/routes/open-source/index.tsx` | 带 CDN 页面缓存头的单版块列表页，复用身份轨与刊头 | 第二套侧栏语言 |
+| 详情页 | `apps/web/src/routes/curation/$id.tsx`、`apps/web/src/routes/design/$id.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免把筛选上下文放入请求期 query | 第二套个人侧栏 |
 | Loading | `apps/web/components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
 | 个人简介 | `apps/web/components/profile-introduction.tsx`、`apps/web/components/profile-typewriter.ts`、`apps/web/components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
 | 内容导航 | `apps/web/components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
@@ -153,7 +153,7 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 
 ## 2026-09-08 设计工程更新
 
-- 同级栏目链接直接提交 Next 路由，键盘导航不经过退出动效；手机身份展开/收拢保留现有桥接。之前描述的桌面淡入换页已被这一规则取代。
+- 同级栏目链接直接提交 TanStack Router 路由，键盘导航不经过退出动效；手机身份展开/收拢保留现有桥接。之前描述的桌面淡入换页已被这一规则取代。
 - 问答输入统一 16px，主要控件统一 44px。
 - `apps/web/components/route-fallbacks.tsx` 为缺失页面提供共享身份轨与真实阅读出口。
 

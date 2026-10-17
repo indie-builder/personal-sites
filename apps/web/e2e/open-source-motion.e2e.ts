@@ -53,21 +53,48 @@ function readBrowserContent(browser: Browser) {
 
 test("open-source filters cap Motion stagger and honor reduced motion", async ({ app, screen, browser }) => {
   const instrumentListMotion = () => browser.evaluate(() => {
-    const testWindow = window as typeof window & { __filterMotionDurations: number[] };
+    const testWindow = window as typeof window & {
+      __filterMotionCalls: { index: number; duration: number; properties: string[] }[];
+    };
     const nativeAnimate = Element.prototype.animate;
-    testWindow.__filterMotionDurations = [];
+    const animatedProperties = (keyframes: Keyframe[] | PropertyIndexedKeyframes | null) => {
+      const ignored = new Set(["offset", "composite", "easing"]);
+      const frames = keyframes ? (Array.isArray(keyframes) ? keyframes : [keyframes]) : [];
+      const properties = new Set<string>();
+      for (const frame of frames) {
+        for (const property of Object.keys(frame)) {
+          if (!ignored.has(property)) properties.add(property);
+        }
+      }
+      return [...properties];
+    };
+    testWindow.__filterMotionCalls = [];
     Element.prototype.animate = function animate(keyframes, options) {
       if (this instanceof HTMLLIElement && this.closest('[aria-label="已判读的开源项目"]')) {
         const duration = typeof options === "number" ? options : options?.duration;
-        if (typeof duration === "number") testWindow.__filterMotionDurations.push(duration);
+        const index = this.parentElement ? Array.prototype.indexOf.call(this.parentElement.children, this) : -1;
+        if (typeof duration === "number" && index >= 0) {
+          testWindow.__filterMotionCalls.push({ index, duration, properties: animatedProperties(keyframes) });
+        }
       }
       return nativeAnimate.call(this, keyframes, options);
     };
     return null;
   });
-  const readDurations = () => browser.evaluate(() => (
-    window as typeof window & { __filterMotionDurations?: number[] }
-  ).__filterMotionDurations ?? []);
+  // Motion 可按属性拆分 WAAPI 调用：一行允许一次 opacity + 一次 transform（拆分或合并），
+  // 重复启动同一属性则说明揭示范围失控。
+  const readRevealRows = () => browser.evaluate(() => {
+    const calls = (window as typeof window & {
+      __filterMotionCalls?: { index: number; duration: number; properties: string[] }[];
+    }).__filterMotionCalls ?? [];
+    const callsByRow = new Map<number, { duration: number; properties: string[] }[]>();
+    for (const { index, duration, properties } of calls) {
+      callsByRow.set(index, [...(callsByRow.get(index) ?? []), { duration, properties }]);
+    }
+    return [...callsByRow.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([index, rowCalls]) => ({ index, calls: rowCalls }));
+  });
   await app.open("/open-source");
   // 旧断言经 Playwright 10s 断言预算等完 5s 开机仪式后元素卸载；引擎默认断言预算更短，显式给同额预算。
   await expect(browser.locator(".opening-loader")).toHaveCount(0, { timeout: 10_000 });
@@ -80,7 +107,29 @@ test("open-source filters cap Motion stagger and honor reduced motion", async ({
   await screen.getByRole("menuitemradio", /^Skills 与工作流 · /u).click();
   await expect(screen.getByRole("button", "筛选开源关注：Skills 与工作流", { exact: false })).toBeVisible();
   const filteredRows = await browser.locator('[aria-label="已判读的开源项目"] ol > li').count();
-  await expect.poll(readDurations).toEqual(Array(Math.min(filteredRows, 8)).fill(300));
+  await expect.poll(async () => {
+    const rows = await readRevealRows();
+    return {
+      indices: rows.map((row) => row.index),
+      everyRowRevealsEachPropertyOnce: rows.every((row) => {
+        const startsByProperty = new Map<string, number>();
+        let allAtSharedDuration = true;
+        for (const call of row.calls) {
+          allAtSharedDuration &&= call.duration === 300;
+          for (const property of call.properties) {
+            startsByProperty.set(property, (startsByProperty.get(property) ?? 0) + 1);
+          }
+        }
+        return allAtSharedDuration
+          && startsByProperty.size === 2
+          && startsByProperty.get("opacity") === 1
+          && startsByProperty.get("transform") === 1;
+      }),
+    };
+  }).toEqual({
+    indices: Array.from({ length: Math.min(filteredRows, 8) }, (_, index) => index),
+    everyRowRevealsEachPropertyOnce: true,
+  });
 
   await emulateReducedMotion(browser);
   await browser.reload();
@@ -88,7 +137,7 @@ test("open-source filters cap Motion stagger and honor reduced motion", async ({
   await screen.getByRole("button", "筛选开源关注：全部主题", { exact: false }).click();
   await screen.getByRole("menuitemradio", /^Skills 与工作流 · /u).click();
   await expect(screen.getByRole("button", "筛选开源关注：Skills 与工作流", { exact: false })).toBeVisible();
-  expect(await readDurations()).toEqual([]);
+  expect(await readRevealRows()).toEqual([]);
   expect(await browser.evaluate(() =>
     Array.from(document.querySelectorAll('[aria-label="已判读的开源项目"] ol > li'))
       .every((row) => getComputedStyle(row).opacity === "1"),

@@ -240,6 +240,36 @@ test("Ask can return to the latest message after reading earlier messages", asyn
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 812 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
+  test(`Ask renders patched KaTeX with matching styles at ${viewport.width}px`, async ({ app, screen, browser }) => {
+    await browser.setViewport(viewport);
+    await emulateReducedMotion(browser);
+    await installEmitAskMock(browser);
+    const dialog = await openAssistant(app, screen, browser, viewport.width);
+    await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("请展示公开公式示例");
+    await dialog.getByRole("button", "发送问题", { exact: false }).tap();
+    await expect(dialog.getByRole("button", "停止生成", { exact: false })).toBeVisible();
+    const markdown = "行内公式：$$x_i^2$$。\n\n$$\n\\frac{a_1+b^2}{c_3}\n$$";
+    await emitAsk(browser, "text", { delta: `root = TextContent(${JSON.stringify(markdown)})` });
+    await emitAsk(browser, "done", {});
+    await expect(browser.locator('[role="dialog"] .katex')).toHaveCount(2);
+    await expect(browser.locator('[role="dialog"] .katex-display')).toHaveCount(1);
+    await expect(browser.locator('[role="dialog"] .katex-error')).toHaveCount(0);
+    await expect.poll(() => browser.evaluate(async () => {
+      await document.fonts.ready;
+      const formulas = [...document.querySelectorAll<HTMLElement>('[role="dialog"] .katex')];
+      const display = document.querySelector('[role="dialog"] .katex-display');
+      const mathml = document.querySelector('[role="dialog"] .katex-mathml');
+      const panel = document.querySelector('[role="dialog"]');
+      return formulas.length === 2 && Boolean(display && mathml && panel)
+        && formulas.every((formula) => getComputedStyle(formula).fontFamily.includes("KaTeX_Main")
+          && formula.getBoundingClientRect().height > 0)
+        && getComputedStyle(display!).display === "block"
+        && getComputedStyle(mathml!).position === "absolute"
+        && [...document.fonts].some((font) => font.family === "KaTeX_Main" && font.status === "loaded")
+        && panel!.scrollWidth <= panel!.clientWidth;
+    })).toBe(true);
+  });
+
   test(`Ask streams default OpenUI components before citations at ${viewport.width}px`, async ({ app, screen, browser }) => {
     await browser.setViewport({ width: viewport.width, height: viewport.height });
     // reduce 补丁只改 matchMedia 现读，不模拟 CSS 媒体查询：ask-chat.module.css 的 reduce 块
