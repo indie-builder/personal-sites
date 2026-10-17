@@ -60,12 +60,16 @@ export const fetchOpenSourceEntry = createServerFn({ method: "GET" })
   .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ slug: Schema.String }))(input))
   .handler(async ({ data }) => Effect.runPromise(getOpenSourceEntry(data.slug)));
 
-/** 剪报详情（curation 与 design 板块共用，design 只放行 include 状态条目）。 */
+/** 剪报详情（curation 与 design 板块共用，design 只放行 include 状态条目）。
+ *  条目与相邻剪报互不依赖，按 Vercel async-parallel 规则并行取回；非存在/被排除
+ *  条目最多浪费一次相邻查询（有索引），换取详情视图少一串行往返。 */
 export const fetchCurationEntry = createServerFn({ method: "GET" })
   .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ context: Schema.Literals(["curation", "design"]), id: Schema.String }))(input))
   .handler(async ({ data }) => {
-    const item = await Effect.runPromise(findCurationItem(data.id));
-    if (!item || (data.context === "design" && item.design?.status !== "include")) return null;
-    const neighbors = await Effect.runPromise(getCurationNeighbors(data.id, data.context === "design"));
+    const designContext = data.context === "design";
+    const { item, neighbors } = await Effect.runPromise(Effect.all(
+      { item: findCurationItem(data.id), neighbors: getCurationNeighbors(data.id, designContext) },
+    ));
+    if (!item || (designContext && item.design?.status !== "include")) return null;
     return { item, neighbors };
   });

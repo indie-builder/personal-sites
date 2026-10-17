@@ -10,6 +10,11 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // vmThreads：jsdom 环境每 worker 只建一次（默认 threads 每文件重建一次，
+    // 40 个文件的环境创建占了整轮 45%）。保留单文件隔离；VM 缺失的 Node web
+    // 全局由 tests/support/vm-globals.ts 按缺补齐。
+    pool: "vmThreads",
+    setupFiles: ["tests/support/vm-globals.ts"],
     include: ["tests/**/*.test.{ts,tsx}", "tests/**/*.vitest.mjs"],
     passWithNoTests: false,
   },
