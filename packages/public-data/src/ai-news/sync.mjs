@@ -65,13 +65,17 @@ export function buildSyncRows(items, mode, now) {
     });
     const content = toPublicAiNewsItem(raw);
     if (content) {
-      publicRows.push({
+      const row = {
         content,
         id: content.id,
         published_at: content.publishedAt,
-        selected: mode === "selected",
         synced_at: now,
-      });
+      };
+      // all feed 不得携带 selected：upsert 会把它写进同 id 的已有行并抹掉精选标记，
+      // 而恢复要靠末尾一次独立写入，其间公开表会读到零精选。省略该列则 upsert 不覆盖，
+      // 新条目走建表默认值 false。
+      if (mode === "selected") row.selected = true;
+      publicRows.push(row);
     }
   }
   return { privateRows, publicRows };
@@ -155,15 +159,15 @@ export function syncAiNews({
       const fetchedAt = syncNow.toISOString();
       const stats = { backfill, modes: {}, publicCount: 0, skipped: false };
       const program = Effect.gen(function* () {
-        // all feed 的 upsert 会把同 id 行的 selected 覆盖为 false：先记下当前精选 id，
-        // 待全部 upsert 结束后统一先清后设（清掉已掉出精选的旧行，再点亮本轮精选）；
-        // selected feed 本轮有更新时以它的条目为准。
+        // 精选集合的权威来源：selected feed 本轮有更新时以它的条目为准，未更新时沿用库里的现状。
+        // 记下读到的现状，末尾只复位掉出精选的那部分。
         const { data: previousSelected, error: selectedReadError } = yield* io("ai-news.supabase", (signal) =>
           client.from("ai_news_public_items").select("id").eq("selected", true).abortSignal(signal),
         );
         if (selectedReadError)
           return yield* Effect.fail(new Error(`读取每日动态精选标记失败：${selectedReadError.message}`));
-        let selectedIds = new Set((previousSelected ?? []).map((row) => row.id));
+        const previousSelectedIds = new Set((previousSelected ?? []).map((row) => row.id));
+        let selectedIds = new Set(previousSelectedIds);
 
         for (const mode of FEED_MODES) {
           const feed = yield* fetchFeed(mode, {
@@ -193,29 +197,17 @@ export function syncAiNews({
           stats.modes[mode] = { changed: true, count: feed.items.length };
         }
 
-        // 精选标记先清后设：掉出精选 feed 的旧条目必须复位为 false，
-        // 否则它们会一直挂着 selected=true，直到下一次归档仍保留旧标记。
-        let clearSelectedQuery = client
-          .from("ai_news_public_items")
-          .update({ selected: false, synced_at: fetchedAt })
-          .eq("selected", true);
-        if (selectedIds.size > 0) {
-          clearSelectedQuery = clearSelectedQuery.not("id", "in", `(${[...selectedIds].join(",")})`);
-        }
-        yield* assertOwned;
-        const { error: clearSelectedError } = yield* io("ai-news.selected", (signal) => clearSelectedQuery.abortSignal(signal));
-        if (clearSelectedError)
-          return yield* Effect.fail(new Error(`复位每日动态精选标记失败：${clearSelectedError.message}`));
-
-        if (selectedIds.size > 0) {
+        // 只复位掉出精选 feed 的旧条目。仍在精选的行从不被写成 false，公开表因此不会读到零精选。
+        const droppedSelectedIds = [...previousSelectedIds].filter((id) => !selectedIds.has(id));
+        if (droppedSelectedIds.length > 0) {
           yield* assertOwned;
-          const { error } = yield* io("ai-news.supabase", (signal) =>
+          const { error } = yield* io("ai-news.selected", (signal) =>
             client
               .from("ai_news_public_items")
-              .update({ selected: true, synced_at: fetchedAt })
-              .in("id", [...selectedIds]).abortSignal(signal),
+              .update({ selected: false, synced_at: fetchedAt })
+              .in("id", droppedSelectedIds).abortSignal(signal),
           );
-          if (error) return yield* Effect.fail(new Error(`还原每日动态精选标记失败：${error.message}`));
+          if (error) return yield* Effect.fail(new Error(`复位每日动态精选标记失败：${error.message}`));
         }
 
         // 公开数据只能在已部署归档验证后清理；原始备份维持原有 8 天保留期。
