@@ -36,7 +36,7 @@
 
 ### 1. 确认现场
 
-- 读取根及相关目录的 `AGENTS.md`、平台 README；遵守当前项目约定。修改 Next / Turbo 前读取安装包内匹配版本的文档。
+- 读取根及相关目录的 `AGENTS.md`、平台 README；遵守当前项目约定。修改 TanStack Start / Vite / Nitro / Turbo 前读取安装包内匹配版本的文档（TanStack Start 指南从 `apps/web/node_modules/@tanstack/react-start/skills/` 读取）。
 - 检查 `git status`、当前分支和相关 PR，记录既有未提交改动。只处理本轮路径，不提交其他任务的修改。
 - 执行模式从最新主分支建立主题分支，或继续同一维护 PR。既有改动阻碍安全切换时，先处理不冲突的范围；不要自动 reset、clean、stash 或合并他人改动。
 - check 模式不进行上述 Git 写操作。不要把本机已安装版本、锁文件版本和线上运行版本当成同一事实。
@@ -115,23 +115,28 @@ JS 使用 `bun outdated`、`bun audit --json` 辅助检查（Bun 无 `--prod` / 
 
 报告保持简洁，提供必要的文件或 PR 链接。版本检查失败、无补丁公告和停止维护的依赖都要保留在结果里。不要承诺会自动定期执行；需要持久调度时另行配置 GitHub Actions 等服务，复用本 SOP 的规则。
 
-## 版本基线（2026-10-14）
+## 版本基线（2026-10-17）
 
-README 只保留栈型概述。下表是当日核对的全量版本快照，仅作参考；维护时仍按本文流程从仓库与官方发布源实时核对，精确依赖以各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml` 为准。
+README 只保留栈型概述。下表是本轮维护的版本快照，仅作参考；维护时仍按本文流程从仓库与官方发布源实时核对，精确依赖以各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml` 为准。
 
 | 层 | 版本 |
 | --- | --- |
-| Web | Next.js 16.4.0（App Router）、React 19.3.0、Tailwind CSS 4.3.3、shadcn CLI 4.21.4 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.1.0（14.2.0 使每个入场元素产生两次 WAAPI `animate` 调用，被 `open-source-motion` E2E 断言拦截，升级前需专项调查）、Lucide 1.56.0；部署在 Vercel |
-| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，Vercel 支持上限 24.x）、Bun 1.4.3（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、Effect 4.0.4、Turbo 2.11.7、oxlint 1.88.0、Portless 0.15.7；测试使用 Vitest 5.0.4、Vite 8.3.4 与 Playwright 1.64.0 |
-| 数据与 AI | Supabase JS 2.117.3、better-sqlite3 13.0.3、AI SDK 7.0.139 / Anthropic 4.0.79、Pi 1.2.0、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
-| 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
+| Web | TanStack Start 1.169.3（TanStack Router 1.170.45、Vite 8.3.4、Nitro 3.0.260903-beta）、React 19.3.1、Tailwind CSS 4.3.3、shadcn CLI 4.22.0 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.3.0（入场透明度与位移可能拆成多次 WAAPI 调用；`open-source-motion` 按行校验时长及 reduced-motion 终态）、Lucide 1.59.0；部署在 Vercel |
+| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，本机 24.22.0，Vercel 支持上限 24.x）、Bun 1.4.3（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、Effect 4.0.5、Turbo 2.11.9、oxlint 1.88.0、Portless 0.15.8；测试使用 Vitest 5.0.5、Vite 8.3.4 与 Playwright 1.64.1 |
+| 数据与 AI | Supabase JS 2.118.0、better-sqlite3 13.0.3、AI SDK 7.0.143 / Anthropic 4.0.82、Pi 1.3.0、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
+| 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、CommonMark 0.30.1、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
 | 原生客户端（iOS） | Swift 6 语言模式、SwiftUI、iOS 26+，无第三方依赖 |
 
 ## 依赖审计遗留
 
-2026-10-09 依赖审计剩余 2 项告警：
+2026-10-17 `bun audit --json` 剩余 1 项告警：`braces` 3.0.3 高危来自 shadcn CLI 的开发间接依赖，上游暂无修复版（[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，跟踪 [#73](https://github.com/indie-builder/personal-sites/issues/73)）。退出码 1 表示仍有该告警，不能报审计全绿。
 
-- `braces` 3.0.3 高危来自 shadcn CLI 的间接依赖，上游暂无修复版（[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，跟踪 [#73](https://github.com/indie-builder/personal-sites/issues/73)）。
-- KaTeX 低危（[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)）正常依赖更新无法覆盖修复，跨版本 override 尚待兼容验证，跟踪 [#74](https://github.com/indie-builder/personal-sites/issues/74)。
+本轮补丁与再次处理条件：
 
-另有两条运行时约束。Node.js 26.10.0 属 Current 发布线，待部署平台支持后再评估 major 上界升级。`@steipete/bird` 0.8.0 已停止维护且无新版，当前仅用于离线抓取工具，按既有授权保留。
+- `fflate` 中危（[GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98)）通过根 `overrides` 的 `fflate@0.7.3 → 0.7.5` 修复 Satori / `@shuding/opentype.js` 路径，保留 fast-png 的安全版本 0.8.3。OG 图片单测与生产构建通过；上游更新约束后优先移除覆盖。
+- KaTeX 低危（[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)）通过根 `overrides` 固定 0.18.2，覆盖仍声明 `^0.16.0` 的 `rehype-katex` / `micromark-extension-math`。Web 显式依赖同版 KaTeX，`AskAnswer` 懒加载其完整 CSS，避免新版类名与旧样式不匹配。真实 OpenUI TextContent 已验证行内公式、块级分式和上下标；浏览器回归覆盖 1440、320、390px 与横屏。上游正式支持补丁后移除覆盖，跟踪 [#74](https://github.com/indie-builder/personal-sites/issues/74)。
+- Motion 14.3.0 的多次 WAAPI 调用来自按属性拆分；专项测试改为按列表行归组验证 300ms 揭示时长，保留前八行上限及 reduced-motion 静态终态。专项 5 例与首例重复 3 次均通过。
+
+Android 当前 AGP / Gradle 组合高于 Kotlin 2.4.21 官方 fully-supported 矩阵上限（Gradle 9.7.0、AGP 9.3.1）。本轮 Debug 构建、30 项 JVM 单测、20 项 API 36 仪器测试及静态检查通过；这不扩大上游支持声明，后续升级继续核对兼容矩阵。
+
+另有两条运行时约束。Node.js 26.12.0 属 Current 发布线，待部署平台支持后再评估 major 上界升级。`@steipete/bird` 0.8.0 已停止维护且无新版，当前仅用于离线抓取工具，按既有授权保留。

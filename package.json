@@ -69,6 +69,10 @@
     "vectors:search": "bun run --filter @site/content vectors:search",
     "github:starred:run": "bun run --filter @site/content github:starred:run"
   },
+  "overrides": {
+    "fflate@0.7.3": "0.7.5",
+    "katex": "0.18.2"
+  },
   "devDependencies": {
     "@shadcn/lint": "^0.2.1",
     "@types/node": "26.6.5",
@@ -76,6 +80,6 @@
     "oxlint": "^1.88.0",
     "portless": "^0.15.8",
     "typescript": "7.0.2",
-    "turbo": "2.11.8"
+    "turbo": "2.11.9"
   }
 }

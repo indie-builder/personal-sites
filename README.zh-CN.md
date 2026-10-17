@@ -26,7 +26,7 @@
 
 ## 本地运行
 
-使用 Bun `1.4.3`（包管理器与默认脚本/测试运行时，经 `packageManager` 锁定），另需 Node.js `>=24.21.0 <25` 负责 Next.js 构建启动与 Vercel 线上运行时。
+使用 Bun `1.4.3`（包管理器与默认脚本/测试运行时，经 `packageManager` 锁定），另需 Node.js `>=24.21.0 <25` 负责 TanStack Start/Vite/Nitro 构建启动与 Vercel 线上运行时。
 
 ```bash
 git clone https://github.com/indie-builder/personal-sites.git
@@ -57,7 +57,7 @@ bun run dev:domain
 
 ## 技术栈
 
-Next.js（App Router）配 React、Tailwind CSS 与 Motion，部署在 Vercel；业务 I/O 使用 Effect；公开数据来自 Supabase 与只读 SQLite 快照；问一问由智谱 GLM 流式输出；测试使用 Vitest、Playwright 与 e2e 运行器。带日期的版本基线与遗留审计项记录在[技术栈维护](docs/tech-stack-maintenance.md)；精确依赖见各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml`。
+TanStack Start（Vite + Nitro）配 React、Tailwind CSS 与 Motion，部署在 Vercel；公开页面数据经 server functions 读取，路由声明 CDN `Cache-Control`（`s-maxage` 与 `stale-while-revalidate`）；业务 I/O 使用 Effect；公开数据来自 Supabase 与只读 SQLite 快照；问一问由智谱 GLM 流式输出；测试使用 Vitest、Playwright 与 e2e 运行器。带日期的版本基线与遗留审计项记录在[技术栈维护](docs/tech-stack-maintenance.md)；精确依赖见各工作区 `package.json`、`bun.lock` 和 `android/gradle/libs.versions.toml`。
 
 ## 文档
 

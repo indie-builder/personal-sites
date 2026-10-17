@@ -16,5 +16,7 @@ jobs:
           fetch-depth: 0
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
       - name: Verify Git storage boundary
         run: bun scripts/verify-git-safety.mjs --range "$GITHUB_SHA"

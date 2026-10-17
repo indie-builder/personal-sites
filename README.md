@@ -26,7 +26,7 @@ Public discovery endpoints are `/sitemap.xml`, `/robots.txt`, `/feed.xml`, and s
 
 ## Run it locally
 
-Requires Bun `1.4.3` (package manager and default script/test runtime, pinned via `packageManager`) plus Node.js `>=24.21.0 <25` for the Next.js build/start launchers and the Vercel runtime.
+Requires Bun `1.4.3` (package manager and default script/test runtime, pinned via `packageManager`) plus Node.js `>=24.21.0 <25` for the TanStack Start/Vite/Nitro build/start launchers and the Vercel runtime.
 
 ```bash
 git clone https://github.com/indie-builder/personal-sites.git
@@ -57,7 +57,7 @@ Public data splits in two. Daily updates merge the read-only `data/ai-news.sqlit
 
 ## Tech stack
 
-Next.js (App Router) with React, Tailwind CSS, and Motion on Vercel; Effect for business I/O; Supabase and read-only SQLite snapshots for public data; Zhipu GLM streaming for Ask; Vitest, Playwright, and the e2e runner for tests. The dated version baseline and open audit items are recorded in [tech-stack maintenance](docs/tech-stack-maintenance.md); exact dependencies live in each workspace `package.json`, `bun.lock`, and `android/gradle/libs.versions.toml`.
+TanStack Start on Vite with Nitro, React, Tailwind CSS, and Motion on Vercel; public page reads go through server functions and routes declare CDN `Cache-Control` (`s-maxage` plus `stale-while-revalidate`); Effect for business I/O; Supabase and read-only SQLite snapshots for public data; Zhipu GLM streaming for Ask; Vitest, Playwright, and the e2e runner for tests. The dated version baseline and open audit items are recorded in [tech-stack maintenance](docs/tech-stack-maintenance.md); exact dependencies live in each workspace `package.json`, `bun.lock`, and `android/gradle/libs.versions.toml`.
 
 ## Documentation
 
