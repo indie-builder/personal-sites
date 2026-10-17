@@ -47,7 +47,7 @@ bun run dev:domain
 
 ## 原生客户端
 
-[Android](android/README.md)（Kotlin + Jetpack Compose，Android 12+，JDK 17+）与 [iOS](ios/README.md)（Swift 6 + SwiftUI，iOS 26+，无第三方依赖）复用公开内容 GET API，并通过 `POST /api/ask` 使用问答；构建与验证以各自 README 为准。
+[Android](android/README.md)（Kotlin + Jetpack Compose，Android 12+，JDK 17+）、[iOS](ios/README.md)（Swift 6 + SwiftUI，iOS 26+，无第三方依赖）与[微信小程序](apps/miniprogram/README.md)（原生 TypeScript + WXML + WXSS）复用公开内容 GET API，并通过 `POST /api/ask` 使用问答；构建与验证以各自 README 为准。小程序通过独立作品集的公开 API 提供原生浏览；微信正式发布需要真实 AppID 和合法域名配置。
 
 ## 数据与隐私
 

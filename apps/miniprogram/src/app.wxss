@@ -1,0 +1,59 @@
+page {
+  --surface: #ffffff;
+  --ink: #1c1c1e;
+  --muted: #656568;
+  --quiet: #767676;
+  --line: #eeeeee;
+  --paper: #f8f8f8;
+  --error: #994545;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+@media (prefers-color-scheme: dark) {
+  page {
+    --surface: #181818;
+    --ink: #f4f4f4;
+    --muted: #a1a1a4;
+    --quiet: #a1a1a4;
+    --line: #2a2a2c;
+    --paper: #222222;
+    --error: #e5a5a5;
+  }
+}
+view, scroll-view, input, textarea, button { box-sizing: border-box; }
+button {
+  margin: 0;
+  padding: 8px 12px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 28px;
+  border-radius: 8px;
+  font-weight: 500;
+  white-space: normal;
+}
+button::after { border: 0; }
+button[disabled] { color: var(--quiet); opacity: .65; }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+input, textarea { color: var(--ink); font-size: 16px; line-height: 1.6; }
+image { display: block; max-width: 100%; }
+video { width: 100%; border-radius: 10px; }
+.page { max-width: 760px; margin: 0 auto; padding: 20px 24px calc(28px + env(safe-area-inset-bottom)); }
+.title { font-size: 22px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.body { font-size: 15px; line-height: 1.8; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.quiet, .meta { color: var(--quiet); font-size: 12px; line-height: 1.6; }
+.row { padding: 22px 0; border-bottom: 1px solid var(--line); }
+.divider { border-bottom: 1px solid var(--line); }
+.button { border: 1px solid var(--line); }
+.primary { color: var(--surface); background: var(--ink); }
+.primary[disabled] { color: var(--surface); background: var(--muted); }
+.status { padding: 28px 0; text-align: center; color: var(--muted); }
+.error { color: var(--error); }
+rich-text { display: block; overflow-wrap: anywhere; word-break: break-word; }
+@media (max-width: 350px) { .page { padding-left: 16px; padding-right: 16px; } }
+@media (prefers-reduced-motion: reduce) { view, button, image { animation: none !important; transition: none !important; } }

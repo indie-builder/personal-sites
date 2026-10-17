@@ -1,0 +1,21 @@
+{
+  "name": "@site/miniprogram",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "typecheck": "bun ../../scripts/tsc7.mjs --noEmit && bun ../../scripts/tsc7.mjs --noEmit -p tsconfig.tools.json",
+    "lint": "oxlint --deny-warnings src scripts tests",
+    "test": "bun test tests/",
+    "test:e2e": "bun scripts/e2e.ts",
+    "check:templates": "bun scripts/check-templates.ts"
+  },
+  "dependencies": {
+    "@site/effect": "workspace:*",
+    "effect": "4.0.5"
+  },
+  "devDependencies": {
+    "bun-types": "1.4.3",
+    "miniprogram-api-typings": "5.2.3"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "desc": "只允许搜索公共首页；对话与临时阅读状态不参与索引。",
+  "rules": [
+    { "action": "allow", "page": "pages/home/index" },
+    { "action": "allow", "page": "pages/about/index" },
+    { "action": "allow", "page": "pages/portfolio/index" },
+    { "action": "disallow", "page": "*" }
+  ]
+}

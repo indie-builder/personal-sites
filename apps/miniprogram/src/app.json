@@ -1,0 +1,36 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/ask/index",
+    "pages/portfolio/index",
+    "pages/about/index",
+    "pages/detail/index",
+    "pages/collection/index",
+    "pages/work/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "陈远小站",
+    "pageOrientation": "auto",
+    "navigationBarBackgroundColor": "@surface",
+    "navigationBarTextStyle": "@navigationText",
+    "backgroundColor": "@surface",
+    "backgroundTextStyle": "@backgroundText"
+  },
+  "tabBar": {
+    "color": "@muted",
+    "selectedColor": "@ink",
+    "backgroundColor": "@surface",
+    "borderStyle": "@borderStyle",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "动态" },
+      { "pagePath": "pages/ask/index", "text": "问一问" },
+      { "pagePath": "pages/portfolio/index", "text": "作品集" },
+      { "pagePath": "pages/about/index", "text": "关于我" }
+    ]
+  },
+  "darkmode": true,
+  "themeLocation": "theme.json",
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "networkTimeout": { "request": 120000, "downloadFile": 30000 }
+}

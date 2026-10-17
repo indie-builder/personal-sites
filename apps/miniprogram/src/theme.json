@@ -1,0 +1,18 @@
+{
+  "light": {
+    "surface": "#ffffff",
+    "ink": "#1c1c1e",
+    "muted": "#656568",
+    "navigationText": "black",
+    "backgroundText": "dark",
+    "borderStyle": "black"
+  },
+  "dark": {
+    "surface": "#181818",
+    "ink": "#f4f4f4",
+    "muted": "#a1a1a4",
+    "navigationText": "white",
+    "backgroundText": "light",
+    "borderStyle": "white"
+  }
+}

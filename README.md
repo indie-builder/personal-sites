@@ -47,7 +47,7 @@ Build, test, and browser e2e commands are in [workspace notes](docs/monorepo.md)
 
 ## Native clients
 
-[Android](android/README.md) (Kotlin + Jetpack Compose, Android 12+, JDK 17+) and [iOS](ios/README.md) (Swift 6 + SwiftUI, iOS 26+, no third-party dependencies) read the public content GET APIs and ask through `POST /api/ask`. Build and verification follow each client's README.
+[Android](android/README.md) (Kotlin + Jetpack Compose, Android 12+, JDK 17+), [iOS](ios/README.md) (Swift 6 + SwiftUI, iOS 26+, no third-party dependencies), and the [WeChat Mini Program](apps/miniprogram/README.md) (native TypeScript, WXML and WXSS) read the public content GET APIs and ask through `POST /api/ask`. Build and verification follow each client's README. The Mini Program also reads the independent portfolio's public API; WeChat publication requires a real AppID and approved domains.
 
 ## Data and privacy
 

@@ -1,0 +1,35 @@
+<view class="page work-page {{readingCount > 1 ? 'has-navigation' : ''}}">
+  <block wx:if="{{item}}">
+    <view class="work-media-list">
+      <view wx:for="{{item.media}}" wx:for-item="media" wx:for-index="mediaIndex" wx:key="id" class="media-item">
+        <block wx:if="{{!failedMedia[media.id] && !removedMedia[media.id] && media.url}}">
+          <video wx:if="{{media.kind === 'video'}}" id="{{'work-video-' + mediaIndex}}" class="work-video" style="height: {{media.heightRpx}}rpx" src="{{media.url}}" poster="{{media.poster}}" controls show-center-play-btn object-fit="contain" data-id="{{media.id}}" binderror="mediaFailed" aria-label="{{item.title + '，视频'}}" />
+          <button wx:else class="image-button" data-url="{{media.url}}" bindtap="previewImage" aria-label="{{'放大查看图片：' + item.title}}">
+            <image class="work-image" src="{{media.url}}" mode="widthFix" lazy-load data-id="{{media.id}}" binderror="mediaFailed" />
+          </button>
+        </block>
+        <view wx:if="{{failedMedia[media.id] || !media.url}}" class="status media-error">
+          <view>{{media.kind === 'video' ? '视频暂时无法播放。' : '图片暂时无法读取。'}}</view>
+          <button wx:if="{{media.url}}" class="button retry-button" data-id="{{media.id}}" bindtap="retryMedia">重新加载{{media.kind === 'video' ? '视频' : '图片'}}</button>
+        </view>
+      </view>
+      <view wx:if="{{!item.media.length}}" class="status no-media">这件作品暂未提供图片或视频。</view>
+    </view>
+    <view class="title work-title"><text selectable>{{item.title}}</text></view>
+    <view wx:if="{{item.author}}" class="meta work-meta">作者：{{item.author}}</view>
+    <view wx:if="{{item.category || item.topic}}" class="meta work-meta">{{item.category}}{{item.category && item.topic ? ' · ' : ''}}{{item.topic}}</view>
+    <view wx:if="{{item.text}}" class="body work-text"><text selectable>{{item.text}}</text></view>
+    <button wx:if="{{item.sourceURL}}" class="button source-button" bindtap="copySource">复制原作链接</button>
+    <view wx:if="{{attribution}}" class="meta attribution"><text selectable>{{attribution}}</text></view>
+  </block>
+  <view wx:if="{{loading}}" class="status" aria-live="polite">正在读取作品…</view>
+  <view wx:if="{{error}}" class="status" role="alert">
+    <view class="error">{{error}}</view>
+    <button wx:if="{{!invalid}}" class="button retry-button" bindtap="loadWork" disabled="{{loading}}">重新读取</button>
+  </view>
+  <view wx:if="{{readingCount > 1}}" class="work-navigation">
+    <button bindtap="previousWork" disabled="{{readingIndex <= 0}}" aria-label="上一件作品">上一件</button>
+    <view class="meta work-position" aria-live="polite">第 {{readingIndex + 1}} / {{readingCount}} 件</view>
+    <button bindtap="nextWork" disabled="{{readingIndex + 1 >= readingCount}}" aria-label="下一件作品">下一件</button>
+  </view>
+</view>

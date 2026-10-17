@@ -67,3 +67,10 @@ test-results/
 /apps/web/.output/
 /apps/web/dist/
 /apps/web/.vercel/
+
+# Local LoopX execution state and generated mini program bundles.
+/.loopx/
+/.codex/goals/
+/apps/miniprogram/dist/
+/apps/miniprogram/.dist-next/
+/apps/miniprogram/project.private.config.json

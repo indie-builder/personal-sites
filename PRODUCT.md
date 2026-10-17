@@ -6,7 +6,7 @@
 
 web
 
-主交付端是 Web，支持桌面与手机浏览器；手机端使用同一路由与公开内容，按视口调整呈现。Android 客户端（`android/`，「陈远小站」，Kotlin + Compose）与 iOS 客户端（`ios/`，Swift 6 + SwiftUI，iOS 26+）复用同一公开 GET API 作为唯一数据源，站点不为客户端单独提供服务。
+主交付端是 Web，支持桌面与手机浏览器；手机端使用同一路由与公开内容，按视口调整呈现。Android 客户端（`android/`，「陈远小站」，Kotlin + Compose）、iOS 客户端（`ios/`，Swift 6 + SwiftUI，iOS 26+）与微信小程序（`apps/miniprogram/`，原生 TypeScript + WXML + WXSS）复用同一公开 GET API 和 `POST /api/ask`，站点不为客户端单独提供服务。小程序参考 iOS 的动态、问一问、作品集和关于我四项导航；作品内容继续由独立作品集 API 提供，外部来源在微信内提供明确的复制链接出口。
 
 ## Users
 

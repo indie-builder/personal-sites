@@ -1,0 +1,43 @@
+<view class="page collection-page">
+  <view class="title">{{title}}</view>
+  <block wx:if="{{!invalid}}">
+    <view class="search-row">
+      <input class="search-input" value="{{draft}}" placeholder="{{'搜索' + title}}" placeholder-class="search-placeholder" maxlength="200" confirm-type="search" bindinput="inputQuery" bindconfirm="search" aria-label="{{'搜索' + title}}" />
+      <button class="search-button" bindtap="search">搜索</button>
+      <button wx:if="{{draft}}" class="clear-button" bindtap="clearSearch">清空</button>
+    </view>
+    <view class="filter-row divider">
+      <picker class="filter-picker" mode="selector" range="{{categories}}" range-key="name" value="{{categoryIndex}}" bindchange="selectCategory" aria-label="选择分类">
+        <view class="filter-label">{{categories[categoryIndex].name}} · 选择</view>
+      </picker>
+      <picker wx:if="{{collection === 'layouts'}}" class="filter-picker" mode="selector" range="{{topics}}" range-key="name" value="{{topicIndex}}" bindchange="selectTopic" aria-label="选择主题">
+        <view class="filter-label">{{topics[topicIndex].name}} · 选择</view>
+      </picker>
+    </view>
+    <view wx:if="{{loaded}}" class="meta result-count">{{total}} 件作品 · 已显示 {{items.length}} 件</view>
+    <button wx:for="{{items}}" wx:key="id" class="work-row row" data-id="{{item.id}}" bindtap="openWork" aria-label="{{'阅读作品：' + item.title}}">
+      <view class="work-thumb-wrap">
+        <image wx:if="{{item.thumbnail && !failedImages[item.id]}}" class="work-thumb" src="{{item.thumbnail}}" mode="{{collection === 'layouts' ? 'aspectFit' : 'aspectFill'}}" lazy-load data-id="{{item.id}}" binderror="imageFailed" aria-hidden="true" />
+        <view wx:else class="image-placeholder meta">暂无预览</view>
+      </view>
+      <view class="work-copy">
+        <view class="work-title">{{item.title}}</view>
+        <view wx:if="{{item.author}}" class="meta work-meta">{{item.author}}</view>
+        <view wx:if="{{item.category || item.topic}}" class="meta work-meta">{{item.category}}{{item.category && item.topic ? ' · ' : ''}}{{item.topic}}</view>
+        <view wx:if="{{item.media[0].kind === 'video'}}" class="meta work-meta">视频作品</view>
+      </view>
+    </button>
+    <view wx:if="{{loading}}" class="status" aria-live="polite">正在读取作品…</view>
+    <view wx:elif="{{loaded && !items.length && !error}}" class="status">
+      <view>没有找到作品</view>
+      <view class="meta">试试其他关键词、分类或主题。</view>
+    </view>
+    <button wx:if="{{hasMore && loaded && !loading && !error}}" class="button more-button" bindtap="loadMore">继续加载作品</button>
+    <view wx:if="{{loaded && items.length && !hasMore && !loading && !error}}" class="status meta">已显示全部结果</view>
+  </block>
+  <view wx:if="{{error}}" class="status" role="alert">
+    <view class="error">{{error}}</view>
+    <button wx:if="{{!invalid}}" class="button retry-button" bindtap="retry" disabled="{{loading}}">重新读取</button>
+  </view>
+  <view wx:if="{{attribution}}" class="meta attribution"><text selectable>{{attribution}}</text></view>
+</view>
