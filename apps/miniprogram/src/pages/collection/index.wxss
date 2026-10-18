@@ -6,6 +6,10 @@ button.book {
   display: flex; flex-direction: column; align-items: center; flex: 0 0 calc((100% - 30px) / 4); min-width: 0;
   padding: 10px 6px; border-radius: 3px 5px 2px 1px; text-align: center; line-height: 1.4;
 }
+button.book.motion-control { transform-origin: center bottom; transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out); }
+button.book.motion-control.motion-press { transform: translateY(-6px) rotate(-2deg); opacity: .94; }
+.motion-reduced button.book.motion-control.motion-press { transform: none; }
+@media (prefers-reduced-motion: reduce) { button.book.motion-control.motion-press { transform: none; } }
 .book-number { font-size: 10px; font-weight: 500; opacity: .8; }
 .book-name { margin-top: 12px; width: 1em; font-size: 15px; line-height: 1.25; font-weight: 600; word-break: break-all; }
 .book-count { margin-top: auto; padding-top: 10px; font-size: 10px; font-weight: 500; }

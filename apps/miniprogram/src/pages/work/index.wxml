@@ -1,5 +1,5 @@
 <view class="page work-page {{readingCount > 1 ? 'has-navigation' : ''}} {{reducedMotion ? 'motion-reduced' : ''}}">
-  <view wx:if="{{item}}" class="work-content {{contentEntering ? 'motion-enter' : ''}}" bindanimationend="finishContentEntry">
+  <view wx:if="{{item}}" class="work-content {{contentEntering ? 'motion-enter' : ''}} {{contentEntering && entryDirection ? 'motion-enter-' + entryDirection : ''}}" data-id="{{item.id}}" bindanimationend="finishContentEntry">
     <view class="work-media-list">
       <view wx:for="{{item.media}}" wx:for-item="media" wx:for-index="mediaIndex" wx:key="id" class="media-item">
         <block wx:if="{{!failedMedia[media.id] && !removedMedia[media.id] && media.url}}">

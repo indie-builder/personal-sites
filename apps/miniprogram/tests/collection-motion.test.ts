@@ -41,6 +41,11 @@ describe("collection appended-row motion", () => {
     expect(template).toContain('motion[item_index]');
     expect(template).toContain('data-index="{{item_index}}"');
     expect(template).toContain('bindanimationend="onEnterEnd"');
+    const styles = readFileSync(path.join(root, "src/pages/collection/index.wxss"), "utf8");
+    expect(styles).toContain("translateY(-6px) rotate(-2deg)");
+    expect(styles).toContain("transform 160ms var(--ease-out)");
+    expect(styles).toContain(".motion-reduced button.book.motion-control.motion-press { transform: none; }");
+    expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
   });
   test("stages only the first four appended rows and clears each on animationend", async () => {
     const page = harness.open("/pages/collection/index?collection=muse");

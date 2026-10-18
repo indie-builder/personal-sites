@@ -2,11 +2,13 @@ import { copyLink, externalUrl, previewImages, readReducedMotion, run } from "..
 import { collectionTitle, getWork, layoutAttribution, type Collection, type Work } from "../../portfolio/api";
 
 type WorkView = Omit<Work, "media"> & { media: (Work["media"][number] & { heightRpx: number })[] };
+type EntryDirection = "next" | "prev";
 
 Page({
   data: {
     reducedMotion: false,
     contentEntering: false,
+    entryDirection: "" as EntryDirection | "",
     collection: "layouts" as Collection,
     workId: "",
     item: null as WorkView | null,
@@ -25,7 +27,11 @@ Page({
   readingListener: undefined as ((payload: unknown) => void) | undefined,
   cancel: undefined as (() => void) | undefined,
   generation: 0,
+  // Increments on hide/show and unload so a pending entrance cannot survive a lifecycle turn.
+  motionEpoch: 0,
   motionVisible: true,
+  // Captured by the request that consumes it; a stale generation cannot reuse it.
+  pendingEntry: undefined as EntryDirection | undefined,
   onLoad(options: Record<string, string | undefined>) {
     if ((options.collection !== "layouts" && options.collection !== "muse") || !options.id || options.id.length > 300) {
       this.setData({ invalid: true, error: "作品链接无效，请返回作品集重新打开。" });
@@ -57,13 +63,29 @@ Page({
   onUnload() {
     this.motionVisible = false;
     this.generation += 1;
+    this.motionEpoch += 1;
+    this.pendingEntry = undefined;
     this.cancel?.();
     this.pauseVideos();
     if (this.readingListener) this.readingChannel?.off?.("workReading", this.readingListener);
   },
-  onShow() { this.motionVisible = true; this.setData({ reducedMotion: readReducedMotion(), contentEntering: false }); },
-  onHide() { this.motionVisible = false; this.pauseVideos(); this.setData({ contentEntering: false }); },
-  finishContentEntry() { if (this.data.contentEntering) this.setData({ contentEntering: false }); },
+  onShow() {
+    this.motionVisible = true;
+    this.pendingEntry = undefined;
+    this.setData({ reducedMotion: readReducedMotion(), contentEntering: false, entryDirection: "" });
+  },
+  onHide() {
+    this.motionVisible = false;
+    this.motionEpoch += 1;
+    this.pendingEntry = undefined;
+    this.pauseVideos();
+    this.setData({ contentEntering: false, entryDirection: "" });
+  },
+  // An animationend from a replaced node must not settle the entry currently on screen.
+  finishContentEntry(event: WechatMiniprogram.CustomEvent) {
+    if (!this.data.contentEntering || String(event.currentTarget.dataset.id ?? "") !== this.data.item?.id) return;
+    this.setData({ contentEntering: false, entryDirection: "" });
+  },
   pauseVideos() {
     const media = this.data.item?.media ?? [];
     for (let index = 0; index < media.length; index += 1) {
@@ -81,22 +103,29 @@ Page({
     if (!workId) return;
     this.pauseVideos();
     this.cancel?.();
+    this.pendingEntry = delta === 1 ? "next" : "prev";
     this.setData({ readingIndex, workId, item: null, failedMedia: {}, removedMedia: {} });
     this.loadWork();
     wx.pageScrollTo({ scrollTop: 0, duration: 0 });
   },
   onPullDownRefresh() { this.loadWork(); },
   loadWork() {
+    // Initial content keeps the original vertical entrance; only a successful adjacent move is spatial.
+    const direction = this.data.item ? undefined : this.pendingEntry;
     const revealNewItem = !this.data.item;
     if (this.data.invalid) { wx.stopPullDownRefresh(); return; }
     this.cancel?.();
+    this.pendingEntry = undefined;
     const generation = ++this.generation;
+    const epoch = this.motionEpoch;
     this.setData({ loading: true, error: "" });
     this.cancel = run(getWork(this.data.collection, this.data.workId), (result) => {
       if (generation !== this.generation) return;
+      const entering = revealNewItem && this.motionVisible && epoch === this.motionEpoch && !readReducedMotion();
       this.setData({
         loading: false, failedMedia: {}, removedMedia: {},
-        contentEntering: revealNewItem && this.motionVisible && !readReducedMotion(),
+        contentEntering: entering,
+        entryDirection: entering ? direction ?? "" : "",
         item: {
           ...result.item,
           sourceURL: externalUrl(result.item.sourceURL),

@@ -17,8 +17,8 @@
 | `bun install --frozen-lockfile` | 通过；固定 Bun、Effect 和微信类型声明 |
 | `bun run typecheck` | 全仓五个工作区通过，含小程序源码与脚本/测试 |
 | `bun run lint` | 全仓通过 |
-| `bun run test` | 全仓通过，小程序 119 项、Web 230 项，另含公共数据、内容工具和仓库保护套件 |
-| `bun run build` | Web 与小程序均构建成功；小程序主包约 470 KiB，构建强制限制为 2 MiB |
+| `bun run test` | 全仓通过，小程序 121 项、Web 230 项，另含公共数据、内容工具和仓库保护套件 |
+| `bun run build` | Web 与小程序均构建成功；小程序主包约 471 KiB，构建强制限制为 2 MiB |
 | 小程序 AppService 回归 | 实际构建 CommonJS 包，在缺少 fetch/URL/AbortController/编码器的受限环境加载；覆盖八页注册与共享模块、分页/刷新/详情返回、Ask SSE/取消/错误恢复/引用、作品集浏览 |
 | 微信 `wcc` / `wcsc` | 八页 WXML/WXSS 使用已安装微信工具的编译器通过；不依赖登录 |
 | 微信模拟器（2026-10-18） | 已使用本地测试账号 AppID 和有效登录打开；首页读取 50 条内容、问一问初始界面和作品集四项入口正常渲染；布局集合读取 24 件（全库 350 件），实际切 tab 保留问答草稿，修复后未见运行错误 |
