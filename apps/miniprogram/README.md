@@ -55,12 +55,15 @@ bun run build
 
 # 小程序专项
 bun run --filter @site/miniprogram test:e2e
+bun run --filter @site/miniprogram test:simulator
 bun run --filter @site/miniprogram check:templates
 ```
 
 默认 `test` 会先构建当前源码再执行单测，产物缺失时不会跳过构建契约。`test:e2e` 的定位是 **构建产物的 AppService 契约回归**：在受限 JS 环境中加载实际 CommonJS 包、模拟微信平台 API，验证真实页面生命周期与公开 HTTP/SSE 契约。固定内容是测试夹具，不进入产品。它不等同于微信模拟器、真机或发布验收。
 
 `check:templates` 调用本机微信开发者工具的真实 `wcc` 和 `wcsc` 编译器，无需线上模型或数据库。macOS 默认读取 `/Applications/wechatwebdevtools.app`；其他安装位置用 `WECHAT_COMPILER_ROOT` 指向含 `wcc`/`wcsc`（Windows 为 `.exe`）的目录。不在仓库分发平台编译器。
+
+`test:simulator` 是面向已安装 `wechatide` CLI 与本机微信开发者工具的最小冒烟：检查登录（只报告是否有效，不输出账号）、要求模拟器当前只有一个空闲的问一问页面，注入带「冒烟」标记的合成问答与引用，验证引用可见、可点击进入资料页并返回，然后把截图写到被忽略的 `apps/miniprogram/.turbo/simulator-smoke.jpg`。运行前请**手动打开问一问并回到最新位置**，确认没有生成中的回答、没有待清理的冒烟备份；阅读历史消息时拒绝运行，以保留原滚动位置。脚本不自动打开项目或切换标签页，页面栈不是仅问一问一页、页面不空闲或状态不适用时明确拒绝。它不发送 `POST /api/ask`、不调用模型、不读凭据、不上传或推送预览；结束后只恢复本次注入的 controller 与阅读窗口，不退出用户原有的详情页。找不到 CLI、未登录、需要令牌、出现待授权任务或恢复失败时直接失败，不等待确认；工具链未就绪时该命令不作为通过证据。
 
 2026-10-18 已使用本地测试账号 AppID 和有效登录打开微信模拟器：首页成功读取 50 条内容，问一问初始界面与作品集四项入口正常渲染；修复编译降级和原生按钮默认宽度后，未见运行错误。这次检查未覆盖真机、生产模型问答、完整窄屏/深色/横屏验收或上传发布。
 

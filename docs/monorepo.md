@@ -34,6 +34,7 @@ cd apps/web && bunx vitest run tests/ai-news-hybrid.test.ts
 bun run --filter @site/content test
 bun run --filter @site/miniprogram build     # 微信开发者工具导入 apps/miniprogram
 bun run --filter @site/miniprogram test:e2e  # 构建产物 AppService 契约回归
+bun run --filter @site/miniprogram test:simulator # 本机微信合成问答与引用冒烟
 bun run --filter @site/miniprogram check:templates # 本机微信工具 wcc/wcsc 编译
 bunx turbo run build test --dry=json        # 只看任务依赖，不运行任务
 ```
@@ -70,7 +71,7 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 - 根 Git 保护测试依赖 Git 状态，不缓存。Web build 已不再读取外部数据（页面在请求期 SSR，构建期无 Supabase/SQLite 读取），未来可在显式版本化输入后重新评估 build 缓存；当前保持关闭以缩小本次迁移面。
 - 同步、归档、清理、数据库推送、部署等有副作用的命令直接通过 bun 执行，不使用 Turbo 缓存。
 - 暂不开启远程缓存。Web `.output` 包含两份公开 SQLite 副本；不要把私有队列、原始资料或凭据加入任何缓存 outputs。
-- GitHub Code quality 调用根类型检查、lint、单测，并构建一次后运行关键 Web E2E。`apps/web/scripts/ci-public-data.mjs` 只在 CI 启动，提供空新闻增量，配合已提交的公开 SQLite；不使用生产数据库或模型凭据。Ask 回归在浏览器拦截模型请求；失败保存 trace。原生工程保留各自操作系统和路径触发规则。
+- GitHub Code quality 调用根类型检查、lint、单测，并构建一次后运行关键 Web E2E。`apps/web/scripts/ci-public-data.mjs` 只在 CI 启动，提供空新闻增量，配合已提交的公开 SQLite；不使用生产数据库或模型凭据。Ask 回归在浏览器拦截模型请求；失败保存 trace。Code quality、Android、iOS 与 Git 安全门禁均为手动 `workflow_dispatch`，推送和 PR 不自动触发；本地适用检查是默认验证依据。每日动态归档与 production health 按 schedule 运行。
 - 根 `tests/agent-environment.test.mjs` 随 `bun run test` 检查 `.claude/skills` 目录软链接与技能内容的唯一跟踪目录、核心导航文档的本地链接/路径、明确列出的 bun 命令以及 Bun 工件（`bun.lock` 存在、pnpm 工件不存在），避免机械性漂移。事实和领域语义仍需评审核对。每日动态工作流调用内容工具脚本，归档仍为根 `data/ai-news.sqlite`。
 
 ## Vercel
