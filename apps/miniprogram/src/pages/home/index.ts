@@ -5,7 +5,9 @@ type FeedController = ReturnType<typeof createFeed>;
 type LoadMode = "initial" | "more" | "refresh";
 type HomeData = {
   sections: typeof sections;
+  sectionLabels: string[];
   section: Section;
+  sectionIndex: number;
   sectionLabel: string;
   feeds: Record<Section, FeedView>;
 };
@@ -14,8 +16,15 @@ type HomeMethods = {
   _controllers: Partial<Record<Section, FeedController>>;
   _cancels: Partial<Record<Section, () => void>>;
   _loadModes: Partial<Record<Section, LoadMode>>;
+  _positions: Partial<Record<Section, number>>;
+  _scrollTop: number;
+  _scrollToken: number;
+  _switching: boolean;
   loadFeed(mode?: LoadMode): void;
   selectSection(event: WechatMiniprogram.TouchEvent): void;
+  selectSectionIndex(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
+  activate(id: string | undefined): void;
+  onPageScroll(options: WechatMiniprogram.Page.IPageScrollOption): void;
   openDetail(event: WechatMiniprogram.TouchEvent): void;
   openAbout(): void;
   retry(): void;
@@ -28,7 +37,9 @@ function emptyFeed(): FeedView {
 const homePage: WechatMiniprogram.Page.Options<HomeData, HomeMethods> = {
   data: {
     sections,
+    sectionLabels: sections.map((section) => section.label),
     section: "ai-news",
+    sectionIndex: 0,
     sectionLabel: sections[0]?.label ?? "每日动态",
     feeds: { "ai-news": emptyFeed(), curation: emptyFeed(), design: emptyFeed(), douyin: emptyFeed(), "open-source": emptyFeed() },
   },
@@ -36,14 +47,22 @@ const homePage: WechatMiniprogram.Page.Options<HomeData, HomeMethods> = {
   _controllers: {},
   _cancels: {},
   _loadModes: {},
+  _positions: {},
+  _scrollTop: 0,
+  _scrollToken: 0,
+  _switching: false,
 
   onLoad(query) {
     this._active = true;
     this._controllers = {};
     this._cancels = {};
     this._loadModes = {};
+    this._positions = {};
+    this._scrollTop = 0;
+    this._scrollToken = 0;
+    this._switching = false;
     const selected = sections.find((section) => section.id === query.section) ?? sections[0];
-    if (selected) this.setData({ section: selected.id, sectionLabel: selected.label });
+    if (selected) this.setData({ section: selected.id, sectionIndex: sections.indexOf(selected), sectionLabel: selected.label });
     this.loadFeed();
   },
 
@@ -71,10 +90,38 @@ const homePage: WechatMiniprogram.Page.Options<HomeData, HomeMethods> = {
   },
 
   selectSection(event) {
-    const selected = sections.find((section) => section.id === event.currentTarget.dataset.section);
+    this.activate(event.currentTarget.dataset.section);
+  },
+
+  selectSectionIndex(event) {
+    this.activate(sections[Number(event.detail.value)]?.id);
+  },
+
+  activate(id) {
+    const selected = sections.find((section) => section.id === id);
     if (!selected || selected.id === this.data.section) return;
-    this.setData({ section: selected.id, sectionLabel: selected.label });
+    if (!this._switching) this._positions[this.data.section] = this._scrollTop;
+    const position = this._positions[selected.id] ?? 0;
+    // 切换期间的滚动事件来自旧栏目或本次恢复，写入会污染目标栏目的阅读位置。
+    const token = ++this._scrollToken;
+    this._scrollTop = position;
+    this._switching = true;
+    const settle = () => {
+      if (token !== this._scrollToken) return;
+      this._scrollTop = position;
+      this._switching = false;
+    };
+    this.setData({ section: selected.id, sectionIndex: sections.indexOf(selected), sectionLabel: selected.label }, () => {
+      if (!this._active || token !== this._scrollToken) return;
+      wx.pageScrollTo({ scrollTop: position, duration: 0, complete: settle, fail: settle });
+    });
     if (!this._controllers[selected.id]?.state.error) this.loadFeed();
+  },
+
+  onPageScroll(event) {
+    if (this._switching) return;
+    this._scrollTop = event.scrollTop;
+    this._positions[this.data.section] = event.scrollTop;
   },
 
   onPullDownRefresh() {
@@ -110,11 +157,14 @@ const homePage: WechatMiniprogram.Page.Options<HomeData, HomeMethods> = {
 
   onUnload() {
     this._active = false;
+    this._switching = false;
+    this._scrollToken++;
     for (const cancel of Object.values(this._cancels)) cancel?.();
     for (const feed of Object.values(this._controllers)) feed?.dispose();
     this._cancels = {};
     this._controllers = {};
     this._loadModes = {};
+    this._positions = {};
     wx.stopPullDownRefresh();
   },
 

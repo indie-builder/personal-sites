@@ -73,4 +73,5 @@ test-results/
 /.codex/goals/
 /apps/miniprogram/dist/
 /apps/miniprogram/.dist-next/
+/apps/miniprogram/.dist-next-*/
 /apps/miniprogram/project.private.config.json

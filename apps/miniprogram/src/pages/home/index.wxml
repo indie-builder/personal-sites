@@ -9,6 +9,9 @@
         <button wx:for="{{sections}}" wx:key="id" id="section-{{item.id}}" class="section-tab {{section === item.id ? 'section-tab-selected' : ''}}" data-section="{{item.id}}" bindtap="selectSection" aria-label="{{item.label}}{{section === item.id ? '，当前栏目' : ''}}">{{item.label}}</button>
       </view>
     </scroll-view>
+    <picker class="section-picker" mode="selector" range="{{sectionLabels}}" value="{{sectionIndex}}" bindchange="selectSectionIndex" aria-label="选择栏目，当前{{sectionLabel}}">
+      <view class="section-picker-control"><view class="section-picker-chevron" aria-hidden="true"></view></view>
+    </picker>
   </view>
   <block wx:for="{{sections}}" wx:for-item="feedSection" wx:key="id">
     <view wx:if="{{section === feedSection.id}}" class="feed" aria-label="{{feedSection.label}}内容">

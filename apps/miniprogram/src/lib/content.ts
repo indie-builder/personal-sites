@@ -15,7 +15,7 @@ export type FeedRow = { id: string; title: string; summary: string; meta: string
 export type FeedState = { items: FeedRow[]; loading: boolean; refreshing: boolean; hasMore: boolean; error: string; loaded: boolean };
 export type Detail = {
   title: string; meta: string; summary: string; text: string; tags: string[];
-  media: { url: string; previewUrl: string; videoUrl: string }[];
+  media: { url: string; previewUrl: string; videoUrl: string; width: number | null; height: number | null }[];
   sourceUrl: string; websiteUrl: string; reason: string;
 };
 
@@ -31,7 +31,10 @@ const Curation = Schema.Struct({
   source: Schema.Struct({ platform: Schema.Literals(["x", "douyin"]), label: Schema.String, url: Schema.String }),
   publishedAt: Schema.NullOr(Schema.String), collectedAt: Schema.NullOr(Schema.String),
   tags: Schema.Array(Schema.String), attachments: Schema.Array(Schema.String),
-  media: Schema.Array(Schema.Struct({ url: Schema.String, previewUrl: Schema.NullOr(Schema.String), videoUrl: Schema.NullOr(Schema.String) })),
+  media: Schema.Array(Schema.Struct({
+    url: Schema.String, previewUrl: Schema.NullOr(Schema.String), videoUrl: Schema.NullOr(Schema.String),
+    width: Schema.optionalKey(Schema.NullOr(Schema.Number)), height: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  })),
   design: Schema.optionalKey(Schema.NullOr(Schema.Struct({ reason: Schema.String }))),
 });
 const OpenSource = Schema.Struct({
@@ -53,6 +56,14 @@ export function dateLabel(value: string | null, now = Date.now()): string {
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 const categories: Record<string, string> = { "ai-models": "模型", "ai-products": "产品", industry: "行业", paper: "论文", tip: "教程" };
+// 与 iOS Models.swift 的 dimensionLabels 保持一致，列表与详情都不显示内部 id。
+const dimensionLabels: Record<string, string> = {
+  "agent-skills": "Agent Skills", "coding-agent": "Coding Agent", "agent-runtime": "Agent 运行时",
+  "long-running": "长程 Agent", "multi-agent": "多智能体协作", "agent-control": "Agent 控制面",
+  "agent-infra": "Agent 基础设施", "agent-context": "Agent 上下文", "local-retrieval": "本地检索",
+  "model-gateway": "模型网关", "ai-ingestion": "AI 数据入口",
+};
+const dimensionLabel = (value: string) => dimensionLabels[value] ?? value;
 
 function newsRow(item: typeof News.Type): FeedRow {
   const summary = item.summary.trim();
@@ -67,7 +78,7 @@ function curationRow(item: typeof Curation.Type): FeedRow {
   };
 }
 function openSourceRow(item: typeof OpenSource.Type): FeedRow {
-  return { id: item.slug, title: item.repository, summary: item.sourceSummary, date: dateLabel(item.checkedAt), meta: join(item.status, item.type, item.dimensions.join(" · ")), thumbnail: "", raw: item };
+  return { id: item.slug, title: item.repository, summary: item.sourceSummary, date: dateLabel(item.checkedAt), meta: join(item.status, item.type, item.dimensions.map(dimensionLabel).join(" · ")), thumbnail: "", raw: item };
 }
 
 const feedPage = Effect.fn("Feed.page")(function* (section: Section, offset: number, registerCancel: (cancel: () => void) => void) {
@@ -152,20 +163,23 @@ export const detailFor = Effect.fn("Content.detail")(function* (section: Section
   const websiteUrl = `${SITE_ORIGIN}/${section}/${encodeURIComponent(id)}`;
   if (section === "ai-news") {
     const { item } = yield* requestWithCancel(`/api/ai-news/${encodeURIComponent(id)}`, Schema.Struct({ item: NewsDetail }));
-    return { title: item.title, meta: join(item.sourceName, dateLabel(item.publishedAt), categories[item.category] ?? item.category), summary: item.summary, text: "", reason: item.reason, tags: [], media: [], sourceUrl: externalUrl(item.url), websiteUrl };
+    return { title: item.title, meta: join(item.sourceName, dateLabel(item.publishedAt), categories[item.category] ?? item.category, item.selected ? "精选" : ""), summary: item.summary, text: "", reason: item.reason, tags: [], media: [], sourceUrl: externalUrl(item.url), websiteUrl };
   }
   const row = supplied ?? takeRow(section, id);
   if (!row || row.id !== id) return yield* Effect.fail(new OperationError("content.detail", new Error("阅读链接已失效，请返回对应栏目重新打开。")));
   if (section === "open-source") {
     const item = yield* Schema.decodeUnknownEffect(OpenSource)(row.raw);
     const sourceUrl = /^[\w.-]+\/[\w.-]+$/.test(item.repository) ? `https://github.com/${item.repository}` : "";
-    return { title: item.repository, meta: row.meta, summary: item.sourceSummary, text: "", tags: [...item.dimensions], media: [], sourceUrl, websiteUrl, reason: "" };
+    return { title: item.repository, meta: row.meta, summary: item.sourceSummary, text: "", tags: item.dimensions.map(dimensionLabel), media: [], sourceUrl, websiteUrl, reason: "" };
   }
   const item = yield* Schema.decodeUnknownEffect(Curation)(row.raw);
   return {
     title: item.title || row.title, meta: join(row.meta, row.date), summary: item.summary, text: item.text,
     tags: [...item.tags], reason: section === "design" ? item.design?.reason ?? "" : "", websiteUrl,
     sourceUrl: externalUrl(item.source.url),
-    media: item.media.map((media) => ({ url: externalUrl(media.url), previewUrl: externalUrl(media.previewUrl || media.url), videoUrl: videoUrl(item.source.platform, media.videoUrl) })),
+    media: item.media.map((media) => ({
+      url: externalUrl(media.url), previewUrl: externalUrl(media.previewUrl || media.url),
+      videoUrl: videoUrl(item.source.platform, media.videoUrl), width: media.width ?? null, height: media.height ?? null,
+    })),
   };
 });

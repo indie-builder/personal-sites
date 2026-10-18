@@ -6,7 +6,8 @@
     "pages/about/index",
     "pages/detail/index",
     "pages/collection/index",
-    "pages/work/index"
+    "pages/work/index",
+    "pages/project/index"
   ],
   "window": {
     "navigationBarTitleText": "陈远小站",

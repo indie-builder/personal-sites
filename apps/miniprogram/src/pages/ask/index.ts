@@ -1,4 +1,4 @@
-import { createAsk, markdown, run, scopes, type AskMessage, type AskScope, type AskState } from "../../lib/runtime";
+import { createAsk, markdownParts, run, scopes, type AskMessage, type AskScope, type AskState, type MarkdownBlock } from "../../lib/runtime";
 
 const examples: { question: string; scope: AskScope }[] = [
   { question: "介绍一下陈远", scope: "profile" },
@@ -13,19 +13,64 @@ const placeholders: Record<AskMessage["status"], string> = {
   error: "这次未能完成回答",
 };
 
-function messageViews(messages: AskMessage[]) {
-  return messages.map((message, index) => ({
-    ...message,
-    nodes: message.role === "answer" ? markdown(message.text) : [],
-    placeholder: placeholders[message.status],
-    last: index === messages.length - 1,
-    sourceViews: message.sources.map((source, sourceIndex) => ({
-      number: sourceIndex + 1,
-      index: sourceIndex,
-      title: source.title || `引用资料 ${sourceIndex + 1}`,
+// Displayed history is a bounded view; the controller keeps the full conversation.
+const WINDOW = 20;
+const VIEW_BUDGET = 256 * 1024;
+// Six 16px lines at the composer's fixed 1.6 line-height.
+const INPUT_MAX = 26 * 6 + 8;
+const INPUT_MIN = 48;
+
+function utf8Bytes(text: string): number {
+  let bytes = 0;
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) { bytes += 4; index++; }
+    else bytes += 3;
+  }
+  return bytes;
+}
+
+type SourceView = { number: number; index: number; title: string; meta: string };
+type PartsCache = { text: string; count: number; parts: MarkdownBlock[] };
+type MessageView = {
+  id: string; role: AskMessage["role"]; text: string; status: AskMessage["status"]; scope: AskScope;
+  parts: MarkdownBlock[]; sourceViews: SourceView[]; sourceCount: number;
+  placeholder: string; last: boolean;
+};
+
+function partCacheFor(message: AskMessage, cache: Map<string, PartsCache>): MarkdownBlock[] {
+  const count = message.sources.length;
+  const cached = cache.get(message.id);
+  if (cached && cached.text === message.text && cached.count === count) return cached.parts;
+  const parts = markdownParts(message.text, count);
+  if (cache.size > 64) cache.clear();
+  cache.set(message.id, { text: message.text, count, parts });
+  return parts;
+}
+
+function messageView(message: AskMessage, last: boolean, cache: Map<string, PartsCache>): MessageView {
+  const sources = message.sources;
+  return {
+    id: message.id,
+    role: message.role,
+    text: message.text,
+    status: message.status,
+    scope: message.scope,
+    // Detail pages keep the plain markdown() contract; Ask renders parts with native refs.
+    parts: message.role === "answer" ? partCacheFor(message, cache) : [],
+    // Deliberately no source.content: reading happens from the controller copy.
+    sourceViews: sources.map((source, index) => ({
+      number: index + 1,
+      index,
+      title: source.title || `引用资料 ${index + 1}`,
       meta: [source.section, source.publishedAt?.slice(0, 10)].filter(Boolean).join(" · "),
     })),
-  }));
+    sourceCount: sources.length,
+    placeholder: placeholders[message.status],
+    last,
+  };
 }
 
 Page({
@@ -35,7 +80,9 @@ Page({
     scopeIndex: 0,
     scopeLabel: scopes[0]?.label ?? "全部公开资料",
     draft: "",
-    messages: [] as ReturnType<typeof messageViews>,
+    messages: [] as MessageView[],
+    hiddenCount: 0,
+    inputHeight: INPUT_MIN,
     streaming: false,
     error: "",
     pageError: "",
@@ -50,8 +97,11 @@ Page({
   },
   controller: undefined as ReturnType<typeof createAsk> | undefined,
   cancel: undefined as (() => void) | undefined,
+  partsCache: new Map<string, PartsCache>(),
   visible: false,
   followLatest: true,
+  windowEnd: 0,
+  measuredHeight: 0,
   viewportHeight: 0,
   keyboardHeight: 0,
   windowHeight: 0,
@@ -90,24 +140,71 @@ Page({
     this.stop();
     this.visible = false;
     this.controller = undefined;
+    this.partsCache.clear();
   },
 
   renderState(state: AskState) {
     if (!this.visible) return;
     const length = state.draft.trim().length;
     const scopeIndex = Math.max(0, scopes.findIndex((scope) => scope.id === state.scope));
-    this.setData({
-      draft: state.draft,
-      messages: messageViews(state.messages),
+    const total = state.messages.length;
+    // Reverse-fill from the anchor so the newest answer is always in view; loadEarlier moves the anchor back.
+    const end = this.followLatest || this.windowEnd <= 0 || this.windowEnd > total ? total : this.windowEnd;
+    this.windowEnd = end;
+    const start = Math.max(0, end - WINDOW);
+    const views: MessageView[] = [];
+    let bytes = 0;
+    for (let index = end - 1; index >= start; index--) {
+      const view = messageView(state.messages[index]!, index === total - 1, this.partsCache);
+      const size = utf8Bytes(JSON.stringify(view));
+      // One oversized answer still renders alone rather than hiding the tail.
+      if (views.length && bytes + size > VIEW_BUDGET) break;
+      views.unshift(view);
+      bytes += size;
+    }
+    const firstVisible = end - views.length;
+    const draft = state.draft;
+    const next = {
+      draft,
       streaming: state.streaming,
       error: state.error,
       scopeIndex,
       scopeLabel: scopes[scopeIndex]?.label ?? "全部公开资料",
       canSend: length >= 2 && length <= 1000 && !state.streaming,
-      hasConversation: state.messages.length > 0 || state.draft.length > 0,
+      hasConversation: total > 0 || draft.length > 0,
       inputHint: length > 1000 ? `已输入 ${length} 字，最多 1000 字` : length === 1 ? "至少输入 2 个字" : "",
-    });
-    if (this.followLatest && state.messages.length > 0) this.scrollLatest();
+      inputHeight: this.measuredHeight > 0 ? this.measuredHeight : INPUT_MIN,
+      hiddenCount: firstVisible,
+    };
+    const current = this.data;
+    const patch: Record<string, unknown> = {};
+    for (const field of Object.keys(next) as (keyof typeof next)[]) {
+      if (current[field] !== next[field]) patch[field] = next[field];
+    }
+    const replaced = views.length !== current.messages.length || views[0]?.id !== current.messages[0]?.id;
+    if (replaced) {
+      // Bounded by VIEW_BUDGET, so one write stays well under the native 1 MiB cap.
+      patch.messages = views;
+    } else {
+      for (let index = 0; index < views.length; index++) {
+        const view = views[index]!;
+        const previous = current.messages[index]!;
+        for (const field of ["text", "status", "placeholder", "last"] as const) {
+          if (previous[field] !== view[field]) patch[`messages[${index}].${field}`] = view[field];
+        }
+        if (previous.text !== view.text) patch[`messages[${index}].parts`] = view.parts;
+        else if (previous.sourceCount !== view.sourceCount) {
+          // Late sources enable the inline refs without resending the answer text.
+          patch[`messages[${index}].parts`] = view.parts;
+        }
+        if (previous.sourceCount !== view.sourceCount) {
+          patch[`messages[${index}].sourceViews`] = view.sourceViews;
+          patch[`messages[${index}].sourceCount`] = view.sourceCount;
+        }
+      }
+    }
+    if (Object.keys(patch).length) this.setData(patch);
+    if (this.followLatest && total > 0) this.scrollLatest();
   },
 
   onInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -125,12 +222,40 @@ Page({
     if (!example || this.data.streaming) return;
     this.controller?.setScope(example.scope);
     this.controller?.setDraft(example.question);
+    this.resetMeasurement();
     this.setData({ inputFocused: true });
+  },
+
+  loadEarlier() {
+    if (!this.controller) return;
+    const total = this.controller.state.messages.length;
+    const oldest = this.data.hiddenCount;
+    if (oldest <= 0) return;
+    this.followLatest = false;
+    // Page backwards so the previously hidden page replaces the view; returnLatest restores the tail.
+    this.windowEnd = Math.min(total, oldest + 1);
+    this.setData({ showLatest: true });
+    this.renderState(this.controller.state);
+    if (this.visible) this.setData({ scrollTarget: `message-${this.data.hiddenCount}` });
+  },
+
+  onLineChange(event: WechatMiniprogram.CustomEvent<{ lineCount?: number; height?: number }>) {
+    const lineCount = Number(event.detail.lineCount) || 0;
+    const height = Number(event.detail.height) || 0;
+    if (!lineCount || !height) return;
+    // Native wrap metrics; six lines is the cap, and 8px is the textarea's vertical padding.
+    this.measuredHeight = Math.min(INPUT_MAX, Math.min(6, lineCount) * (height / lineCount) + 8);
+    if (this.controller) this.renderState(this.controller.state);
+  },
+
+  resetMeasurement() {
+    this.measuredHeight = 0;
   },
 
   send() {
     if (!this.controller || !this.data.canSend) return;
     this.followLatest = true;
+    this.resetMeasurement();
     this.setData({ pageError: "", showLatest: false, inputFocused: false });
     wx.hideKeyboard({});
     this.cancel = run(this.controller.send(), () => { this.cancel = undefined; }, () => {
@@ -166,8 +291,10 @@ Page({
         if (!confirm || !this.visible) return;
         this.stop();
         this.followLatest = true;
+        this.windowEnd = 0;
         this.setData({ pageError: "", showLatest: false, inputFocused: false });
         wx.hideKeyboard({});
+        this.resetMeasurement();
         this.controller?.reset();
       },
       fail: () => wx.showToast({ title: "暂时无法打开确认，请重试", icon: "none" }),
@@ -208,8 +335,11 @@ Page({
 
   returnLatest() {
     this.followLatest = true;
+    this.windowEnd = 0;
     this.setData({ showLatest: false });
-    this.scrollLatest();
+    // Re-render trims the window back to the latest slice and scrolls.
+    if (this.controller) this.renderState(this.controller.state);
+    else this.scrollLatest();
   },
 
   scrollLatest() {

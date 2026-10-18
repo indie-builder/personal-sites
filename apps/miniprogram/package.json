@@ -6,7 +6,7 @@
     "build": "bun scripts/build.ts",
     "typecheck": "bun ../../scripts/tsc7.mjs --noEmit && bun ../../scripts/tsc7.mjs --noEmit -p tsconfig.tools.json",
     "lint": "oxlint --deny-warnings src scripts tests",
-    "test": "bun test tests/",
+    "test": "bun run build && bun test tests/",
     "test:e2e": "bun scripts/e2e.ts",
     "check:templates": "bun scripts/check-templates.ts"
   },

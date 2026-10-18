@@ -1,47 +1,19 @@
 <view class="page portfolio-page">
-  <block wx:if="{{mode === 'index'}}">
-    <view class="portfolio-heading">
-      <view class="title">作品集</view>
-      <view class="muted">设计参考与工程实践</view>
+  <view class="portfolio-heading">
+    <view class="title">作品集</view>
+    <view class="muted">设计参考与工程实践</view>
+  </view>
+  <button wx:for="{{products}}" wx:key="id" class="product row" data-id="{{item.id}}" bindtap="openProduct" aria-label="{{'阅读' + item.name}}">
+    <view class="product-copy">
+      <view class="product-title">{{item.name}}</view>
+      <view class="muted product-summary">{{item.summary}}</view>
+      <view class="meta product-date">{{item.date}} · {{item.dateLabel}}</view>
     </view>
-    <button wx:for="{{products}}" wx:key="id" class="product row" data-id="{{item.id}}" bindtap="openProduct" aria-label="{{'阅读' + item.name}}">
-      <view class="product-copy">
-        <view class="product-title">{{item.name}}</view>
-        <view class="muted product-summary">{{item.summary}}</view>
-        <view class="meta product-date">{{item.date}} · {{item.dateLabel}}</view>
-      </view>
-      <image wx:if="{{item.cover && !failedImages[item.id]}}" class="product-cover" src="{{item.cover}}" mode="aspectFit" lazy-load data-id="{{item.id}}" binderror="imageFailed" aria-hidden="true" />
-      <view wx:else class="product-read">阅读</view>
-    </button>
-    <view wx:if="{{loaded && !loading && !error && !products.length}}" class="status">作品集暂时没有内容。</view>
-  </block>
-  <block wx:else>
-    <button class="back-to-products" bindtap="backToProducts">返回作品集</button>
-    <view class="title">{{mode === 'tools' ? '设计工程工具' : '个人网站'}}</view>
-    <block wx:if="{{mode === 'tools'}}">
-      <view class="muted tool-intro">按分类查找工具，点击复制官网链接。</view>
-      <view wx:for="{{categories}}" wx:for-item="category" wx:key="id" class="tool-category">
-        <view class="category-title">{{category.name}}</view>
-        <view wx:for="{{category.tools}}" wx:for-item="tool" wx:key="url" class="tool-row divider">
-          <image wx:if="{{tool.icon && !failedImages[tool.url]}}" class="tool-icon" src="{{tool.icon}}" mode="aspectFit" lazy-load data-id="{{tool.url}}" binderror="imageFailed" aria-hidden="true" />
-          <view class="tool-name">{{tool.name}}</view>
-          <button wx:if="{{tool.url}}" class="copy-tool" data-url="{{tool.url}}" bindtap="copyUrl" aria-label="{{'复制' + tool.name + '官网链接'}}">复制链接</button>
-          <text wx:else class="meta">链接暂缺</text>
-        </view>
-      </view>
-      <view wx:if="{{loaded && !loading && !error && !categories.length}}" class="status">工具目录暂时没有内容。</view>
-    </block>
-    <view wx:elif="{{site}}" class="site-content">
-      <video wx:if="{{site.video && videoMounted && !videoFailed}}" id="site-video" class="site-video" src="{{site.video}}" poster="{{site.poster}}" controls show-center-play-btn object-fit="contain" binderror="videoFailed" aria-label="个人网站介绍视频" />
-      <view wx:if="{{videoFailed}}" class="status">
-        <view>视频暂时无法播放。</view>
-        <button class="button" bindtap="retryVideo">重新加载视频</button>
-      </view>
-      <view class="body site-description"><text selectable>{{site.description}}</text></view>
-      <button wx:if="{{site.website}}" class="button source-button" data-url="{{site.website}}" bindtap="copyUrl">复制网站链接</button>
-    </view>
-  </block>
-  <view wx:if="{{loading}}" class="status" aria-live="polite">正在读取{{mode === 'tools' ? '工具目录' : mode === 'site' ? '网站介绍' : '作品集'}}…</view>
+    <image wx:if="{{item.cover && !failedImages[item.id]}}" class="product-cover" src="{{item.cover}}" mode="aspectFit" lazy-load data-id="{{item.id}}" binderror="imageFailed" aria-hidden="true" />
+    <view wx:else class="product-read">阅读</view>
+  </button>
+  <view wx:if="{{loaded && !loading && !error && !products.length}}" class="status">作品集暂时没有内容。</view>
+  <view wx:if="{{loading}}" class="status" aria-live="polite">正在读取作品集…</view>
   <view wx:if="{{error}}" class="status" role="alert">
     <view class="error">{{error}}</view>
     <button class="button retry-button" bindtap="loadContent" disabled="{{loading}}">重新读取</button>

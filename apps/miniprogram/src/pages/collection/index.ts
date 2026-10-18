@@ -1,12 +1,34 @@
 import { externalUrl, run } from "../../lib/runtime";
-import { collectionTitle, createCollection, workReadingLimit, type Collection, type Work } from "../../portfolio/api";
+import {
+  collectionTitle, collectionWork, createCollection, type Category, type Collection, type CollectionWork, type Work,
+} from "../../portfolio/api";
+
+const shelfColors = ["#B94A35", "#D6C7A6", "#557477", "#D4AC49", "#465676", "#A65E47", "#707453", "#DDD5C3"];
+const shelfInk = new Set([1, 3, 7]);
+const shelfHeights = [182, 166, 176, 160, 172, 182, 162, 176];
+
+type CategoryView = { id: string; name: string; count: number; number: string; color: string; ink: string; height: number };
+type ViewItem = CollectionWork & { thumbnail: string; video: boolean };
+
+const shelf = (categories: { id: string; name: string; count: number }[]): CategoryView[] =>
+  categories.map((category, index) => ({
+    ...category,
+    number: String(index + 1).padStart(2, "0"),
+    color: shelfColors[index % shelfColors.length],
+    ink: shelfInk.has(index % shelfColors.length) ? "#383630" : "#ffffff",
+    height: shelfHeights[index % shelfHeights.length],
+  }));
 
 Page({
   data: {
     collection: "layouts" as Collection,
     title: "布局参考",
     draft: "",
-    items: [] as ReturnType<typeof createCollection>["state"]["items"],
+    items: [] as ViewItem[],
+    shelf: [] as CategoryView[],
+    shelfTotal: 0,
+    // index: category shelf; grid: image-browse grid.
+    view: "index" as "index" | "grid",
     categories: [{ id: "", name: "全部分类", count: 0 }],
     topics: [{ id: "", name: "全部主题", count: 0 }],
     categoryIndex: 0,
@@ -21,7 +43,8 @@ Page({
     invalid: false,
   },
   controller: undefined as ReturnType<typeof createCollection> | undefined,
-  cancel: undefined as (() => void) | undefined,
+  loadedCount: 0,
+  listRevision: -1,
   lastMode: "initial" as "initial" | "more" | "refresh",
   onLoad(options: Record<string, string | undefined>) {
     if (options.collection !== "layouts" && options.collection !== "muse") {
@@ -30,30 +53,48 @@ Page({
     }
     const collection = options.collection;
     const title = collectionTitle(collection);
-    this.setData({ collection, title });
+    this.setData({ collection, title, view: collection === "layouts" ? "index" : "grid" });
     wx.setNavigationBarTitle({ title });
-    this.controller = createCollection(collection, (state) => {
-      const categories = [{ id: "", name: "全部分类", count: 0 }, ...state.categories];
-      const topics = [{ id: "", name: "全部主题", count: 0 }, ...state.topics];
-      this.setData({
-        ...state,
-        items: state.items.map((item) => ({ ...item, thumbnail: externalUrl(item.thumbnail) })),
-        categories, topics,
-        categoryIndex: Math.max(0, categories.findIndex((category) => category.id === state.filters.cat)),
-        topicIndex: Math.max(0, topics.findIndex((topic) => topic.id === state.filters.theme)),
-      });
-    });
+    this.controller = createCollection(collection, (state) => this.render(state));
     this.load("initial");
+  },
+  render(state: ReturnType<typeof createCollection>["state"]) {
+    const categories = [{ id: "", name: "全部分类", count: 0 }, ...state.categories];
+    const topics = [{ id: "", name: "全部主题", count: 0 }, ...state.topics];
+    // Bounded patch: list loads only send rows added since the last render, never the whole set.
+    const reset = state.listRevision !== this.listRevision;
+    this.listRevision = state.listRevision;
+    const start = reset ? 0 : Math.min(this.loadedCount, state.items.length);
+    this.loadedCount = state.items.length;
+    const patch: Record<string, unknown> = {
+      total: state.total, hasMore: state.hasMore, loading: state.loading, loaded: state.loaded,
+      error: state.error, attribution: state.attribution, categories, topics,
+      shelf: shelf(state.categories),
+      shelfTotal: state.categories.reduce((sum, category) => sum + category.count, 0),
+      categoryIndex: Math.max(0, categories.findIndex((category) => category.id === state.filters.cat)),
+      topicIndex: Math.max(0, topics.findIndex((topic) => topic.id === state.filters.theme)),
+    };
+    for (let index = start; index < state.items.length; index += 1) {
+      const item = collectionWork(state.items[index]);
+      patch[`items[${index}]`] = { ...item, thumbnail: externalUrl(item.thumbnail) };
+    }
+    // Reset and indexed writes are separate patches so the writes land on the new empty list.
+    if (reset) this.setData({ items: [] });
+    this.setData(patch);
   },
   onUnload() { this.controller?.dispose(); this.cancel?.(); },
   onPullDownRefresh() { this.load("refresh"); },
   onReachBottom() {
-    if (this.data.loaded && this.data.hasMore && !this.data.error) this.load("more");
+    if (this.data.view === "grid" && this.data.loaded && this.data.hasMore && !this.data.error) this.load("more");
   },
   load(mode: "initial" | "more" | "refresh") {
     if (!this.controller || this.controller.state.loading) { wx.stopPullDownRefresh(); return; }
     this.lastMode = mode;
-    this.cancel = run(this.controller.load(mode), () => wx.stopPullDownRefresh());
+    this.cancel = run(this.controller.load(mode), () => {
+      // A successful load clears failure flags; images may load again.
+      if (!this.controller?.state.error) this.setData({ failedImages: {} });
+      wx.stopPullDownRefresh();
+    });
   },
   retry() { this.load(this.lastMode); },
   loadMore() { this.load("more"); },
@@ -77,27 +118,38 @@ Page({
     const filters = this.controller?.state.filters;
     if (topic && filters) this.changeFilters({ ...filters, theme: topic.id });
   },
+  openCategory(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id ?? "");
+    const category = this.controller?.state.categories.find((item: Category) => item.id === id);
+    if (category) this.changeFilters({ q: "", cat: category.id, theme: "" });
+  },
+  // The shelf and the full grid share the unfiltered page, so browsing all reuses it.
+  browseAll() { this.setData({ view: "grid" }); },
+  showIndex() { this.changeFilters({ q: "", cat: "", theme: "" }); },
   changeFilters(filters: { q: string; cat: string; theme: string }) {
     this.cancel?.();
     this.controller?.setFilters(filters);
     this.setData({ failedImages: {}, draft: this.controller?.state.filters.q ?? "" });
+    const empty = !filters.q && !filters.cat && !filters.theme;
+    this.setData({ view: empty && this.data.collection === "layouts" ? "index" : "grid" });
     this.load("initial");
   },
   openWork(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id ?? "");
     const items: readonly Work[] = this.controller?.state.items ?? [];
-    const index = items.findIndex((item) => item.id === id);
+    const index = items.findIndex((item: Work) => item.id === id);
     if (index < 0 || !id || id.length > 300) return;
-    // shortcut: browse at most 120 loaded works; expand the handoff only if longer reading sessions need it.
-    const start = Math.max(0, Math.min(index - Math.floor(workReadingLimit / 2), items.length - workReadingLimit));
-    const ids = items.slice(start, start + workReadingLimit).map((item) => item.id);
     wx.navigateTo({
       url: `/pages/work/index?collection=${this.data.collection}&id=${encodeURIComponent(id)}`,
-      success: ({ eventChannel }) => eventChannel.emit("workReading", { collection: this.data.collection, ids }),
+      success: ({ eventChannel }) => eventChannel.emit("workReading", {
+        collection: this.data.collection, ids: items.map((item: Work) => item.id), start: 0,
+      }),
     });
   },
+  // The event carries only the id; the grid renders from this view projection.
   imageFailed(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id ?? "");
+    // Spread, not a dotted key: public work IDs are not guaranteed to be path-safe.
     this.setData({ failedImages: { ...this.data.failedImages, [id]: true } });
   },
   onShareAppMessage() {

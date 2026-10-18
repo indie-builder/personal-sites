@@ -54,7 +54,7 @@ const latest = () => {
   return value;
 };
 const news = (id: string) => ({ id, category: "ai-models", publishedAt: "2026-10-18T00:00:00Z", selected: true, sourceName: "原文", summary: "标题：导读", title: "标题" });
-const curation = (id: string) => ({ id, title: "设计标题", summary: "导读", text: "原文", author: { name: "作者", handle: "handle" }, source: { label: "X", platform: "x", url: "https://x.com/user/status/1" }, collectedAt: null, publishedAt: "2026-10-18", tags: ["设计"], attachments: ["视频"], media: [{ url: "https://pbs.twimg.com/a.jpg", previewUrl: null, videoUrl: "https://video.twimg.com/ext_tw_video/123/pu/vid/a.mp4?tag=1" }], design: { reason: "设计理由" } });
+const curation = (id: string) => ({ id, title: "设计标题", summary: "导读", text: "原文", author: { name: "作者", handle: "handle" }, source: { label: "X", platform: "x", url: "https://x.com/user/status/1" }, collectedAt: null, publishedAt: "2026-10-18", tags: ["设计"], attachments: ["视频"], media: [{ url: "https://pbs.twimg.com/a.jpg", previewUrl: null, videoUrl: "https://video.twimg.com/ext_tw_video/123/pu/vid/a.mp4?tag=1", width: 720, height: 1280 }], design: { reason: "设计理由" } });
 const source = (id: string) => ({ id, title: id, content: "引用原文", scope: "profile", sourceUrl: "https://example.com/source", publishedAt: null, section: null, sourceId: id });
 
 test("feed dates match iOS relative-time boundaries and omit invalid values", () => {
@@ -197,7 +197,11 @@ describe("detail reader", () => {
     latest().success({ item: { ...news("中文 id"), reason: "理由", url: "https://example.com/original" } });
     const detail = await promise;
     expect(detail.reason).toBe("理由");
+    expect(detail.meta).toContain("精选");
     expect(detail.websiteUrl).toBe(`${SITE_ORIGIN}/ai-news/${encodeURIComponent("中文 id")}`);
+    const plain = Effect.runPromise(detailFor("ai-news", "plain"));
+    latest().success({ item: { ...news("plain"), selected: false, reason: "", url: "https://example.com/original" } });
+    expect((await plain).meta).not.toContain("精选");
     const expired = await Effect.runPromise(detailFor("curation", "no-carrier").pipe(Effect.flip));
     expect(expired.message).toContain("已失效");
   });
@@ -207,6 +211,8 @@ describe("detail reader", () => {
     const detail = await Effect.runPromise(detailFor("design", "1", row));
     expect(detail.websiteUrl).toBe(`${SITE_ORIGIN}/design/1`);
     expect(detail.media[0]?.videoUrl).toBe(`${SITE_ORIGIN}/api/x-media?url=${encodeURIComponent(curation("1").media[0]?.videoUrl ?? "")}`);
+    expect(detail.media[0]?.width).toBe(720);
+    expect(detail.media[0]?.height).toBe(1280);
     expect(detail.reason).toBe("设计理由");
     const raw = curation("1");
     const firstMedia = raw.media[0];
@@ -221,6 +227,37 @@ describe("detail reader", () => {
     for (let index = 0; index < 21; index++) stashRow("curation", { id: `carrier-${index}`, title: "", summary: "", meta: "", date: "", thumbnail: "", raw: {} });
     expect(takeRow("curation", "carrier-0")).toBeUndefined();
     expect(takeRow("curation", "carrier-20")?.id).toBe("carrier-20");
+  });
+
+  test("maps open-source dimensions to the iOS Chinese labels in rows and tags", async () => {
+    const feed = createFeed("open-source", () => {});
+    const operation = Effect.runPromise(feed.load());
+    latest().success({ items: [{
+      slug: "repo", repository: "owner/repo", sourceSummary: "判读", checkedAt: "2026-10-18", status: "活跃", type: "工具",
+      dimensions: ["agent-skills", "agent-infra", "unmapped"],
+    }], hasMore: false });
+    await operation;
+    expect(feed.state.items[0]?.meta).toBe("活跃 · 工具 · Agent Skills · Agent 基础设施 · unmapped");
+    expect(feed.state.items[0]?.meta).not.toContain("agent-skills");
+    const row = feed.state.items[0];
+    if (!row) throw new Error("Missing open-source row");
+    const detail = await Effect.runPromise(detailFor("open-source", "repo", row));
+    expect(detail.tags).toEqual(["Agent Skills", "Agent 基础设施", "unmapped"]);
+    expect(detail.sourceUrl).toBe("https://github.com/owner/repo");
+  });
+
+  test("accepts media without optional dimensions and maps missing values to null", async () => {
+    const raw = curation("no-size");
+    const media = raw.media[0];
+    if (!media) throw new Error("Missing media fixture");
+    const sized = { ...media } as Record<string, unknown>;
+    delete sized.width;
+    delete sized.height;
+    raw.media = [sized as typeof media];
+    const row: FeedRow = { id: "no-size", title: "", summary: "", meta: "", date: "", thumbnail: "", raw };
+    const detail = await Effect.runPromise(detailFor("curation", "no-size", row));
+    expect(detail.media[0]?.width).toBeNull();
+    expect(detail.media[0]?.height).toBeNull();
   });
 });
 

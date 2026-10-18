@@ -6,6 +6,9 @@
 .profile-button::before { content: ""; position: absolute; right: 0; top: 16px; width: 1px; height: 16px; background: var(--line); }
 .section-scroll { flex: 1; min-width: 0; width: 0; white-space: nowrap; }
 .section-tabs { display: inline-flex; align-items: stretch; min-width: 100%; }
+.section-picker { flex-shrink: 0; }
+.section-picker-control { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; }
+.section-picker-chevron { width: 7px; height: 7px; margin-top: -4px; border-right: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); transform: rotate(45deg); }
 .home-page .section-tab { position: relative; flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 0; color: var(--muted); font-size: 14px; line-height: 44px; font-weight: 400; white-space: nowrap; }
 .home-page .section-tab-selected { color: var(--ink); font-weight: 500; }
 .section-tab-selected::before { content: ""; position: absolute; right: 12px; bottom: 4px; left: 12px; height: 2px; border-radius: 1px; background: var(--ink); }

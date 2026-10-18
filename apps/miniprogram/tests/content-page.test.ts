@@ -17,6 +17,8 @@ let copied: string[];
 let paused: string[];
 let previews: string[][];
 let stoppedRefresh: number;
+let scrolls: number[];
+let windowWidth = 390;
 let mounted: PageInstance[];
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 const tap = (dataset: Record<string, unknown>) => ({ currentTarget: { dataset } });
@@ -25,8 +27,8 @@ const curation = (id: string) => ({
   id, title: "策展标题", summary: "导读", text: "# 原帖\n\n公开正文", author: { handle: "public", name: "公开作者" },
   source: { platform: "x", label: "X", url: "https://x.com/public/status/1" }, publishedAt: "2026-10-18", collectedAt: null,
   tags: ["公开标签"], attachments: ["图片", "视频"], media: [
-    { url: "https://example.com/image.jpg", previewUrl: "https://example.com/preview.jpg", videoUrl: null },
-    { url: "https://example.com/poster.jpg", previewUrl: "https://example.com/poster.jpg", videoUrl: "https://video.twimg.com/ext_tw_video/123/pu/vid/a.mp4" },
+    { url: "https://example.com/image.jpg", previewUrl: "https://example.com/preview.jpg", videoUrl: null, width: 800, height: 600 },
+    { url: "https://example.com/poster.jpg", previewUrl: "https://example.com/poster.jpg", videoUrl: "https://video.twimg.com/ext_tw_video/123/pu/vid/a.mp4", width: 720, height: 1280 },
   ],
 });
 function mount(index: number): PageInstance {
@@ -35,13 +37,14 @@ function mount(index: number): PageInstance {
   const page: PageInstance = {
     ...definition,
     data: structuredClone(definition.data),
-    setData(update: Record<string, unknown>) {
+    setData(update: Record<string, unknown>, callback?: () => void) {
       for (const [path, value] of Object.entries(update)) {
         const keys = path.replace(/\[(\d+)\]/g, ".$1").split(".");
         let target = this.data;
         for (const key of keys.slice(0, -1)) target = target[key];
         target[keys[keys.length - 1]!] = value;
       }
+      callback?.();
     },
   };
   for (const [key, value] of Object.entries(page)) if (typeof value === "function") page[key] = value.bind(page);
@@ -65,7 +68,7 @@ beforeAll(async () => {
 });
 afterAll(() => { definitions = []; });
 beforeEach(() => {
-  requests = []; navigated = []; copied = []; paused = []; previews = []; stoppedRefresh = 0; mounted = [];
+  requests = []; navigated = []; copied = []; paused = []; previews = []; stoppedRefresh = 0; scrolls = []; mounted = []; windowWidth = 390;
   originalWx = Object.getOwnPropertyDescriptor(globalThis, "wx");
   Object.defineProperty(globalThis, "wx", { configurable: true, value: {
     request(options: Omit<Pending, "aborted">) {
@@ -81,6 +84,8 @@ beforeEach(() => {
     setClipboardData(options: { data: string; success: () => void }) { copied.push(options.data); options.success(); },
     previewImage(options: { urls: string[] }) { previews.push(options.urls); },
     createVideoContext(id: string) { return { pause() { paused.push(id); } }; },
+    pageScrollTo(options: { scrollTop: number; duration: number; complete: () => void }) { scrolls.push(options.scrollTop); options.complete(); },
+    getWindowInfo() { return { windowWidth }; },
   } });
 });
 afterEach(() => {
@@ -113,6 +118,49 @@ describe("native home page lifecycle", () => {
     expect(requests).toHaveLength(3);
     home.openDetail(tap({ id: "a" }));
     expect(navigated[1]).toBe("/pages/detail/index?section=ai-news&id=a");
+  });
+
+  test("stores each section's scroll position and restores it without recording the switch itself", async () => {
+    const home = mount(0); home.onLoad?.({}); respond(0, { items: [news("a")], hasMore: true }); await settle();
+    home.onPageScroll?.({ scrollTop: 900 });
+    home.selectSection(tap({ section: "curation" }));
+    expect(scrolls).toEqual([0]);
+    respond(1, { items: [curation("c")], hasMore: true }); await settle();
+    home.onPageScroll?.({ scrollTop: 240 });
+    home.selectSection(tap({ section: "ai-news" }));
+    expect(scrolls).toEqual([0, 900]);
+    home.onPageScroll?.({ scrollTop: 950 });
+    home.selectSection(tap({ section: "curation" }));
+    expect(scrolls).toEqual([0, 900, 240]);
+    home.selectSection(tap({ section: "design" }));
+    expect(scrolls[3]).toBe(0);
+    home.selectSectionIndex({ detail: { value: "4" } });
+    expect(home.data.section).toBe("open-source");
+    expect(home.data.sectionIndex).toBe(4);
+    expect(scrolls[4]).toBe(0);
+    home.selectSectionIndex({ detail: { value: "0" } });
+    expect(scrolls[5]).toBe(950);
+  });
+
+  test("ignores superseded or unloaded render callbacks before scrolling", async () => {
+    const home = mount(0); home.onLoad?.({}); respond(0, { items: [news("a")], hasMore: true }); await settle();
+    home.onPageScroll?.({ scrollTop: 900 });
+    const callbacks: (() => void)[] = [];
+    const update = home.setData.bind(home);
+    home.setData = (patch: Record<string, unknown>, callback?: () => void) => {
+      update(patch);
+      if (callback) callbacks.push(callback);
+    };
+    home.selectSection(tap({ section: "curation" }));
+    home.selectSection(tap({ section: "ai-news" }));
+    callbacks.shift()?.();
+    expect(scrolls).toEqual([]);
+    callbacks.shift()?.();
+    expect(scrolls).toEqual([900]);
+    home.selectSection(tap({ section: "design" }));
+    home.onUnload?.();
+    callbacks.shift()?.();
+    expect(scrolls).toEqual([900]);
   });
 
   test("error prevents automatic reloads until retry, and refresh always ends its native indicator", async () => {
@@ -201,6 +249,9 @@ describe("native detail page lifecycle", () => {
     expect(requests).toHaveLength(0);
     expect(detail.data.tagsText).toBe("公开标签");
     expect(detail.data.nodes.length).toBeGreaterThan(0);
+    expect(detail.data.photos).toHaveLength(1);
+    expect(detail.data.videos).toHaveLength(1);
+    expect(detail.data.videos[0].videoHeight).toBe(608);
     expect(detail.onShareAppMessage?.({ from: "menu", target: undefined })).toMatchObject({ path: "/pages/home/index?section=curation" });
     detail.previewImage(tap({ index: 0 }));
     expect(previews).toEqual([["https://example.com/image.jpg"]]);
@@ -211,6 +262,42 @@ describe("native detail page lifecycle", () => {
     detail.onHide?.();
     expect(paused).toContain("detail-video-1");
     expect(detail.data.media[1].videoUrl).toContain("/api/x-media?url=");
+  });
+
+  test("keeps source video proportions, recalculates on resize and preserves multi-image preview order", async () => {
+    const raw = curation("grid");
+    raw.media = [
+      raw.media[0]!,
+      { url: "https://example.com/second.jpg", previewUrl: "", videoUrl: "", width: 600, height: 900 },
+      { url: "https://example.com/third.jpg", previewUrl: "", videoUrl: "", width: 600, height: 600 },
+    ];
+    stashRow("curation", { id: raw.id, title: raw.title, summary: raw.summary, date: "", meta: "", thumbnail: "", raw });
+    const grid = mount(1); grid.onLoad?.({ section: "curation", id: raw.id }); await settle();
+    expect(grid.data.photos).toHaveLength(3);
+    expect(grid.data.videos).toHaveLength(0);
+    expect(grid.data.gridHeight).toBe(110);
+    grid.previewImage(tap({ index: 2 }));
+    expect(previews).toEqual([["https://example.com/image.jpg", "https://example.com/second.jpg", "https://example.com/third.jpg"]]);
+    windowWidth = 700;
+    grid.onResize?.();
+    expect(grid.data.gridHeight).toBe(213);
+  });
+
+  test("derives video height from real dimensions and falls back to 16:9", async () => {
+    const vertical = curation("vertical");
+    vertical.media = [{ url: "https://example.com/p.jpg", previewUrl: "", videoUrl: "https://video.twimg.com/ext_tw_video/9/pu/vid/v.mp4", width: 720, height: 1280 }];
+    stashRow("curation", { id: vertical.id, title: "竖屏", summary: "", date: "", meta: "", thumbnail: "", raw: vertical });
+    const portrait = mount(1); portrait.onLoad?.({ section: "curation", id: vertical.id }); await settle();
+    expect(portrait.data.media[0].videoHeight).toBe(608);
+    windowWidth = 700;
+    portrait.onResize?.();
+    expect(portrait.data.media[0].videoHeight).toBe(1159);
+    windowWidth = 390;
+    const missing = curation("missing-size");
+    missing.media = [{ url: "", previewUrl: "", videoUrl: "https://video.twimg.com/ext_tw_video/9/pu/vid/v.mp4", width: 0, height: 0 }];
+    stashRow("curation", { id: missing.id, title: "无尺寸", summary: "", date: "", meta: "", thumbnail: "", raw: missing });
+    const fallback = mount(1); fallback.onLoad?.({ section: "curation", id: missing.id }); await settle();
+    expect(fallback.data.media[0].videoHeight).toBe(192);
   });
 
   test("expired curation shows an explicit recovery and invalid routes do not request anything", async () => {

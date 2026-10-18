@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import vm from "node:vm";
+import { Deferred, Effect, Fiber } from "effect";
+import { io } from "@site/effect";
+import { stagingDirectory } from "../scripts/build";
+import { compilerProcess } from "../scripts/check-templates";
 import { createAppService, packageFiles, root, routes, verifyPackage } from "../scripts/e2e";
 
 // Reuse the repository lint tool's installed parser instead of matching JavaScript text.
@@ -10,7 +14,6 @@ const { parseSync } = createRequire(import.meta.resolve("@shadcn/lint"))("oxc-pa
 
 const source = path.join(root, "src");
 const build = readFileSync(path.join(root, "scripts/build.ts"), "utf8");
-const built = existsSync(path.join(root, "dist/lib/runtime.js"));
 
 describe("public miniprogram build contract", () => {
   test("declares seven complete native routes and four tab destinations", () => {
@@ -35,19 +38,39 @@ describe("public miniprogram build contract", () => {
   });
 
   test("copies only declared native resources and the approved public avatar", () => {
-    // Enforce the copy boundary even before dist exists; emitted files receive an exact whitelist check below.
-    const copies = [...build.matchAll(/await cp\(([^;]+)\);/g)].map((match) => match[1]);
-    expect(copies).toHaveLength(4);
-    expect(copies[3]).toContain('assets/navigation/${name}-${tone}.png');
-    expect(copies[0]).toContain('`${page}.${extension}`');
-    expect(build).toMatch(/for \(const extension of \["json", "wxml", "wxss"\]\)/);
-    expect(copies[1]).toContain('path.join(source, name)');
-    expect(build).toContain('["app.json", "app.wxss", "theme.json", "sitemap.json"]');
-    expect(copies[2]).toContain("Assets.xcassets/profile_avatar.imageset/profile_avatar.png");
-    expect(copies.join("\n")).not.toMatch(/recursive|sensitive|\.env|sqlite|smaug|credentials/);
-    expect(build).toContain('env: "disable"');
-    expect(build).not.toMatch(/process\.env|Bun\.env/);
-    expect(build).toMatch(/maximumBytes\s*=\s*2\s*\*\s*1024\s*\*\s*1024/);
+    verifyPackage();
+    for (const route of routes) {
+      for (const extension of ["json", "wxml", "wxss"]) {
+        const name = `${route}.${extension}`;
+        expect(readFileSync(path.join(root, "dist", name))).toEqual(readFileSync(path.join(source, name)));
+      }
+    }
+    for (const name of ["app.json", "app.wxss", "theme.json", "sitemap.json",
+      ...["home", "ask", "portfolio", "about"].flatMap((name) => ["muted", "light", "dark"].map((tone) => `assets/navigation/${name}-${tone}.png`))]) {
+      expect(readFileSync(path.join(root, "dist", name))).toEqual(readFileSync(path.join(source, name)));
+    }
+    expect(readFileSync(path.join(root, "dist/assets/avatar.png"))).toEqual(readFileSync(path.join(root, "../../ios/ChenYuanSite/Assets.xcassets/profile_avatar.imageset/profile_avatar.png")));
+    expect(build).not.toMatch(/process\.env\.(?!NODE_ENV)|Bun\.env/);
+  });
+
+  test("interruption removes staging files and kills and reaps the compiler", async () => {
+    await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+      const ready = yield* Deferred.make<{ directory: string; child: Bun.Subprocess<"ignore", "pipe", "pipe"> }>();
+      const worker = yield* Effect.gen(function* () {
+        const directory = yield* stagingDirectory;
+        const child = yield* compilerProcess([process.execPath, "-e", 'console.log("ready"); setInterval(() => {}, 1000)']);
+        yield* io("test.compiler.ready", () => child.stdout.getReader().read());
+        yield* Deferred.succeed(ready, { directory, child });
+        yield* Effect.never;
+      }).pipe(Effect.scoped, Effect.forkScoped);
+      const { directory, child } = yield* Deferred.await(ready);
+      expect(existsSync(directory)).toBe(true);
+      expect(child.exitCode).toBeNull();
+      yield* Fiber.interrupt(worker);
+      expect(existsSync(directory)).toBe(false);
+      expect(child.signalCode).toBe("SIGKILL");
+      expect(yield* io("test.compiler.reaped", () => child.exited)).not.toBe(0);
+    })));
   });
 
   test("externalizes the shared runtime and bootstraps codecs before Effect", () => {
@@ -60,7 +83,7 @@ describe("public miniprogram build contract", () => {
     }
   });
 
-  test.skipIf(!built)("all emitted JavaScript lowers optional/nullish syntax, logical assignments, and class fields", () => {
+  test("all emitted JavaScript lowers optional/nullish syntax, logical assignments, and class fields", () => {
     for (const name of packageFiles(path.join(root, "dist")).filter((name) => name.endsWith(".js"))) {
       const code = readFileSync(path.join(root, "dist", name), "utf8");
       const parsed = parseSync(name, code);
@@ -79,11 +102,11 @@ describe("public miniprogram build contract", () => {
     }
   });
 
-  test.skipIf(!built)("emitted package has no unapproved files, secret material, or size overflow (run build first)", () => {
+  test("emitted package has no unapproved files, secret material, or size overflow (run build first)", () => {
     expect(() => verifyPackage()).not.toThrow();
   });
 
-  test.skipIf(!built)("tab switches cache instances, unload detail stacks, and run lifecycle callbacks once per transition", () => {
+  test("tab switches cache instances, unload detail stacks, and run lifecycle callbacks once per transition", () => {
     const harness = createAppService();
     const calls: string[] = [];
     for (const name of ["home", "ask", "detail", "collection"]) {
@@ -123,7 +146,7 @@ describe("public miniprogram build contract", () => {
     expect(harness.stack).toHaveLength(0);
   });
 
-  test.skipIf(!built)("built shared runtime initializes once without injected browser APIs (run build first)", () => {
+  test("built shared runtime initializes once without injected browser APIs (run build first)", () => {
     const harness = createAppService();
     try {
       for (const name of ["fetch", "URL", "TextEncoder", "TextDecoder", "AbortController"]) {

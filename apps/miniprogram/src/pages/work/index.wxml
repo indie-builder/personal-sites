@@ -29,7 +29,7 @@
   </view>
   <view wx:if="{{readingCount > 1}}" class="work-navigation">
     <button bindtap="previousWork" disabled="{{readingIndex <= 0}}" aria-label="上一件作品">上一件</button>
-    <view class="meta work-position" aria-live="polite">第 {{readingIndex + 1}} / {{readingCount}} 件</view>
+    <view class="meta work-position" aria-live="polite">第 {{readingStart + readingIndex + 1}} 件</view>
     <button bindtap="nextWork" disabled="{{readingIndex + 1 >= readingCount}}" aria-label="下一件作品">下一件</button>
   </view>
 </view>

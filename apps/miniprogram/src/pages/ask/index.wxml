@@ -15,12 +15,24 @@
           </view>
         </view>
 
-        <view wx:for="{{messages}}" wx:key="id" wx:for-item="message" class="ask-message {{message.role === 'question' ? 'ask-question' : 'ask-answer'}}">
+        <button wx:if="{{hiddenCount}}" class="ask-earlier button" bindtap="loadEarlier">显示较早的 {{hiddenCount}} 条消息</button>
+
+        <view wx:for="{{messages}}" wx:key="id" wx:for-item="message" id="message-{{hiddenCount + index}}" class="ask-message {{message.role === 'question' ? 'ask-question' : 'ask-answer'}}">
           <view wx:if="{{message.role === 'question'}}" class="ask-question-text">
             <text selectable>{{message.text}}</text>
           </view>
           <block wx:else>
-            <rich-text wx:if="{{message.text}}" class="body ask-answer-text" nodes="{{message.nodes}}" user-select="{{true}}"></rich-text>
+            <view wx:if="{{message.text}}" class="ask-answer-text">
+              <block wx:for="{{message.parts}}" wx:key="key" wx:for-item="part">
+                <rich-text wx:if="{{part.kind === 'rich'}}" class="body" nodes="{{part.nodes}}" user-select="{{true}}"></rich-text>
+                <view wx:else class="body ask-flow" style="{{part.style}}">
+                  <block wx:for="{{part.runs}}" wx:key="key" wx:for-item="run">
+                    <text wx:if="{{run.ref}}" class="ask-ref" data-message-id="{{message.id}}" data-index="{{run.index}}" bindtap="openSource" aria-label="{{'阅读引用 ' + run.ref}}">{{run.ref}}</text>
+                    <rich-text wx:else class="ask-run" nodes="{{run.nodes}}" user-select="{{true}}"></rich-text>
+                  </block>
+                </view>
+              </block>
+            </view>
             <text wx:else class="body muted" aria-live="polite">{{message.placeholder}}</text>
             <text wx:if="{{message.status === 'stopped' && message.text}}" class="meta ask-message-state">已停止生成</text>
             <text wx:if="{{message.status === 'streaming' && message.text}}" class="meta ask-message-state" aria-live="polite">正在生成…</text>
@@ -53,7 +65,7 @@
   </view>
 
   <view class="ask-composer {{keyboardOpen ? 'ask-composer-keyboard' : ''}}">
-    <textarea class="ask-input" value="{{draft}}" placeholder="输入你的问题…" placeholder-class="ask-input-placeholder" maxlength="-1" auto-height="{{false}}" fixed="{{false}}" adjust-position="{{false}}" cursor-spacing="16" show-confirm-bar="{{false}}" confirm-type="send" confirm-hold="{{true}}" hold-keyboard="{{true}}" focus="{{inputFocused}}" bindinput="onInput" bindconfirm="send" bindfocus="onInputFocus" bindblur="onInputBlur" bindkeyboardheightchange="onKeyboardHeight" aria-label="输入问题，2 至 1000 字"></textarea>
+    <textarea class="ask-input" style="height: {{inputHeight}}px;" value="{{draft}}" placeholder="输入你的问题…" placeholder-class="ask-input-placeholder" maxlength="-1" auto-height="{{false}}" fixed="{{false}}" adjust-position="{{false}}" cursor-spacing="16" show-confirm-bar="{{false}}" confirm-type="send" confirm-hold="{{true}}" hold-keyboard="{{true}}" focus="{{inputFocused}}" bindinput="onInput" bindlinechange="onLineChange" bindconfirm="send" bindfocus="onInputFocus" bindblur="onInputBlur" bindkeyboardheightchange="onKeyboardHeight" aria-label="输入问题，2 至 1000 字"></textarea>
     <view class="ask-composer-tools">
       <picker class="ask-scope" mode="selector" range="{{scopeLabels}}" value="{{scopeIndex}}" disabled="{{streaming}}" bindchange="onScopeChange" aria-label="{{'检索范围：' + scopeLabel}}">
         <view class="ask-scope-control {{streaming ? 'muted' : ''}}"><text>{{scopeLabel}}</text><view class="ask-scope-chevron" aria-hidden="true"></view></view>

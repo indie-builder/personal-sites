@@ -13,7 +13,7 @@ bun run --filter @site/miniprogram build
 
 在微信开发者工具中导入 **`apps/miniprogram`**，不是 `dist`。`project.config.json` 已将 `miniprogramRoot` 指向构建结果 `dist/`。修改源码后重新构建，再在工具中编译。生成文件、个人工具配置和 LoopX 执行状态不提交。
 
-Bun 负责 CommonJS 打包，esbuild 将输出统一转换为微信预览打包可解析的 ES2018 语法，并保留运行环境支持的原生 BigInt。保持项目配置中的 `es6: false`、`enhance: false`、`minified: false`，不再启用微信的 ES5 转换或重复压缩：额外的 Babel 降级会把 Effect 的 BigInt 幂运算转成 `Math.pow`，而旧压缩器不接受可选链、空值合并等现代语法。
+Bun 运行构建脚本，esbuild 直接生成微信预览打包可解析的 ES2018 CommonJS 包，并保留运行环境支持的原生 BigInt。构建上下文、临时目录和模板编译器进程由 Effect 作用域管理，取消时清理。保持项目配置中的 `es6: false`、`enhance: false`、`minified: false`，不再启用微信的 ES5 转换或重复压缩：额外的 Babel 降级会把 Effect 的 BigInt 幂运算转成 `Math.pow`，而旧压缩器不接受可选链、空值合并等现代语法。
 
 项目配置里的 `touristappid` 只是公开占位符，不能上传，也不保证当前开发者工具允许游客模式。打开项目时填入自己的小程序 AppID；个人 AppID 可以放在被忽略的 `project.private.config.json`，不提交凭据、工具 ticket 或账号资料。若工具要求登录，先在开发者工具中扫码。
 
@@ -29,10 +29,10 @@ Bun 负责 CommonJS 打包，esbuild 将输出统一转换为微信预览打包�
 
 | 功能 | 小程序行为 |
 | --- | --- |
-| 动态 | 每日动态、每日关注、设计收藏、抖音收藏、开源关注；各栏目独立分页、下拉刷新、失败恢复 |
-| 详情 | 原生返回、导读与来源摘录、图片预览、手动视频播放、来源和完整网页的复制入口 |
-| 问一问 | 文本 SSE、检索范围、停止、重试、新对话确认、来源编号与原生引用阅读；切 tab 保留会话和草稿 |
-| 作品集 | 读取独立作品集 API；布局和灵感搜索、分类、主题、分页与详情，在当前作品附近最多 120 件已加载结果内切换上一件/下一件；工具目录和网站介绍 |
+| 动态 | 每日动态、每日关注、设计收藏、抖音收藏、开源关注；横栏与栏目总菜单、独立分页与阅读位置、下拉刷新、失败恢复 |
+| 详情 | 原生返回、导读与来源摘录、单图完整阅读／多图预览、按来源比例播放视频、来源和完整网页的复制入口 |
+| 问一问 | 文本 SSE、检索范围、停止、重试、新对话确认、正文引用与原生资料阅读；多行草稿、表格和基础 Markdown；切 tab 保留会话和草稿 |
+| 作品集 | 读取独立作品集 API；带数量的布局分类入口、图片集合、搜索/分类/主题/分页与详情；在已加载结果内连续阅读并显示集合真实序号；工具目录与网站介绍使用原生子页面 |
 | 关于我 | 复用公开身份、介绍和经历；GitHub、语雀等外部链接通过明确按钮复制 |
 | 外链 | 使用微信剪贴板复制链接，用户在浏览器打开；不假设任意第三方域名可用 `web-view` |
 | 导航与外观 | 四项原生 tabBar、系统返回、安全区、黑白阅读流；深浅色跟随系统 |
@@ -41,7 +41,7 @@ Bun 负责 CommonJS 打包，esbuild 将输出统一转换为微信预览打包�
 
 问答按现有 `POST /api/ask` 的 `format: "text"` 协议消费 `text → sources → done`。请求通过 `wx.request(enableChunked)` 接收，支持跨块 UTF-8 中文、表情和 SSE 帧。停止会取消底层请求；不会自动重试模型调用。访客随机标识存于本机，仅用于匿名问答上下文；问题和回答由现有服务器会话策略处理。聊天内容和草稿仅在当前进程保留，不做额外本地历史库。
 
-构建只复制明确列出的 WXML/WXSS/JSON、现有公开头像，并生成一个共享业务模块和页面 JS；检查主包不超过 2 MiB。`src/encoding.ts` 在共享模块之前补齐老版本 AppService 缺失的 UTF-8 编解码器；网络适配使用微信 RequestTask 取消，不依赖浏览器 fetch、EventSource 或 AbortController。
+构建只复制明确列出的 WXML/WXSS/JSON、现有公开头像和原创导航图标，并生成一个共享业务模块和页面 JS；检查主包不超过 2 MiB。列表向视图传递展示字段，问答来源全文留在控制器；分页和流式更新按变化路径提交，避免整段历史重复传输。`src/encoding.ts` 在共享模块之前补齐老版本 AppService 缺失的 UTF-8 编解码器；网络适配使用微信 RequestTask 取消，不依赖浏览器 fetch、EventSource 或 AbortController。
 
 ## 验证
 
@@ -57,7 +57,7 @@ bun run --filter @site/miniprogram test:e2e
 bun run --filter @site/miniprogram check:templates
 ```
 
-`test:e2e` 的定位是 **构建产物的 AppService 契约回归**：在受限 JS 环境中加载实际 CommonJS 包、模拟微信平台 API，验证真实页面生命周期与公开 HTTP/SSE 契约。固定内容是测试夹具，不进入产品。它不等同于微信模拟器、真机或发布验收。
+默认 `test` 会先构建当前源码再执行单测，产物缺失时不会跳过构建契约。`test:e2e` 的定位是 **构建产物的 AppService 契约回归**：在受限 JS 环境中加载实际 CommonJS 包、模拟微信平台 API，验证真实页面生命周期与公开 HTTP/SSE 契约。固定内容是测试夹具，不进入产品。它不等同于微信模拟器、真机或发布验收。
 
 `check:templates` 调用本机微信开发者工具的真实 `wcc` 和 `wcsc` 编译器，无需线上模型或数据库。macOS 默认读取 `/Applications/wechatwebdevtools.app`；其他安装位置用 `WECHAT_COMPILER_ROOT` 指向含 `wcc`/`wcsc`（Windows 为 `.exe`）的目录。不在仓库分发平台编译器。
 

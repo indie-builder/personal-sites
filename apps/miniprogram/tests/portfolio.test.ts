@@ -4,8 +4,8 @@ import { createAppService, root } from "../scripts/e2e";
 import * as Fiber from "effect/Fiber";
 import { Effect, PORTFOLIO_ORIGIN, Schema } from "../src/lib/runtime";
 import {
-  CollectionPage, Site, Tools, WorkDetail, collectionPath, createCollection,
-  getProducts, getSite, getTools, getWork, normalizeFilters, productDestination, workReadingLimit,
+  CollectionPage, Site, Tools, WorkDetail, collectionPath, collectionWork, createCollection,
+  getProducts, getSite, getTools, getWork, normalizeFilters, productDestination, projectKind, projectPath, projectTitle,
 } from "../src/portfolio/api";
 
 const item = (id: string) => ({
@@ -24,6 +24,7 @@ interface Pending {
   success: (response: { statusCode: number; data: unknown }) => void;
   fail: (error: { errMsg: string }) => void;
 }
+type Request = ReturnType<typeof createAppService>["requests"][number];
 let pending: Pending[];
 let waiters: ((request: Pending) => void)[];
 let originalWx: PropertyDescriptor | undefined;
@@ -83,6 +84,24 @@ describe("public portfolio contract", () => {
     expect((await result).map((product) => product.id)).toEqual(ids.slice(0, 4));
     expect(ids.slice(0, 4).map(productDestination)).toEqual(["layouts", "muse", "tools", "site"]);
     expect(productDestination("future-product")).toBeUndefined();
+    expect(projectPath("tools")).toBe("/pages/project/index?kind=tools");
+    expect(projectPath("site")).toBe("/pages/project/index?kind=site");
+    expect(projectKind("tools")).toBe("tools");
+    expect(projectKind("site")).toBe("site");
+    expect(projectKind("layouts")).toBeUndefined();
+    expect(projectKind(undefined)).toBeUndefined();
+    expect(projectTitle("tools")).toBe("设计工程工具");
+    expect(projectTitle("site")).toBe("个人网站");
+  });
+
+  test("projects list rows to display fields without text, source or full media", () => {
+    const work = item("001");
+    const video = { id: "clip", kind: "video" as const, url: "https://example.com/clip.mp4", poster: "", width: 1200, height: 800 };
+    expect(collectionWork({ ...work, media: [video] })).toEqual({
+      id: "001", title: "作品 001", category: "构图", topic: "空间留白", author: "作者",
+      thumbnail: "https://example.com/thumb.webp", video: true,
+    });
+    expect(collectionWork(item("002"))).not.toHaveProperty("text");    expect(collectionWork(item("002")).video).toBe(false);
   });
 
   test("reads cold details, tools and site using validated independent endpoints", async () => {
@@ -181,24 +200,78 @@ describe("built native portfolio actions", () => {
     } finally { harness.close(); }
   });
 
-  test.skipIf(!built)("bounds the eventChannel snapshot around a late loaded item without a URL list", async () => {
+  test.skipIf(!built)("hands the whole loaded ID set with a true global ordinal and stays under 1 MiB", async () => {
     const harness = createAppService();
     try {
       harness.loadAll();
       const collection = harness.open("/pages/collection/index?collection=muse");
       await settled(() => harness.requests.length === 1);
-      const ids = Array.from({ length: workReadingLimit + 40 }, (_, index) => `work-${index}`);
+      const ids = Array.from({ length: 1824 }, (_, index) => `work-${index}`);
       harness.respond(harness.requests[0]!, page(ids, false));
       await settled(() => !collection.data.loading);
       let openedUrl = "";
+      let payloadSize = 0;
       const navigate = harness.wx.navigateTo;
-      harness.wx.navigateTo = (options) => { openedUrl = options.url; return navigate(options); };
-      collection.openWork({ currentTarget: { dataset: { id: ids.at(-2) } } });
+      harness.wx.navigateTo = (options) => {
+        openedUrl = options.url;
+        return navigate({
+          ...options,
+          success: (result: { eventChannel: { emit: (name: string, payload: unknown) => void } }) => {
+            const emit = result.eventChannel.emit.bind(result.eventChannel);
+            result.eventChannel.emit = (name, payload) => {
+              if (name === "workReading") payloadSize = Buffer.byteLength(JSON.stringify(payload));
+              emit(name, payload);
+            };
+            options.success?.(result);
+          },
+        });
+      };
+      collection.openWork({ currentTarget: { dataset: { id: ids[201] } } });
       const reader = harness.stack.at(-1)!;
-      expect(openedUrl).toBe(`/pages/work/index?collection=muse&id=${ids.at(-2)}`);
-      expect(reader.readingIds).toEqual(ids.slice(-workReadingLimit));
-      expect(reader.data.readingCount).toBe(workReadingLimit);
-      expect(reader.data.readingIndex).toBe(workReadingLimit - 2);
+      expect(openedUrl).toBe(`/pages/work/index?collection=muse&id=${ids[201]}`);
+      expect(reader.readingIds).toEqual(ids);
+      expect(reader.data.readingCount).toBe(1824);
+      expect(reader.data.readingIndex).toBe(201);
+      expect(reader.data.readingStart).toBe(0);
+      expect(payloadSize).toBeLessThan(1024 * 1024);
+    } finally { harness.close(); }
+  });
+
+  test.skipIf(!built)("sends bounded decimal item patches while 1824 works stay in the controller", async () => {
+    const harness = createAppService();
+    try {
+      harness.loadAll();
+      const collection = harness.open("/pages/collection/index?collection=layouts");
+      await settled(() => harness.requests.length === 1);
+      collection.browseAll();
+      const patches: { keys: string[]; bytes: number }[] = [];
+      const setData = collection.setData;
+      collection.setData = function (patch: Record<string, unknown>, callback?: () => void) {
+        patches.push({ keys: Object.keys(patch), bytes: Buffer.byteLength(JSON.stringify(patch)) });
+        return setData.call(this, patch, callback);
+      };
+      const pages = 76;
+      for (let pageIndex = 0; pageIndex < pages; pageIndex += 1) {
+        const ids = Array.from({ length: 24 }, (_, offset) => `work-${pageIndex * 24 + offset}`);
+        harness.respond(await new Promise<Request>((resolve) => {
+          const take = () => {
+            const request = harness.requests.find((entry) => !entry.settled && !entry.aborted && new URL(entry.options.url).pathname === "/api/portfolio/layouts");
+            if (request) resolve(request); else setImmediate(take);
+          };
+          take();
+        }), { ...page(ids, pageIndex + 1 < pages), items: ids.map((id) => ({ ...item(id), text: "正文".repeat(1500) })) });
+        await settled(() => !collection.data.loading);
+        if (collection.data.hasMore) collection.onReachBottom();
+      }
+      expect(collection.controller.state.items).toHaveLength(1824);
+      expect(collection.data.items).toHaveLength(1824);
+      const itemKeys = new Set(collection.data.items.map((entry: Record<string, unknown>) => Object.keys(entry).sort().join(",")));
+      expect([...itemKeys]).toEqual(["author,category,id,thumbnail,title,topic,video"]);
+      expect(patches.filter((patch) => patch.keys.some((key) => /^items\[/u.test(key))).length).toBeGreaterThan(1);
+      // No wholesale work list: the only plain `items` write clears before the indexed rows land.
+      expect(patches.every((patch) => !patch.keys.includes("items") || patch.keys.length === 1)).toBe(true);
+      expect(Math.max(...patches.map((patch) => patch.bytes))).toBeLessThan(1024 * 1024);
+      expect(JSON.stringify(collection.data)).not.toContain("正文");
     } finally { harness.close(); }
   });
 
@@ -218,7 +291,9 @@ describe("built native portfolio actions", () => {
           { collection: collection === "layouts" ? "muse" : "layouts", ids: ["cold", "next"] },
           { collection, ids: ["cold", "cold"] }, { collection, ids: ["cold", ""] },
           { collection, ids: ["cold", 12] }, { collection, ids: ["cold", "x".repeat(301)] },
-          { collection, ids: ["cold", ...Array.from({ length: workReadingLimit }, (_, index) => `${index}`)] },
+          { collection, ids: ["cold", "next"], start: -1 },
+          { collection, ids: ["cold", "next"], start: 4 },
+          { collection, ids: ["cold", "next"], start: 1.5 },
         ]) channel.emit("workReading", payload);
         reader.previousWork();
         reader.nextWork();
@@ -228,8 +303,9 @@ describe("built native portfolio actions", () => {
         expect(harness.stack).toHaveLength(1);
         expect(reader.onShareAppMessage().path).toBe(`/pages/work/index?collection=${collection}&id=cold`);
         reader.onUnload();
-        channel.emit("workReading", { collection, ids: ["cold", "next"] });
+        channel.emit("workReading", { collection, ids: ["cold", "next"], start: 5 });
         expect(reader.data.readingCount).toBe(0);
+        expect(reader.data.readingIndex).toBe(-1);
       } finally { harness.close(); }
     }
   });
@@ -253,10 +329,18 @@ describe("built native portfolio actions", () => {
       index.openProduct(event({ id: "layout-compositions" }));
       const collection = harness.stack.at(-1);
       if (!collection) throw new Error("Missing collection page");
+      expect(collection.data.view).toBe("index");
       harness.respond(await take("/api/portfolio/layouts"), page(["a", "b"]));
       await settled(() => !collection.data.loading && collection.data.loaded);
+      expect(collection.data.shelf.map((book: { id: string; number: string; count: number }) => [book.id, book.number, book.count])).toEqual([["composition", "01", 80]]);
+      expect(collection.data.shelfTotal).toBe(80);
+      collection.browseAll();
+      expect(collection.data.view).toBe("grid");
+      expect(harness.requests.filter((request) => !request.settled && request.options.url.includes("/api/portfolio/layouts"))).toHaveLength(0);
+      expect(collection.data.items.map((item: { id: string }) => item.id)).toEqual(["a", "b"]);
       collection.onReachBottom();
-      const more = await take("/api/portfolio/layouts");
+      await settled(() => harness.requests.some((request) => !request.settled && request.options.url.includes("offset=2")));
+      const more = harness.requests.find((request) => !request.settled && request.options.url.includes("offset=2"))!;
       expect(more.options.url).toContain("offset=2&limit=24");
       harness.respond(more, page(["b", "c"], false));
       await settled(() => !collection.data.loading);
@@ -278,6 +362,7 @@ describe("built native portfolio actions", () => {
       collection.openWork(event({ id: "filtered" }));
       const detail = harness.stack.at(-1);
       if (!detail) throw new Error("Missing detail page");
+      expect(detail.data.readingStart).toBe(0);
       const media = { id: "image", kind: "image", url: "https://example.com/image.png", poster: "", width: 1200, height: 800 };
       harness.respond(await take("/api/portfolio/layouts/filtered"), { item: { ...item("filtered"), media: [media] } });
       await settled(() => !detail.data.loading);
@@ -303,24 +388,75 @@ describe("built native portfolio actions", () => {
       expect(muse.data.items).toEqual([]);
       harness.wx.navigateBack();
       index.openProduct(event({ id: "design-engineer-tools" }));
+      const tools = harness.stack.at(-1);
+      if (!tools) throw new Error("Missing project page");
+      expect(tools.route).toBe("pages/project/index");
+      expect(tools.data.kind).toBe("tools");
       harness.respond(await take("/api/portfolio/tools"), { categories: [{ id: "design", name: "设计", tools: [{ name: "工具", url: "https://example.com/tool", icon: "" }] }] });
-      await settled(() => !index.data.loading);
-      expect(index.data.mode).toBe("tools");
-      index.copyUrl(event({ url: index.data.categories[0].tools[0].url }));
+      await settled(() => !tools.data.loading && tools.data.loaded);
+      tools.copyUrl(event({ url: tools.data.categories[0].tools[0].url }));
       expect(harness.clipboard.at(-1)).toBe("https://example.com/tool");
-      index.backToProducts();
+      harness.wx.navigateBack();
+      expect(harness.stack.at(-1)).toBe(index);
       index.openProduct(event({ id: "personal-sites" }));
+      const site = harness.stack.at(-1);
+      if (!site) throw new Error("Missing site page");
+      expect(site.data.kind).toBe("site");
       harness.respond(await take("/api/portfolio/site"), { video: "https://example.com/promo.mp4", poster: "", website: "https://example.com/", description: "公开介绍" });
-      await settled(() => !index.data.loading);
-      expect(index.data.mode).toBe("site");
-      expect(index.data.site.description).toBe("公开介绍");
-      index.videoFailed();
-      expect(index.data.videoFailed).toBe(true);
-      index.retryVideo();
-      expect(index.data.videoFailed).toBe(false);
-      index.backToProducts();
+      await settled(() => !site.data.loading && Boolean(site.data.site));
+      expect(site.data.site.description).toBe("公开介绍");
+      site.videoFailed();
+      expect(site.data.videoFailed).toBe(true);
+      site.retryVideo();
+      expect(site.data.videoFailed).toBe(false);
+      expect(site.onShareAppMessage().path).toBe("/pages/project/index?kind=site");
+      harness.wx.navigateBack();
       expect(index.data.products).toHaveLength(4);
-      expect(index.data.mode).toBe("index");
+    } finally { harness.close(); }
+  });
+
+  test.skipIf(!built)("clears a failed collection thumbnail only after a successful refresh", async () => {
+    const harness = createAppService();
+    try {
+      harness.loadAll();
+      const collection = harness.open("/pages/collection/index?collection=muse");
+      await settled(() => harness.requests.length === 1);
+      harness.respond(harness.requests[0]!, page(["a"]));
+      await settled(() => !collection.data.loading);
+      collection.imageFailed({ currentTarget: { dataset: { id: "a" } } });
+      expect(collection.data.failedImages.a).toBe(true);
+      collection.onPullDownRefresh();
+      await settled(() => harness.requests.length === 2);
+      harness.respond(harness.requests[1]!, { error: "暂时不可用" }, 500);
+      await settled(() => !collection.data.loading);
+      expect(collection.data.failedImages.a).toBe(true);
+      collection.onPullDownRefresh();
+      await settled(() => harness.requests.length === 3);
+      harness.respond(harness.requests[2]!, page(["a"], false));
+      await settled(() => !collection.data.loading);
+      expect(collection.data.failedImages).toEqual({});
+    } finally { harness.close(); }
+  });
+
+  test.skipIf(!built)("rejects invalid project links and clears failed cover flags after a successful refresh", async () => {
+    const harness = createAppService();
+    const event = (dataset: Record<string, string>) => ({ currentTarget: { dataset } });
+    try {
+      harness.loadAll();
+      const invalid = harness.open("/pages/project/index?kind=layouts");
+      expect(invalid.data.invalid).toBe(true);
+      expect(harness.requests).toHaveLength(0);
+      const index = harness.open("/pages/portfolio/index");
+      await settled(() => harness.requests.length === 1);
+      harness.respond(harness.requests[0]!, { items: [{ id: "muse", name: "灵感", summary: "介绍", date: "2026-09-03", dateLabel: "上线", cover: "https://example.com/cover.png" }] });
+      await settled(() => !index.data.loading);
+      index.imageFailed(event({ id: "muse" }));
+      expect(index.data.failedImages.muse).toBe(true);
+      index.loadContent();
+      await settled(() => harness.requests.length === 2);
+      harness.respond(harness.requests[1]!, { items: [{ id: "muse", name: "灵感", summary: "介绍", date: "2026-09-03", dateLabel: "上线", cover: "https://example.com/cover.png" }] });
+      await settled(() => !index.data.loading);
+      expect(index.data.failedImages).toEqual({});
     } finally { harness.close(); }
   });
 });

@@ -1,6 +1,6 @@
 import { copyLink, detailFor, externalUrl, markdown, previewImages, run, scopes, sections, takeRow, type Detail, type FeedRow, type Section } from "../../lib/runtime";
 
-type MediaView = Detail["media"][number] & { imageError: boolean; videoError: boolean };
+type MediaView = Detail["media"][number] & { index: number; imageError: boolean; videoError: boolean; videoHeight: number };
 type DetailData = {
   loading: boolean;
   retryable: boolean;
@@ -14,6 +14,9 @@ type DetailData = {
   nodes: ReturnType<typeof markdown>;
   tagsText: string;
   media: MediaView[];
+  photos: MediaView[];
+  videos: MediaView[];
+  gridHeight: number;
   sourceUrl: string;
   websiteUrl: string;
 };
@@ -25,6 +28,7 @@ type DetailMethods = {
   _cancel: (() => void) | undefined;
   _channel: ReturnType<WechatMiniprogram.Page.TrivialInstance["getOpenerEventChannel"]> | undefined;
   _citationListener: ((source: unknown) => void) | undefined;
+  _availableWidth: number;
   loadDetail(): void;
   readCitation(source: unknown): void;
   previewImage(event: WechatMiniprogram.TouchEvent): void;
@@ -35,10 +39,41 @@ type DetailMethods = {
   copyWebsite(): void;
   copyMarkdown(): void;
   returnToFeed(): void;
+  onResize(): void;
 };
 
+const MAX_READING_WIDTH = 760;
+
+// 页面实际可用阅读宽度；媒体比例与方格尺寸都从这里推算。
+function readingWidth(): number {
+  try {
+    const windowWidth = wx.getWindowInfo().windowWidth;
+    if (Number.isFinite(windowWidth) && windowWidth > 0) return Math.max(0, Math.min(windowWidth, MAX_READING_WIDTH) - (windowWidth <= 350 ? 32 : 48));
+  } catch { /* 旧基础库没有 getWindowInfo 时用常见手机宽度 */ }
+  return 342;
+}
+
+function videoHeight(media: Detail["media"][number], available: number): number {
+  const ratio = media.width && media.height && media.width > 0 && media.height > 0 ? media.width / media.height : 16 / 9;
+  return Math.max(1, Math.round(available / ratio));
+}
+
+const gridHeight = (available: number) => Math.max(44, Math.floor((available - 12) / 3));
+
+function mediaViews(media: Detail["media"], available: number): MediaView[] {
+  const views = media.flatMap((item) => {
+    const url = externalUrl(item.url);
+    const video = externalUrl(item.videoUrl);
+    return url || video ? [{ ...item, url, previewUrl: externalUrl(item.previewUrl), videoUrl: video }] : [];
+  });
+  return views.map((item, index) => ({
+    ...item, index, imageError: false, videoError: false,
+    videoHeight: item.videoUrl ? videoHeight(item, available) : 0,
+  }));
+}
+
 const detailPage: WechatMiniprogram.Page.Options<DetailData, DetailMethods> = {
-  data: { loading: true, retryable: false, error: "", citation: false, title: "", meta: "", summary: "", reason: "", text: "", nodes: [], tagsText: "", media: [], sourceUrl: "", websiteUrl: "" },
+  data: { loading: true, retryable: false, error: "", citation: false, title: "", meta: "", summary: "", reason: "", text: "", nodes: [], tagsText: "", media: [], photos: [], videos: [], gridHeight: 44, sourceUrl: "", websiteUrl: "" },
   _active: false,
   _section: undefined,
   _id: "",
@@ -46,9 +81,12 @@ const detailPage: WechatMiniprogram.Page.Options<DetailData, DetailMethods> = {
   _cancel: undefined,
   _channel: undefined,
   _citationListener: undefined,
+  _availableWidth: 342,
 
   onLoad(query) {
     this._active = true;
+    this._availableWidth = readingWidth();
+    this.setData({ gridHeight: gridHeight(this._availableWidth) });
     if (query.citation === "1") {
       this.setData({ citation: true, loading: false, error: "引用资料未能读取，请返回对话后重新打开。" });
       this._channel = this.getOpenerEventChannel();
@@ -78,6 +116,7 @@ const detailPage: WechatMiniprogram.Page.Options<DetailData, DetailMethods> = {
       if (!this._active) return;
       const summary = detail.summary.trim() !== detail.title.trim() ? detail.summary : "";
       const text = detail.text.trim() !== detail.title.trim() && detail.text.trim() !== detail.summary.trim() ? detail.text : "";
+      const media = mediaViews(detail.media, this._availableWidth);
       this.setData({
         loading: false,
         error: "",
@@ -88,7 +127,9 @@ const detailPage: WechatMiniprogram.Page.Options<DetailData, DetailMethods> = {
         text,
         nodes: markdown(text),
         tagsText: detail.tags.join(" · "),
-        media: detail.media.map((media) => ({ ...media, url: externalUrl(media.url), previewUrl: externalUrl(media.previewUrl), videoUrl: externalUrl(media.videoUrl), imageError: false, videoError: false })).filter((media) => media.url || media.videoUrl),
+        media,
+        photos: media.filter((item) => !item.videoUrl),
+        videos: media.filter((item) => item.videoUrl),
         sourceUrl: externalUrl(detail.sourceUrl),
         websiteUrl: externalUrl(detail.websiteUrl),
       });
@@ -121,7 +162,7 @@ const detailPage: WechatMiniprogram.Page.Options<DetailData, DetailMethods> = {
   previewImage(event) {
     const media = this.data.media[Number(event.currentTarget.dataset.index)];
     if (!media || media.videoUrl) return;
-    previewImages(this.data.media.filter((item) => !item.videoUrl).map((item) => item.url), media.url);
+    previewImages(this.data.photos.map((item) => item.url), media.url);
   },
 
   mediaError(event) {
@@ -142,6 +183,18 @@ const detailPage: WechatMiniprogram.Page.Options<DetailData, DetailMethods> = {
     this.data.media.forEach((media, index) => {
       if (media.videoUrl) wx.createVideoContext(`detail-video-${index}`, this).pause();
     });
+  },
+
+  // 横竖屏切换后重算视频高度与方格边长，不重新请求内容。
+  onResize() {
+    const available = readingWidth();
+    if (available === this._availableWidth) return;
+    this._availableWidth = available;
+    const patch: Record<string, unknown> = { gridHeight: gridHeight(available) };
+    this.data.media.forEach((item, index) => {
+      if (item.videoUrl) patch[`media[${index}].videoHeight`] = videoHeight(item, available);
+    });
+    this.setData(patch);
   },
 
   onHide() {

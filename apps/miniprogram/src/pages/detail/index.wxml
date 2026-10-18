@@ -26,25 +26,34 @@
       <text class="body selectable-copy" user-select="true">{{reason}}</text>
     </view>
     <view wx:if="{{media.length}}" class="media-list">
-      <view wx:for="{{media}}" wx:key="url" class="media-item">
-        <block wx:if="{{item.videoUrl}}">
-          <video wx:if="{{!item.videoError}}" id="detail-video-{{index}}" class="detail-video" src="{{item.videoUrl}}" poster="{{item.previewUrl}}" controls show-fullscreen-btn show-play-btn enable-play-gesture autoplay="{{false}}" loop="{{false}}" object-fit="contain" data-index="{{index}}" binderror="mediaError" aria-label="内容视频 {{index + 1}}" />
-          <view wx:else class="media-failure">
-            <text class="muted">视频暂时无法播放，可重试或复制原文链接查看。</text>
-            <button class="button" data-index="{{index}}" bindtap="retryMedia">重试播放</button>
-          </view>
-        </block>
-        <block wx:else>
-          <button wx:if="{{!item.imageError}}" class="image-preview" data-index="{{index}}" bindtap="previewImage" aria-label="放大查看图片 {{index + 1}}">
-            <image class="detail-image" src="{{item.url}}" mode="widthFix" lazy-load data-index="{{index}}" binderror="mediaError" aria-hidden="true" />
-          </button>
-          <view wx:else class="media-failure">
-            <text class="muted">图片暂时无法读取。</text>
-            <button class="button" data-index="{{index}}" bindtap="retryMedia">重新加载图片</button>
-          </view>
-        </block>
+      <view wx:for="{{videos}}" wx:key="index" class="media-item">
+        <video wx:if="{{!media[item.index].videoError}}" id="detail-video-{{item.index}}" class="detail-video" style="height: {{media[item.index].videoHeight}}px" src="{{item.videoUrl}}" poster="{{item.previewUrl}}" controls show-fullscreen-btn show-play-btn enable-play-gesture autoplay="{{false}}" loop="{{false}}" object-fit="contain" data-index="{{item.index}}" binderror="mediaError" aria-label="内容视频 {{index + 1}}" />
+        <view wx:else class="media-failure">
+          <text class="muted">视频暂时无法播放，可重试或复制原文链接查看。</text>
+          <button class="button" data-index="{{item.index}}" bindtap="retryMedia">重试播放</button>
+        </view>
       </view>
-      <text wx:if="{{media.length > 1}}" class="meta">点击图片可全屏查看，左右滑动浏览。</text>
+      <view wx:if="{{photos.length === 1}}" class="media-item">
+        <button wx:if="{{!media[photos[0].index].imageError}}" class="image-preview" data-index="{{photos[0].index}}" bindtap="previewImage" aria-label="放大查看图片 1">
+          <image class="detail-image" src="{{photos[0].url}}" mode="widthFix" lazy-load data-index="{{photos[0].index}}" binderror="mediaError" aria-hidden="true" />
+        </button>
+        <view wx:else class="media-failure">
+          <text class="muted">图片暂时无法读取。</text>
+          <button class="button" data-index="{{photos[0].index}}" bindtap="retryMedia">重新加载图片</button>
+        </view>
+      </view>
+      <view wx:elif="{{photos.length > 1}}" class="media-grid">
+        <view wx:for="{{photos}}" wx:key="index" class="media-grid-cell" style="height: {{gridHeight}}px">
+          <button wx:if="{{!media[item.index].imageError}}" class="image-preview image-preview-grid" data-index="{{item.index}}" bindtap="previewImage" aria-label="放大查看图片 {{index + 1}}">
+            <image class="detail-image" src="{{item.url}}" mode="aspectFill" lazy-load data-index="{{item.index}}" binderror="mediaError" aria-hidden="true" />
+          </button>
+          <view wx:else class="media-failure media-failure-grid">
+            <text class="muted">图片暂时无法读取。</text>
+            <button class="button" data-index="{{item.index}}" bindtap="retryMedia">重新加载</button>
+          </view>
+        </view>
+      </view>
+      <text wx:if="{{photos.length > 1}}" class="meta">点击图片可全屏查看，左右滑动浏览。</text>
     </view>
     <text wx:if="{{tagsText}}" class="tags meta" user-select="true">{{tagsText}}</text>
     <view class="source-actions divider">

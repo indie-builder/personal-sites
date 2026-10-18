@@ -1,5 +1,5 @@
 import { copyLink, externalUrl, previewImages, run } from "../../lib/runtime";
-import { collectionTitle, getWork, layoutAttribution, workReadingLimit, type Collection, type Work } from "../../portfolio/api";
+import { collectionTitle, getWork, layoutAttribution, type Collection, type Work } from "../../portfolio/api";
 
 type WorkView = Omit<Work, "media"> & { media: (Work["media"][number] & { heightRpx: number })[] };
 
@@ -15,6 +15,7 @@ Page({
     failedMedia: {} as Record<string, boolean>,
     removedMedia: {} as Record<string, boolean>,
     readingIndex: -1,
+    readingStart: 0,
     readingCount: 0,
   },
   readingIds: [] as string[],
@@ -36,14 +37,16 @@ Page({
     this.readingChannel = this.getOpenerEventChannel();
     this.readingListener = (payload: unknown) => {
       if (!payload || typeof payload !== "object" || this.readingIds.length) return;
-      const { collection, ids } = payload as { collection?: unknown; ids?: unknown };
-      if (collection !== this.data.collection || !Array.isArray(ids) || !ids.length || ids.length > workReadingLimit
+      const { collection, ids, start } = payload as { collection?: unknown; ids?: unknown; start?: unknown };
+      if (collection !== this.data.collection || !Array.isArray(ids) || !ids.length
         || !ids.every((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 300)
         || new Set(ids).size !== ids.length) return;
       const readingIndex = ids.indexOf(this.data.workId);
+      const readingStart = start === undefined ? 0 : start;
+      if (typeof readingStart !== "number" || !Number.isInteger(readingStart) || readingStart < 0 || readingStart >= ids.length) return;
       if (readingIndex < 0) return;
       this.readingIds = [...ids];
-      this.setData({ readingIndex, readingCount: ids.length });
+      this.setData({ readingIndex, readingStart, readingCount: ids.length });
     };
     this.readingChannel.on?.("workReading", this.readingListener);
     this.loadWork();

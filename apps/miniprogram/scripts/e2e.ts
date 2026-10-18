@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 export const root = fileURLToPath(new URL("../", import.meta.url));
-export const routes = ["home", "ask", "portfolio", "about", "detail", "collection", "work"].map((name) => `pages/${name}/index`);
+export const routes = ["home", "ask", "portfolio", "about", "detail", "collection", "work", "project"].map((name) => `pages/${name}/index`);
 const site = "https://default-coder.lovemyrmb.cn";
 const portfolio = "https://portfolio.default-coder.lovemyrmb.cn";
 const date = "2026-10-18T08:00:00.000Z";
 const forbiddenGlobals = ["fetch", "URL", "TextEncoder", "TextDecoder", "AbortController"];
+// WeChat rejects a single setData payload above 1 MiB; every call in this harness is measured against it.
+export const setDataLimit = 1024 * 1024;
 
 export function packageFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => entry.isDirectory()
@@ -35,7 +37,12 @@ export function verifyPackage(directory = path.join(root, "dist")): void {
 type Callback = (...args: any[]) => void;
 type Options = Record<string, any>;
 type PageInstance = Options & { data: Options; setData: (patch: Options, callback?: Callback) => void };
-type Request = { options: Options; aborted: boolean; settled: boolean; chunks: Callback[]; headers: Callback[]; abort: () => void };
+type Request = {
+  options: Options; aborted: boolean; settled: boolean; chunks: Callback[]; headers: Callback[]; abort: () => void;
+  readonly url: string;
+  success: (response: unknown) => void;
+  fail: (error: unknown) => void;
+};
 
 // shortcut: models the documented AppService APIs, not WXML layout or a WeChat simulator; use DevTools/device verification for those.
 export function createAppService(directory = path.join(root, "dist")) {
@@ -47,6 +54,8 @@ export function createAppService(directory = path.join(root, "dist")) {
   const clipboard: string[] = [];
   const previews: Options[] = [];
   const toasts: string[] = [];
+  const patches: { route: string; keys: string[]; bytes: number }[] = [];
+  const scrolls: number[] = [];
   const stack: PageInstance[] = [];
   const tabRoutes = new Set<string>(JSON.parse(readFileSync(path.join(directory, "app.json"), "utf8")).tabBar.list.map((tab: { pagePath: string }) => tab.pagePath));
   const tabs = new Map<string, PageInstance>();
@@ -89,6 +98,9 @@ export function createAppService(directory = path.join(root, "dist")) {
       data: JSON.parse(JSON.stringify(definition.data ?? {})),
       getOpenerEventChannel: () => eventChannel,
       setData(patch, callback) {
+        const bytes = Buffer.byteLength(JSON.stringify(patch));
+        assert(bytes <= setDataLimit, `setData on ${route} sent ${bytes} bytes; WeChat rejects payloads over 1 MiB`);
+        patches.push({ route, keys: Object.keys(patch), bytes });
         for (const [key, value] of Object.entries(patch)) {
           // Native setData accepts dotted and indexed paths and serializable values only.
           assert(value !== undefined, `setData(${key}) received undefined`);
@@ -121,6 +133,20 @@ export function createAppService(directory = path.join(root, "dist")) {
       assert(!Object.keys(options.header ?? {}).some((name) => /authorization|cookie|api-key/i.test(name)), "public requests must not send credentials");
       const request: Request = {
         options, aborted: false, settled: false, chunks: [], headers: [],
+        // The Pending shape used by page tests destructures request options directly.
+        get url() { return options.url; },
+        success(response: unknown) {
+          if (this.settled) return;
+          this.settled = true;
+          options.success?.(response);
+          options.complete?.(response);
+        },
+        fail(error: unknown) {
+          if (this.settled) return;
+          this.settled = true;
+          options.fail?.(error);
+          options.complete?.(error);
+        },
         abort() {
           if (this.aborted || this.settled) return;
           this.aborted = true;
@@ -189,7 +215,11 @@ export function createAppService(directory = path.join(root, "dist")) {
     onKeyboardHeightChange() {},
     offKeyboardHeightChange() {},
     nextTick: (callback: Callback) => queueMicrotask(callback),
-    pageScrollTo(options: Options) { options.success?.({}); },
+    pageScrollTo(options: Options) {
+      scrolls.push(options.scrollTop);
+      options.success?.({});
+      options.complete?.({});
+    },
   };
   const context = vm.createContext({
     console, wx,
@@ -238,14 +268,16 @@ export function createAppService(directory = path.join(root, "dist")) {
     for (const part of parts) for (const callback of request.chunks) callback({ data: part.buffer });
   }
   return {
-    context, definitions, loads, requests, storage, clipboard, previews, toasts, stack, wx, load, open, respond, chunk,
+    context, definitions, loads, requests, storage, clipboard, previews, toasts, patches, scrolls, stack, wx, load, open, respond, chunk,
     get pullDownStops() { return pullDownStops; },
     setModalConfirm(value: boolean) { modalConfirm = value; },
+    resetPatches() { patches.length = 0; },
+    resetScrolls() { scrolls.length = 0; },
     loadAll() {
       load("app.js");
       app.onLaunch?.();
       for (const route of routes) { registering = route; load(`${route}.js`); }
-      assert.equal(definitions.size, 7, "all seven bundles must register a page");
+      assert.equal(definitions.size, 8, "all eight bundles must register a page");
       const runtime = load("lib/runtime.js");
       assert.equal(runtime, load("lib/runtime.js"), "shared CommonJS runtime must retain identity");
       assert.equal(loads.get("lib/runtime.js"), 1);
@@ -293,7 +325,7 @@ function curation(id: string, platform = "x") {
     design: null,
   };
 }
-const source = { id: "profile-public", title: "公开资料", content: "## 陈远\n这是公开引用正文。", sourceUrl: `${site}/about`, scope: "profile", publishedAt: null, section: null, sourceId: "profile" };
+const source = (id: string, content = "## 陈远\n这是公开引用正文。"): Options => ({ id, title: `公开资料 ${id}`, content, sourceUrl: `${site}/about`, scope: "profile", publishedAt: null, section: null, sourceId: "profile" });
 const work = (id: string) => ({ id, title: `布局 ${id}`, category: "editorial", topic: "minimal", author: "公开作者", text: "公开作品说明", sourceURL: "https://example.com/original", thumbnail: "https://images.example.com/work.jpg", media: [{ id: "image", kind: "image", url: "https://images.example.com/work.jpg", poster: "", width: 1200, height: 800 }] });
 const collectionPage = (ids: string[], hasMore = false) => ({ items: ids.map(work), total: 3, hasMore, categories: [{ id: "editorial", name: "编辑", count: 3 }], topics: [{ id: "minimal", name: "简约", count: 3 }], attribution: "CC BY 4.0 · 公开测试作者" });
 
@@ -323,21 +355,29 @@ async function verifyHome(harness: Harness) {
   home.openDetail(tap({ id: "fresh" }));
   const newsDetail = harness.stack.at(-1)!;
   request = await nextRequest(harness, "/api/ai-news/fresh");
-  harness.respond(request, { item: { ...news("fresh"), reason: "公开推荐理由", score: null, url: "https://example.com/public-news" } });
+  harness.respond(request, { item: { ...news("fresh"), reason: "公开推荐理由", selected: true, url: "https://example.com/public-news" } });
   await settled(() => !newsDetail.data.loading, "news detail API");
   assert.equal(newsDetail.data.title, "动态 fresh");
   assert.equal(newsDetail.data.reason, "公开推荐理由");
+  assert.match(newsDetail.data.meta, /精选/);
   harness.wx.navigateBack();
   for (const section of ["curation", "design", "douyin", "open-source"]) {
     home.selectSection(tap({ section }));
     request = await nextRequest(harness, `/api/${section}`);
     const item = section === "open-source"
-      ? { slug: "public/repo", repository: "public/repo", sourceSummary: "公开仓库摘要", checkedAt: date, dimensions: ["tools"], status: "active", type: "tool", category: "tools" }
+      ? { slug: "public/repo", repository: "public/repo", sourceSummary: "公开仓库摘要", checkedAt: date, dimensions: ["agent-skills"], status: "active", type: "tool", category: "tools" }
       : curation(section, section === "douyin" ? "douyin" : "x");
     harness.respond(request, { items: [item], hasMore: false });
     await settled(() => home.data.feeds[section].loaded && !home.data.feeds[section].loading, `home ${section}`);
   }
+  assert.equal(home.data.feeds["open-source"].items[0].meta.includes("agent-skills"), false, "open-source dimensions use public labels");
+  // 栏目位置只在真实滚动后保存；切换时的恢复滚动不得写回旧值。
+  home.onPageScroll({ scrollTop: 420 });
+  harness.resetScrolls();
   home.selectSection(tap({ section: "curation" }));
+  assert.deepEqual(harness.scrolls, [0], "new section starts at the top");
+  await settled(() => home.data.feeds.curation.loaded, "cached curation");
+  home.onPageScroll({ scrollTop: 900 });
   const count = harness.requests.length;
   home.openDetail(tap({ id: "curation" }));
   const detail = harness.stack.at(-1)!;
@@ -348,7 +388,26 @@ async function verifyHome(harness: Harness) {
   assert.equal(harness.stack.at(-1), home);
   assert.equal(home.data.section, "curation");
   assert.equal(home.data.feeds["ai-news"].items[0].id, "fresh");
-  console.log("PASS home: initial / more / refresh / five sections / carried detail / native back");
+  // 返回后仍在原栏目，继续滚动才更新位置；切换回来恢复 950。
+  home.onPageScroll({ scrollTop: 950 });
+  harness.resetScrolls();
+  home.selectSectionIndex({ detail: { value: "0" } });
+  assert.equal(home.data.section, "ai-news");
+  assert.equal(home.data.sectionIndex, 0);
+  assert.deepEqual(harness.scrolls, [0], "untouched sections start at the top");
+  home.onPageScroll({ scrollTop: 60 });
+  harness.resetScrolls();
+  home.selectSection(tap({ section: "curation" }));
+  assert.deepEqual(harness.scrolls, [950], "section switch restores the saved position");
+  assert.equal(home.data.sectionLabel, "每日关注");
+  harness.resetScrolls();
+  home.selectSectionIndex({ detail: { value: "0" } });
+  assert.deepEqual(harness.scrolls, [60], "the dropdown restores ai-news's last real scroll");
+  harness.resetScrolls();
+  home.selectSection(tap({ section: "open-source" }));
+  assert.deepEqual(harness.scrolls, [420], "a section scrolled earlier restores its own value");
+  assert.equal(home.data.section, "open-source");
+  console.log("PASS home: initial / more / refresh / five sections / carried detail / per-section scroll restore / native back");
 }
 
 async function verifyAsk(harness: Harness) {
@@ -371,14 +430,22 @@ async function verifyAsk(harness: Harness) {
   harness.chunk(request, ': heartbeat\r\nevent: text\r\ndata: {"delta":"陈远 👋【1】"}\r\n\r\n', true);
   harness.chunk(request, 'event: text\ndata: {"delta":\ndata: "，公开回答"}\n\n', true);
   await settled(() => ask.data.messages.at(-1)?.text === "陈远 👋【1】，公开回答", "Ask text before sources");
-  assert.equal(ask.data.messages.at(-1).sources.length, 0);
+  // 晚到来源前，引用数字仍是普通文本；页面数据不保存来源正文。
+  assert.equal(ask.data.messages.at(-1).sourceCount, 0);
+  assert.equal(ask.data.messages.at(-1).sourceViews.length, 0);
+  assert.equal(ask.data.messages.at(-1).sources, undefined, "page data must not mirror raw sources");
+  assert.equal(JSON.stringify(ask.data.messages.at(-1).parts).includes('"ref"'), false);
   assert.equal(ask.data.streaming, true);
-  harness.chunk(request, `event: sources\ndata: ${JSON.stringify({ sources: [source] })}\n\nevent: done\ndata: {}\n\n`, true);
+  const citationSource = source("profile-public");
+  harness.chunk(request, `event: sources\ndata: ${JSON.stringify({ sources: [citationSource] })}\n\nevent: done\ndata: {}\n\n`, true);
   harness.respond(request, "event: text\ndata: {\"delta\":\"MUST NOT DUPLICATE\"}\n\n");
   await settled(() => !ask.data.streaming, "Ask complete");
   assert.equal(ask.data.messages.at(-1).text, "陈远 👋【1】，公开回答");
-  assert.equal(ask.data.messages.at(-1).sources[0].id, source.id);
+  assert.equal(ask.data.messages.at(-1).sourceViews[0].title, citationSource.title);
+  assert.equal(ask.data.messages.at(-1).sourceCount, 1);
   assert.equal(ask.data.messages.at(-1).status, "complete");
+  assert(JSON.stringify(ask.data.messages.at(-1).parts).includes('"ref"'), "late sources enable native citation refs");
+  assert.equal(JSON.stringify(ask.data).includes(citationSource.content), false, "source content stays in the controller");
   const answerId = ask.data.messages.at(-1).id;
   ask.copyAnswer(tap({ messageId: answerId }));
   assert.equal(harness.clipboard.at(-1), "陈远 👋【1】，公开回答");
@@ -387,7 +454,7 @@ async function verifyAsk(harness: Harness) {
   const completed = JSON.stringify(ask.data.messages);
   const requestCount = harness.requests.length;
   const home = harness.wx.switchTab({ url: "/pages/home/index" });
-  assert.equal(home.data.section, "curation", "cached home retains its selected feed");
+  assert.equal(home.data.section, "open-source", "cached home retains its selected feed");
   home.openAbout();
   assert.equal(harness.stack.at(-1)?.route, "pages/about/index");
   harness.wx.switchTab({ url: "/pages/ask/index" });
@@ -406,11 +473,11 @@ async function verifyAsk(harness: Harness) {
   ask.openSource(tap({ messageId: answerId, index: 0 }));
   const citation = harness.stack.at(-1)!;
   assert.equal(citation.data.citation, true);
-  assert.equal(citation.data.title, source.title);
-  assert.equal(citation.data.text, source.content);
+  assert.equal(citation.data.title, citationSource.title);
+  assert.equal(citation.data.text, citationSource.content);
   assert.equal(citation.data.error, "");
   citation.copySource();
-  assert.equal(harness.clipboard.at(-1), source.sourceUrl);
+  assert.equal(harness.clipboard.at(-1), citationSource.sourceUrl);
   harness.wx.navigateBack();
   assert.equal(harness.stack.at(-1), ask);
   assert.equal(ask.data.draft, "返回后保留草稿");
@@ -500,22 +567,91 @@ async function verifyAsk(harness: Harness) {
   assert.equal(ask.data.messages.at(-1).status, "stopped");
   assert.equal(ask.data.messages.at(-1).text, "离开前的部分回答");
   assert.equal(ask.data.draft, "切回后继续编辑");
-  console.log("PASS Ask: UTF-8 / multiline SSE / late sources / done / copy / cached tabs and draft / citation scroll state / stop / retry / new dialogue / HTTP and SSE errors / EOF / tab hide cancellation");
+
+  // 真实信任边界：12 轮、每轮 6 条大来源与 4,000 字回答，每次 setData 都不得超过 1 MiB。
+  harness.setModalConfirm(true);
+  ask.newConversation();
+  ask.onInput({ detail: { value: "保留的压力测试草稿" } });
+  harness.resetPatches();
+  const rounds = 12;
+  const contents = "来源正文".repeat(500); // 4,000 characters per source
+  const answer = "长回答【1】【2】【3】【4】【5】【6】".repeat(200).slice(0, 4000);
+  for (let round = 0; round < rounds; round++) {
+    ask.onInput({ detail: { value: `第 ${round + 1} 个压力测试问题` } });
+    ask.send();
+    // send clears the draft; keep editing mid-stream to prove the composer survives long rendering.
+    ask.onInput({ detail: { value: `草稿 ${round + 1}` } });
+    request = await nextRequest(harness, "/api/ask");
+    const sources = Array.from({ length: 6 }, (_, index) => source(`来源 ${round}-${index}`, `${contents}${index}`));
+    // Sources arrive before and after text in alternating rounds; both must enable inline refs.
+    if (round % 2 === 0) harness.chunk(request, `event: sources\ndata: ${JSON.stringify({ sources })}\n\n`);
+    for (let offset = 0; offset < answer.length; offset += 100) harness.chunk(request, `event: text\ndata: ${JSON.stringify({ delta: answer.slice(offset, offset + 100) })}\n\n`);
+    if (round % 2 === 1) harness.chunk(request, `event: sources\ndata: ${JSON.stringify({ sources })}\n\n`);
+    harness.chunk(request, "event: done\ndata: {}\n\n");
+    await settled(() => !ask.data.streaming, `Ask stress round ${round + 1}`);
+    assert.equal(ask.data.messages.at(-1).status, "complete");
+    assert.equal(ask.data.messages.at(-1).text.length, answer.length);
+    assert.equal(ask.data.messages.at(-1).sourceCount, 6);
+    assert.equal(ask.data.draft, `草稿 ${round + 1}`, "the draft survives each streamed answer");
+  }
+  assert.equal(ask.controller?.state.messages.length, rounds * 2, "the controller keeps the full conversation");
+  assert(ask.data.messages.length > 0 && ask.data.messages.length <= 20, "the rendered history respects count and byte budgets");
+  assert.equal(ask.data.hiddenCount, rounds * 2 - ask.data.messages.length, "earlier history is reachable behind the explicit control");
+  assert.equal(JSON.stringify(ask.data).includes(contents), false, "page data must never carry source content");
+  ask.onInput({ detail: { value: "保留的压力测试草稿" } });
+  assert.equal(ask.data.draft, "保留的压力测试草稿");
+  const largestPatch = Math.max(...harness.patches.map((patch) => patch.bytes));
+  assert(largestPatch <= setDataLimit, `setData exceeded 1 MiB: ${largestPatch}`);
+  assert(harness.patches.some((patch) => patch.keys.some((key) => key.startsWith("messages["))), "Ask must patch answer fields by path");
+  let previousHidden = ask.data.hiddenCount;
+  let olderPages = 0;
+  while (ask.data.hiddenCount > 0) {
+    ask.loadEarlier();
+    assert(ask.data.hiddenCount < previousHidden, "older-page navigation must make progress");
+    assert(ask.data.messages.length <= 20, "earlier pages remain bounded");
+    previousHidden = ask.data.hiddenCount;
+    assert(++olderPages <= rounds * 2, "older history remains reachable");
+  }
+  assert.equal(ask.data.messages[0].id, ask.controller.state.messages[0].id);
+  ask.returnLatest();
+  assert(ask.data.messages.length > 0 && ask.data.messages.length <= 20);
+  assert.equal(ask.data.messages.at(-1).id, ask.controller.state.messages.at(-1).id);
+  assert.equal(ask.data.hiddenCount, rounds * 2 - ask.data.messages.length);
+  assert(Math.max(...harness.patches.map((patch) => patch.bytes)) <= setDataLimit, "history navigation must also respect the payload bound");
+  ask.onInput({ detail: { value: "草稿仍在" } });
+  harness.wx.switchTab({ url: "/pages/home/index" });
+  harness.wx.switchTab({ url: "/pages/ask/index" });
+  assert.equal(ask.data.draft, "草稿仍在");
+  assert.equal(ask.visible, true);
+  console.log("PASS Ask: UTF-8 / multiline SSE / late sources / done / copy / cached tabs and draft / citation scroll state / stop / retry / new dialogue / HTTP and SSE errors / EOF / tab hide cancellation / 12-round bounded rendering under 1 MiB");
 }
 
 async function verifyPortfolio(harness: Harness) {
   const page = harness.wx.switchTab({ url: "/pages/portfolio/index" });
-  const request = await nextRequest(harness, "/api/portfolio");
+  let request = await nextRequest(harness, "/api/portfolio");
   assert.equal(new URL(request.options.url).origin, portfolio);
   harness.respond(request, { items: ["layout-compositions", "muse", "design-engineer-tools", "personal-sites"].map((id) => ({ id, name: id, summary: "公开作品集", date: "2026-10-18", dateLabel: "2026", cover: "" })) });
   await settled(() => !page.data.loading && JSON.stringify(page.data).includes("layout-compositions"), "portfolio products");
   page.openProduct(tap({ id: "layout-compositions" }));
   const collection = harness.stack.at(-1)!;
+  assert.equal(collection.route, "pages/collection/index");
+  assert.equal(collection.data.view, "index", "layouts open on the category shelf");
   let collectionRequest = await nextRequest(harness, "/api/portfolio/layouts");
   assert.equal(new URL(collectionRequest.options.url).origin, portfolio);
   assert.equal(new URL(collectionRequest.options.url).searchParams.get("limit"), "24");
   harness.respond(collectionRequest, collectionPage(["one", "two"], true));
   await settled(() => collection.data.loaded && !collection.data.loading, "portfolio collection");
+  assert.equal(collection.data.shelf.length, 1);
+  assert.equal(collection.data.shelfTotal, 3);
+  // The shelf and unfiltered grid share the first page; browsing reuses it without a request.
+  const beforeBrowse = harness.requests.length;
+  collection.browseAll();
+  assert.equal(collection.data.view, "grid");
+  await settled(() => collection.data.items.length === 2, "collection browse all");
+  assert.equal(harness.requests.length, beforeBrowse, "browse all reuses the unfiltered page");
+  const firstRow = collection.data.items[0];
+  assert.deepEqual(Object.keys(firstRow).sort(), ["author", "category", "id", "thumbnail", "title", "topic", "video"], "list rows strip text and media");
+  assert.equal(JSON.stringify(collection.data).includes("公开作品说明"), false, "work bodies stay in the controller");
   collection.onReachBottom();
   collectionRequest = await nextRequest(harness, "/api/portfolio/layouts");
   assert.equal(new URL(collectionRequest.options.url).searchParams.get("offset"), "2");
@@ -556,7 +692,8 @@ async function verifyPortfolio(harness: Harness) {
   assert.equal(detail.data.failedMedia.image, true);
   detail.retryMedia(tap({ id: "image" }));
   assert.equal(detail.data.failedMedia.image, false);
-  assert.equal(detail.data.readingIndex, 0);
+  assert.equal(detail.data.readingIndex, 0, "the whole filtered loaded set is handed off");
+  assert.equal(detail.data.readingStart, 0);
   assert.equal(detail.data.readingCount, 3);
   const depth = harness.stack.length;
   let requestCount = harness.requests.length;
@@ -582,6 +719,7 @@ async function verifyPortfolio(harness: Harness) {
   await settled(() => !detail.data.loading && detail.data.item?.id === "three", "previous work");
   assert.equal(harness.stack.length, depth, "adjacent reading must reuse the same page");
   assert.equal(harness.stack.at(-1), detail);
+  assert.deepEqual(harness.scrolls.at(-1), 0, "adjacent reading scrolls the reused page to the top");
   harness.wx.navigateBack();
   assert.equal(harness.stack.at(-1), collection);
   assert.equal(collection.data.draft, "排版");
@@ -593,6 +731,7 @@ async function verifyPortfolio(harness: Harness) {
 
   page.openProduct(tap({ id: "muse" }));
   const muse = harness.stack.at(-1)!;
+  assert.equal(muse.data.view, "grid", "muse opens directly in the image grid");
   collectionRequest = await nextRequest(harness, "/api/portfolio/muse");
   harness.respond(collectionRequest, collectionPage(["muse-one"]));
   await settled(() => muse.data.loaded && !muse.data.loading, "muse collection");
@@ -622,22 +761,39 @@ async function verifyPortfolio(harness: Harness) {
   harness.wx.navigateBack();
 
   page.openProduct(tap({ id: "design-engineer-tools" }));
-  const toolsRequest = await nextRequest(harness, "/api/portfolio/tools");
-  harness.respond(toolsRequest, { categories: [{ id: "public", name: "公开工具", tools: [{ name: "设计工具", url: "https://example.com/tool", icon: "" }] }] });
-  await settled(() => !page.data.loading && page.data.categories.length > 0, "portfolio tools");
-  page.copyUrl(tap({ url: page.data.categories[0].tools[0].url }));
+  const tools = harness.stack.at(-1)!;
+  assert.equal(tools.route, "pages/project/index");
+  assert.equal(tools.data.kind, "tools");
+  request = await nextRequest(harness, "/api/portfolio/tools");
+  harness.respond(request, { categories: [{ id: "public", name: "公开工具", tools: [{ name: "设计工具", url: "https://example.com/tool", icon: "" }] }] });
+  await settled(() => !tools.data.loading && tools.data.categories.length > 0, "project tools");
+  tools.copyUrl(tap({ url: tools.data.categories[0].tools[0].url }));
   assert.equal(harness.clipboard.at(-1), "https://example.com/tool");
-  page.backToProducts();
+  harness.wx.navigateBack();
+  assert.equal(harness.stack.at(-1), page, "project uses native back to the product index");
+
   page.openProduct(tap({ id: "personal-sites" }));
-  const siteRequest = await nextRequest(harness, "/api/portfolio/site");
-  harness.respond(siteRequest, { video: "https://media.example.com/public.mp4", poster: "https://images.example.com/poster.jpg", website: site, description: "公开个人网站" });
-  await settled(() => !page.data.loading && Boolean(page.data.site), "portfolio site");
-  assert.equal(page.data.site.website, site);
-  page.videoFailed();
-  assert.equal(page.data.videoFailed, true);
-  page.retryVideo();
-  assert.equal(page.data.videoFailed, false);
-  console.log("PASS portfolio: four products / layouts and muse / pagination / search and filters / adjacent reading and request cancellation / cold work detail / image preview and retry / source copy / tools / site");
+  const sitePage = harness.stack.at(-1)!;
+  assert.equal(sitePage.route, "pages/project/index");
+  assert.equal(sitePage.data.kind, "site");
+  request = await nextRequest(harness, "/api/portfolio/site");
+  harness.respond(request, { video: "https://media.example.com/public.mp4", poster: "https://images.example.com/poster.jpg", website: site, description: "公开个人网站" });
+  await settled(() => !sitePage.data.loading && Boolean(sitePage.data.site), "project site");
+  assert.equal(sitePage.data.site.website, site);
+  sitePage.videoFailed();
+  assert.equal(sitePage.data.videoFailed, true);
+  sitePage.retryVideo();
+  assert.equal(sitePage.data.videoFailed, false);
+  harness.wx.navigateBack();
+
+  const invalid = harness.wx.navigateTo({ url: "/pages/project/index?kind=other" });
+  await settled(() => invalid.data.invalid, "invalid project kind");
+  requestCount = harness.requests.length;
+  invalid.loadContent();
+  assert.equal(harness.requests.length, requestCount, "invalid project kinds never request");
+  harness.wx.navigateBack();
+  assert.equal(harness.stack.at(-1), page);
+  console.log("PASS portfolio: four products / shelf and grid / pagination / search and filters / whole-set handoff and cancellation / cold work detail / image preview and retry / source copy / project tools and site / native back");
 }
 
 export async function verifyAppService() {
@@ -645,7 +801,7 @@ export async function verifyAppService() {
   const harness = createAppService();
   try {
     harness.loadAll();
-    console.log("PASS seven page bundles registered; shared CommonJS runtime initialized once without browser globals");
+    console.log("PASS eight page bundles registered; shared CommonJS runtime initialized once without browser globals");
     await verifyHome(harness);
     await verifyAsk(harness);
     await verifyPortfolio(harness);

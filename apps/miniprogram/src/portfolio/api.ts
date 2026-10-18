@@ -1,8 +1,13 @@
 import { Effect, PORTFOLIO_ORIGIN, Schema, request } from "../lib/runtime";
 
 export type Collection = "layouts" | "muse";
-export const workReadingLimit = 120;
+export type Project = "tools" | "site";
 export const collectionTitle = (collection: Collection) => collection === "layouts" ? "布局参考" : "灵感集";
+export const projectTitle = (project: Project) => project === "tools" ? "设计工程工具" : "个人网站";
+export const projectPath = (project: Project) => `/pages/project/index?kind=${project}`;
+export function projectKind(value: string | undefined): Project | undefined {
+  return value === "tools" || value === "site" ? value : undefined;
+}
 export const layoutAttribution = "图鉴改编自 nevertoday/350-layout-compositions · CC BY 4.0";
 
 export const Product = Schema.Struct({
@@ -38,6 +43,20 @@ export const Work = Schema.Struct({
   media: Schema.Array(Media),
 });
 export type Work = typeof Work.Type;
+// Collection lists only need display fields; text/media stay in the controller for the detail read.
+export interface CollectionWork {
+  id: string;
+  title: string;
+  category: string;
+  topic: string;
+  author: string;
+  thumbnail: string;
+  video: boolean;
+}
+export const collectionWork = (work: Work): CollectionWork => ({
+  id: work.id, title: work.title, category: work.category, topic: work.topic,
+  author: work.author, thumbnail: work.thumbnail, video: work.media[0]?.kind === "video",
+});
 export const CollectionPage = Schema.Struct({
   items: Schema.Array(Work),
   total: Schema.Natural,
@@ -101,13 +120,15 @@ export interface CollectionState {
   error: string;
   attribution: string;
   filters: Filters;
+  // Increments only when the controller replaces the list (filters or non-append load).
+  listRevision: number;
 }
 
 export function createCollection(collection: Collection, onChange: (state: CollectionState) => void) {
   let state: CollectionState = {
     items: [], categories: [], topics: [], total: 0, hasMore: true,
     loading: false, loaded: false, error: "", attribution: "",
-    filters: { q: "", cat: "", theme: "" },
+    filters: { q: "", cat: "", theme: "" }, listRevision: 0,
   };
   let offset = 0;
   let generation = 0;
@@ -124,6 +145,7 @@ export function createCollection(collection: Collection, onChange: (state: Colle
       update({
         filters: normalizeFilters(collection, filters), items: [], total: 0,
         hasMore: true, loading: false, loaded: false, error: "",
+        listRevision: state.listRevision + 1,
       });
     },
     load: (mode: "initial" | "more" | "refresh" = "initial") => Effect.gen(function* () {
@@ -149,6 +171,7 @@ export function createCollection(collection: Collection, onChange: (state: Colle
               items, total: page.total, hasMore: page.hasMore && page.items.length > 0,
               categories: [...page.categories], topics: [...page.topics],
               attribution: page.attribution, loaded: true,
+              listRevision: mode === "more" ? state.listRevision : state.listRevision + 1,
             });
           },
         }),
