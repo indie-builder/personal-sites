@@ -1,9 +1,8 @@
 import type { Browser } from "@e2e-dev/web";
-import type { JsonValue } from "e2e";
-import type { AskSource } from "../lib/ask-types.ts";
 import { expect, test } from "./helpers/loader-key.ts";
 import { openAssistant } from "./helpers/assistant.ts";
 import { emulateReducedMotion } from "./helpers/reduced-motion.ts";
+import { emitAsk, installEmitAskMock } from "./helpers/ask-stream.ts";
 
 // browser.evaluate 必须返回 JSON；页面内定时器复现 waitForTimeout 的固定静置窗口，
 // 供「这段时间内不再发生过渡/动画」的负向断言使用。
@@ -16,33 +15,14 @@ function settle(browser: Browser, milliseconds: number) {
 // 键盘激活（Enter，合成 click detail 为 0）直接到达开合终态：本次切换零过渡事件；
 // 指针开合仍走 chevron 旋转与引用淡入过渡。
 test("sources disclosure toggles instantly from the keyboard and transitions from the mouse", async ({ app, screen, browser }) => {
-  await browser.addInitScript(() => {
-    const originalFetch = window.fetch.bind(window);
-    const controls = window as typeof window & { emitAsk: (event: string, data: unknown) => void };
-    window.fetch = (input, init) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (!url.endsWith("/api/ask")) return originalFetch(input, init);
-      return Promise.resolve(new Response(new ReadableStream({
-        start(controller) {
-          controls.emitAsk = (event, data) => {
-            controller.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-            if (event === "done") controller.close();
-          };
-        },
-      }), { headers: { "Content-Type": "text/event-stream" } }));
-    };
-  });
-  const emit = (event: string, data: JsonValue) => browser.evaluate(({ event, data }: { event: string; data: JsonValue }) => {
-    (window as typeof window & { emitAsk: (event: string, data: unknown) => void }).emitAsk(event, data);
-    return null;
-  }, { event, data });
+  await installEmitAskMock(browser);
 
   const dialog = await openAssistant(app, screen, browser);
   await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("请整理公开资料");
   await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-  await emit("text", { delta: "root = TextContent(\"结论已整理\")" });
-  await emit("sources", { sources: [{ id: "source-1", title: "测试公开来源", sourceUrl: "/curation/source" }] });
-  await emit("done", {});
+  await emitAsk(browser, "text", { delta: "root = TextContent(\"结论已整理\")" });
+  await emitAsk(browser, "sources", { sources: [{ id: "source-1", title: "测试公开来源", sourceUrl: "/curation/source" }] });
+  await emitAsk(browser, "done", {});
   const summary = browser.locator('[role="dialog"] summary').filter({ hasText: "参考资料 · 1 篇" });
   await expect(summary).toBeVisible();
   const details = browser.locator('xpath=//*[@role="dialog"]//summary[contains(normalize-space(.), "参考资料 · 1 篇")]/ancestor::details[1]');
@@ -239,106 +219,6 @@ test("Ask can return to the latest message after reading earlier messages", asyn
   })).toBeLessThan(2);
 });
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 812 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
-  test(`Ask renders patched KaTeX with matching styles at ${viewport.width}px`, async ({ app, screen, browser }) => {
-    await browser.setViewport(viewport);
-    await emulateReducedMotion(browser);
-    await installEmitAskMock(browser);
-    const dialog = await openAssistant(app, screen, browser, viewport.width);
-    await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("请展示公开公式示例");
-    await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-    await expect(dialog.getByRole("button", "停止生成", { exact: false })).toBeVisible();
-    const markdown = "行内公式：$$x_i^2$$。\n\n$$\n\\frac{a_1+b^2}{c_3}\n$$";
-    await emitAsk(browser, "text", { delta: `root = TextContent(${JSON.stringify(markdown)})` });
-    await emitAsk(browser, "done", {});
-    await expect(browser.locator('[role="dialog"] .katex')).toHaveCount(2);
-    await expect(browser.locator('[role="dialog"] .katex-display')).toHaveCount(1);
-    await expect(browser.locator('[role="dialog"] .katex-error')).toHaveCount(0);
-    await expect.poll(() => browser.evaluate(async () => {
-      await document.fonts.ready;
-      const formulas = [...document.querySelectorAll<HTMLElement>('[role="dialog"] .katex')];
-      const display = document.querySelector('[role="dialog"] .katex-display');
-      const mathml = document.querySelector('[role="dialog"] .katex-mathml');
-      const panel = document.querySelector('[role="dialog"]');
-      return formulas.length === 2 && Boolean(display && mathml && panel)
-        && formulas.every((formula) => getComputedStyle(formula).fontFamily.includes("KaTeX_Main")
-          && formula.getBoundingClientRect().height > 0)
-        && getComputedStyle(display!).display === "block"
-        && getComputedStyle(mathml!).position === "absolute"
-        && [...document.fonts].some((font) => font.family === "KaTeX_Main" && font.status === "loaded")
-        && panel!.scrollWidth <= panel!.clientWidth;
-    })).toBe(true);
-  });
-
-  test(`Ask streams default OpenUI components before citations at ${viewport.width}px`, async ({ app, screen, browser }) => {
-    await browser.setViewport({ width: viewport.width, height: viewport.height });
-    // reduce 补丁只改 matchMedia 现读，不模拟 CSS 媒体查询：ask-chat.module.css 的 reduce 块
-    // 还关闭引用 chevron、citations 等过渡。本组用例保留的已核对依赖是状态现读与引用开合的
-    // 最终显隐断言，不声称完整 prefers-reduced-motion 等价。
-    await emulateReducedMotion(browser);
-    await browser.addInitScript(() => {
-      const originalFetch = window.fetch.bind(window);
-      const controls = window as typeof window & { emitAsk: (event: string, data: unknown) => void };
-      window.fetch = (input, init) => {
-        const url = input instanceof Request ? input.url : String(input);
-        if (!url.endsWith("/api/ask")) return originalFetch(input, init);
-        return Promise.resolve(new Response(new ReadableStream({
-          start(controller) {
-            controls.emitAsk = (event, data) => {
-              controller.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-              if (event === "done") controller.close();
-            };
-          },
-        }), { headers: { "Content-Type": "text/event-stream" } }));
-      };
-    });
-    const dialog = await openAssistant(app, screen, browser, viewport.width);
-    await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("请整理公开资料");
-    await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-    await expect(dialog.getByRole("button", "停止生成", { exact: false })).toBeVisible();
-    const emit = (event: string, data: JsonValue) => browser.evaluate(({ event, data }: { event: string; data: JsonValue }) => {
-      (window as typeof window & { emitAsk: (event: string, data: unknown) => void }).emitAsk(event, data);
-      return null;
-    }, { event, data });
-    await emit("text", { delta: `root = Stack([TextContent(${JSON.stringify("## 资料概览\n\n先看**工程实践**。\n\n- 连续阅读\n- 来源可追溯\n\n```ts\nconst ready = true;\n```")}), Tabs([TabItem("overview", "摘要", [TextContent("先看概览")]), TabItem("details", "详细内容", [TextContent("这里是详细说明")])])` });
-    await expect(dialog.getByRole("heading", "资料概览", { exact: false })).toBeVisible();
-    await expect(browser.locator("[role=\"dialog\"] strong")).toHaveText("工程实践");
-    // 框架没有 toHaveCSS：两处样式断言轮询读 computed style。列表断言复现旧版
-    // dialog.locator(".ask-openui ul") 的严格单匹配；段落旧版即 .first()，保持首个。
-    await expect.poll(() => browser.evaluate(() => {
-      const lists = document.querySelectorAll('[role="dialog"] .ask-openui ul');
-      if (lists.length !== 1) throw new Error(`expected exactly one openui list, found ${lists.length}`);
-      return getComputedStyle(lists[0]).listStyleType;
-    })).toBe("disc");
-    await expect.poll(() => browser.evaluate(() => {
-      const paragraph = document.querySelector('[role="dialog"] .ask-openui p');
-      return paragraph ? getComputedStyle(paragraph).fontSize : null;
-    })).toBe("13px");
-    await emit("sources", { sources: [{ id: "source-1", title: "测试公开来源", sourceUrl: "/curation/source" }] });
-    await expect(dialog.getByRole("list", "回答来源", { exact: false })).toHaveCount(0);
-    await emit("done", {});
-    await dialog.getByRole("tab", "详细内容", { exact: false }).tap();
-    await expect(dialog.getByText("这里是详细说明", { exact: false })).toBeVisible();
-    const sourcesToggle = browser.locator('[role="dialog"] summary').filter({ hasText: "参考资料 · 1 篇" });
-    await expect(sourcesToggle).toBeVisible();
-    await expect(dialog.getByRole("list", "回答来源", { exact: false })).toBeHidden();
-    await sourcesToggle.tap();
-    await expect(dialog.getByRole("list", "回答来源", { exact: false })).toBeVisible();
-    await sourcesToggle.focus();
-    await browser.keyboard.press("Enter");
-    await expect(dialog.getByRole("list", "回答来源", { exact: false })).toBeHidden();
-    expect(await browser.evaluate(() => {
-      const dialogElement = document.querySelector('[role="dialog"]');
-      return dialogElement ? dialogElement.scrollWidth <= dialogElement.clientWidth : false;
-    })).toBe(true);
-    if (viewport.width <= 900) {
-      await expect.poll(() => browser.evaluate(() => {
-        const input = document.querySelector('[role="dialog"] [aria-label="输入问题"]');
-        return input ? getComputedStyle(input).fontSize : null;
-      })).toBe("16px");
-    }
-  });
-}
 
 test("Ask has no automatically detectable accessibility violations", async ({ app, screen, browser }) => {
   // AxeBuilder 绑定 Playwright Page；注入同版本 axe-core 在页面内跑同一默认规则集，
@@ -353,147 +233,4 @@ test("Ask has no automatically detectable accessibility violations", async ({ ap
     return axe.run('[role="dialog"]').then((results) => results.violations);
   });
   expect(violations).toEqual([]);
-});
-
-function installEmitAskMock(browser: Browser) {
-  return browser.addInitScript(() => {
-    const originalFetch = window.fetch.bind(window);
-    const controls = window as typeof window & { emitAsk: (event: string, data: unknown) => void };
-    window.fetch = (input, init) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (!url.endsWith("/api/ask")) return originalFetch(input, init);
-      return Promise.resolve(new Response(new ReadableStream({
-        start(controller) {
-          controls.emitAsk = (event, data) => {
-            controller.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-            if (event === "done") controller.close();
-          };
-        },
-      }), { headers: { "Content-Type": "text/event-stream" } }));
-    };
-  });
-}
-
-function emitAsk(browser: Browser, event: string, data: JsonValue) {
-  return browser.evaluate(({ event, data }: { event: string; data: JsonValue }) => {
-    (window as typeof window & { emitAsk: (event: string, data: unknown) => void }).emitAsk(event, data);
-    return null;
-  }, { event, data });
-}
-
-const streamedSource = {
-  content: "恢复测试来源正文",
-  id: "source-1",
-  publishedAt: null,
-  scope: "daily",
-  section: null,
-  sourceId: "curation-source",
-  sourceUrl: "/curation/source",
-  title: "恢复测试来源",
-} satisfies AskSource;
-
-test("Ask stop keeps the partial answer and restores a usable composer", async ({ app, screen, browser }) => {
-  await installEmitAskMock(browser);
-  const dialog = await openAssistant(app, screen, browser);
-  await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("请整理公开资料");
-  await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-  await emitAsk(browser, "text", { delta: 'root = TextContent("部分结论先行' });
-  await expect(dialog.getByText("部分结论先行", { exact: false })).toBeVisible();
-
-  await dialog.getByRole("button", "停止生成", { exact: false }).tap();
-  await expect(dialog.getByRole("button", "发送问题", { exact: false })).toBeVisible();
-  await expect(dialog.getByText("已停止生成。", { exact: false })).toBeVisible();
-  await expect(dialog.getByText("部分结论先行", { exact: false })).toBeVisible();
-
-  // 流已取消，enqueue 可能抛错；迟到片段即使送达也不得进入答案。
-  await browser.evaluate(() => {
-    const controls = window as typeof window & { emitAsk?: (event: string, data: unknown) => void };
-    try {
-      controls.emitAsk?.("text", { delta: '！迟到追加不许出现")' });
-    } catch {}
-    return null;
-  });
-  await expect(dialog.getByText("部分结论先行", { exact: false })).toBeVisible();
-  await expect(dialog.getByText("迟到追加不许出现", { exact: false })).not.toBeVisible();
-
-  const input = dialog.getByRole("textbox", "输入问题", { exact: false });
-  await input.fill("换个关键词再问");
-  await expect(dialog.getByRole("button", "发送问题", { exact: false })).toBeEnabled();
-});
-
-test("Ask late delta appends into the answer while the stream is running", async ({ app, screen, browser }) => {
-  await installEmitAskMock(browser);
-  const dialog = await openAssistant(app, screen, browser);
-  await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("公开资料里的检索实践");
-  await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-  await emitAsk(browser, "text", { delta: 'root = TextContent("首段结论先行' });
-  await emitAsk(browser, "text", { delta: '！迟到片段照常上屏")' });
-  await emitAsk(browser, "done", {});
-  await expect(dialog.getByText("首段结论先行！迟到片段照常上屏", { exact: false })).toBeVisible();
-});
-
-test("Ask conversation and unsent draft survive a full reload", async ({ app, screen, browser }) => {
-  await installEmitAskMock(browser);
-  const dialog = await openAssistant(app, screen, browser);
-  await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("会话恢复测试问题");
-  await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-  await emitAsk(browser, "text", { delta: 'root = TextContent("恢复后的回答内容")' });
-  await emitAsk(browser, "sources", { sources: [streamedSource] });
-  await emitAsk(browser, "done", {});
-  await expect(browser.locator('[role="dialog"] summary').filter({ hasText: "参考资料 · 1 篇" })).toBeVisible();
-  const input = dialog.getByRole("textbox", "输入问题", { exact: false });
-  await input.fill("还没发送的草稿");
-
-  await browser.reload();
-  const restored = await openAssistant(app, screen, browser);
-  await expect(restored.getByText("会话恢复测试问题", { exact: false })).toBeVisible();
-  await expect(restored.getByText("恢复后的回答内容", { exact: false })).toBeVisible();
-  await expect(browser.locator('[role="dialog"] summary').filter({ hasText: "参考资料 · 1 篇" })).toBeVisible();
-  await expect(restored.getByRole("textbox", "输入问题", { exact: false })).toHaveValue("还没发送的草稿");
-});
-
-test("Ask stream error offers retry that resends the original question and keeps the draft", async ({ app, screen, browser }) => {
-  const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  let attempt = 0;
-  const requestedQuestions: string[] = [];
-  await browser.route("**/api/ask", async (route) => {
-    attempt += 1;
-    requestedQuestions.push(String(
-      (JSON.parse(route.request.postData ?? "{}") as { question?: unknown }).question ?? "",
-    ));
-    if (attempt === 1) {
-      await route.fulfill({
-        body: sse("text", { delta: 'root = TextContent("公开资料里没有直接答案")' })
-          + sse("error", { message: "回答暂时不可用，请稍后重试。" })
-          + sse("done", {}),
-        contentType: "text/event-stream",
-        status: 200,
-      });
-      return;
-    }
-    await route.fulfill({
-      body: sse("text", { delta: 'root = TextContent("重新整理后的完整回答")' })
-        + sse("sources", { sources: [streamedSource] })
-        + sse("done", {}),
-      contentType: "text/event-stream",
-      status: 200,
-    });
-  });
-
-  const dialog = await openAssistant(app, screen, browser);
-  await dialog.getByRole("textbox", "输入问题", { exact: false }).fill("整理检索实践");
-  await dialog.getByRole("button", "发送问题", { exact: false }).tap();
-  const retry = dialog.getByRole("button", "重新提问", { exact: false });
-  await expect(retry).toBeVisible();
-  await expect(dialog.getByText("回答暂时不可用，请稍后重试。", { exact: false })).toBeVisible();
-
-  const input = dialog.getByRole("textbox", "输入问题", { exact: false });
-  await input.fill("帮我补充工程背景。");
-  await retry.tap();
-  expect(requestedQuestions).toEqual(["整理检索实践", "整理检索实践"]);
-  await expect(dialog.getByText("整理检索实践", { exact: false })).toHaveCount(2);
-  await expect(browser.locator('[role="dialog"] [data-slot="message"]').filter({ hasText: "帮我补充工程背景。" })).toHaveCount(0);
-  await expect(input).toHaveValue("帮我补充工程背景。");
-  await expect(dialog.getByText("重新整理后的完整回答", { exact: false })).toBeVisible();
-  await expect(browser.locator('[role="dialog"] summary').filter({ hasText: "参考资料 · 1 篇" })).toBeVisible();
 });

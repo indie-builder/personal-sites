@@ -7,7 +7,8 @@ import { Deferred, Effect, Fiber } from "effect";
 import { io } from "@site/effect";
 import { stagingDirectory } from "../scripts/build";
 import { compilerProcess } from "../scripts/check-templates";
-import { createAppService, packageFiles, root, routes, verifyPackage } from "../scripts/e2e";
+import { createAppService } from "../scripts/e2e/app-service";
+import { packageFiles, root, routes, verifyPackage } from "../scripts/e2e/package";
 
 // Reuse the repository lint tool's installed parser instead of matching JavaScript text.
 const { parseSync } = createRequire(import.meta.resolve("@shadcn/lint"))("oxc-parser");
