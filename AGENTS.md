@@ -2,7 +2,7 @@
 
 - Prefer the simplest implementation that meets the current need; reuse existing code before adding abstractions or dependencies.
 - This personal project does not require backward compatibility unless requested, including for published APIs and installed clients. Replace old APIs and structures directly and update current callers; preserve data integrity without compatibility layers or dual-version support.
-- Web is the primary product, including desktop and mobile browsers. Native 「陈远小站」 clients in `android/` and `ios/` consume public content GET APIs and `POST /api/ask`; follow each client's README for platform requirements, build commands, and tests.
+- Web is the primary product, including desktop and mobile browsers. Native 「陈远小站」 clients in `android/`, `ios/`, and `apps/miniprogram/` consume public content GET APIs and `POST /api/ask`; follow each client's README for platform requirements and checks. For WeChat development and reference-client UI baselines, read [apps/miniprogram/README.md](apps/miniprogram/README.md) and `apps/miniprogram/DESIGN.md` before implementation.
 
 ## Workspace
 
@@ -16,11 +16,12 @@
 - For issues or specifications, follow `docs/agents/issue-tracker.md` for this repository's GitHub Issues.
 - For issue triage, use the role mapping in `docs/agents/triage-labels.md`.
 - For domain concepts or design decisions, follow `docs/agents/domain.md` to read the root glossary and relevant ADRs.
+- For tool availability, missing credentials, or delegated workspace commands, follow `docs/agents/skills.md` for capability and path checks.
 
 ## Effect
 
 - Effect is the default for TypeScript/JavaScript business I/O and asynchronous orchestration across Web, shared packages, and content pipelines; follow `docs/effect-architecture.md`. Pure transformations and React/platform lifecycles stay native.
-- Return Effects from business functions; execute them only at Next.js, React callbacks/cache allocation, CLI, or test boundaries. Use Effect Schema, bounded concurrency, scopes, and explicit retry policies; keep SDK/Node Promise adapters small.
+- Return Effects from business functions; execute them at TanStack Start server functions/route handlers, React/native lifecycle callbacks, CLI, or test boundaries. Use Effect Schema, bounded concurrency, scopes, and explicit retry policies; keep SDK/Node Promise adapters small.
 - Use the pinned stable Effect version and `@site/effect` I/O adapters. Do not add parallel Promise business APIs, manual worker pools, timeout races, or Promise lock chains.
 
 ## Package Manager and Checks
@@ -50,7 +51,7 @@
 ## Data, Privacy, and Caching
 
 - Read `docs/sensitive-data.md` before touching curation inputs or credentials. Never stage, publish, render, screenshot, or expose `data/sensitive/`, `knowledge/sensitive/`, local credentials, or `tools/smaug/.state/`.
-- Public content comes from approved projections: X/Douyin/GitHub content and the local Ask index use the bundled, runtime-read-only `data/curation.sqlite`; AI news merges bundled `data/ai-news.sqlite` history with Supabase `ai_news_public_items` updates. Never fall back to sensitive local data. Service-role keys never belong in `NEXT_PUBLIC_*` variables.
+- Public content comes from approved projections: X/Douyin/GitHub content and the local Ask index use the bundled, runtime-read-only `data/curation.sqlite`; AI news merges bundled `data/ai-news.sqlite` history with Supabase `ai_news_public_items` updates. Never fall back to sensitive local data. Service-role keys stay server-only and never use a client-exposed build prefix such as `VITE_*`.
 - Keep public curation detail reads CDN-cacheable with per-route `Cache-Control` (`s-maxage=300`, see `apps/web/lib/page-cache.ts`) and loading states. SQLite content changes require rebuilding the public projection and redeploying; page caches do not refresh the bundled data. For cache changes, verify the response `Cache-Control` header and CDN MISS→HIT behavior.
 - Treat `curation:*`, `douyin:*`, `github:starred:*`, `ai-news:sync`, `ai-news:backfill`, `ai-news:archive`, `ai-news:prune`, and `supabase:push` as data operations, not validation commands. Follow `docs/supabase-x-sync.md`, `docs/douyin-curation.md`, `docs/github-starred-sync.md`, and `docs/ai-news-sync.md`; run `bun run supabase:push -- --dry-run` before a database write.
 - Run daily Star syncs one at a time and report partial results until the process exits. For AI news, Supabase Cron calls `/api/cron/ai-news` every 5 minutes; GitHub Actions handles daily backfill/manual recovery. Verify actual run results before reporting success.

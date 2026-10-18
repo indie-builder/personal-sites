@@ -1,9 +1,11 @@
-import { copyLink, profile, SITE_ORIGIN } from "../../lib/runtime";
+import { copyLink, profile, readReducedMotion, setReducedMotion, SITE_ORIGIN } from "../../lib/runtime";
 
 Page({
   data: {
     profile,
     careerOpen: false,
+    careerHeight: "0px",
+    reducedMotion: false,
     links: [
       { label: "GitHub", url: "https://github.com/indie-builder" },
       { label: "语雀", url: "https://www.yuque.com/defulat-coder" },
@@ -16,9 +18,57 @@ Page({
     ],
     terms: ["agent.runtime", "human.in.loop", "rag.retrieval", "sse.stream", "TypeScript", "Python", "Java", "Postgres", "Docker", "Kubernetes", "React.js", "Git/GitHub"],
   },
+  _careerToken: 0,
+
+  // Keep the closed receipt mounted so its height never reflows after the first measurement.
+  measureCareer() {
+    const token = ++this._careerToken;
+    const settle = (height: string) => {
+      if (token !== this._careerToken) return;
+      this.setData({ careerHeight: height });
+    };
+    try {
+      wx.createSelectorQuery().in(this).select("#career-receipt").boundingClientRect((rect) => {
+        const measured = rect && !Array.isArray(rect) && Number.isFinite(rect.height) && rect.height > 0;
+        settle(measured ? `${Math.ceil(rect.height)}px` : "auto");
+      }).exec();
+    } catch {
+      // A persistent zero height without a measurable rect would hide the open content.
+      settle("auto");
+    }
+  },
 
   toggleCareer() {
-    this.setData({ careerOpen: !this.data.careerOpen });
+    if (this.data.careerOpen) {
+      this._careerToken += 1;
+      this.setData({ careerOpen: false, careerHeight: "0px" });
+      return;
+    }
+    this.setData({ careerOpen: true });
+    this.measureCareer();
+  },
+
+  onShow() {
+    const reducedMotion = readReducedMotion();
+    if (reducedMotion !== this.data.reducedMotion) this.setData({ reducedMotion });
+    if (this.data.careerOpen) this.measureCareer();
+  },
+
+  onResize() {
+    if (this.data.careerOpen) this.measureCareer();
+  },
+
+  onHide() {
+    this._careerToken += 1;
+  },
+
+  onUnload() {
+    this._careerToken += 1;
+  },
+
+  onReducedMotionChange(event: WechatMiniprogram.SwitchChange) {
+    setReducedMotion(event.detail.value);
+    this.setData({ reducedMotion: readReducedMotion() });
   },
 
   copyProfileLink(event: WechatMiniprogram.TouchEvent) {

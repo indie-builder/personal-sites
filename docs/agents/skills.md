@@ -21,3 +21,13 @@ ln -s ../../.agents/skills/impeccable .pi/skills/impeccable
 `.claude/skills` 的目录软链接已覆盖 impeccable,无需额外建链。
 
 技能文件在本机保持可用;`PRODUCT.md` 的 `impeccable:product-schema` 标记与 `.impeccable/` 评审产物维持跟踪,不受此策略影响。
+
+## 工具与路径核实
+
+引用 skill、CLI、workspace SDK 或环境变量前先核实存在性,再下结论:
+
+- skill:先查当前会话的技能目录与已启用的用户级插件,再查项目 `.agents/skills/<name>/SKILL.md`。项目目录未找到只能说明未在该位置发现;确认安装范围后再建议安装。
+- CLI:用 `command -v <工具>` 和已找到工具的 `--help` 核实入口;CLI 与同名 skill 分别判断。能力发现阶段使用已安装入口,避免 `bunx` 隐式下载安装。
+- workspace SDK:从实际消费它的 workspace 解析包入口并核对该工作区 manifest;用户级插件、CLI 和项目运行时依赖分别报告。
+- 环境变量:先检查当前进程是否设置,再核对项目声明的加载来源;只输出存在性,不输出值或凭据文件内容。未检查的来源标为未核实。
+- 仓库路径:脚本用 `fileURLToPath(import.meta.url)` 或 `new URL("../", import.meta.url)` 计算绝对路径(内容脚本见 `tools/content/scripts/lib/repo-root.mjs`)。委派任务携带绝对 `repo_root` 和 workspace;命令用 `git -C <绝对路径>`、`bun --cwd <绝对路径>` 或绝对文件路径,不依赖持久 cwd。

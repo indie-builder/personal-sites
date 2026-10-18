@@ -1,3 +1,10 @@
+.work-content.motion-enter { animation: work-content-in 160ms var(--ease-out); }
+@keyframes work-content-in { from { opacity: .75; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* Adjacent reading is spatial: next enters from the right, previous from the left, capped at 16px. */
+.work-content.motion-enter.motion-enter-next { animation: work-content-in-next 220ms var(--ease-out); }
+@keyframes work-content-in-next { from { opacity: .75; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+.work-content.motion-enter.motion-enter-prev { animation: work-content-in-prev 220ms var(--ease-out); }
+@keyframes work-content-in-prev { from { opacity: .75; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
 .media-item { margin-bottom: 12px; }
 button.image-button { width: 100%; min-height: 44px; padding: 0; line-height: 0; border-radius: 8px; overflow: hidden; }
 .work-image { width: 100%; height: auto; background: var(--paper); }

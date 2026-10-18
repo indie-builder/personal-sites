@@ -1,4 +1,4 @@
-import { externalUrl, run } from "../../lib/runtime";
+import { externalUrl, readReducedMotion, run } from "../../lib/runtime";
 import {
   collectionTitle, collectionWork, createCollection, type Category, type Collection, type CollectionWork, type Work,
 } from "../../portfolio/api";
@@ -9,6 +9,10 @@ const shelfHeights = [182, 166, 176, 160, 172, 182, 162, 176];
 
 type CategoryView = { id: string; name: string; count: number; number: string; color: string; ink: string; height: number };
 type ViewItem = CollectionWork & { thumbnail: string; video: boolean };
+type LoadMode = "initial" | "more" | "refresh";
+// Appended rows enter from just below; only the first four growth rows get the stagger.
+const ENTER_LIMIT = 4;
+const ENTER_STAGGER = 30;
 
 const shelf = (categories: { id: string; name: string; count: number }[]): CategoryView[] =>
   categories.map((category, index) => ({
@@ -40,12 +44,17 @@ Page({
     error: "",
     attribution: "",
     failedImages: {} as Record<string, boolean>,
+    reducedMotion: false,
+    // Absolute item index -> entrance delay, cleared row by row on animationend.
+    motion: {} as Record<number, { delay: number; token: number; id: string }>,
     invalid: false,
   },
   controller: undefined as ReturnType<typeof createCollection> | undefined,
   loadedCount: 0,
   listRevision: -1,
-  lastMode: "initial" as "initial" | "more" | "refresh",
+  lastMode: "initial" as LoadMode,
+  motionToken: 0,
+  motionLoad: undefined as { token: number; mode: LoadMode } | undefined,
   onLoad(options: Record<string, string | undefined>) {
     if (options.collection !== "layouts" && options.collection !== "muse") {
       this.setData({ invalid: true, error: "集合链接无效，请返回作品集重新打开。" });
@@ -53,10 +62,16 @@ Page({
     }
     const collection = options.collection;
     const title = collectionTitle(collection);
-    this.setData({ collection, title, view: collection === "layouts" ? "index" : "grid" });
+    this.setData({ collection, title, view: collection === "layouts" ? "index" : "grid", reducedMotion: readReducedMotion() });
     wx.setNavigationBarTitle({ title });
     this.controller = createCollection(collection, (state) => this.render(state));
     this.load("initial");
+  },
+  onShow() {
+    const reducedMotion = readReducedMotion();
+    // A preference turned on while away must not be followed by a fresh entrance.
+    if (reducedMotion) this.settleMotion();
+    this.setData({ reducedMotion });
   },
   render(state: ReturnType<typeof createCollection>["state"]) {
     const categories = [{ id: "", name: "全部分类", count: 0 }, ...state.categories];
@@ -78,18 +93,51 @@ Page({
       const item = collectionWork(state.items[index]);
       patch[`items[${index}]`] = { ...item, thumbnail: externalUrl(item.thumbnail) };
     }
+    // Only a successful `more` appends rows: entrance is for actual growth, never initial/refresh/filter.
+    // The per-load token keeps a resolved load from replaying after onHide/onUnload settled it.
+    const load = this.motionLoad;
+    if (!reset && load?.mode === "more" && load.token === this.motionToken && !state.error && !this.data.reducedMotion) {
+      const count = Math.min(ENTER_LIMIT, state.items.length - start);
+      // A single appended row is not a list entrance.
+      if (count > 1) {
+        const motion: Record<number, { delay: number; token: number; id: string }> = {};
+        for (let slot = 0; slot < count; slot += 1) {
+          const index = start + slot;
+          motion[index] = { delay: slot * ENTER_STAGGER, token: load.token, id: state.items[index]!.id };
+        }
+        patch.motion = motion;
+      }
+    }
     // Reset and indexed writes are separate patches so the writes land on the new empty list.
-    if (reset) this.setData({ items: [] });
+    if (reset) { this.settleMotion(); this.setData({ items: [] }); }
     this.setData(patch);
   },
-  onUnload() { this.controller?.dispose(); this.cancel?.(); },
+  onEnterEnd(event: WechatMiniprogram.CustomEvent) {
+    const { index: rowIndex, id, motionToken } = event.currentTarget.dataset;
+    const index = Number(rowIndex);
+    const entry = this.data.motion[index];
+    // Filtering can reuse an index; only this work in this load may complete its entrance.
+    if (!entry || entry.id !== id || entry.token !== Number(motionToken)) return;
+    const motion = { ...this.data.motion };
+    delete motion[index];
+    this.setData({ motion });
+  },
+  onHide() { this.settleMotion(); },
+  onUnload() { this.settleMotion(); this.controller?.dispose(); this.cancel?.(); },
+  // Leaving the page or rebuilding the grid clears any pending entrance; rows remount statically instead of replaying.
+  settleMotion() {
+    this.motionLoad = undefined;
+    this.motionToken += 1;
+    if (Object.keys(this.data.motion).length) this.setData({ motion: {} });
+  },
   onPullDownRefresh() { this.load("refresh"); },
   onReachBottom() {
     if (this.data.view === "grid" && this.data.loaded && this.data.hasMore && !this.data.error) this.load("more");
   },
-  load(mode: "initial" | "more" | "refresh") {
+  load(mode: LoadMode) {
     if (!this.controller || this.controller.state.loading) { wx.stopPullDownRefresh(); return; }
     this.lastMode = mode;
+    this.motionLoad = { token: ++this.motionToken, mode };
     this.cancel = run(this.controller.load(mode), () => {
       // A successful load clears failure flags; images may load again.
       if (!this.controller?.state.error) this.setData({ failedImages: {} });
@@ -124,7 +172,7 @@ Page({
     if (category) this.changeFilters({ q: "", cat: category.id, theme: "" });
   },
   // The shelf and the full grid share the unfiltered page, so browsing all reuses it.
-  browseAll() { this.setData({ view: "grid" }); },
+  browseAll() { this.settleMotion(); this.setData({ view: "grid" }); },
   showIndex() { this.changeFilters({ q: "", cat: "", theme: "" }); },
   changeFilters(filters: { q: string; cat: string; theme: string }) {
     this.cancel?.();

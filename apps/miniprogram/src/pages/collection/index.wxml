@@ -1,11 +1,11 @@
-<view class="page collection-page">
+<view class="page collection-page {{reducedMotion ? 'motion-reduced' : ''}}">
   <block wx:if="{{!invalid}}">
     <block wx:if="{{view === 'index'}}">
       <view class="shelf-heading">从一本书开始</view>
       <view class="muted shelf-intro">{{shelf.length}} 个分类，按主题翻阅排版图鉴。</view>
       <view wx:if="{{shelf.length}}" class="shelf">
         <view class="shelf-row">
-          <button wx:for="{{shelf}}" wx:key="id" class="book" style="background: {{item.color}}; color: {{item.ink}}; min-height: {{item.height}}px" data-id="{{item.id}}" bindtap="openCategory" aria-label="{{item.name}}，{{item.count}} 张图鉴">
+          <button wx:for="{{shelf}}" wx:key="id" class="book motion-control" hover-class="motion-press" hover-start-time="0" hover-stay-time="60" hover-stop-propagation="{{true}}" style="background: {{item.color}}; color: {{item.ink}}; min-height: {{item.height}}px" data-id="{{item.id}}" bindtap="openCategory" aria-label="{{item.name}}，{{item.count}} 张图鉴">
             <text class="book-number">{{item.number}}</text>
             <text class="book-name">{{item.name}}</text>
             <text class="book-count">{{item.count}} 张</text>
@@ -41,7 +41,7 @@
       </view>
       <view wx:if="{{loaded}}" class="meta result-count">{{total}} 件作品 · 已显示 {{items.length}} 件</view>
       <view class="work-grid">
-        <button wx:for="{{items}}" wx:key="id" class="work-card" data-id="{{item.id}}" bindtap="openWork" aria-label="{{'阅读作品：' + item.title}}">
+        <button wx:for="{{items}}" wx:for-index="item_index" wx:key="id" class="work-card motion-control {{motion[item_index] ? 'motion-enter' : ''}}" style="{{motion[item_index] ? 'animation-delay: ' + motion[item_index].delay + 'ms' : ''}}" data-id="{{item.id}}" data-index="{{item_index}}" data-motion-token="{{motion[item_index].token}}" bindanimationend="onEnterEnd" bindtap="openWork" hover-class="motion-press" hover-start-time="0" hover-stay-time="60" hover-stop-propagation="{{true}}" aria-label="{{'阅读作品：' + item.title}}">
           <view class="work-thumb-wrap {{collection === 'layouts' ? 'is-layout' : 'is-muse'}}">
             <image wx:if="{{item.thumbnail && !failedImages[item.id]}}" class="work-thumb" src="{{item.thumbnail}}" mode="{{collection === 'layouts' ? 'aspectFit' : 'aspectFill'}}" lazy-load data-id="{{item.id}}" binderror="imageFailed" aria-hidden="true" />
             <view wx:else class="image-placeholder meta">暂无预览</view>

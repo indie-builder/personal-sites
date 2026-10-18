@@ -6,6 +6,10 @@ button.book {
   display: flex; flex-direction: column; align-items: center; flex: 0 0 calc((100% - 30px) / 4); min-width: 0;
   padding: 10px 6px; border-radius: 3px 5px 2px 1px; text-align: center; line-height: 1.4;
 }
+button.book.motion-control { transform-origin: center bottom; transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out); }
+button.book.motion-control.motion-press { transform: translateY(-6px) rotate(-2deg); opacity: .94; }
+.motion-reduced button.book.motion-control.motion-press { transform: none; }
+@media (prefers-reduced-motion: reduce) { button.book.motion-control.motion-press { transform: none; } }
 .book-number { font-size: 10px; font-weight: 500; opacity: .8; }
 .book-name { margin-top: 12px; width: 1em; font-size: 15px; line-height: 1.25; font-weight: 600; word-break: break-all; }
 .book-count { margin-top: auto; padding-top: 10px; font-size: 10px; font-weight: 500; }
@@ -34,6 +38,9 @@ button.work-card { display: block; width: 100%; min-height: 44px; padding: 0; te
 .video-badge { position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: rgba(0, 0, 0, .65); border-radius: 50%; color: #fff; font-size: 10px; }
 .work-title { display: -webkit-box; margin-top: 8px; overflow: hidden; font-size: 15px; line-height: 1.6; font-weight: 500; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .work-meta { margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* Appended rows only: 220ms ease-out entrance; the animation ends at full opacity with no transform. */
+.motion-enter { animation: work-enter 220ms var(--ease-out) backwards; }
+@keyframes work-enter { from { opacity: .75; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .more-button { margin-top: 24px; width: 100%; }
 .retry-button { margin: 12px auto 0; width: fit-content; }
 .attribution { padding-top: 28px; }

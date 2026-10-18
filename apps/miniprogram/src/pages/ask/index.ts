@@ -1,4 +1,4 @@
-import { createAsk, markdownParts, run, scopes, type AskMessage, type AskScope, type AskState, type MarkdownBlock } from "../../lib/runtime";
+import { createAsk, markdownParts, readReducedMotion, run, scopes, type AskMessage, type AskScope, type AskState, type MarkdownBlock } from "../../lib/runtime";
 
 const examples: { question: string; scope: AskScope }[] = [
   { question: "介绍一下陈远", scope: "profile" },
@@ -94,6 +94,7 @@ Page({
     scrollTarget: "",
     screenHeight: 0,
     keyboardOpen: false,
+    reducedMotion: false,
   },
   controller: undefined as ReturnType<typeof createAsk> | undefined,
   cancel: undefined as (() => void) | undefined,
@@ -119,6 +120,8 @@ Page({
   onShow() {
     this.visible = true;
     this.readWindow();
+    const reducedMotion = readReducedMotion();
+    if (reducedMotion !== this.data.reducedMotion) this.setData({ reducedMotion });
   },
 
   onReady() {
@@ -250,6 +253,11 @@ Page({
 
   resetMeasurement() {
     this.measuredHeight = 0;
+  },
+
+  handleSubmit() {
+    if (this.data.streaming) this.stop();
+    else this.send();
   },
 
   send() {

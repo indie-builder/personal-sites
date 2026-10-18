@@ -8,6 +8,11 @@
 button.career-toggle { display: flex; width: 100%; min-height: 56px; gap: 12px; align-items: center; padding: 10px 0; text-align: left; border-radius: 0; font-size: 14px; font-weight: 500; }
 .career-toggle .meta { font-size: 12px; font-weight: 400; }
 .career-toggle-action { margin-left: auto; font-size: 12px; font-weight: 400; }
+.career-chevron { width: 7px; height: 7px; flex-shrink: 0; border-right: 1px solid var(--muted); border-bottom: 1px solid var(--muted); transform: rotate(45deg); transition: transform 160ms var(--ease-out); }
+.career-chevron.is-open { transform: rotate(225deg); }
+/* Height is the accordion's only layout cost; 200ms keeps it cheap and interruptible. */
+.career-clip { overflow: hidden; opacity: 0; transition: height 200ms var(--ease-out), opacity 160ms var(--ease-out); }
+.career-clip.is-open { opacity: 1; }
 .career-receipt { padding: 24px 0; border-bottom: 1px solid var(--line); }
 .section-title { display: block; font-size: 18px; font-weight: 600; line-height: 1.5; }
 .career-row { padding: 12px 0; }
@@ -21,4 +26,9 @@ button.career-toggle { display: flex; width: 100%; min-height: 56px; gap: 12px; 
 .bio-paragraph { display: block; margin-bottom: 16px; }
 .technical-terms { display: flex; flex-wrap: wrap; column-gap: 24px; row-gap: 18px; padding: 20px 0 28px; }
 .technical-term { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.6; }
+.motion-setting { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; }
+.motion-setting-label { font-size: 14px; }
 .website-link { display: table; margin-top: 16px; padding-left: 0; color: var(--muted); }
+.motion-reduced .career-clip { transition: none; }
+.motion-reduced .career-chevron { transition: none; }
+@media (prefers-reduced-motion: reduce) { .career-clip, .career-chevron { transition: none; } }

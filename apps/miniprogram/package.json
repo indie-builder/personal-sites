@@ -8,6 +8,7 @@
     "lint": "oxlint --deny-warnings src scripts tests",
     "test": "bun run build && bun test tests/",
     "test:e2e": "bun scripts/e2e.ts",
+    "test:simulator": "bun scripts/simulator-smoke.ts",
     "check:templates": "bun scripts/check-templates.ts"
   },
   "dependencies": {
