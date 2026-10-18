@@ -52,16 +52,18 @@ function main() {
       throw new Error(rootResult.stderr.trim() || "当前目录不是项目 Git 根目录");
     }
 
-    const hookPath = path.join(args.repo, ".githooks", "pre-push");
-    if (!existsSync(hookPath)) {
-      if (args.ifPresent) {
-        skip("未找到 .githooks/pre-push");
-        return;
+    for (const hook of ["pre-commit", "pre-push"]) {
+      const hookPath = path.join(args.repo, ".githooks", hook);
+      if (!existsSync(hookPath)) {
+        if (args.ifPresent) {
+          skip(`未找到 .githooks/${hook}`);
+          return;
+        }
+        throw new Error(`未找到 .githooks/${hook}`);
       }
-      throw new Error("未找到 .githooks/pre-push");
+      chmodSync(hookPath, 0o755);
+      accessSync(hookPath, constants.X_OK);
     }
-    chmodSync(hookPath, 0o755);
-    accessSync(hookPath, constants.X_OK);
 
     const configResult = git(args.repo, ["config", "--local", "core.hooksPath", ".githooks"]);
     if (configResult.status !== 0) {

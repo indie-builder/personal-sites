@@ -148,9 +148,11 @@ test("git safety rejects sensitive raw data that was added and deleted earlier i
   assert.match(result.stderr, /历史对象禁止进入 Git/);
 });
 
-test("hook installer activates the repository pre-push guard for a fresh clone", (t) => {
+test("hook installer activates the repository guards for a fresh clone", (t) => {
   const root = initFixture(t, { gitignore: productionGitignore });
   mkdirSync(path.join(root, ".githooks"), { recursive: true });
+  const commitHookPath = path.join(root, ".githooks", "pre-commit");
+  writeFileSync(commitHookPath, "#!/bin/sh\nprintf 'executed\\n' > .git/pre-commit-ran\n");
   const hookPath = path.join(root, ".githooks", "pre-push");
   writeFileSync(hookPath, "#!/bin/sh\nprintf 'executed\\n' > .git/pre-push-ran\n");
 
@@ -165,6 +167,10 @@ test("hook installer activates the repository pre-push guard for a fresh clone",
     encoding: "utf8",
   }).trim();
   assert.equal(configuredHookPath, ".githooks");
+
+  const commitHookResult = spawnSync(commitHookPath, [], { cwd: root, encoding: "utf8" });
+  assert.equal(commitHookResult.status, 0, commitHookResult.error?.message ?? commitHookResult.stderr);
+  assert.equal(readFileSync(path.join(root, ".git", "pre-commit-ran"), "utf8"), "executed\n");
 
   const hookResult = spawnSync(hookPath, [], { cwd: root, encoding: "utf8" });
   assert.equal(hookResult.status, 0, hookResult.error?.message ?? hookResult.stderr);

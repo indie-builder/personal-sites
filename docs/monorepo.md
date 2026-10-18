@@ -45,6 +45,12 @@ Web 源码直接位于 `apps/web/src/routes/`（TanStack Start 文件路由，�
 
 TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版本（Bun 对 peer 范围不匹配只告警，不再需要 pnpm 的 peer exceptions）。数据操作命令例如 `bun run ai-news:archive`、`bun run curation:sync`、`bun run github:starred:daily` 保留在根目录，转发给内容管道；它们会访问或写入真实数据，不是验证命令，不挂到 Turbo 的 build/test 依赖中。各来源的手动入口与定时调度汇总见[数据同步总览](data-sync.md)。
 
+## Git 提交文件大小
+
+`bun install` 的 `prepare` 会安装 `.githooks`，也可手动执行 `bun run git:hooks:install`。`pre-commit` 先运行 `scripts/check-staged-file-tokens.mjs`，只检查本次暂存变更的文本文件，按 Git 索引中的完整文件字节数 / 4 计算 token；超过 5,000 token（20,000 bytes）即拒绝提交，并输出按职责拆分文件、更新引用和重新暂存的步骤。未暂存、未变更和删除的文件不参与 token 检查。
+
+Git 不记录代理作者身份，因此所有作者维护的文本都受此限制。锁文件、常见生成文件（如 `*.gen.ts`、`*.generated.ts`、`generated/`、`dist/`、`build/`、压缩脚本及 source map）、`vendor/` / `node_modules/` 和二进制资产自动跳过；其他生成或供应商文件可在 `.gitattributes` 中按路径声明 `linguist-generated=true` 或 `linguist-vendored=true`，并一同暂存。现有 Git 隐私与大文件安全检查继续运行。
+
 ## 功能到代码路径
 
 | 要追踪的功能 | 写入或入口 | 读取与界面 |
