@@ -41,7 +41,7 @@
       </view>
       <view wx:if="{{loaded}}" class="meta result-count">{{total}} 件作品 · 已显示 {{items.length}} 件</view>
       <view class="work-grid">
-        <button wx:for="{{items}}" wx:for-index="item_index" wx:key="id" class="work-card motion-control {{motion[item_index] ? 'motion-enter' : ''}}" style="{{motion[item_index] ? 'animation-delay: ' + motion[item_index].delay + 'ms' : ''}}" data-id="{{item.id}}" data-index="{{item_index}}" bindanimationend="onEnterEnd" bindtap="openWork" hover-class="motion-press" hover-start-time="0" hover-stay-time="60" hover-stop-propagation="{{true}}" aria-label="{{'阅读作品：' + item.title}}">
+        <button wx:for="{{items}}" wx:for-index="item_index" wx:key="id" class="work-card motion-control {{motion[item_index] ? 'motion-enter' : ''}}" style="{{motion[item_index] ? 'animation-delay: ' + motion[item_index].delay + 'ms' : ''}}" data-id="{{item.id}}" data-index="{{item_index}}" data-motion-token="{{motion[item_index].token}}" bindanimationend="onEnterEnd" bindtap="openWork" hover-class="motion-press" hover-start-time="0" hover-stay-time="60" hover-stop-propagation="{{true}}" aria-label="{{'阅读作品：' + item.title}}">
           <view class="work-thumb-wrap {{collection === 'layouts' ? 'is-layout' : 'is-muse'}}">
             <image wx:if="{{item.thumbnail && !failedImages[item.id]}}" class="work-thumb" src="{{item.thumbnail}}" mode="{{collection === 'layouts' ? 'aspectFit' : 'aspectFill'}}" lazy-load data-id="{{item.id}}" binderror="imageFailed" aria-hidden="true" />
             <view wx:else class="image-placeholder meta">暂无预览</view>

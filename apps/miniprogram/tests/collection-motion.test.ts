@@ -41,6 +41,7 @@ describe("collection appended-row motion", () => {
     expect(template).toContain('motion[item_index]');
     expect(template).toContain('data-index="{{item_index}}"');
     expect(template).toContain('bindanimationend="onEnterEnd"');
+    expect(template).toContain('data-motion-token="{{motion[item_index].token}}"');
     const styles = readFileSync(path.join(root, "src/pages/collection/index.wxss"), "utf8");
     expect(styles).toContain("translateY(-6px) rotate(-2deg)");
     expect(styles).toContain("transform 160ms var(--ease-out)");
@@ -56,14 +57,37 @@ describe("collection appended-row motion", () => {
     await wait(() => harness.requests.length === 2);
     await respond(harness, page, harness.requests[1]!, collectionPage(["c", "d", "e", "f", "g"], true));
     expect(page.data.items.map((item: { id: string }) => item.id)).toEqual(["a", "b", "c", "d", "e", "f", "g"]);
-    expect(page.data.motion).toEqual({ 2: { delay: 0 }, 3: { delay: 30 }, 4: { delay: 60 }, 5: { delay: 90 } });
-    page.onEnterEnd({ currentTarget: { dataset: { index: 2 } } });
-    expect(page.data.motion).toEqual({ 3: { delay: 30 }, 4: { delay: 60 }, 5: { delay: 90 } });
+    const token = page.motionToken;
+    expect(page.data.motion).toEqual({
+      2: { delay: 0, token, id: "c" }, 3: { delay: 30, token, id: "d" },
+      4: { delay: 60, token, id: "e" }, 5: { delay: 90, token, id: "f" },
+    });
+    page.onEnterEnd({ currentTarget: { dataset: { index: 2, id: "c", motionToken: token } } });
+    expect(Object.keys(page.data.motion)).toEqual(["3", "4", "5"]);
     // Rows outside the bounded four never enter, so their stale events are ignored.
     page.onEnterEnd({ currentTarget: { dataset: { index: 6 } } });
     expect(Object.keys(page.data.motion)).toHaveLength(3);
-    for (const index of [3, 4, 5]) page.onEnterEnd({ currentTarget: { dataset: { index } } });
+    for (const index of [3, 4, 5]) page.onEnterEnd({ currentTarget: { dataset: { index, id: page.data.items[index].id, motionToken: token } } });
     expect(page.data.motion).toEqual({});
+  });
+
+  test("an old animation completion cannot clear a new batch at the same index", async () => {
+    const page = harness.open("/pages/collection/index?collection=muse");
+    await respond(harness, page, harness.requests[0]!, collectionPage(["a", "b"], true));
+    page.loadMore();
+    await respond(harness, page, harness.requests[1]!, collectionPage(["old-c", "old-d"], true));
+    const old = { ...page.data.motion[2] };
+    page.selectCategory({ detail: { value: "1" } });
+    await respond(harness, page, harness.requests[2]!, collectionPage(["x", "y"], true));
+    page.loadMore();
+    await respond(harness, page, harness.requests[3]!, collectionPage(["new-c", "new-d"], true));
+    const current = { ...page.data.motion[2] };
+    page.onEnterEnd({ currentTarget: { dataset: { index: 2, id: "old-c", motionToken: old.token } } });
+    expect(page.data.motion[2]).toEqual(current);
+    page.onEnterEnd({ currentTarget: { dataset: { index: 2, id: "new-c", motionToken: old.token } } });
+    expect(page.data.motion[2]).toEqual(current);
+    page.onEnterEnd({ currentTarget: { dataset: { index: 2, id: "new-c", motionToken: current.token } } });
+    expect(page.data.motion[2]).toBeUndefined();
   });
 
   test("single appended row, initial load, refresh and filter reset never enter", async () => {

@@ -46,7 +46,7 @@ Page({
     failedImages: {} as Record<string, boolean>,
     reducedMotion: false,
     // Absolute item index -> entrance delay, cleared row by row on animationend.
-    motion: {} as Record<number, { delay: number }>,
+    motion: {} as Record<number, { delay: number; token: number; id: string }>,
     invalid: false,
   },
   controller: undefined as ReturnType<typeof createCollection> | undefined,
@@ -100,8 +100,11 @@ Page({
       const count = Math.min(ENTER_LIMIT, state.items.length - start);
       // A single appended row is not a list entrance.
       if (count > 1) {
-        const motion: Record<number, { delay: number }> = {};
-        for (let slot = 0; slot < count; slot += 1) motion[start + slot] = { delay: slot * ENTER_STAGGER };
+        const motion: Record<number, { delay: number; token: number; id: string }> = {};
+        for (let slot = 0; slot < count; slot += 1) {
+          const index = start + slot;
+          motion[index] = { delay: slot * ENTER_STAGGER, token: load.token, id: state.items[index]!.id };
+        }
         patch.motion = motion;
       }
     }
@@ -110,10 +113,11 @@ Page({
     this.setData(patch);
   },
   onEnterEnd(event: WechatMiniprogram.CustomEvent) {
-    // event.currentTarget is the button even if a child finishes a transition first.
-    const index = Number(event.currentTarget.dataset.index);
-    // A stale row from before a reset has no motion entry and is ignored; each row clears itself.
-    if (!(index in this.data.motion)) return;
+    const { index: rowIndex, id, motionToken } = event.currentTarget.dataset;
+    const index = Number(rowIndex);
+    const entry = this.data.motion[index];
+    // Filtering can reuse an index; only this work in this load may complete its entrance.
+    if (!entry || entry.id !== id || entry.token !== Number(motionToken)) return;
     const motion = { ...this.data.motion };
     delete motion[index];
     this.setData({ motion });
