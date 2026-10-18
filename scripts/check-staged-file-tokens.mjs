@@ -15,17 +15,12 @@ function main() {
     maxBuffer: 64 * 1024 * 1024,
     ...options,
   });
-  const changes = git([
-    "diff", "--cached", "--numstat", "-z", "--no-renames", "--diff-filter=ACMT",
-    "--ignore-submodules=all", "--no-ext-diff", "--no-textconv",
-  ]);
-  const files = [];
-  for (const entry of changes.split("\0").filter(Boolean)) {
-    const [, added, , file] = entry.match(/^([^\t]+)\t([^\t]+)\t([\s\S]+)$/);
-    if (added !== "-" && !lockfiles.test(path.posix.basename(file)) && !generatedFiles.test(file)) {
-      files.push(file);
-    }
-  }
+  // numstat infers binaries from worktree attributes and the old blob, so list names instead.
+  const files = git([
+    "diff", "--cached", "--name-only", "-z", "--no-renames", "--diff-filter=ACMT",
+    "--ignore-submodules=all",
+  ]).split("\0").filter((file) =>
+    file && !lockfiles.test(path.posix.basename(file)) && !generatedFiles.test(file));
   if (files.length === 0) return;
 
   // shortcut: check all authored text; narrow to agents only if reliable provenance tracking is added.
@@ -42,8 +37,11 @@ function main() {
   const violations = [];
   for (const file of files) {
     if (excluded.has(file)) continue;
-    const bytes = Number(git(["cat-file", "-s", `:${file}`]).trim());
-    if (bytes > maxBytes) {
+    const bytes = Number(git(["cat-file", "-s", `:0:${file}`]).trim());
+    if (bytes <= maxBytes) continue;
+    // Git's binary heuristic inspects the first 8,000 bytes of the new blob only.
+    const blob = git(["cat-file", "blob", `:0:${file}`], { encoding: "buffer", maxBuffer: bytes + 1 });
+    if (!blob.subarray(0, 8_000).includes(0)) {
       violations.push(`- ${JSON.stringify(file)}: ${bytes} bytes / 4 = ${bytes / 4} tokens`);
     }
   }

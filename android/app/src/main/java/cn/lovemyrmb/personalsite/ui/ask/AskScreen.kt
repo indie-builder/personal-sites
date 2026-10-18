@@ -2,7 +2,6 @@ package cn.lovemyrmb.personalsite.ui.ask
 
 import android.animation.ValueAnimator
 import android.content.ClipData
-import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
@@ -12,18 +11,15 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.delay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +35,6 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -54,19 +49,6 @@ import cn.lovemyrmb.personalsite.ui.theme.SiteTheme
 import cn.lovemyrmb.personalsite.ui.theme.SiteSpace
 import cn.lovemyrmb.personalsite.ui.theme.SiteText
 import kotlinx.coroutines.launch
-
-/** 推荐问题与其检索范围成对声明，避免按文案字符串反推范围（docs/ask-experience.md：推荐问题会选对应范围）。 */
-private val recommendedQuestions = listOf(
-    "介绍一下陈远" to AskScope.PROFILE,
-    "最近关注哪些 AI 技术？" to AskScope.AI_NEWS,
-    "有哪些值得了解的开源项目？" to AskScope.OPEN_SOURCE,
-)
-
-/** 推荐问题芯片：点击填入草稿并选对应范围（行为契约见 docs/ask-experience.md）。 */
-@Composable
-private fun RecommendedChip(question: String, enabled: Boolean, onSelect: () -> Unit) {
-    OutlinedButton(onClick = onSelect, enabled = enabled) { Text(question) }
-}
 
 /** Full-screen native conversation. References open the returned source content in-app. */
 @Composable
@@ -165,29 +147,10 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = SiteSpace.page, vertical = SiteSpace.paragraph), verticalArrangement = Arrangement.spacedBy(SiteSpace.section)) {
                     if (state.messages.isEmpty()) item {
-                        // 横屏高度有限：推荐问题横向滚动排布并压缩顶部留白，避免被输入区裁切。
-                        val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-                        Column(Modifier.padding(top = if (landscape) SiteSpace.compact else 40.dp), verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
-                            Text("有什么想了解的？", style = SiteText.pageTitle, color = SiteTheme.colors.ink)
-                            Text("关于陈远、每日关注或开源内容，都可以从这里开始。", style = SiteText.body, color = SiteTheme.colors.muted)
-                            // 横竖屏只换容器(横向滚动 vs 纵向堆叠),推荐问题芯片共用一份渲染。
-                            val questionChips: @Composable () -> Unit = {
-                                recommendedQuestions.forEach { (question, questionScope) ->
-                                    RecommendedChip(question, !readerVisible) {
-                                        input = question
-                                        searchScope = questionScope
-                                        focus.requestFocus(); keyboard?.show()
-                                    }
-                                }
-                            }
-                            if (landscape) {
-                                Row(
-                                    Modifier.horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(SiteSpace.compact),
-                                ) { questionChips() }
-                            } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) { questionChips() }
-                            }
+                        AskSuggestions(enabled = !readerVisible) { question, questionScope ->
+                            input = question
+                            searchScope = questionScope
+                            focus.requestFocus(); keyboard?.show()
                         }
                     }
                     itemsIndexed(state.messages, key = { _, message -> message.id }) { index, message ->
@@ -292,23 +255,4 @@ fun AskScreen(controller: AskController, onDismiss: () -> Unit) {
     if (confirmReset) AlertDialog(onDismissRequest = { confirmReset = false }, title = { Text("开始新对话？") }, text = { Text("当前对话和输入草稿将清空。") },
         confirmButton = { TextButton(onClick = { controller.newConversation(); input = ""; followLatest = true; confirmReset = false }) { Text("新对话") } },
         dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("取消") } })
-}
-
-
-@Composable
-private fun SourceReader(source: AskSource, number: Int, onBack: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(SiteTheme.colors.background).statusBarsPadding().navigationBarsPadding()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(SiteIcons.ArrowBack, "返回对话") }
-            Text("引用 $number", style = SiteText.title, color = SiteTheme.colors.ink)
-        }
-        SelectionContainer(modifier = Modifier.weight(1f)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(SiteSpace.page), verticalArrangement = Arrangement.spacedBy(SiteSpace.paragraph)) {
-                Text(source.title.ifBlank { "引用资料" }, style = SiteText.pageTitle, color = SiteTheme.colors.ink)
-                Text(listOfNotNull(source.section, source.publishedAt).filter { it.isNotBlank() }.joinToString(" · "), style = SiteText.meta, color = SiteTheme.colors.muted)
-                Text("本次检索返回的资料片段", style = SiteText.label, color = SiteTheme.colors.muted)
-                Text(source.content.ifBlank { "该引用没有返回可阅读的正文。" }, style = SiteText.body, color = SiteTheme.colors.ink)
-            }
-        }
-    }
 }

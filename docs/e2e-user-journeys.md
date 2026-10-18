@@ -24,7 +24,7 @@ PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch   # Playwright 留守件（须�
 | 每日动态 | `ai-news-filter`、`ai-news-detail-entrance` | 分类菜单窄屏可用、渲染结果按窗口过滤与重置、加载全部历史后的收尾文案不再提 7 天上限；详情入场武装只播一次 |
 | 开源关注 | `open-source-filter`、`open-source-motion`、`open-source-repository` | 主题筛选（四视口）、仓库面板 Motion 与入场/隐藏往返、文件树目录展开、文件读取失败原位报错，重选同一文件后正文、路径与 GitHub 直链就位 |
 | 详情阅读 | `curation-detail-responsive`、`detail-touch-targets` | 长媒体对页展开（1200px 断点）、移动端返回链接/来源 CTA 触控目标 |
-| 问一问 | `ask-flow`、`ask-scroll-to-latest`、`retired-ask` | OpenUI 流式渲染与引用折叠（四视口）、停止保留部分答案且迟到片段不得进入答案、SSE 错误后重试重发原问题且保留未发送草稿、整页刷新后会话与草稿恢复、axe 无违规、独立 `/ask` 已退役 |
+| 问一问 | `ask-flow`、`ask-rendering`、`ask-recovery`、`ask-scroll-to-latest`、`retired-ask` | OpenUI 流式渲染与引用折叠（四视口）、停止保留部分答案且迟到片段不得进入答案、SSE 错误后重试重发原问题且保留未发送草稿、整页刷新后会话与草稿恢复、axe 无违规、独立 `/ask` 已退役 |
 | 助手抽屉 | `assistant-drawer`、`assistant-motion`、`ask-scroll-to-latest` | 参考版式对齐、草稿跨关合恢复、移动端模态与焦点圈闭、问候语坐标稳定、步行精灵动效时序 |
 | 关于我 / 主题 | `identity-controls`、`profile-motion` | 主题切换经客户端导航与硬刷新持久并可切回；关于我小票展示真实经历、Escape 关闭、焦点回落、背景滚动解锁；打印小票 Motion 与 reduce 终态 |
 | 公开元数据 | `entry-metadata`、`public-discovery` | 详情 canonical 归一到 `/curation/[id]`、分享卡带 og:image、列表 canonical 裸路径；`/feed.xml`、`/robots.txt`、`/sitemap.xml` 与健康端点机器可读；精选流 axe 无违规 |
@@ -34,7 +34,7 @@ PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch   # Playwright 留守件（须�
 
 ## Playwright 留守件
 
-`e2e/*.spec.ts` 五例留在 Playwright：e2e 运行器没有触设备仿真（`hasTouch`/`isMobile`）与 `prefers-reduced-motion` CSS 媒体模拟，涉及这两类计算样式的断言无法等价表达，见各 spec 头注释。其余用例已全部迁移到 e2e 运行器。
+`e2e/*.spec.ts` 留在 Playwright：e2e 运行器没有触设备仿真（`hasTouch`/`isMobile`）与 `prefers-reduced-motion` CSS 媒体模拟，涉及这两类计算样式的断言无法等价表达，见各 spec 头注释。头像的媒体偏好、触屏与可见性契约在 `avatar-media.spec.ts`，其余减少动态效果样式在 `reduced-motion-styles.spec.ts`。名字入场与中断恢复分别由 `avatar-name-intro.e2e.ts`、`avatar-name-intro-races.e2e.ts` 覆盖。
 
 ## 明确不在覆盖内
 

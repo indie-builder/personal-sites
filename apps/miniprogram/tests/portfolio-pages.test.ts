@@ -1,0 +1,160 @@
+import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { createAppService } from "../scripts/e2e/app-service";
+import { root } from "../scripts/e2e/package";
+import { settled } from "../scripts/e2e/scenario";
+import { item, page } from "./portfolio-fixture";
+
+const built = existsSync(`${root}/dist/lib/runtime.js`);
+
+describe("built native portfolio pages", () => {
+  test.skipIf(!built)("navigates four products, preserves collection on native back and copies explicit sources", async () => {
+    const harness = createAppService();
+    const event = (dataset: Record<string, string>) => ({ currentTarget: { dataset } });
+    const take = async (path: string) => {
+      await settled(() => harness.requests.some((request) => !request.aborted && !request.settled && new URL(request.options.url).pathname === path), `${path} request`);
+      const request = harness.requests.find((request) => !request.aborted && !request.settled && new URL(request.options.url).pathname === path);
+      if (!request) throw new Error(`Missing request ${path}`);
+      return request;
+    };
+    try {
+      harness.loadAll();
+      const index = harness.open("/pages/portfolio/index");
+      const products = ["layout-compositions", "muse", "design-engineer-tools", "personal-sites"];
+      harness.respond(await take("/api/portfolio"), { items: products.map((id) => ({ id, name: id, summary: "公开作品", date: "2026-09-03", dateLabel: "上线", cover: "" })) });
+      await settled(() => !index.data.loading, "portfolio index data");
+      expect(index.data.products).toHaveLength(4);
+      index.openProduct(event({ id: "layout-compositions" }));
+      const collection = harness.stack.at(-1);
+      if (!collection) throw new Error("Missing collection page");
+      expect(collection.data.view).toBe("index");
+      harness.respond(await take("/api/portfolio/layouts"), page(["a", "b"]));
+      await settled(() => !collection.data.loading && collection.data.loaded, "collection data");
+      expect(collection.data.shelf.map((book: { id: string; number: string; count: number }) => [book.id, book.number, book.count])).toEqual([["composition", "01", 80]]);
+      expect(collection.data.shelfTotal).toBe(80);
+      collection.browseAll();
+      expect(collection.data.view).toBe("grid");
+      expect(harness.requests.filter((request) => !request.settled && request.options.url.includes("/api/portfolio/layouts"))).toHaveLength(0);
+      expect(collection.data.items.map((item: { id: string }) => item.id)).toEqual(["a", "b"]);
+      collection.onReachBottom();
+      await settled(() => harness.requests.some((request) => !request.settled && request.options.url.includes("offset=2")), "collection next page request");
+      const more = harness.requests.find((request) => !request.settled && request.options.url.includes("offset=2"))!;
+      expect(more.options.url).toContain("offset=2&limit=24");
+      harness.respond(more, page(["b", "c"], false));
+      await settled(() => !collection.data.loading, "collection next page data");
+      expect(collection.data.items.map((item: { id: string }) => item.id)).toEqual(["a", "b", "c"]);
+      collection.inputQuery({ detail: { value: "  留白  " } });
+      collection.search();
+      const oldSearch = await take("/api/portfolio/layouts");
+      collection.selectCategory({ detail: { value: "1" } });
+      const category = await take("/api/portfolio/layouts");
+      expect(oldSearch.aborted).toBe(true);
+      expect(category.options.url).toContain("q=%E7%95%99%E7%99%BD&cat=composition");
+      harness.respond(category, page(["filtered"], false));
+      await settled(() => !collection.data.loading, "collection category data");
+      collection.selectTopic({ detail: { value: "1" } });
+      const theme = await take("/api/portfolio/layouts");
+      expect(theme.options.url).toContain("theme=space");
+      harness.respond(theme, page(["filtered"], false));
+      await settled(() => !collection.data.loading, "collection topic data");
+      collection.openWork(event({ id: "filtered" }));
+      const detail = harness.stack.at(-1);
+      if (!detail) throw new Error("Missing detail page");
+      expect(detail.data.readingStart).toBe(0);
+      const media = { id: "image", kind: "image", url: "https://example.com/image.png", poster: "", width: 1200, height: 800 };
+      harness.respond(await take("/api/portfolio/layouts/filtered"), { item: { ...item("filtered"), media: [media] } });
+      await settled(() => !detail.data.loading, "work detail data");
+      detail.copySource();
+      detail.previewImage(event({ url: media.url }));
+      expect(harness.clipboard.at(-1)).toBe("https://example.com/work");
+      expect(harness.previews.at(-1)?.current).toBe(media.url);
+      detail.mediaFailed(event({ id: "image" }));
+      expect(detail.data.failedMedia.image).toBe(true);
+      detail.retryMedia(event({ id: "image" }));
+      expect(detail.data.failedMedia.image).toBe(false);
+      expect(detail.onShareAppMessage().path).toContain("collection=layouts&id=filtered");
+      harness.wx.navigateBack();
+      expect(harness.stack.at(-1)).toBe(collection);
+      expect(collection.data.draft).toBe("留白");
+      expect(collection.data.items[0].id).toBe("filtered");
+      harness.wx.navigateBack();
+      index.openProduct(event({ id: "muse" }));
+      const muse = harness.stack.at(-1);
+      if (!muse) throw new Error("Missing muse page");
+      harness.respond(await take("/api/portfolio/muse"), { ...page([], false), topics: [] });
+      await settled(() => !muse.data.loading && muse.data.loaded, "muse collection data");
+      expect(muse.data.items).toEqual([]);
+      harness.wx.navigateBack();
+      index.openProduct(event({ id: "design-engineer-tools" }));
+      const tools = harness.stack.at(-1);
+      if (!tools) throw new Error("Missing project page");
+      expect(tools.route).toBe("pages/project/index");
+      expect(tools.data.kind).toBe("tools");
+      harness.respond(await take("/api/portfolio/tools"), { categories: [{ id: "design", name: "设计", tools: [{ name: "工具", url: "https://example.com/tool", icon: "" }] }] });
+      await settled(() => !tools.data.loading && tools.data.loaded, "tools project data");
+      tools.copyUrl(event({ url: tools.data.categories[0].tools[0].url }));
+      expect(harness.clipboard.at(-1)).toBe("https://example.com/tool");
+      harness.wx.navigateBack();
+      expect(harness.stack.at(-1)).toBe(index);
+      index.openProduct(event({ id: "personal-sites" }));
+      const site = harness.stack.at(-1);
+      if (!site) throw new Error("Missing site page");
+      expect(site.data.kind).toBe("site");
+      harness.respond(await take("/api/portfolio/site"), { video: "https://example.com/promo.mp4", poster: "", website: "https://example.com/", description: "公开介绍" });
+      await settled(() => !site.data.loading && Boolean(site.data.site), "site project data");
+      expect(site.data.site.description).toBe("公开介绍");
+      site.videoFailed();
+      expect(site.data.videoFailed).toBe(true);
+      site.retryVideo();
+      expect(site.data.videoFailed).toBe(false);
+      expect(site.onShareAppMessage().path).toBe("/pages/project/index?kind=site");
+      harness.wx.navigateBack();
+      expect(index.data.products).toHaveLength(4);
+    } finally { harness.close(); }
+  });
+
+  test.skipIf(!built)("clears a failed collection thumbnail only after a successful refresh", async () => {
+    const harness = createAppService();
+    try {
+      harness.loadAll();
+      const collection = harness.open("/pages/collection/index?collection=muse");
+      await settled(() => harness.requests.length === 1, "muse collection request");
+      harness.respond(harness.requests[0]!, page(["a"]));
+      await settled(() => !collection.data.loading, "muse collection data");
+      collection.imageFailed({ currentTarget: { dataset: { id: "a" } } });
+      expect(collection.data.failedImages.a).toBe(true);
+      collection.onPullDownRefresh();
+      await settled(() => harness.requests.length === 2, "muse collection refresh request");
+      harness.respond(harness.requests[1]!, { error: "暂时不可用" }, 500);
+      await settled(() => !collection.data.loading, "muse collection refresh failure");
+      expect(collection.data.failedImages.a).toBe(true);
+      collection.onPullDownRefresh();
+      await settled(() => harness.requests.length === 3, "muse collection retry request");
+      harness.respond(harness.requests[2]!, page(["a"], false));
+      await settled(() => !collection.data.loading, "muse collection retry data");
+      expect(collection.data.failedImages).toEqual({});
+    } finally { harness.close(); }
+  });
+
+  test.skipIf(!built)("rejects invalid project links and clears failed cover flags after a successful refresh", async () => {
+    const harness = createAppService();
+    const event = (dataset: Record<string, string>) => ({ currentTarget: { dataset } });
+    try {
+      harness.loadAll();
+      const invalid = harness.open("/pages/project/index?kind=layouts");
+      expect(invalid.data.invalid).toBe(true);
+      expect(harness.requests).toHaveLength(0);
+      const index = harness.open("/pages/portfolio/index");
+      await settled(() => harness.requests.length === 1, "portfolio index request");
+      harness.respond(harness.requests[0]!, { items: [{ id: "muse", name: "灵感", summary: "介绍", date: "2026-09-03", dateLabel: "上线", cover: "https://example.com/cover.png" }] });
+      await settled(() => !index.data.loading, "portfolio index data");
+      index.imageFailed(event({ id: "muse" }));
+      expect(index.data.failedImages.muse).toBe(true);
+      index.loadContent();
+      await settled(() => harness.requests.length === 2, "portfolio index refresh request");
+      harness.respond(harness.requests[1]!, { items: [{ id: "muse", name: "灵感", summary: "介绍", date: "2026-09-03", dateLabel: "上线", cover: "https://example.com/cover.png" }] });
+      await settled(() => !index.data.loading, "portfolio index refresh data");
+      expect(index.data.failedImages).toEqual({});
+    } finally { harness.close(); }
+  });
+});

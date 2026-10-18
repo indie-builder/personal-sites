@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @import "./styles/foundation.css";
+@import "./styles/foundation-feed.css";
+@import "./styles/foundation-detail.css";
 @import "./styles/streams.css";
 @import "./styles/reading.css";
 @import "./styles/profile.css";

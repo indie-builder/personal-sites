@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { createAppService, root } from "../scripts/e2e";
+import { createAppService } from "../scripts/e2e/app-service";
+import { root } from "../scripts/e2e/package";
 
 type Harness = ReturnType<typeof createAppService>;
 type Page = ReturnType<Harness["open"]>;

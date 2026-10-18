@@ -1,0 +1,310 @@
+.curation-home__feed {
+  width: 100%;
+  max-width: 50rem;
+  padding: 2rem 1.875rem 5rem 0;
+}
+.curation-home__stream {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.curation-home__stream li {
+  border-bottom: 1px solid var(--line);
+}
+.curation-home__stream > li > a {
+  display: grid;
+  grid-template-columns: minmax(7rem,8.5rem) minmax(0,1fr);
+  column-gap: clamp(1.25rem,2.5vw,2rem);
+  align-items: start;
+  color: inherit;
+  padding: 1.5rem 0;
+  text-decoration: none;
+  transition: transform 120ms var(--ease-out);
+}
+.curation-home__stream > li > a:active:not(:focus-visible) {
+  transform: scale(.985);
+}
+@media (prefers-reduced-motion:reduce) {
+  .curation-home__stream > li > a {
+    transition: none;
+  }
+  .curation-home__stream > li > a:active:not(:focus-visible) {
+    transform: none;
+  }
+}
+.curation-home__stream-meta {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  padding-top: .14rem;
+  color: #767676;
+  font-size: .72rem;
+  line-height: 1.4;
+}
+.curation-home__stream-copy h3,
+.curation-home__stream-copy p {
+  margin: 0;
+}
+.curation-home__stream-copy h3 {
+  max-width: 36rem;
+  color: #303033;
+  font-size: clamp(.88rem,.95vw,1rem);
+  font-weight: 500;
+  letter-spacing: -.018em;
+  line-height: 1.32;
+  text-wrap: pretty;
+}
+.curation-home__stream-copy p {
+  max-width: 38rem;
+  margin-top: .5rem;
+  color: #3f3f42;
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.curation-home__stream > li > a:hover h3,
+.curation-home__stream > li > a:focus-visible h3 {
+  color: var(--ink);
+}
+@media (max-width:900px) {
+  .curation-home__stream > li > a {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .curation-home__stream-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: .25rem .55rem;
+    margin-bottom: .55rem;
+    padding-top: 0;
+  }
+  .curation-home__stream-meta :where(time,span):has(+ :where(time,span))::after {
+    margin-left: .55rem;
+    content: "·";
+  }
+}
+.curation-home__stream-status {
+  min-height: 3.5rem;
+  border-bottom: 0!important;
+  color: #6f6f72;
+  font-size: .75rem;
+  text-align: center;
+}
+.curation-home__stream-status span,
+.curation-home__stream-status button {
+  display: inline-block;
+  margin-top: 1rem;
+}
+.curation-home__stream-status button {
+  border: 0;
+  background: transparent;
+  color: #6f6f72;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: .22em;
+  transition: transform 120ms var(--ease-out);
+}
+.curation-home__stream-status button:active:not(:focus-visible) {
+  transform: scale(.97);
+}
+/* 完成文案（"已加载全部…"）在流末尾补进 DOM，用 @starting-style 淡入与详情/表头入场对齐。 */
+.curation-home__stream-status > span {
+  transition: opacity 200ms ease-out;
+}
+@starting-style {
+  .curation-home__stream-status > span {
+    opacity: 0;
+  }
+}
+
+/* 剪报摘录：判断流里的"原文声音"，1px 左引线 + 降调灰阶与解析区分，两行裁切。 */
+.curation-home__stream-clip {
+  max-width: 34rem;
+  margin: .85rem 0 0;
+  border-left: 1px solid #dededf;
+  padding-left: .85rem;
+}
+.curation-home__stream-clip p {
+  display: -webkit-box;
+  max-width: none;
+  margin-top: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: #656568;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+.curation-home__stream-copy .curation-home__stream-tags {
+  max-width: 38rem;
+  margin-top: .7rem;
+  color: #767676;
+  font-size: .67rem;
+  letter-spacing: .01em;
+  line-height: 1.5;
+}
+.design-curation__entry {
+  display: grid;
+  grid-template-columns: minmax(7rem,8.5rem) minmax(0,1fr);
+  column-gap: clamp(1.25rem,2.5vw,2rem);
+  align-items: start;
+  padding: 1.5rem 0;
+}
+.design-curation__entry .curation-home__stream-copy h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+@media (max-width:900px) {
+  .design-curation__entry .curation-home__stream-copy h3 a {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+.design-curation__entry .curation-home__stream-copy h3 a:hover,
+.design-curation__entry .curation-home__stream-copy h3 a:focus-visible {
+  color: var(--ink);
+}
+.design-curation__media {
+  display: grid;
+  gap: .9rem;
+  max-width: 38rem;
+  margin-top: 1rem;
+}
+.design-curation__media-player video {
+  max-height: 32rem;
+}
+.design-curation__media-player figcaption {
+  padding: .6rem .8rem;
+}
+@media (max-width:900px) {
+  .design-curation__entry {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .design-curation__entry .curation-home__stream-meta {
+    margin-bottom: .55rem;
+  }
+}
+
+/* 长列表屏外条目跳过布局与绘制：无限滚动下 DOM 只增不减，
+   contain-intrinsic-size 用 auto 记住已渲染高度，未渲染条目按估计值占位。 */
+.ai-news__timeline li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 6rem;
+}
+.curation-home__stream li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 11rem;
+}
+.curation-home__stream-skeleton {
+  display: grid;
+  gap: .65rem;
+  padding: 1rem 0 0;
+  text-align: left;
+}
+.curation-home__stream-skeleton .curation-home__stream-loading {
+  margin: 0 0 .2rem;
+  color: #767676;
+  font-size: .74rem;
+  line-height: 1.4;
+}
+.curation-home__stream-skeleton span {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: .78rem;
+  margin-top: 0;
+  border-radius: .2rem;
+  background: #eeeeef;
+  overflow: hidden;
+}
+.curation-home__stream-skeleton span::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(90deg,transparent 22%,#f7f7f8 50%,transparent 78%);
+  animation: curation-loading-shimmer 1.3s ease-in-out infinite;
+}
+.curation-home__stream-skeleton .is-medium {
+  width: 78%;
+}
+.curation-home__stream-skeleton .is-short {
+  width: 48%;
+}
+.curation-home__feed-content {
+  display: contents;
+}
+/* shimmer 用 transform 扫过伪元素渐变层，替代 background-position 逐帧重绘。 */
+@keyframes curation-loading-shimmer {
+  from {
+    transform: translate3d(-100%,0,0);
+  }
+  to {
+    transform: translate3d(100%,0,0);
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .curation-home__stream-skeleton span::after {
+    animation: none;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .about-modal__close,
+  .curation-home__stream-status button,
+  .curation-home__stream-status > span {
+    transition: none;
+  }
+  .curation-home__about-trigger:active:not(:focus-visible),
+  .about-modal__close:active:not(:focus-visible),
+  .curation-home__stream-status button:active:not(:focus-visible) {
+    transform: none;
+  }
+}
+.curation-home__stream-error {
+  display: grid;
+  max-width: 38rem;
+  justify-items: start;
+  gap: .42rem;
+  border-bottom: 1px solid var(--line);
+  padding: 2.25rem 0;
+  transition: opacity 200ms ease-out;
+}
+@starting-style {
+  .curation-home__stream-error {
+    opacity: 0;
+  }
+}
+/* 同特异性下源顺序取胜：stream-error 的降级必须排在正常声明之后才真正生效。 */
+@media (prefers-reduced-motion:reduce) {
+  .curation-home__stream-error {
+    transition: none;
+  }
+}
+.curation-home__stream-error p {
+  margin: 0;
+  color: #656568;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+.curation-home__stream-error .curation-home__stream-error-title {
+  color: #994545;
+  font-size: .82rem;
+  font-weight: 620;
+}
+.curation-home__stream-error button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 620;
+  padding: 0 .1rem;
+  text-decoration: underline;
+  text-underline-offset: .23em;
+}
+.curation-home__stream-error button:disabled {
+  color: #767676;
+  cursor: wait;
+}

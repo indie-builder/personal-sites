@@ -49,7 +49,9 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 
 `bun install` 的 `prepare` 会安装 `.githooks`，也可手动执行 `bun run git:hooks:install`。`pre-commit` 先运行 `scripts/check-staged-file-tokens.mjs`，只检查本次暂存变更的文本文件，按 Git 索引中的完整文件字节数 / 4 计算 token；超过 5,000 token（20,000 bytes）即拒绝提交，并输出按职责拆分文件、更新引用和重新暂存的步骤。未暂存、未变更和删除的文件不参与 token 检查。
 
-Git 不记录代理作者身份，因此所有作者维护的文本都受此限制。锁文件、常见生成文件（如 `*.gen.ts`、`*.generated.ts`、`generated/`、`dist/`、`build/`、压缩脚本及 source map）、`vendor/` / `node_modules/` 和二进制资产自动跳过；其他生成或供应商文件可在 `.gitattributes` 中按路径声明 `linguist-generated=true` 或 `linguist-vendored=true`，并一同暂存。现有 Git 隐私与大文件安全检查继续运行。
+Git 不记录代理作者身份，因此所有作者维护的文本都受此限制。锁文件、常见生成文件（如 `*.gen.ts`、`*.generated.ts`、`generated/`、`dist/`、`build/`、压缩脚本及 source map）、`vendor/` / `node_modules/` 和二进制资产自动跳过。二进制判定只检查新暂存 blob 的前 8,000 字节是否含 NUL，不受旧版本或未暂存的 `.gitattributes` 影响。其他生成或供应商文件可在 `.gitattributes` 中按路径声明 `linguist-generated=true` 或 `linguist-vendored=true`，并一同暂存；已核实的排除路径及来源记录在该文件的注释中。现有 Git 隐私与大文件安全检查继续运行。
+
+2026-10-18 的全仓审查、拆分清单与来源排除依据见[作者文件大小审查](file-size-review.md)。
 
 ## 功能到代码路径
 

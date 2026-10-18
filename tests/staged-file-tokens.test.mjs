@@ -96,6 +96,61 @@ test("honors staged generated attributes and ignores unstaged exemptions", (t) =
   assert.equal(check().status, 1);
 });
 
+test("ignores binary staged content regardless of the worktree or HEAD", (t) => {
+  const { stage, git, check } = fixture(t);
+  stage("from-binary.ts", Buffer.alloc(20_001));
+  stage("from-text.ts", "small");
+  stage("from-binary.bin", Buffer.alloc(20_001));
+  stage("from-text.bin", "small");
+  git("-c", "user.name=Token Test", "-c", "user.email=token-test@example.invalid",
+    "commit", "--quiet", "-m", "fixture");
+  stage("from-binary.ts", "a".repeat(20_001));
+  stage("from-text.ts", Buffer.alloc(20_001));
+  stage("from-binary.bin", "a".repeat(20_001));
+  stage("from-text.bin", Buffer.alloc(20_001));
+  const result = check();
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /from-binary\.ts/);
+  assert.match(result.stderr, /from-binary\.bin/);
+  assert.doesNotMatch(result.stderr, /from-text/);
+});
+
+test("detects binaries from staged content only, within Git's first 8,000 bytes", (t) => {
+  const { stage, write, commit, check } = fixture(t);
+  const binaryAt = (offset) => {
+    const bytes = Buffer.alloc(20_001, "a");
+    bytes[offset] = 0;
+    return bytes;
+  };
+  stage("head-binary.ts", binaryAt(0));
+  for (const file of ["worktree-diff.ts", "staged-binary.ts", "boundary-inside.ts", "boundary-after.ts"]) {
+    stage(file, "small");
+  }
+  commit();
+  write(".gitattributes", "worktree-diff.ts -diff\n");
+  stage("head-binary.ts", "a".repeat(20_001));
+  stage("worktree-diff.ts", "a".repeat(20_001));
+  stage("staged-binary.ts", binaryAt(0));
+  stage("boundary-inside.ts", binaryAt(7_999));
+  stage("boundary-after.ts", binaryAt(8_000));
+  const result = check();
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /head-binary\.ts/);
+  assert.match(result.stderr, /worktree-diff\.ts/);
+  assert.match(result.stderr, /boundary-after\.ts/);
+  assert.doesNotMatch(result.stderr, /staged-binary/);
+  assert.doesNotMatch(result.stderr, /boundary-inside/);
+});
+
+test("does not confuse filenames with Git index-stage prefixes", (t) => {
+  const { stage, check } = fixture(t);
+  stage("source.ts", Buffer.alloc(20_001));
+  stage("0:source.ts", "a".repeat(20_001));
+  const result = check();
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /"0:source\.ts": 20001 bytes/);
+});
+
 test("counts UTF-8 bytes and reports all files with unusual path characters", (t) => {
   const { stage, check } = fixture(t);
   const files = ["space name.ts", "tab\tname.ts", "line\nname.ts", "-option.ts", "中文.ts"];

@@ -22,6 +22,8 @@ ln -s ../../.agents/skills/impeccable .pi/skills/impeccable
 
 技能文件在本机保持可用;`PRODUCT.md` 的 `impeccable:product-schema` 标记与 `.impeccable/` 评审产物维持跟踪,不受此策略影响。
 
+根 `.gitattributes` 按具体技能目录标记已核实上游来源的供应商内容，来源记录见 `skills-lock.json`。这些文件保持跟踪，但不参与作者文件的 5,000 token 检查；项目自研技能不做全目录豁免。
+
 ## 工具与路径核实
 
 引用 skill、CLI、workspace SDK 或环境变量前先核实存在性,再下结论:
