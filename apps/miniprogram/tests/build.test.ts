@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import vm from "node:vm";
-import { createAppService, root, routes, verifyPackage } from "../scripts/e2e";
+import { createAppService, packageFiles, root, routes, verifyPackage } from "../scripts/e2e";
+
+// Reuse the repository lint tool's installed parser instead of matching JavaScript text.
+const { parseSync } = createRequire(import.meta.resolve("@shadcn/lint"))("oxc-parser");
 
 const source = path.join(root, "src");
 const build = readFileSync(path.join(root, "scripts/build.ts"), "utf8");
@@ -24,6 +28,10 @@ describe("public miniprogram build contract", () => {
     const project = JSON.parse(readFileSync(path.join(root, "project.config.json"), "utf8"));
     expect(project.miniprogramRoot).toBe("dist/");
     expect(project.setting.urlCheck).toBe(true);
+    // The build targets WeChat directly; its ES5 lowering breaks native BigInt exponentiation.
+    expect(project.setting.es6).toBe(false);
+    expect(project.setting.enhance).toBe(false);
+    expect(project.setting.minified).toBe(false);
   });
 
   test("copies only declared native resources and the approved public avatar", () => {
@@ -48,6 +56,25 @@ describe("public miniprogram build contract", () => {
     for (const route of routes) {
       const script = readFileSync(path.join(source, `${route}.ts`), "utf8");
       expect(script).not.toMatch(/from\s+["'](?:effect(?:\/[^"']*)?|@site\/effect(?:\/[^"']*)?)["']/);
+    }
+  });
+
+  test.skipIf(!built)("all emitted JavaScript lowers optional/nullish syntax, logical assignments, and class fields", () => {
+    for (const name of packageFiles(path.join(root, "dist")).filter((name) => name.endsWith(".js"))) {
+      const code = readFileSync(path.join(root, "dist", name), "utf8");
+      const parsed = parseSync(name, code);
+      expect(parsed.errors, name).toEqual([]);
+      const pending = [parsed.program];
+      const unsupported: string[] = [];
+      for (const node of pending) {
+        if (!node || typeof node !== "object") continue;
+        if (["ChainExpression", "PropertyDefinition", "PrivateIdentifier", "StaticBlock"].includes(node.type)) unsupported.push(node.type);
+        if (["??", "??=", "&&=", "||="].includes(node.operator)) unsupported.push(node.operator);
+        for (const value of Object.values(node)) {
+          if (value && typeof value === "object") pending.push(...(Array.isArray(value) ? value : [value]));
+        }
+      }
+      expect(unsupported, name).toEqual([]);
     }
   });
 
@@ -101,7 +128,20 @@ describe("public miniprogram build contract", () => {
       for (const name of ["fetch", "URL", "TextEncoder", "TextDecoder", "AbortController"]) {
         expect(vm.runInContext(`typeof ${name}`, harness.context)).toBe("undefined");
       }
+      // Math.pow only accepts numbers; fail if any transformed Effect path passes it a bigint.
+      vm.runInContext(`
+        const numberPow = Math.pow;
+        Math.pow = (base, exponent) => {
+          if (typeof base === "bigint" || typeof exponent === "bigint") throw new Error("BigInt lowered to Math.pow");
+          return numberPow(base, exponent);
+        };
+      `, harness.context);
       const first = harness.load("lib/runtime.js");
+      const value = first.Schema.decodeUnknownSync(first.Schema.BigIntFromString)("9223372036854775807");
+      expect(value).toBe(9223372036854775807n);
+      expect(first.Schema.encodeSync(first.Schema.BigIntFromString)(value)).toBe("9223372036854775807");
+      const decimal = first.Schema.decodeUnknownSync(first.Schema.BigDecimalFromString)("12345678901234567890.123456789");
+      expect(first.Schema.encodeSync(first.Schema.BigDecimalFromString)(decimal)).toBe("12345678901234567890.123456789");
       expect(harness.load("lib/runtime.js")).toBe(first);
       expect(harness.loads.get("lib/runtime.js")).toBe(1);
       for (const name of ["fetch", "URL", "AbortController"]) {

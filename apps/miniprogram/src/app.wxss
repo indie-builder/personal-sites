@@ -36,6 +36,9 @@ button {
   font-weight: 500;
   white-space: normal;
 }
+/* Native v2 buttons otherwise impose a 184px width and auto margins over page classes. */
+button:not([size="mini"]) { width: auto; margin-left: 0; margin-right: 0; }
+button.identity, button.feed-row, button.product, button.ask-example, button.ask-source { width: 100%; }
 button::after { border: 0; }
 button[disabled] { color: var(--quiet); opacity: .65; }
 button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

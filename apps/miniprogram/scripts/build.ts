@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Effect } from "effect";
 import { io } from "@site/effect";
+import { transform } from "esbuild";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const source = path.join(root, "src");
@@ -31,8 +32,13 @@ async function bundle(entry: string, outfile: string, external: string[] = [], b
     }] : [],
   });
   if (!result.success) throw new Error(result.logs.map(String).join("\n"));
+  const transformed = await transform(await result.outputs[0].text(), {
+    target: "es2018", format: "cjs", minify: true,
+    // WeChat supports native BigInt; its ES5/Babel lowering to Math.pow breaks Effect.
+    logOverride: { "bigint": "silent" },
+  });
   await mkdir(path.dirname(outfile), { recursive: true });
-  await writeFile(outfile, await result.outputs[0].text());
+  await writeFile(outfile, transformed.code);
 }
 
 const build = io("miniprogram.build", async () => {

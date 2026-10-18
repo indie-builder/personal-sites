@@ -7,9 +7,9 @@
   "libVersion": "3.10.3",
   "setting": {
     "urlCheck": true,
-    "es6": true,
-    "enhance": true,
-    "minified": true,
+    "es6": false,
+    "enhance": false,
+    "minified": false,
     "postcss": true
   },
   "packOptions": {

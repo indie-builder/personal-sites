@@ -13,6 +13,8 @@ bun run --filter @site/miniprogram build
 
 在微信开发者工具中导入 **`apps/miniprogram`**，不是 `dist`。`project.config.json` 已将 `miniprogramRoot` 指向构建结果 `dist/`。修改源码后重新构建，再在工具中编译。生成文件、个人工具配置和 LoopX 执行状态不提交。
 
+Bun 负责 CommonJS 打包，esbuild 将输出统一转换为微信预览打包可解析的 ES2018 语法，并保留运行环境支持的原生 BigInt。保持项目配置中的 `es6: false`、`enhance: false`、`minified: false`，不再启用微信的 ES5 转换或重复压缩：额外的 Babel 降级会把 Effect 的 BigInt 幂运算转成 `Math.pow`，而旧压缩器不接受可选链、空值合并等现代语法。
+
 项目配置里的 `touristappid` 只是公开占位符，不能上传，也不保证当前开发者工具允许游客模式。打开项目时填入自己的小程序 AppID；个人 AppID 可以放在被忽略的 `project.private.config.json`，不提交凭据、工具 ticket 或账号资料。若工具要求登录，先在开发者工具中扫码。
 
 ```json
@@ -58,6 +60,8 @@ bun run --filter @site/miniprogram check:templates
 `test:e2e` 的定位是 **构建产物的 AppService 契约回归**：在受限 JS 环境中加载实际 CommonJS 包、模拟微信平台 API，验证真实页面生命周期与公开 HTTP/SSE 契约。固定内容是测试夹具，不进入产品。它不等同于微信模拟器、真机或发布验收。
 
 `check:templates` 调用本机微信开发者工具的真实 `wcc` 和 `wcsc` 编译器，无需线上模型或数据库。macOS 默认读取 `/Applications/wechatwebdevtools.app`；其他安装位置用 `WECHAT_COMPILER_ROOT` 指向含 `wcc`/`wcsc`（Windows 为 `.exe`）的目录。不在仓库分发平台编译器。
+
+2026-10-18 已使用本地测试账号 AppID 和有效登录打开微信模拟器：首页成功读取 50 条内容，问一问初始界面与作品集四项入口正常渲染；修复编译降级和原生按钮默认宽度后，未见运行错误。这次检查未覆盖真机、生产模型问答、完整窄屏/深色/横屏验收或上传发布。
 
 有效 AppID 和登录就绪后，可使用安装工具的 CLI 做模拟器检查：
 
