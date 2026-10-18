@@ -6,6 +6,9 @@ page {
   --line: #eeeeee;
   --paper: #f8f8f8;
   --error: #994545;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --motion-press-duration: 120ms;
   background: var(--surface);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
@@ -59,4 +62,15 @@ video { width: 100%; border-radius: 10px; }
 .error { color: var(--error); }
 rich-text { display: block; overflow-wrap: anywhere; word-break: break-word; }
 @media (max-width: 350px) { .page { padding-left: 16px; padding-right: 16px; } }
-@media (prefers-reduced-motion: reduce) { view, button, image { animation: none !important; transition: none !important; } }
+button { transition: opacity var(--motion-press-duration) var(--ease-out); }
+.motion-control { transition: transform var(--motion-press-duration) var(--ease-out), opacity var(--motion-press-duration) var(--ease-out); }
+.motion-press { opacity: .72; }
+.motion-control.motion-press { transform: scale(.97); }
+.motion-reduced .motion-control.motion-press { transform: none; }
+.motion-reduced .motion-enter { animation: none !important; transform: none !important; opacity: 1 !important; }
+/* A static completion emits animationend so a changed system preference cannot replay old entries. */
+@keyframes motion-settled { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .motion-control.motion-press { transform: none; }
+  .motion-enter { animation: motion-settled 1ms linear !important; animation-delay: 0ms !important; transform: none !important; opacity: 1 !important; }
+}

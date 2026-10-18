@@ -1,10 +1,12 @@
-import { copyLink, externalUrl, previewImages, run } from "../../lib/runtime";
+import { copyLink, externalUrl, previewImages, readReducedMotion, run } from "../../lib/runtime";
 import { collectionTitle, getWork, layoutAttribution, type Collection, type Work } from "../../portfolio/api";
 
 type WorkView = Omit<Work, "media"> & { media: (Work["media"][number] & { heightRpx: number })[] };
 
 Page({
   data: {
+    reducedMotion: false,
+    contentEntering: false,
     collection: "layouts" as Collection,
     workId: "",
     item: null as WorkView | null,
@@ -23,6 +25,7 @@ Page({
   readingListener: undefined as ((payload: unknown) => void) | undefined,
   cancel: undefined as (() => void) | undefined,
   generation: 0,
+  motionVisible: true,
   onLoad(options: Record<string, string | undefined>) {
     if ((options.collection !== "layouts" && options.collection !== "muse") || !options.id || options.id.length > 300) {
       this.setData({ invalid: true, error: "作品链接无效，请返回作品集重新打开。" });
@@ -52,12 +55,15 @@ Page({
     this.loadWork();
   },
   onUnload() {
+    this.motionVisible = false;
     this.generation += 1;
     this.cancel?.();
     this.pauseVideos();
     if (this.readingListener) this.readingChannel?.off?.("workReading", this.readingListener);
   },
-  onHide() { this.pauseVideos(); },
+  onShow() { this.motionVisible = true; this.setData({ reducedMotion: readReducedMotion(), contentEntering: false }); },
+  onHide() { this.motionVisible = false; this.pauseVideos(); this.setData({ contentEntering: false }); },
+  finishContentEntry() { if (this.data.contentEntering) this.setData({ contentEntering: false }); },
   pauseVideos() {
     const media = this.data.item?.media ?? [];
     for (let index = 0; index < media.length; index += 1) {
@@ -81,6 +87,7 @@ Page({
   },
   onPullDownRefresh() { this.loadWork(); },
   loadWork() {
+    const revealNewItem = !this.data.item;
     if (this.data.invalid) { wx.stopPullDownRefresh(); return; }
     this.cancel?.();
     const generation = ++this.generation;
@@ -89,6 +96,7 @@ Page({
       if (generation !== this.generation) return;
       this.setData({
         loading: false, failedMedia: {}, removedMedia: {},
+        contentEntering: revealNewItem && this.motionVisible && !readReducedMotion(),
         item: {
           ...result.item,
           sourceURL: externalUrl(result.item.sourceURL),

@@ -39,11 +39,18 @@ button.ask-example { width: fit-content; max-width: 100%; min-height: 44px; marg
 .ask-scope { min-width: 0; flex: 1; }
 .ask-scope-control { display: flex; align-items: center; gap: 6px; min-height: 44px; padding-left: 8px; font-size: 12px; line-height: 1.5; }
 .ask-scope-chevron { flex-shrink: 0; width: 6px; height: 6px; margin-top: -3px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); }
-button.ask-submit { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; flex-shrink: 0; padding: 0; border-radius: 50%; color: var(--surface); background: var(--ink); font-size: 12px; }
+button.ask-submit { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; flex-shrink: 0; padding: 0; border-radius: 50%; color: var(--surface); background: var(--ink); font-size: 12px; }
 button.ask-submit[disabled] { color: var(--muted); background: transparent; opacity: 1; }
+.ask-submit-icon { position: absolute; top: 0; right: 0; bottom: 0; left: 0; margin: auto; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; opacity: 1; transform: none; transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out); }
+.ask-submit-icon.is-hidden { opacity: 0; transform: translateY(2px) scale(.95); }
+.motion-reduced .ask-submit-icon { transition: none; transform: none; }
 .ask-send-arrow { position: relative; width: 18px; height: 18px; }
 .ask-send-arrow::before { content: ''; position: absolute; top: 2px; left: 8px; width: 2px; height: 15px; background: currentColor; border-radius: 1px; }
 .ask-send-arrow::after { content: ''; position: absolute; top: 2px; left: 4px; width: 8px; height: 8px; border-top: 2px solid currentColor; border-left: 2px solid currentColor; transform: rotate(45deg); }
+.ask-stop-square { width: 12px; height: 12px; border-radius: 2px; background: currentColor; }
+@media (prefers-reduced-motion: reduce) {
+  .ask-submit-icon { transition: none; transform: none; }
+}
 .ask-input-hint { display: block; margin: 4px 8px 0; }
 @media (max-width: 350px) {
   .ask-header { padding-left: 12px; padding-right: 12px; }

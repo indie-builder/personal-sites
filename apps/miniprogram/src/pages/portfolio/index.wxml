@@ -3,7 +3,7 @@
     <view class="title">作品集</view>
     <view class="muted">设计参考与工程实践</view>
   </view>
-  <button wx:for="{{products}}" wx:key="id" class="product row" data-id="{{item.id}}" bindtap="openProduct" aria-label="{{'阅读' + item.name}}">
+  <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" wx:for="{{products}}" wx:key="id" class="product row" data-id="{{item.id}}" bindtap="openProduct" aria-label="{{'阅读' + item.name}}">
     <view class="product-copy">
       <view class="product-title">{{item.name}}</view>
       <view class="muted product-summary">{{item.summary}}</view>
@@ -16,6 +16,6 @@
   <view wx:if="{{loading}}" class="status" aria-live="polite">正在读取作品集…</view>
   <view wx:if="{{error}}" class="status" role="alert">
     <view class="error">{{error}}</view>
-    <button class="button retry-button" bindtap="loadContent" disabled="{{loading}}">重新读取</button>
+    <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" class="button retry-button" bindtap="loadContent" disabled="{{loading}}">重新读取</button>
   </view>
 </view>

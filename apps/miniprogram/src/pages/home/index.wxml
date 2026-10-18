@@ -1,12 +1,12 @@
 <view class="page home-page">
   <view class="section-navigation">
-    <button class="profile-button" bindtap="openAbout" aria-label="了解陈远，打开关于我">
+    <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" class="profile-button" bindtap="openAbout" aria-label="了解陈远，打开关于我">
       <image class="avatar" src="/assets/avatar.png" mode="aspectFit" aria-hidden="true" />
       <text class="profile-name">陈远</text>
     </button>
     <scroll-view class="section-scroll" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="section-{{section}}" aria-label="阅读栏目">
       <view class="section-tabs">
-        <button wx:for="{{sections}}" wx:key="id" id="section-{{item.id}}" class="section-tab {{section === item.id ? 'section-tab-selected' : ''}}" data-section="{{item.id}}" bindtap="selectSection" aria-label="{{item.label}}{{section === item.id ? '，当前栏目' : ''}}">{{item.label}}</button>
+        <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" wx:for="{{sections}}" wx:key="id" id="section-{{item.id}}" class="section-tab {{section === item.id ? 'section-tab-selected' : ''}}" data-section="{{item.id}}" bindtap="selectSection" aria-label="{{item.label}}{{section === item.id ? '，当前栏目' : ''}}">{{item.label}}</button>
       </view>
     </scroll-view>
     <picker class="section-picker" mode="selector" range="{{sectionLabels}}" value="{{sectionIndex}}" bindchange="selectSectionIndex" aria-label="选择栏目，当前{{sectionLabel}}">
@@ -17,7 +17,7 @@
     <view wx:if="{{section === feedSection.id}}" class="feed" aria-label="{{feedSection.label}}内容">
       <view wx:if="{{!feeds[feedSection.id].loaded && !feeds[feedSection.id].error}}" class="status" role="status">正在读取{{feedSection.label}}…</view>
       <text wx:if="{{feeds[feedSection.id].refreshing}}" class="refresh-status meta" role="status">正在更新，已有内容仍可阅读…</text>
-      <button wx:for="{{feeds[feedSection.id].items}}" wx:key="id" class="row feed-row feed-row-{{feedSection.id}}" data-id="{{item.id}}" bindtap="openDetail" aria-label="阅读：{{item.title}}">
+      <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" wx:for="{{feeds[feedSection.id].items}}" wx:key="id" class="row feed-row feed-row-{{feedSection.id}}" data-id="{{item.id}}" bindtap="openDetail" aria-label="阅读：{{item.title}}">
         <view class="feed-copy">
           <text class="feed-title">{{item.title}}</text>
           <text wx:if="{{item.summary && (feedSection.id === 'ai-news' || feedSection.id === 'open-source')}}" class="feed-summary muted">{{item.summary}}</text>
@@ -27,15 +27,15 @@
       </button>
       <view wx:if="{{feeds[feedSection.id].error}}" class="status" role="alert">
         <text class="error">{{feeds[feedSection.id].error}}</text>
-        <button class="button retry-button" bindtap="retry" disabled="{{feeds[feedSection.id].loading || feeds[feedSection.id].refreshing}}">重试读取</button>
+        <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" class="button retry-button" bindtap="retry" disabled="{{feeds[feedSection.id].loading || feeds[feedSection.id].refreshing}}">重试读取</button>
       </view>
       <view wx:elif="{{feeds[feedSection.id].loaded && !feeds[feedSection.id].items.length && !feeds[feedSection.id].loading}}" class="status">
         <text>这里暂时没有{{feedSection.label}}内容。</text>
-        <button class="button retry-button" bindtap="onPullDownRefresh" disabled="{{feeds[feedSection.id].refreshing}}">{{feeds[feedSection.id].refreshing ? '正在刷新…' : '刷新内容'}}</button>
+        <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" class="button retry-button" bindtap="onPullDownRefresh" disabled="{{feeds[feedSection.id].refreshing}}">{{feeds[feedSection.id].refreshing ? '正在刷新…' : '刷新内容'}}</button>
       </view>
       <view wx:elif="{{feeds[feedSection.id].loading && feeds[feedSection.id].loaded}}" class="status" role="status">正在读取更多…</view>
       <text wx:elif="{{feeds[feedSection.id].loaded && feeds[feedSection.id].items.length && !feeds[feedSection.id].hasMore}}" class="status feed-end">已经到底了</text>
-      <button wx:elif="{{feeds[feedSection.id].loaded && feeds[feedSection.id].items.length && feeds[feedSection.id].hasMore}}" class="load-more" bindtap="onReachBottom" disabled="{{feeds[feedSection.id].refreshing}}">读取更多</button>
+      <button hover-class="motion-press" hover-start-time="0" hover-stay-time="60" wx:elif="{{feeds[feedSection.id].loaded && feeds[feedSection.id].items.length && feeds[feedSection.id].hasMore}}" class="load-more" bindtap="onReachBottom" disabled="{{feeds[feedSection.id].refreshing}}">读取更多</button>
     </view>
   </block>
 </view>
