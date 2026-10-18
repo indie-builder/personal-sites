@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { Effect, Schedule } from "effect";
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -239,6 +239,21 @@ for (const nested of [false, true]) {
   }
  });
 }
+
+test("X worker cannot execute when its owner marker cannot be persisted", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "site-process-register-"));
+  const output = path.join(directory, "must-not-exist");
+  try {
+    const exit = await Effect.runPromiseExit(runCommand(process.execPath, ["-e",
+      `require("node:fs").writeFileSync(${JSON.stringify(output)}, "unexpected write")`,
+    ], { cwd: directory, env: { X_SYNC_WORKER_DIRECTORY: path.join(directory, "missing") } }));
+    assert.equal(exit._tag, "Failure");
+    assert.equal(exit.cause.reasons[0].error.operation, "x.sync-worker.register");
+    await assert.rejects(access(output), { code: "ENOENT" });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("process adapters report spawn failures without hanging cleanup", async () => {
   for (const run of [runCodexCli, runCommand]) {
