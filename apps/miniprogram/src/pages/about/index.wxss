@@ -7,13 +7,17 @@
 .avatar { width: 96px; height: 96px; flex-shrink: 0; }
 button.career-toggle { display: flex; width: 100%; min-height: 56px; gap: 12px; align-items: center; padding: 10px 0; text-align: left; border-radius: 0; font-size: 14px; font-weight: 500; }
 .career-toggle .meta { font-size: 12px; font-weight: 400; }
-.career-toggle-action { margin-left: auto; font-size: 12px; font-weight: 400; }
-.career-chevron { width: 7px; height: 7px; flex-shrink: 0; border-right: 1px solid var(--muted); border-bottom: 1px solid var(--muted); transform: rotate(45deg); transition: transform 160ms var(--ease-out); }
-.career-chevron.is-open { transform: rotate(225deg); }
-/* Height is the accordion's only layout cost; 200ms keeps it cheap and interruptible. */
-.career-clip { overflow: hidden; opacity: 0; transition: height 200ms var(--ease-out), opacity 160ms var(--ease-out); }
-.career-clip.is-open { opacity: 1; }
-.career-receipt { padding: 24px 0; border-bottom: 1px solid var(--line); }
+.career-chevron { margin-left: auto; width: 7px; height: 7px; flex-shrink: 0; border-right: 1px solid var(--muted); border-top: 1px solid var(--muted); transform: rotate(45deg); }
+.career-motion-probe { position: fixed; width: 0; height: 0; pointer-events: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .career-motion-probe { opacity: 0; } }
+.career-sheet { display: flex; flex-direction: column; max-width: 760px; height: 68vh; max-height: 640px; margin: 0 auto; padding: 10px 24px calc(16px + env(safe-area-inset-bottom)); }
+.career-grabber { align-self: center; width: 32px; height: 4px; flex-shrink: 0; margin-bottom: 12px; border-radius: 2px; background: var(--line); }
+.career-sheet-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--ink); }
+.career-sheet-name, .career-sheet-header .meta { display: block; }
+.career-sheet-name { font-size: 16px; line-height: 1.6; font-weight: 500; }
+button.career-close { min-width: 44px; padding: 8px 0 8px 8px; font-size: 13px; }
+.career-scroll { flex: 1; min-height: 0; height: 0; }
+.career-receipt { padding: 8px 0 20px; }
 .section-title { display: block; font-size: 18px; font-weight: 600; line-height: 1.5; }
 .career-row { padding: 12px 0; }
 .career-heading, .career-total { display: flex; justify-content: space-between; gap: 16px; }
@@ -29,6 +33,5 @@ button.career-toggle { display: flex; width: 100%; min-height: 56px; gap: 12px; 
 .motion-setting { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; }
 .motion-setting-label { font-size: 14px; }
 .website-link { display: table; margin-top: 16px; padding-left: 0; color: var(--muted); }
-.motion-reduced .career-clip { transition: none; }
-.motion-reduced .career-chevron { transition: none; }
-@media (prefers-reduced-motion: reduce) { .career-clip, .career-chevron { transition: none; } }
+@media (max-width: 350px) { .career-sheet { padding-left: 16px; padding-right: 16px; } }
+@media (max-height: 480px) { .career-sheet { height: 85vh; } }
