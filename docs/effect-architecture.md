@@ -1,6 +1,6 @@
 # Effect 开发规则
 
-本项目的 TypeScript/JavaScript 业务 I/O 和异步流程默认使用 Effect。当前统一固定 `effect@4.0.4`（稳定版），升级时一起更新所有工作区与 lockfile。
+本项目的 TypeScript/JavaScript 业务 I/O 和异步流程默认使用 Effect。稳定版本由各工作区 manifest 与 `bun.lock` 统一固定，升级时一起更新。
 
 ## 边界
 
@@ -10,7 +10,7 @@
 | `packages/public-data` | 公开数据 Schema、SQLite、新闻同步/归档；异步业务接口直接返回 Effect |
 | `apps/web/lib` | 查询、检索、限流、会话、模型调用返回 Effect；不在业务流程中启动独立运行时 |
 | `tools/content/modules` | 同步、模型分析、索引、发布返回 Effect；任务并发由 Effect 管理 |
-| Next / React / CLI / 测试 | Next / React / 测试入口执行 `Effect.runPromise`；Node CLI 使用 `@site/effect/cli` 的 `runCli` 响应 SIGINT/SIGTERM；将生命周期取消信号传入执行选项 |
+| TanStack Start / React / 原生生命周期 / CLI / 测试 | server functions、route handlers、React 回调、微信页面生命周期与测试入口执行 Effect；Node CLI 使用 `@site/effect/cli` 的 `runCli` 响应 SIGINT/SIGTERM；将生命周期取消信号传入执行选项 |
 | 纯计算与展示 | 排序、文本处理、格式化、React 状态、路由、CSS/Motion 保留普通函数和平台生命周期 |
 | Swift / Kotlin / Python | 使用各自平台技术；通过公开 HTTP/SSE 接口与 Web 交互 |
 
@@ -30,7 +30,7 @@ function readRemote(url: string) {
   });
 }
 
-// Next / CLI / React 回调等入口执行。
+// TanStack Start server function / route handler / CLI / React 回调等入口执行。
 const result = await Effect.runPromise(readRemote(url), { signal });
 ```
 
@@ -47,7 +47,7 @@ const result = await Effect.runPromise(readRemote(url), { signal });
 - 超时使用 `timeoutOrElse`；等待使用 `Effect.sleep`。超时需要通过 AbortSignal 或 finalizer 停止真实底层操作。
 - 重试使用明确的 Effect Schedule 和可重试错误条件。数据库写入、收费模型调用、已开始发送的 SSE 流不能默认自动重试；幂等性仍由业务设计保证。
 - 原子文件替换与必要的数据提交可以使用小范围 `uninterruptible`；不能让整个网络同步任务不可取消。
-- React 请求内复用使用 `cache(() => Effect.runSync(Effect.cached(program)))`；这里 `runSync` 只分配懒执行缓存，不执行 I/O。保持 ISR / `revalidate` 与 Next fetch 缓存策略。
+- 懒缓存按所有者生命周期分配 `Effect.cached`；需要在同步点分配时用 `runSync(Effect.cached(program))`，它不执行 I/O。请求绑定的执行与取消不能跨访客共享。页面缓存由路由 `headers()` 声明 `Cache-Control`（`s-maxage` + `stale-while-revalidate`，见 `apps/web/lib/page-cache.ts`），由部署 CDN 兑现。
 
 ## 验证
 

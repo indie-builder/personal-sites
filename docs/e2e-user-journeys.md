@@ -19,7 +19,7 @@ PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch   # Playwright 留守件（须�
 | --- | --- | --- |
 | 首页信息流 | `home-streaming` | 首页流式水合：稳定身份壳内逐段就绪 |
 | 精选剪报流 | `curation-tags`、`stream-load-more-resilience`、`stream-tag-keyboard-scroll` | 标签筛选与详情往返（320–1440px）、加载更多失败中文兜底与重试恢复、键盘切标签即时回顶 |
-| 设计收藏 | `curation-isr` | 列表→详情→相邻剪报→列表全程留在 `/design`；三类详情路径独立 ISR，首读 `MISS\|HIT`、二读 `HIT`；跨板块 ID 404 |
+| 设计收藏 | `curation-isr` | 列表→详情→相邻剪报→列表全程留在 `/design`；三类详情路径各自返回页面 `Cache-Control`（本地断言 `s-maxage=300`）；跨板块 ID 404 |
 | 抖音收藏 | `curation-isr` | `/douyin` 列表进入 `/curation/[id]` 共享详情，返回链接指向 `/douyin`；相邻剪报同为抖音条目，点击换详情后经返回链接回列表 |
 | 每日动态 | `ai-news-filter`、`ai-news-detail-entrance` | 分类菜单窄屏可用、渲染结果按窗口过滤与重置、加载全部历史后的收尾文案不再提 7 天上限；详情入场武装只播一次 |
 | 开源关注 | `open-source-filter`、`open-source-motion`、`open-source-repository` | 主题筛选（四视口）、仓库面板 Motion 与入场/隐藏往返、文件树目录展开、文件读取失败原位报错，重选同一文件后正文、路径与 GitHub 直链就位 |
@@ -40,5 +40,5 @@ PLAYWRIGHT_REUSE_BUILD=1 bun run test:e2e:touch   # Playwright 留守件（须�
 
 - 仓库 tree/file 走 `/api/open-source/*` 到 GitHub 的真实链路会随远端漂移：确定性套件注入受控响应，只证明页面契约；agent 冒烟（`e2e/agent/`）覆盖真实面板切换但不固定远端终态。
 - 投影数据每日同步：确定性套件从渲染列表现取目标（开源 slug、设计与抖音详情、动态分类），不断言具体内容条目；仍硬编码投影 ID 的旧用例属已知技术债（#56）。
-- ISR 断言接受首读 `MISS|HIT`、二读 `HIT`；跨构建的 `x-nextjs-cache: STALE` 残留是已知问题（#65），不在本套件内解决。
+- 页面缓存断言只检查本地响应头 `Cache-Control` 含 `s-maxage=300`；CDN MISS→HIT 与部署侧缓存状态依赖生产环境，不在本地套件内验证。
 - 生产 Supabase 增量、真实模型回答质量、AI 新闻抓取管线的正确性由各自包的测试与线上巡检守住，不在浏览器 e2e 范围。
