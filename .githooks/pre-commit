@@ -3,5 +3,6 @@
 set -eu
 
 repo_root=$(git rev-parse --show-toplevel)
+bun "$repo_root/scripts/check-staged-file-tokens.mjs"
 bun "$repo_root/scripts/verify-git-safety.mjs" \
   --repo "$repo_root"
