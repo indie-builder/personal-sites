@@ -12,7 +12,9 @@ const publicEvidence = () => ({
   askDocuments: 3, askSearchableDocuments: 1, askFts: 1, askMissingFts: 0, askOrphanFts: 0,
   askMissingPostings: 0, askExtraPostings: 0, quickCheck: "ok",
   curation: {
-    x: { count: 1, latestAt: new Date().toISOString() },
+    x: { count: 1, latestAt: new Date().toISOString(), sync: {
+      status: "succeeded", lastStartedAt: new Date().toISOString(), lastFinishedAt: new Date().toISOString(), lastSucceededAt: new Date().toISOString(),
+    } },
     douyin: { count: 1, latestAt: new Date().toISOString() },
   },
   openSource: { count: 1, latestAt: new Date().toISOString() },
@@ -60,6 +62,27 @@ describe("unified data health", () => {
       [field === "askMissingPostings" ? "missingPostings" : "extraPostings"]: 1,
     });
     expect(body.warnings.join("\n")).toContain("词项位置");
+  });
+
+  it.each(["succeeded", "failed", "unknown", "overdue"])("separates stale X content from sync %s", async (state) => {
+    health.mockReturnValue(Effect.succeed({
+      ageMinutes: 1, healthy: true, lastSucceededAt: new Date().toISOString(), running: false,
+    }));
+    const evidence = publicEvidence();
+    publicHealth.mockReturnValue({ ...evidence, curation: { ...evidence.curation, x: {
+      ...evidence.curation.x, latestAt: "2020-01-01T00:00:00.000Z",
+      sync: state === "unknown" ? null : {
+        ...evidence.curation.x.sync,
+        status: state === "failed" ? "failed" : "succeeded",
+        lastSucceededAt: state === "overdue" ? "2020-01-01T00:00:00.000Z" : new Date().toISOString(),
+      },
+    } } });
+    const response = await GET();
+    const body = await response.json();
+    expect(response.status).toBe(state === "succeeded" ? 200 : 503);
+    expect(body.curation.x.freshness).toBe("stale");
+    expect(body.curation.x.sync.status).toBe(state === "overdue" ? "succeeded" : state);
+    expect(body.warnings.join("\n")).toContain("内容");
   });
 
   it("returns only public failure state when SQLite health cannot be read", async () => {

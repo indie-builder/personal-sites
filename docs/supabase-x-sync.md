@@ -50,6 +50,12 @@ bun run curation:enrich -- --refresh --limit 20
 
 全量策展、项目档案和 GitHub Star 三个公开 SQLite 写入口共享压实规则：空闲页达到 32 页时才执行 `VACUUM`，减少 Git 二进制与部署体积，同时避免每次微小更新都重写数据库。
 
+完整 `curation:sync`（bookmarks + likes、无 `--limit`）在 `data/curation.sqlite` 的 `x_sync_state` 记录开始、结束、最近成功时间及 `running/succeeded/failed` 状态，不记录原始错误、来源内容或凭据。配置检查、抓取、解析、公开库构建及本地索引全部成功后才写成功；零新增也是一次成功。普通失败或中断记失败，强制杀进程可能留下 `running`，最近成功超过 72 小时仍会使健康检查失败。`--fetch-only`、`--history`、单来源与限量批次不会更新完整同步记录；单独 `curation:publish` 保留原记录，不会伪造同步成功。状态随公开库提交与部署，线上不会实时读取本机任务。
+
+所有 `curation:sync` 模式（含仅抓取和历史导入）在开始前持有 `var/x-sync-lock.sqlite` 的独占事务，重复启动立即失败，不改队列或运行记录。X 子进程及其通过公共适配器启动的独立进程组在执行前将 PGID 原子写入 `var/x-sync-workers/`；正常结束和中断仍按作用域清理进程组。父进程崩溃虽释放 SQLite 锁，新运行也须确认所有已登记进程组消失后才允许开始；不会自动终止遗留进程，也不要手动删除工作进程标记来绕过检查。每次完整运行用唯一 `run_id` 比较后写结束状态，公开库重建保留该标识，旧运行不能覆盖新运行。单独启动的 prepare/enrich/publish 等维护命令不受此锁保护，需串行执行。
+
+抓取器即使退出码为零，也必须输出可识别的完成结果；外层拒绝其报告的文件夹失败、条目失败或准备数量不符。列表顺序预读必须返回有效数组与条目 ID，失败不再静默跳过。原始抓取输出仅在适配器内检查，不写入公开状态；Smaug 没有结构化结果协议，上游日志格式变化会使校验失败，需更新适配器。该检查覆盖来源抓取及条目准备，不保证可选外链正文、媒体或上游分页数据完整。
+
 每次生成策展内容时还会在私有目录写入 `data/sensitive/x-curation/generated/insights.json` 与便于人工阅读的 `insights.md`，包含数据健康度、来源分布、高频概念、工具、近期上升主题与 taxonomy 建议。按内容摘要去重的历史快照保存在 `generated/insight-snapshots/`；这些文件都不会进入 Git 或网站运行时。
 
 前端只在 Node.js 服务端从 SQLite 读取，绝不向浏览器暴露数据库文件。`apps/web/next.config.ts` 的输出文件追踪会将它随每个函数部署；Edge Runtime 不支持这一读取路径。

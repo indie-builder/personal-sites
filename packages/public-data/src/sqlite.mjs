@@ -21,6 +21,14 @@ export function compactPublicDatabase(database, minimumFreePages = 32) {
 export function initializePublicDatabase(database) {
   database.exec(`
     PRAGMA foreign_keys = ON;
+    CREATE TABLE IF NOT EXISTS x_sync_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      run_id TEXT,
+      status TEXT NOT NULL CHECK (status IN ('running', 'succeeded', 'failed')),
+      last_started_at TEXT NOT NULL,
+      last_finished_at TEXT,
+      last_succeeded_at TEXT
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS curation_items (
       id TEXT PRIMARY KEY,
       collected_at TEXT,
@@ -78,6 +86,9 @@ export function initializePublicDatabase(database) {
       VALUES (new.rowid, new.title, new.search_text);
     END;
   `);
+  if (!database.pragma("table_info(x_sync_state)").some((column) => column.name === "run_id")) {
+    database.exec("ALTER TABLE x_sync_state ADD COLUMN run_id TEXT");
+  }
   // FTS 增量由上面的触发器维护；不再在每次初始化时执行全量 rebuild——
   // GitHub 分析期曾对每个仓库单独 publish，一次运行会触发 N 次全量重建。
   // 若索引出现漂移，重新跑 curation:publish 从零生成公开库即可。
@@ -128,6 +139,11 @@ export function preserveSupplementalProjection(sourcePath, targetDatabase) {
       });
       transaction(source.prepare(`SELECT ${columns.join(", ")} FROM ${table}`).all());
     };
+    const syncColumns = ["id", "status", "last_started_at", "last_finished_at", "last_succeeded_at"];
+    if (tables.has("x_sync_state") && source.pragma("table_info(x_sync_state)").some((column) => column.name === "run_id")) {
+      syncColumns.push("run_id");
+    }
+    copy("x_sync_state", syncColumns);
     copy("open_source_items", ["repo_node_id", "slug", "display_rank", "published_at", "content_json"]);
     if (tables.has("ask_documents")) {
       const columns = ["id", "source_scope", "source_id", "title", "section", "source_url", "published_at", "content", "search_text"];
