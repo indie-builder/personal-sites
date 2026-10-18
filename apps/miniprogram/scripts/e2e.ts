@@ -185,6 +185,8 @@ export function createAppService(directory = path.join(root, "dist")) {
       return cached;
     },
     setNavigationBarTitle() {},
+    hideTabBar() {},
+    showTabBar() {},
     stopPullDownRefresh() { pullDownStops++; },
     getStorageSync: (key: string) => storage.get(key) ?? "",
     setStorageSync: (key: string, value: unknown) => storage.set(key, value),

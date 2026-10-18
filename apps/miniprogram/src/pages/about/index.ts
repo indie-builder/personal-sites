@@ -4,7 +4,7 @@ Page({
   data: {
     profile,
     careerOpen: false,
-    careerHeight: "0px",
+    careerDuration: 0,
     reducedMotion: false,
     links: [
       { label: "GitHub", url: "https://github.com/indie-builder" },
@@ -18,57 +18,54 @@ Page({
     ],
     terms: ["agent.runtime", "human.in.loop", "rag.retrieval", "sse.stream", "TypeScript", "Python", "Java", "Postgres", "Docker", "Kubernetes", "React.js", "Git/GitHub"],
   },
-  _careerToken: 0,
+  _tabBarHidden: false,
+  _openToken: 0,
 
-  // Keep the closed receipt mounted so its height never reflows after the first measurement.
-  measureCareer() {
-    const token = ++this._careerToken;
-    const settle = (height: string) => {
-      if (token !== this._careerToken) return;
-      this.setData({ careerHeight: height });
-    };
+  measureMotion() {
+    const token = ++this._openToken;
+    const reducedMotion = readReducedMotion();
+    this.setData({ reducedMotion, careerDuration: 0 });
+    if (reducedMotion) return;
     try {
-      wx.createSelectorQuery().in(this).select("#career-receipt").boundingClientRect((rect) => {
-        const measured = rect && !Array.isArray(rect) && Number.isFinite(rect.height) && rect.height > 0;
-        settle(measured ? `${Math.ceil(rect.height)}px` : "auto");
+      wx.createSelectorQuery().in(this).select(".career-motion-probe").fields({ computedStyle: ["opacity"] }, (style) => {
+        if (token !== this._openToken || !style) return;
+        this.setData({ careerDuration: String(style.opacity) === "1" ? 250 : 0 });
       }).exec();
-    } catch {
-      // A persistent zero height without a measurable rect would hide the open content.
-      settle("auto");
-    }
+    } catch { /* Static is the safe fallback when the WebView cannot report the system preference. */ }
   },
 
   toggleCareer() {
-    if (this.data.careerOpen) {
-      this._careerToken += 1;
-      this.setData({ careerOpen: false, careerHeight: "0px" });
-      return;
-    }
-    this.setData({ careerOpen: true });
-    this.measureCareer();
+    if (this.data.careerOpen) { this.closeCareer(); return; }
+    this._tabBarHidden = true;
+    wx.hideTabBar({ animation: false });
+    this.setData({ careerOpen: true, reducedMotion: readReducedMotion() });
   },
 
-  onShow() {
-    const reducedMotion = readReducedMotion();
-    if (reducedMotion !== this.data.reducedMotion) this.setData({ reducedMotion });
-    if (this.data.careerOpen) this.measureCareer();
+  closeCareer() { this.setData({ careerOpen: false }); },
+
+  onCareerLeave() {
+    // Native back/swipe dismissal also has to update the controlled show property.
+    this.closeCareer();
   },
 
-  onResize() {
-    if (this.data.careerOpen) this.measureCareer();
+  onCareerAfterLeave() {
+    // A close completion may arrive after reopening the sheet.
+    if (!this.data.careerOpen) this.restoreTabBar();
   },
 
-  onHide() {
-    this._careerToken += 1;
+  restoreTabBar() {
+    if (!this._tabBarHidden) return;
+    this._tabBarHidden = false;
+    wx.showTabBar({ animation: false });
   },
 
-  onUnload() {
-    this._careerToken += 1;
-  },
+  onShow() { this.measureMotion(); },
+  onHide() { this._openToken++; this.closeCareer(); this.restoreTabBar(); },
+  onUnload() { this._openToken++; this.restoreTabBar(); },
 
   onReducedMotionChange(event: WechatMiniprogram.SwitchChange) {
     setReducedMotion(event.detail.value);
-    this.setData({ reducedMotion: readReducedMotion() });
+    this.measureMotion();
   },
 
   copyProfileLink(event: WechatMiniprogram.TouchEvent) {
@@ -76,11 +73,7 @@ Page({
     if (link) copyLink(link.url);
   },
 
-  copyWebsite() {
-    copyLink(SITE_ORIGIN);
-  },
+  copyWebsite() { copyLink(SITE_ORIGIN); },
 
-  onShareAppMessage() {
-    return { title: `${profile.name} · 关于我`, path: "/pages/about/index" };
-  },
+  onShareAppMessage() { return { title: `${profile.name} · 关于我`, path: "/pages/about/index" }; },
 });

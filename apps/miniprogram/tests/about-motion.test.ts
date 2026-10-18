@@ -3,171 +3,83 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import * as runtime from "../src/lib/runtime";
 
-type Rect = { height: number } | null;
-type Page = {
-  data: {
-    careerOpen: boolean;
-    careerHeight: string;
-    reducedMotion: boolean;
-    profile: { name: string };
-    career: { company: string }[];
-  };
-  setData(patch: Record<string, unknown>, callback?: () => void): void;
-  measureCareer(): void;
-  toggleCareer(): void;
-  onShow(): void;
-  onResize(): void;
-  onHide(): void;
-  onUnload(): void;
+type SheetPage = {
+  data: { careerOpen: boolean; reducedMotion: boolean; careerDuration: number };
+  setData(patch: Record<string, unknown>): void;
+  toggleCareer(): void; closeCareer(): void; onCareerLeave(): void; onCareerAfterLeave(): void;
+  onShow(): void; onHide(): void; onUnload(): void;
   onReducedMotionChange(event: { detail: { value: boolean } }): void;
 };
-
-const source = new URL("../src/pages/about/", import.meta.url);
-const template = readFileSync(new URL("index.wxml", source), "utf8");
-const styles = readFileSync(new URL("index.wxss", source), "utf8");
-const build = await Bun.build({
-  entrypoints: [new URL("index.ts", source).pathname],
-  target: "browser", format: "cjs", external: ["*/lib/runtime"],
-});
-if (!build.success) throw new Error(build.logs.map(String).join("\n"));
-
-let page: Page;
-let callbacks: ((rect: Rect) => void)[];
-let executed: number;
-let throwQuery: boolean;
-let storedMotion: boolean;
-let writes: [string, unknown][];
+const directory = new URL("../src/pages/about/", import.meta.url);
+const template = readFileSync(new URL("index.wxml", directory), "utf8");
+const styles = readFileSync(new URL("index.wxss", directory), "utf8");
+const bundle = await Bun.build({ entrypoints: [new URL("index.ts", directory).pathname], target: "browser", format: "cjs", external: ["*/lib/runtime"] });
+if (!bundle.success) throw new Error(bundle.logs.map(String).join("\n"));
+let page: SheetPage;
 let originalWx: PropertyDescriptor | undefined;
-
-function fakeWx() {
-  return {
+let stored: boolean;
+let tabs: string[];
+let motionCallbacks: ((style: { opacity: string }) => void)[];
+beforeEach(async () => {
+  stored = false; tabs = []; motionCallbacks = [];
+  const wxMock = {
+    getStorageSync: () => stored,
+    setStorageSync: (_key: string, value: boolean) => { stored = value; },
+    hideTabBar: () => tabs.push("hide"), showTabBar: () => tabs.push("show"),
     createSelectorQuery() {
-      if (throwQuery) throw new Error("selector query unavailable");
-      const query = {
-        in: () => query,
-        select: () => query,
-        boundingClientRect: (callback: (rect: Rect) => void) => { callbacks.push(callback); return query; },
-        exec: () => { executed += 1; },
-      };
+      const query = { in: () => query, select: () => query, fields: (_options: unknown, callback: (style: { opacity: string }) => void) => { motionCallbacks.push(callback); return query; }, exec() {} };
       return query;
     },
-    getStorageSync(key: string) { return key === "chenyuan.reduced-motion" ? storedMotion : undefined; },
-    setStorageSync(key: string, value: unknown) { writes.push([key, value]); },
-    showToast() {},
-    setClipboardData() {},
   };
-}
-
-beforeEach(async () => {
-  callbacks = []; executed = 0; throwQuery = false; storedMotion = true; writes = [];
-  const wxMock = fakeWx();
   originalWx = Object.getOwnPropertyDescriptor(globalThis, "wx");
   Object.defineProperty(globalThis, "wx", { configurable: true, value: wxMock });
   let definition: Record<string, unknown> = {};
-  runInNewContext(await build.outputs[0].text(), {
-    require: () => runtime,
-    Page: (options: Record<string, unknown>) => { definition = options; },
-    wx: wxMock,
-  });
-  page = {
-    ...definition,
-    data: structuredClone(definition.data),
-    setData(this: Page, patch: Record<string, unknown>, callback?: () => void) {
-      for (const [key, value] of Object.entries(patch)) (this.data as Record<string, unknown>)[key] = value;
-      callback?.();
-    },
-  } as unknown as Page;
+  runInNewContext(await bundle.outputs[0].text(), { require: () => runtime, wx: wxMock, Page: (options: Record<string, unknown>) => { definition = options; } });
+  page = { ...definition, data: structuredClone(definition.data), setData(this: SheetPage, patch: Record<string, unknown>) { Object.assign(this.data, patch); } } as unknown as SheetPage;
 });
-
 afterEach(() => {
-  page?.onUnload();
+  page.onUnload();
   if (originalWx) Object.defineProperty(globalThis, "wx", originalWx);
   else Reflect.deleteProperty(globalThis, "wx");
 });
 
-describe("About native career motion", () => {
-  test("rapid toggles retarget state and only the latest measurement applies", () => {
-    page.toggleCareer();
-    expect(page.data.careerOpen).toBe(true);
-    expect(executed).toBe(1);
-    page.toggleCareer();
-    expect(page.data.careerOpen).toBe(false);
-    expect(page.data.careerHeight).toBe("0px");
-    page.toggleCareer();
-    expect(page.data.careerOpen).toBe(true);
-    expect(callbacks).toHaveLength(2);
-    callbacks[0]!({ height: 999 });
-    expect(page.data.careerHeight).toBe("0px");
-    callbacks[1]!({ height: 412.4 });
-    expect(page.data.careerHeight).toBe("413px");
+describe("native career bottom sheet", () => {
+  test("opens over the page and restores navigation only after dismissal", () => {
+    page.toggleCareer(); expect(page.data.careerOpen).toBe(true); expect(tabs).toEqual(["hide"]);
+    page.closeCareer(); expect(page.data.careerOpen).toBe(false); expect(tabs).toEqual(["hide"]);
+    page.onCareerAfterLeave(); expect(tabs).toEqual(["hide", "show"]);
   });
-
-  test("closing after an open settles leaves no stale command behind", () => {
-    page.toggleCareer();
-    callbacks[0]!({ height: 400 });
-    expect(page.data.careerHeight).toBe("400px");
-    page.toggleCareer();
-    expect(page.data.careerHeight).toBe("0px");
-    page.onShow();
-    expect(callbacks).toHaveLength(1);
-    page.onResize();
-    expect(executed).toBe(1);
+  test("native back and overlay closure keep show state synchronized", () => {
+    page.toggleCareer(); page.onCareerLeave(); expect(page.data.careerOpen).toBe(false);
+    page.onCareerAfterLeave(); expect(tabs.at(-1)).toBe("show");
   });
-
-  test("measurement failures keep the open receipt readable", () => {
-    page.toggleCareer();
-    callbacks[0]!(null);
-    expect(page.data.careerHeight).toBe("auto");
-    page.toggleCareer();
-    expect(page.data.careerHeight).toBe("0px");
-    throwQuery = true;
-    page.toggleCareer();
-    expect(page.data.careerHeight).toBe("auto");
-    expect(page.data.careerOpen).toBe(true);
+  test("a stale close completion cannot expose the tab bar behind a reopened sheet", () => {
+    page.toggleCareer(); page.closeCareer(); page.toggleCareer(); page.onCareerAfterLeave();
+    expect(page.data.careerOpen).toBe(true); expect(tabs).not.toContain("show");
+    page.onHide(); expect(page.data.careerOpen).toBe(false); expect(tabs.at(-1)).toBe("show");
   });
-
-  test("hide and unload invalidate deferred measurements", () => {
-    page.toggleCareer();
-    page.onHide();
-    callbacks[0]!({ height: 500 });
-    expect(page.data.careerHeight).toBe("0px");
-    // onHide keeps the open state; the next toggle closes, then a fresh open measures again.
-    page.toggleCareer();
-    page.toggleCareer();
-    expect(callbacks).toHaveLength(2);
-    page.onUnload();
-    callbacks[1]!({ height: 600 });
-    expect(page.data.careerHeight).toBe("0px");
-  });
-
-  test("resize remeasures the open receipt and reduced motion re-reads the stored preference", () => {
-    page.onResize();
-    expect(callbacks).toHaveLength(0);
-    page.toggleCareer();
-    page.onResize();
-    expect(callbacks).toHaveLength(2);
-    callbacks[1]!({ height: 360 });
-    expect(page.data.careerHeight).toBe("360px");
-    expect(page.data.reducedMotion).toBe(false);
-    page.onShow();
+  test("unload restores navigation and reduced-motion preference is retained", () => {
+    page.onReducedMotionChange({ detail: { value: true } }); page.onShow();
     expect(page.data.reducedMotion).toBe(true);
-    page.onReducedMotionChange({ detail: { value: true } });
-    expect(writes).toEqual([["chenyuan.reduced-motion", true]]);
-    expect(page.data.reducedMotion).toBe(true);
+    page.toggleCareer(); page.onUnload(); expect(tabs.at(-1)).toBe("show");
+  });
+  test("system preference controls native duration and hidden callbacks are ignored", () => {
+    page.onShow(); expect(page.data.careerDuration).toBe(0);
+    motionCallbacks[0]!({ opacity: "0" }); expect(page.data.careerDuration).toBe(0);
+    page.onShow(); motionCallbacks[1]!({ opacity: "1" }); expect(page.data.careerDuration).toBe(250);
+    page.onShow(); page.onHide(); motionCallbacks[2]!({ opacity: "1" }); expect(page.data.careerDuration).toBe(0);
+    page.onReducedMotionChange({ detail: { value: true } }); expect(page.data.careerDuration).toBe(0);
   });
 
-  test("template and styles declare a persistent, measure-driven accordion", () => {
-    expect(template).toContain("about-page {{reducedMotion ? 'motion-reduced' : ''}}");
-    // The receipt stays mounted so its height is measured once and closed content keeps no hit target.
-    expect(template).not.toMatch(/career-receipt[^>]*wx:if/);
-    expect(template).toContain('id="career-receipt"');
-    expect(template).toContain('aria-hidden="{{careerOpen ? \'false\' : \'true\'}}"');
-    expect(template).toContain('bindchange="onReducedMotionChange"');
-    expect(template).toContain("career-chevron {{careerOpen ? 'is-open' : ''}}");
-    expect(styles).toMatch(/\.career-clip[^}]*height 200ms var\(--ease-out\), opacity 160ms var\(--ease-out\)/);
-    expect(styles).toMatch(/\.career-chevron[^}]*transform 160ms var\(--ease-out\)/);
-    // The curve is the shared app token; the page must not fork its own easing system.
-    expect(styles).not.toMatch(/cubic-bezier/);
-    expect(styles).not.toMatch(/bounce|spring|overshoot/i);
+  test("native container slides from bottom with a scrollable receipt and explicit close", () => {
+    expect(template).toContain('<page-container show="{{careerOpen}}" position="bottom"');
+    expect(template).toContain('duration="{{reducedMotion ? 0 : careerDuration}}"');
+    expect(template).toContain('close-on-slide-down="{{false}}"');
+    expect(template).toContain('bindclickoverlay="closeCareer"');
+    expect(template).toContain('bindleave="onCareerLeave"');
+    expect(template).toContain('bindafterleave="onCareerAfterLeave"');
+    expect(template).toContain('class="career-scroll" scroll-y');
+    expect(template).toContain('aria-label="关闭个人经历"');
+    expect(template).not.toContain("career-clip"); expect(styles).not.toContain("transition: height");
   });
 });

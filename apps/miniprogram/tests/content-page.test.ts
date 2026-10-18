@@ -80,6 +80,7 @@ beforeEach(() => {
     switchTab(options: { url: string }) { navigated.push(options.url); },
     stopPullDownRefresh() { stoppedRefresh++; },
     setNavigationBarTitle() {},
+    hideTabBar() {}, showTabBar() {},
     showToast() {},
     setClipboardData(options: { data: string; success: () => void }) { copied.push(options.data); options.success(); },
     previewImage(options: { urls: string[] }) { previews.push(options.urls); },
