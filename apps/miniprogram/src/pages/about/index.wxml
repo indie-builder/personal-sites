@@ -1,0 +1,35 @@
+<view class="page about-page">
+  <view class="external-links">
+    <button wx:for="{{links}}" wx:key="url" class="profile-link quiet" data-url="{{item.url}}" bindtap="copyProfileLink" aria-label="复制{{item.label}}链接">{{item.label}}</button>
+  </view>
+  <view class="meta link-hint">轻点链接复制，在浏览器中打开。</view>
+  <view class="identity">
+    <view>
+      <text class="identity-name">{{profile.name}}</text>
+      <text class="meta identity-handle">@{{profile.handle}}</text>
+    </view>
+    <image class="avatar" src="/assets/avatar.png" mode="aspectFit" aria-label="陈远的头像插画" />
+  </view>
+  <button class="career-toggle divider" bindtap="toggleCareer" aria-label="{{careerOpen ? '收起个人经历' : '展开个人经历'}}" aria-expanded="{{careerOpen}}">
+    <text>2014—至今</text>
+    <text class="meta">个人经历</text>
+    <text class="career-toggle-action">{{careerOpen ? '收起' : '展开'}}</text>
+  </button>
+  <view wx:if="{{careerOpen}}" class="career-receipt">
+    <text class="section-title">个人经历</text>
+    <view wx:for="{{career}}" wx:key="company" class="career-row">
+      <view class="career-heading"><text>{{item.company}}</text><text class="muted">{{item.years}}</text></view>
+      <text class="meta" user-select="true">{{item.meta}}</text>
+    </view>
+    <view class="career-total"><text class="muted">合计</text><text>12 年</text></view>
+    <text class="meta">十二年 · 四段路 · 仍在增长</text>
+  </view>
+  <view class="biography">
+    <text class="section-title greeting">你好，</text>
+    <text wx:for="{{profile.paragraphs}}" wx:key="*this" class="body muted bio-paragraph" user-select="true">{{item}}</text>
+  </view>
+  <view class="technical-terms divider" aria-label="技术词条">
+    <text wx:for="{{terms}}" wx:key="*this" class="technical-term" user-select="true">{{item}}</text>
+  </view>
+  <button class="website-link" bindtap="copyWebsite">复制个人网站链接</button>
+</view>

@@ -3,6 +3,7 @@
 | 目录 | 包名 | 所有权 |
 | --- | --- | --- |
 | `apps/web` | `@site/web` | TanStack Start 页面、API、组件、Web 单测与浏览器 e2e（e2e 运行器 + Playwright 留守件） |
+| `apps/miniprogram` | `@site/miniprogram` | 微信原生页面、公开 HTTP/SSE 客户端、Bun 构建和客户端回归；[开发与发布](../apps/miniprogram/README.md) |
 | `tools/content` | `@site/content` | 抓取、离线分析、同步、归档、向量索引与 Bun/Node 测试 |
 | `packages/effect` | `@site/effect` | Effect I/O 错误边界与公共 Schema 基础约束 |
 | `packages/public-data` | `@site/public-data` | 公开数据 schema、SQLite 工具、每日动态同步/归档、健康检查 |
@@ -31,6 +32,9 @@ bun run test:e2e
 bun run test:e2e:touch
 cd apps/web && bunx vitest run tests/ai-news-hybrid.test.ts
 bun run --filter @site/content test
+bun run --filter @site/miniprogram build     # 微信开发者工具导入 apps/miniprogram
+bun run --filter @site/miniprogram test:e2e  # 构建产物 AppService 契约回归
+bun run --filter @site/miniprogram check:templates # 本机微信工具 wcc/wcsc 编译
 bunx turbo run build test --dry=json        # 只看任务依赖，不运行任务
 ```
 
@@ -48,7 +52,7 @@ TS7 入口仍在 `scripts/tsc7.mjs`；lint 使用 oxlint，不改 TypeScript 版
 | X / 抖音 / GitHub Star | `tools/content/scripts/` 调度 `tools/content/modules/x-sync/`、`tools/content/modules/douyin-sync/`、`tools/content/modules/github-starred/` → `data/curation.sqlite` | `apps/web/lib/curation.ts`、`apps/web/lib/open-source.ts` → 栏目与公开 GET API |
 | 问一问 | `apps/web/src/routes/api/ask.ts` → `apps/web/lib/ask-search.server.ts`、`apps/web/lib/ask-session.server.ts` | `apps/web/components/use-ask-conversation.ts` 管会话、`apps/web/components/ask-sse.ts` 解析流；`apps/web/components/ask-chat.tsx` → `apps/web/components/ask-message.tsx` → `apps/web/components/ask-answer.tsx` 渲染抽屉、消息与 OpenUI；原生客户端复用公开 API |
 | 本地向量检索 | `tools/content/scripts/local-vectors.mjs` → `tools/content/modules/local-vectors/indexer.mjs`、`tools/content/modules/local-vectors/search.mjs` | 私有文件与公开 Ask 投影只进入本机忽略索引；Web 不读取该索引 |
-| 原生客户端 | [Android data](../android/app/src/main/java/cn/lovemyrmb/personalsite/data/) 与 [iOS Data](../ios/ChenYuanSite/Data/) | 各自原生界面消费公开 GET API 与 `POST /api/ask`；构建命令见各端 README |
+| 客户端 | [Android data](../android/app/src/main/java/cn/lovemyrmb/personalsite/data/)、[iOS Data](../ios/ChenYuanSite/Data/)、[小程序数据层](../apps/miniprogram/src/lib/) | 各自原生界面消费公开 GET API 与 `POST /api/ask`；构建命令见各端 README |
 
 页面布局和移动端行为以[前端架构](frontend-architecture.md)与 [DESIGN.md](../DESIGN.md)为准；私有输入和公开投影的界限见[敏感数据说明](sensitive-data.md)。
 

@@ -1,0 +1,26 @@
+{
+  "light": {
+    "surface": "#ffffff",
+    "ink": "#1c1c1e",
+    "muted": "#656568",
+    "navigationText": "black",
+    "backgroundText": "dark",
+    "borderStyle": "black",
+    "homeIcon": "assets/navigation/home-light.png",
+    "askIcon": "assets/navigation/ask-light.png",
+    "portfolioIcon": "assets/navigation/portfolio-light.png",
+    "aboutIcon": "assets/navigation/about-light.png"
+  },
+  "dark": {
+    "surface": "#181818",
+    "ink": "#f4f4f4",
+    "muted": "#a1a1a4",
+    "navigationText": "white",
+    "backgroundText": "light",
+    "borderStyle": "white",
+    "homeIcon": "assets/navigation/home-dark.png",
+    "askIcon": "assets/navigation/ask-dark.png",
+    "portfolioIcon": "assets/navigation/portfolio-dark.png",
+    "aboutIcon": "assets/navigation/about-dark.png"
+  }
+}

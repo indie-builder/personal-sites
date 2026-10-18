@@ -1,0 +1,78 @@
+<view class="ask" style="{{screenHeight ? 'height: ' + screenHeight + 'px;' : ''}}">
+  <view class="ask-header">
+    <text class="meta ask-description">基于站内公开资料，引用可直接阅读</text>
+    <button class="ask-reset" bindtap="newConversation" disabled="{{!hasConversation}}" aria-label="开始新对话">新对话</button>
+  </view>
+
+  <view class="ask-reading">
+    <scroll-view id="conversation" class="ask-conversation" scroll-y scroll-into-view="{{scrollTarget}}" scroll-with-animation="{{false}}" bindscroll="onScroll" enhanced show-scrollbar="{{false}}" aria-label="问答记录">
+      <view class="ask-content">
+        <view wx:if="{{messages.length === 0}}" class="ask-empty">
+          <text class="title ask-empty-title">有什么想了解的？</text>
+          <text class="body muted ask-empty-copy">关于陈远、每日关注或开源内容，都可以从这里开始。</text>
+          <view class="ask-examples">
+            <button wx:for="{{examples}}" wx:key="question" class="ask-example" data-index="{{index}}" bindtap="onExample">{{item.question}}</button>
+          </view>
+        </view>
+
+        <button wx:if="{{hiddenCount}}" class="ask-earlier button" bindtap="loadEarlier">显示较早的 {{hiddenCount}} 条消息</button>
+
+        <view wx:for="{{messages}}" wx:key="id" wx:for-item="message" id="message-{{hiddenCount + index}}" class="ask-message {{message.role === 'question' ? 'ask-question' : 'ask-answer'}}">
+          <view wx:if="{{message.role === 'question'}}" class="ask-question-text">
+            <text selectable>{{message.text}}</text>
+          </view>
+          <block wx:else>
+            <view wx:if="{{message.text}}" class="ask-answer-text">
+              <block wx:for="{{message.parts}}" wx:key="key" wx:for-item="part">
+                <rich-text wx:if="{{part.kind === 'rich'}}" class="body" nodes="{{part.nodes}}" user-select="{{true}}"></rich-text>
+                <view wx:else class="body ask-flow" style="{{part.style}}">
+                  <block wx:for="{{part.runs}}" wx:key="key" wx:for-item="run">
+                    <text wx:if="{{run.ref}}" class="ask-ref" data-message-id="{{message.id}}" data-index="{{run.index}}" bindtap="openSource" aria-label="{{'阅读引用 ' + run.ref}}">{{run.ref}}</text>
+                    <rich-text wx:else class="ask-run" nodes="{{run.nodes}}" user-select="{{true}}"></rich-text>
+                  </block>
+                </view>
+              </block>
+            </view>
+            <text wx:else class="body muted" aria-live="polite">{{message.placeholder}}</text>
+            <text wx:if="{{message.status === 'stopped' && message.text}}" class="meta ask-message-state">已停止生成</text>
+            <text wx:if="{{message.status === 'streaming' && message.text}}" class="meta ask-message-state" aria-live="polite">正在生成…</text>
+            <text wx:if="{{message.status === 'error' && message.text}}" class="meta error ask-message-state">回答未完成</text>
+
+            <view wx:if="{{message.sourceViews.length}}" class="ask-sources">
+              <text class="meta">{{message.text ? '参考资料 · 点击查看依据' : '检索到的资料'}}</text>
+              <button wx:for="{{message.sourceViews}}" wx:for-item="source" wx:key="index" class="ask-source" data-message-id="{{message.id}}" data-index="{{source.index}}" bindtap="openSource" aria-label="{{'阅读引用 ' + source.number + '：' + source.title}}">
+                <text class="ask-source-number">{{source.number}}</text>
+                <view class="ask-source-copy">
+                  <text class="ask-source-title">{{source.title}}</text>
+                  <text wx:if="{{source.meta}}" class="meta">{{source.meta}}</text>
+                </view>
+              </button>
+            </view>
+
+            <text wx:if="{{message.last && error}}" class="body error ask-answer-error" aria-live="polite">{{error}}</text>
+            <view class="ask-answer-actions">
+              <button wx:if="{{message.text}}" class="ask-action" data-message-id="{{message.id}}" bindtap="copyAnswer">复制回答</button>
+              <button wx:if="{{message.last && !streaming}}" class="ask-action" bindtap="retry">{{message.status === 'error' || message.status === 'stopped' ? '重试回答' : '重新生成'}}</button>
+            </view>
+          </block>
+        </view>
+        <text wx:if="{{pageError}}" class="body error ask-page-error" aria-live="polite">{{pageError}}</text>
+        <view id="conversation-end-a" class="ask-end"></view>
+        <view id="conversation-end-b" class="ask-end"></view>
+      </view>
+    </scroll-view>
+    <button wx:if="{{showLatest}}" class="ask-latest button" bindtap="returnLatest">回到最新回复</button>
+  </view>
+
+  <view class="ask-composer {{keyboardOpen ? 'ask-composer-keyboard' : ''}}">
+    <textarea class="ask-input" style="height: {{inputHeight}}px;" value="{{draft}}" placeholder="输入你的问题…" placeholder-class="ask-input-placeholder" maxlength="-1" auto-height="{{false}}" fixed="{{false}}" adjust-position="{{false}}" cursor-spacing="16" show-confirm-bar="{{false}}" confirm-type="send" confirm-hold="{{true}}" hold-keyboard="{{true}}" focus="{{inputFocused}}" bindinput="onInput" bindlinechange="onLineChange" bindconfirm="send" bindfocus="onInputFocus" bindblur="onInputBlur" bindkeyboardheightchange="onKeyboardHeight" aria-label="输入问题，2 至 1000 字"></textarea>
+    <view class="ask-composer-tools">
+      <picker class="ask-scope" mode="selector" range="{{scopeLabels}}" value="{{scopeIndex}}" disabled="{{streaming}}" bindchange="onScopeChange" aria-label="{{'检索范围：' + scopeLabel}}">
+        <view class="ask-scope-control {{streaming ? 'muted' : ''}}"><text>{{scopeLabel}}</text><view class="ask-scope-chevron" aria-hidden="true"></view></view>
+      </picker>
+      <button wx:if="{{streaming}}" class="ask-submit" bindtap="stop" aria-label="停止生成回答">停止</button>
+      <button wx:else class="ask-submit" disabled="{{!canSend}}" bindtap="send" aria-label="发送问题"><view class="ask-send-arrow" aria-hidden="true"></view></button>
+    </view>
+    <text wx:if="{{inputHint}}" class="meta error ask-input-hint" aria-live="polite">{{inputHint}}</text>
+  </view>
+</view>

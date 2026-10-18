@@ -1,0 +1,21 @@
+<view class="page portfolio-page">
+  <view class="portfolio-heading">
+    <view class="title">作品集</view>
+    <view class="muted">设计参考与工程实践</view>
+  </view>
+  <button wx:for="{{products}}" wx:key="id" class="product row" data-id="{{item.id}}" bindtap="openProduct" aria-label="{{'阅读' + item.name}}">
+    <view class="product-copy">
+      <view class="product-title">{{item.name}}</view>
+      <view class="muted product-summary">{{item.summary}}</view>
+      <view class="meta product-date">{{item.date}} · {{item.dateLabel}}</view>
+    </view>
+    <image wx:if="{{item.cover && !failedImages[item.id]}}" class="product-cover" src="{{item.cover}}" mode="aspectFit" lazy-load data-id="{{item.id}}" binderror="imageFailed" aria-hidden="true" />
+    <view wx:else class="product-read">阅读</view>
+  </button>
+  <view wx:if="{{loaded && !loading && !error && !products.length}}" class="status">作品集暂时没有内容。</view>
+  <view wx:if="{{loading}}" class="status" aria-live="polite">正在读取作品集…</view>
+  <view wx:if="{{error}}" class="status" role="alert">
+    <view class="error">{{error}}</view>
+    <button class="button retry-button" bindtap="loadContent" disabled="{{loading}}">重新读取</button>
+  </view>
+</view>

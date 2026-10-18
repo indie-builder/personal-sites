@@ -1,0 +1,19 @@
+{
+  "description": "陈远小站 · 微信小程序",
+  "projectname": "chen-yuan-site",
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "dist/",
+  "libVersion": "3.10.3",
+  "setting": {
+    "urlCheck": true,
+    "es6": false,
+    "enhance": false,
+    "minified": false,
+    "postcss": true
+  },
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  }
+}

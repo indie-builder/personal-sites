@@ -1,0 +1,66 @@
+<view class="page detail-page">
+  <view wx:if="{{loading}}" class="status" role="status">正在读取内容…</view>
+  <view wx:elif="{{error}}" class="status" role="alert">
+    <text class="error">{{error}}</text>
+    <view class="error-actions">
+      <button wx:if="{{retryable}}" class="button" bindtap="loadDetail">重试读取</button>
+      <button wx:if="{{!citation}}" class="button" bindtap="returnToFeed">返回动态</button>
+      <navigator wx:else open-type="navigateBack" class="button back-link">返回对话</navigator>
+    </view>
+  </view>
+  <block wx:else>
+    <text class="title detail-title" user-select="true">{{title}}</text>
+    <text wx:if="{{meta}}" class="meta detail-meta" user-select="true">{{meta}}</text>
+    <text wx:if="{{citation}}" class="citation-notice muted">本次检索返回的资料片段</text>
+    <view wx:if="{{summary}}" class="reading-section">
+      <text class="section-title">导读</text>
+      <text class="body selectable-copy" user-select="true">{{summary}}</text>
+    </view>
+    <view wx:if="{{text}}" class="reading-section">
+      <text wx:if="{{!citation}}" class="section-title">正文</text>
+      <rich-text class="body" nodes="{{nodes}}" user-select="true" />
+    </view>
+    <text wx:elif="{{citation}}" class="body muted citation-empty">该引用没有返回可阅读的正文。</text>
+    <view wx:if="{{reason}}" class="reading-section recommendation">
+      <text class="section-title">推荐理由</text>
+      <text class="body selectable-copy" user-select="true">{{reason}}</text>
+    </view>
+    <view wx:if="{{media.length}}" class="media-list">
+      <view wx:for="{{videos}}" wx:key="index" class="media-item">
+        <video wx:if="{{!media[item.index].videoError}}" id="detail-video-{{item.index}}" class="detail-video" style="height: {{media[item.index].videoHeight}}px" src="{{item.videoUrl}}" poster="{{item.previewUrl}}" controls show-fullscreen-btn show-play-btn enable-play-gesture autoplay="{{false}}" loop="{{false}}" object-fit="contain" data-index="{{item.index}}" binderror="mediaError" aria-label="内容视频 {{index + 1}}" />
+        <view wx:else class="media-failure">
+          <text class="muted">视频暂时无法播放，可重试或复制原文链接查看。</text>
+          <button class="button" data-index="{{item.index}}" bindtap="retryMedia">重试播放</button>
+        </view>
+      </view>
+      <view wx:if="{{photos.length === 1}}" class="media-item">
+        <button wx:if="{{!media[photos[0].index].imageError}}" class="image-preview" data-index="{{photos[0].index}}" bindtap="previewImage" aria-label="放大查看图片 1">
+          <image class="detail-image" src="{{photos[0].url}}" mode="widthFix" lazy-load data-index="{{photos[0].index}}" binderror="mediaError" aria-hidden="true" />
+        </button>
+        <view wx:else class="media-failure">
+          <text class="muted">图片暂时无法读取。</text>
+          <button class="button" data-index="{{photos[0].index}}" bindtap="retryMedia">重新加载图片</button>
+        </view>
+      </view>
+      <view wx:elif="{{photos.length > 1}}" class="media-grid">
+        <view wx:for="{{photos}}" wx:key="index" class="media-grid-cell" style="height: {{gridHeight}}px">
+          <button wx:if="{{!media[item.index].imageError}}" class="image-preview image-preview-grid" data-index="{{item.index}}" bindtap="previewImage" aria-label="放大查看图片 {{index + 1}}">
+            <image class="detail-image" src="{{item.url}}" mode="aspectFill" lazy-load data-index="{{item.index}}" binderror="mediaError" aria-hidden="true" />
+          </button>
+          <view wx:else class="media-failure media-failure-grid">
+            <text class="muted">图片暂时无法读取。</text>
+            <button class="button" data-index="{{item.index}}" bindtap="retryMedia">重新加载</button>
+          </view>
+        </view>
+      </view>
+      <text wx:if="{{photos.length > 1}}" class="meta">点击图片可全屏查看，左右滑动浏览。</text>
+    </view>
+    <text wx:if="{{tagsText}}" class="tags meta" user-select="true">{{tagsText}}</text>
+    <view class="source-actions divider">
+      <button wx:if="{{sourceUrl}}" class="primary" bindtap="copySource">复制原文链接</button>
+      <button wx:if="{{websiteUrl}}" class="button" bindtap="copyWebsite">复制完整网页版链接</button>
+      <button class="button" bindtap="copyMarkdown">复制正文 Markdown</button>
+    </view>
+    <text class="meta link-hint">{{citation ? '返回后可继续阅读原对话。' : '使用右上角菜单分享；外部网页可复制链接后在浏览器中打开。'}}</text>
+  </block>
+</view>

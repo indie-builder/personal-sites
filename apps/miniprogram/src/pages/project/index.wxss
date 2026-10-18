@@ -1,0 +1,12 @@
+.tool-intro { font-size: 14px; }
+.tool-category { margin-top: 24px; }
+.category-title { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
+.tool-row { display: flex; align-items: center; gap: 10px; min-height: 52px; }
+.tool-icon { width: 24px; height: 24px; flex-shrink: 0; }
+.tool-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
+.copy-tool { flex-shrink: 0; padding-right: 0; font-size: 13px; }
+.site-video { height: 190px; background: var(--paper); border-radius: 8px; }
+.site-description { margin: 24px 0; }
+.source-button { width: 100%; min-height: 48px; text-align: left; }
+.retry-button { margin: 12px auto 0; width: fit-content; }
+@media (min-width: 600px) { .site-video { height: 360px; } }
