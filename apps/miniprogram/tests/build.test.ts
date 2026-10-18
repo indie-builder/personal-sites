@@ -37,7 +37,8 @@ describe("public miniprogram build contract", () => {
   test("copies only declared native resources and the approved public avatar", () => {
     // Enforce the copy boundary even before dist exists; emitted files receive an exact whitelist check below.
     const copies = [...build.matchAll(/await cp\(([^;]+)\);/g)].map((match) => match[1]);
-    expect(copies).toHaveLength(3);
+    expect(copies).toHaveLength(4);
+    expect(copies[3]).toContain('assets/navigation/${name}-${tone}.png');
     expect(copies[0]).toContain('`${page}.${extension}`');
     expect(build).toMatch(/for \(const extension of \["json", "wxml", "wxss"\]\)/);
     expect(copies[1]).toContain('path.join(source, name)');

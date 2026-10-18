@@ -1,27 +1,23 @@
 <view class="page home-page">
-  <button class="identity" bindtap="openAbout" aria-label="了解陈远，打开关于我">
-    <view class="identity-copy">
-      <text class="identity-name">{{profile.name}}</text>
-      <text class="meta">@{{profile.handle}}</text>
-    </view>
-    <image class="avatar" src="/assets/avatar.png" mode="aspectFit" aria-hidden="true" />
-  </button>
-  <view class="introduction body muted">
-    <text wx:for="{{profile.paragraphs}}" wx:key="*this" class="bio-paragraph" user-select="true">{{item}}</text>
+  <view class="section-navigation">
+    <button class="profile-button" bindtap="openAbout" aria-label="了解陈远，打开关于我">
+      <image class="avatar" src="/assets/avatar.png" mode="aspectFit" aria-hidden="true" />
+      <text class="profile-name">陈远</text>
+    </button>
+    <scroll-view class="section-scroll" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="section-{{section}}" aria-label="阅读栏目">
+      <view class="section-tabs">
+        <button wx:for="{{sections}}" wx:key="id" id="section-{{item.id}}" class="section-tab {{section === item.id ? 'section-tab-selected' : ''}}" data-section="{{item.id}}" bindtap="selectSection" aria-label="{{item.label}}{{section === item.id ? '，当前栏目' : ''}}">{{item.label}}</button>
+      </view>
+    </scroll-view>
   </view>
-  <scroll-view class="section-navigation" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="section-{{section}}" aria-label="阅读栏目">
-    <view class="section-tabs">
-      <button wx:for="{{sections}}" wx:key="id" id="section-{{item.id}}" class="section-tab {{section === item.id ? 'section-tab-selected' : ''}}" data-section="{{item.id}}" bindtap="selectSection" aria-label="{{item.label}}{{section === item.id ? '，当前栏目' : ''}}">{{item.label}}</button>
-    </view>
-  </scroll-view>
   <block wx:for="{{sections}}" wx:for-item="feedSection" wx:key="id">
     <view wx:if="{{section === feedSection.id}}" class="feed" aria-label="{{feedSection.label}}内容">
       <view wx:if="{{!feeds[feedSection.id].loaded && !feeds[feedSection.id].error}}" class="status" role="status">正在读取{{feedSection.label}}…</view>
       <text wx:if="{{feeds[feedSection.id].refreshing}}" class="refresh-status meta" role="status">正在更新，已有内容仍可阅读…</text>
-      <button wx:for="{{feeds[feedSection.id].items}}" wx:key="id" class="row feed-row" data-id="{{item.id}}" bindtap="openDetail" aria-label="阅读：{{item.title}}">
+      <button wx:for="{{feeds[feedSection.id].items}}" wx:key="id" class="row feed-row feed-row-{{feedSection.id}}" data-id="{{item.id}}" bindtap="openDetail" aria-label="阅读：{{item.title}}">
         <view class="feed-copy">
           <text class="feed-title">{{item.title}}</text>
-          <text wx:if="{{item.summary}}" class="feed-summary muted">{{item.summary}}</text>
+          <text wx:if="{{item.summary && (feedSection.id === 'ai-news' || feedSection.id === 'open-source')}}" class="feed-summary muted">{{item.summary}}</text>
           <text wx:if="{{item.meta || item.date}}" class="meta feed-meta">{{item.date}}{{item.date && item.meta ? ' · ' : ''}}{{item.meta}}</text>
         </view>
         <image wx:if="{{item.thumbnail}}" class="feed-thumbnail" src="{{item.thumbnail}}" mode="aspectFill" lazy-load aria-hidden="true" />

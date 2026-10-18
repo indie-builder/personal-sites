@@ -4,7 +4,6 @@ type FeedView = Omit<FeedState, "items"> & { items: Omit<FeedState["items"][numb
 type FeedController = ReturnType<typeof createFeed>;
 type LoadMode = "initial" | "more" | "refresh";
 type HomeData = {
-  profile: typeof profile;
   sections: typeof sections;
   section: Section;
   sectionLabel: string;
@@ -28,7 +27,6 @@ function emptyFeed(): FeedView {
 
 const homePage: WechatMiniprogram.Page.Options<HomeData, HomeMethods> = {
   data: {
-    profile,
     sections,
     section: "ai-news",
     sectionLabel: sections[0]?.label ?? "每日动态",

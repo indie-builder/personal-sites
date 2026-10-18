@@ -60,6 +60,12 @@ const build = io("miniprogram.build", async () => {
     }
     await mkdir(path.join(output, "assets"), { recursive: true });
     await cp(new URL("../../../ios/ChenYuanSite/Assets.xcassets/profile_avatar.imageset/profile_avatar.png", import.meta.url), path.join(output, "assets/avatar.png"));
+    await mkdir(path.join(output, "assets/navigation"), { recursive: true });
+    for (const name of ["home", "ask", "portfolio", "about"]) {
+      for (const tone of ["muted", "light", "dark"]) {
+        await cp(path.join(source, `assets/navigation/${name}-${tone}.png`), path.join(output, `assets/navigation/${name}-${tone}.png`));
+      }
+    }
     let bytes = 0;
     for (const file of await files(output)) bytes += (await stat(file)).size;
     if (bytes > maximumBytes) throw new Error(`小程序包 ${bytes} 字节，超过主包 2 MiB 限制`);

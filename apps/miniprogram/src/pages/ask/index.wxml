@@ -1,5 +1,5 @@
 <view class="ask" style="{{screenHeight ? 'height: ' + screenHeight + 'px;' : ''}}">
-  <view class="ask-header divider">
+  <view class="ask-header">
     <text class="meta ask-description">基于站内公开资料，引用可直接阅读</text>
     <button class="ask-reset" bindtap="newConversation" disabled="{{!hasConversation}}" aria-label="开始新对话">新对话</button>
   </view>
@@ -56,10 +56,10 @@
     <textarea class="ask-input" value="{{draft}}" placeholder="输入你的问题…" placeholder-class="ask-input-placeholder" maxlength="-1" auto-height="{{false}}" fixed="{{false}}" adjust-position="{{false}}" cursor-spacing="16" show-confirm-bar="{{false}}" confirm-type="send" confirm-hold="{{true}}" hold-keyboard="{{true}}" focus="{{inputFocused}}" bindinput="onInput" bindconfirm="send" bindfocus="onInputFocus" bindblur="onInputBlur" bindkeyboardheightchange="onKeyboardHeight" aria-label="输入问题，2 至 1000 字"></textarea>
     <view class="ask-composer-tools">
       <picker class="ask-scope" mode="selector" range="{{scopeLabels}}" value="{{scopeIndex}}" disabled="{{streaming}}" bindchange="onScopeChange" aria-label="{{'检索范围：' + scopeLabel}}">
-        <view class="ask-scope-control {{streaming ? 'muted' : ''}}"><text>{{scopeLabel}}</text><text class="ask-scope-hint">选择范围</text></view>
+        <view class="ask-scope-control {{streaming ? 'muted' : ''}}"><text>{{scopeLabel}}</text><view class="ask-scope-chevron" aria-hidden="true"></view></view>
       </picker>
-      <button wx:if="{{streaming}}" class="ask-submit primary" bindtap="stop" aria-label="停止生成回答">停止</button>
-      <button wx:else class="ask-submit primary" disabled="{{!canSend}}" bindtap="send" aria-label="发送问题">发送</button>
+      <button wx:if="{{streaming}}" class="ask-submit" bindtap="stop" aria-label="停止生成回答">停止</button>
+      <button wx:else class="ask-submit" disabled="{{!canSend}}" bindtap="send" aria-label="发送问题"><view class="ask-send-arrow" aria-hidden="true"></view></button>
     </view>
     <text wx:if="{{inputHint}}" class="meta error ask-input-hint" aria-live="polite">{{inputHint}}</text>
   </view>

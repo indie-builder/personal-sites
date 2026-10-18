@@ -22,10 +22,10 @@
     "backgroundColor": "@surface",
     "borderStyle": "@borderStyle",
     "list": [
-      { "pagePath": "pages/home/index", "text": "动态" },
-      { "pagePath": "pages/ask/index", "text": "问一问" },
-      { "pagePath": "pages/portfolio/index", "text": "作品集" },
-      { "pagePath": "pages/about/index", "text": "关于我" }
+      { "pagePath": "pages/home/index", "text": "动态", "iconPath": "assets/navigation/home-muted.png", "selectedIconPath": "@homeIcon" },
+      { "pagePath": "pages/ask/index", "text": "问一问", "iconPath": "assets/navigation/ask-muted.png", "selectedIconPath": "@askIcon" },
+      { "pagePath": "pages/portfolio/index", "text": "作品集", "iconPath": "assets/navigation/portfolio-muted.png", "selectedIconPath": "@portfolioIcon" },
+      { "pagePath": "pages/about/index", "text": "关于我", "iconPath": "assets/navigation/about-muted.png", "selectedIconPath": "@aboutIcon" }
     ]
   },
   "darkmode": true,

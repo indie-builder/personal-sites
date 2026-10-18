@@ -1,11 +1,11 @@
-.media-item { margin-bottom: 16px; }
-.image-button { width: 100%; padding: 0; line-height: 0; border-radius: 8px; overflow: hidden; }
+.media-item { margin-bottom: 12px; }
+button.image-button { width: 100%; min-height: 44px; padding: 0; line-height: 0; border-radius: 8px; overflow: hidden; }
 .work-image { width: 100%; height: auto; background: var(--paper); }
 .work-video { display: block; max-height: 80vh; background: var(--paper); border-radius: 8px; }
-.work-title { margin-top: 26px; }
-.work-meta { margin-top: 8px; }
-.work-text { margin-top: 24px; white-space: pre-wrap; }
-.source-button { width: 100%; margin-top: 28px; text-align: left; }
+.work-title { margin-top: 12px; font-size: 22px; font-weight: 600; }
+.work-meta { margin-top: 8px; font-size: 12px; font-weight: 400; }
+.work-text { margin-top: 20px; font-size: 15px; font-weight: 400; white-space: pre-wrap; }
+button.source-button { width: 100%; min-height: 48px; margin-top: 24px; text-align: left; }
 .attribution { margin-top: 16px; }
 .no-media, .media-error { background: var(--paper); border-radius: 8px; padding: 32px 16px; }
 .retry-button { margin: 12px auto 0; width: fit-content; }
@@ -25,5 +25,5 @@
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
-.work-navigation button { min-width: 80px; min-height: 44px; }
+.work-navigation button { min-width: 80px; min-height: 48px; font-size: 14px; font-weight: 500; }
 .work-position { flex: 1; text-align: center; font-variant-numeric: tabular-nums; }

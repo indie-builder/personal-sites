@@ -97,6 +97,9 @@ describe("native home page lifecycle", () => {
     expect(requests[0]?.url).toContain("/api/ai-news?offset=0&limit=50");
     respond(0, { items: [news("a")], hasMore: true }); await settle();
     expect(home.data.feeds["ai-news"].items[0]).not.toHaveProperty("raw");
+    home.openAbout();
+    expect(navigated).toEqual(["/pages/about/index"]);
+    expect(home.data.section).toBe("ai-news");
     home.selectSection(tap({ section: "curation" }));
     respond(1, { items: [curation("c")], hasMore: true }); await settle();
     home.selectSection(tap({ section: "ai-news" }));
@@ -109,7 +112,7 @@ describe("native home page lifecycle", () => {
     home.onReachBottom?.();
     expect(requests).toHaveLength(3);
     home.openDetail(tap({ id: "a" }));
-    expect(navigated[0]).toBe("/pages/detail/index?section=ai-news&id=a");
+    expect(navigated[1]).toBe("/pages/detail/index?section=ai-news&id=a");
   });
 
   test("error prevents automatic reloads until retry, and refresh always ends its native indicator", async () => {

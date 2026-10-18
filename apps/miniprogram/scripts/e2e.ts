@@ -20,6 +20,7 @@ export function verifyPackage(directory = path.join(root, "dist")): void {
   const app = JSON.parse(readFileSync(path.join(directory, "app.json"), "utf8"));
   assert.deepEqual([...app.pages].sort(), [...routes].sort());
   const expected = ["app.js", "encoding.js", "lib/runtime.js", "app.json", "app.wxss", "theme.json", "sitemap.json", "assets/avatar.png",
+    ...["home", "ask", "portfolio", "about"].flatMap(name => ["muted", "light", "dark"].map(tone => `assets/navigation/${name}-${tone}.png`)),
     ...routes.flatMap((route) => ["js", "json", "wxml", "wxss"].map((extension) => `${route}.${extension}`))];
   const actual = packageFiles(directory);
   assert.deepEqual(actual.sort(), expected.sort(), "dist must contain only the public package whitelist");

@@ -1,7 +1,8 @@
 <view class="page about-page">
   <view class="external-links">
-    <button wx:for="{{links}}" wx:key="url" class="profile-link quiet" data-url="{{item.url}}" bindtap="copyProfileLink" aria-label="复制{{item.label}}链接">{{item.label}} · 复制链接</button>
+    <button wx:for="{{links}}" wx:key="url" class="profile-link quiet" data-url="{{item.url}}" bindtap="copyProfileLink" aria-label="复制{{item.label}}链接">{{item.label}}</button>
   </view>
+  <view class="meta link-hint">轻点链接复制，在浏览器中打开。</view>
   <view class="identity">
     <view>
       <text class="identity-name">{{profile.name}}</text>

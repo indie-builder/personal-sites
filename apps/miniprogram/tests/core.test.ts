@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { OperationError } from "@site/effect";
-import { createFeed, detailFor, stashRow, takeRow, type FeedRow } from "../src/lib/content";
+import { createFeed, dateLabel, detailFor, stashRow, takeRow, type FeedRow } from "../src/lib/content";
 import { createAsk } from "../src/lib/ask";
 import { copyLink, externalUrl, previewImages, request, run, SITE_ORIGIN } from "../src/lib/platform";
 
@@ -56,6 +56,18 @@ const latest = () => {
 const news = (id: string) => ({ id, category: "ai-models", publishedAt: "2026-10-18T00:00:00Z", selected: true, sourceName: "原文", summary: "标题：导读", title: "标题" });
 const curation = (id: string) => ({ id, title: "设计标题", summary: "导读", text: "原文", author: { name: "作者", handle: "handle" }, source: { label: "X", platform: "x", url: "https://x.com/user/status/1" }, collectedAt: null, publishedAt: "2026-10-18", tags: ["设计"], attachments: ["视频"], media: [{ url: "https://pbs.twimg.com/a.jpg", previewUrl: null, videoUrl: "https://video.twimg.com/ext_tw_video/123/pu/vid/a.mp4?tag=1" }], design: { reason: "设计理由" } });
 const source = (id: string) => ({ id, title: id, content: "引用原文", scope: "profile", sourceUrl: "https://example.com/source", publishedAt: null, section: null, sourceId: id });
+
+test("feed dates match iOS relative-time boundaries and omit invalid values", () => {
+  const now = Date.parse("2026-10-18T10:00:00Z");
+  expect(dateLabel(null, now)).toBe("");
+  expect(dateLabel("invalid", now)).toBe("");
+  expect(dateLabel("2026-10-18T09:59:59Z", now)).toBe("刚刚");
+  expect(dateLabel("2026-10-18T09:35:00Z", now)).toBe("25 分钟前");
+  expect(dateLabel("2026-10-18T08:00:00Z", now)).toBe("2 小时前");
+  expect(dateLabel("2026-10-15T10:00:00Z", now)).toBe("3 天前");
+  expect(dateLabel("2026-08-15T10:00:00Z", now)).toBe("8月15日");
+  expect(dateLabel("2026-10-19T10:00:00Z", now)).toBe("刚刚");
+});
 
 describe("wx Effect adapter", () => {
   test("validates successful data and HTTP/JSON boundary failures", async () => {

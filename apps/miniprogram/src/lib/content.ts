@@ -40,12 +40,23 @@ const OpenSource = Schema.Struct({
 });
 const page = <A extends Schema.Constraint>(item: A) => Schema.Struct({ items: Schema.Array(item), hasMore: Schema.Boolean });
 const join = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join(" · ");
-const dateLabel = (value: string | null) => value?.slice(0, 10) ?? "";
+export function dateLabel(value: string | null, now = Date.now()): string {
+  if (!value) return "";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "";
+  const minutes = Math.max(0, Math.floor((now - timestamp) / 60_000));
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)} 小时前`;
+  if (minutes < 43200) return `${Math.floor(minutes / 1440)} 天前`;
+  const date = new Date(timestamp);
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
 const categories: Record<string, string> = { "ai-models": "模型", "ai-products": "产品", industry: "行业", paper: "论文", tip: "教程" };
 
 function newsRow(item: typeof News.Type): FeedRow {
   const summary = item.summary.trim();
-  return { id: item.id, title: item.title, summary: (summary.startsWith(item.title) && item.title ? summary.slice(item.title.length) : summary).replace(/^[\s，。：:—-]+/, "").replace(/\s+/g, " "), meta: join(item.sourceName, categories[item.category] ?? item.category, item.selected ? "精选" : ""), date: dateLabel(item.publishedAt), thumbnail: "", raw: item };
+  return { id: item.id, title: item.title, summary: (summary.startsWith(item.title) && item.title ? summary.slice(item.title.length) : summary).replace(/^[\s，。：:—-]+/, "").replace(/\s+/g, " "), meta: item.sourceName, date: dateLabel(item.publishedAt), thumbnail: "", raw: item };
 }
 function curationRow(item: typeof Curation.Type): FeedRow {
   return {

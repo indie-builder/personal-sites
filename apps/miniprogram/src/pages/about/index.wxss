@@ -1,11 +1,13 @@
-.external-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; }
-.profile-link { padding: 8px 0; }
+.external-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 16px; }
+.profile-link { min-width: 44px; min-height: 44px; padding: 8px 0; font-weight: 400; }
+.link-hint { text-align: right; }
 .identity { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; }
-.identity-name { display: block; font-size: 32px; line-height: 1.3; font-weight: 600; letter-spacing: -.03em; }
-.identity-handle { display: block; margin-top: 7px; }
-.avatar { width: 104px; height: 104px; flex-shrink: 0; }
-.career-toggle { display: flex; width: 100%; min-height: 56px; gap: 12px; align-items: center; padding: 10px 0; text-align: left; border-radius: 0; }
-.career-toggle-action { margin-left: auto; font-size: 12px; }
+.identity-name { display: block; font-size: 32px; line-height: 1.3; font-weight: 500; letter-spacing: -.03em; }
+.identity-handle { display: block; margin-top: 8px; font-size: 13px; font-weight: 400; }
+.avatar { width: 96px; height: 96px; flex-shrink: 0; }
+button.career-toggle { display: flex; width: 100%; min-height: 56px; gap: 12px; align-items: center; padding: 10px 0; text-align: left; border-radius: 0; font-size: 14px; font-weight: 500; }
+.career-toggle .meta { font-size: 12px; font-weight: 400; }
+.career-toggle-action { margin-left: auto; font-size: 12px; font-weight: 400; }
 .career-receipt { padding: 24px 0; border-bottom: 1px solid var(--line); }
 .section-title { display: block; font-size: 18px; font-weight: 600; line-height: 1.5; }
 .career-row { padding: 12px 0; }
