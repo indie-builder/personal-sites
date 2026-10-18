@@ -1,3 +1,34 @@
+import { Schema } from "effect";
+
+const xSyncState = Schema.Struct({
+  status: Schema.Literals(["running", "succeeded", "failed"]),
+  lastStartedAt: Schema.String,
+  lastFinishedAt: Schema.NullOr(Schema.String),
+  lastSucceededAt: Schema.NullOr(Schema.String),
+});
+
+export function recordXSyncState(database, status, at, runId) {
+  if (!runId) throw new Error("X 同步状态缺少运行标识。");
+  if (status === "running") {
+    database.prepare(`INSERT INTO x_sync_state (id, run_id, status, last_started_at)
+      VALUES (1, ?, 'running', ?)
+      ON CONFLICT(id) DO UPDATE SET run_id = excluded.run_id, status = 'running',
+        last_started_at = excluded.last_started_at, last_finished_at = NULL`).run(runId, at);
+    return true;
+  }
+  return database.prepare(`UPDATE x_sync_state SET status = ?, last_finished_at = ?,
+    last_succeeded_at = CASE WHEN ? = 'succeeded' THEN ? ELSE last_succeeded_at END
+    WHERE id = 1 AND run_id = ? AND status = 'running'`)
+    .run(status, at, status, at, runId).changes === 1;
+}
+
+function readXSyncState(database) {
+  if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'x_sync_state'").get()) return null;
+  const row = database.prepare(`SELECT status, last_started_at AS lastStartedAt,
+    last_finished_at AS lastFinishedAt, last_succeeded_at AS lastSucceededAt FROM x_sync_state WHERE id = 1`).get();
+  return row ? Schema.decodeUnknownSync(xSyncState)(row) : null;
+}
+
 function readAskIndexHealth(database) {
   const temporaryTables = [];
   const create = (name, definition) => {
@@ -55,7 +86,7 @@ export function readPublicDataHealth(database) {
       askExtraPostings: Number(ask.extra_postings),
       curation: {
         douyin: { count: Number(platforms.get("douyin")?.count ?? 0), latestAt: platforms.get("douyin")?.latest ?? null },
-        x: { count: Number(platforms.get("x")?.count ?? 0), latestAt: platforms.get("x")?.latest ?? null },
+        x: { count: Number(platforms.get("x")?.count ?? 0), latestAt: platforms.get("x")?.latest ?? null, sync: readXSyncState(database) },
       },
       openSource: { count: Number(openSource.count), latestAt: openSource.latest ?? null },
       quickCheck: String(database.pragma("quick_check", { simple: true })),

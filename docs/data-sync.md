@@ -14,11 +14,13 @@
 - Supabase Cron 每 5 分钟触发每日动态增量同步（`POST /api/cron/ai-news`）。
 - GitHub Actions 每天北京时间 04:17 回填 7 天（`.github/workflows/ai-news-sync.yml`）。
 - GitHub Actions 每 15 分钟探测 `/api/health/data`，连续三次异常才使任务失败（`.github/workflows/data-health.yml`）。
-- 本机另配置每天 03:00 的 Codex 自动化执行上述来源；该个人调度不在仓库内，克隆项目不会自动安装。
+- 曾使用每天 03:00 的 Codex 自动化执行上述来源；2026-10-18 检查时，本机实时调度库已无该任务。它不在仓库内，不能把旧配置或历史执行记录当作正在生效的调度；恢复后需核实启用状态、下一次时间与实际运行结果。
 
-各来源的失败分别记录，不阻止其他来源继续运行。每日动态的租约、健康状态与本机 launchd 恢复手段见[每日动态同步说明](ai-news-sync.md)。
+各来源的失败分别记录，不阻止其他来源继续运行。每日动态的租约、健康状态与本机 launchd 恢复手段见[每日动态同步说明](ai-news-sync.md)。2026-10-18 的调度诊断、X 补同步及剩余限制见[X 同步恢复记录](x-sync-recovery.md)。
 
 本机健康入口：`bun run focus:status` 汇总同步状态、公开 SQLite 与 Ask 索引健康度；`bun run health:production` 探测线上统一健康端点，失败时最多尝试三次。提交内容或配置前先跑 `bun run git:safety` 检查敏感数据边界。
+
+`/api/health/data` 仅对 X 将内容新鲜度与同步结果分开：X 内容超过 72 小时产生 `freshness: "stale"` 提醒；抖音或 GitHub Star 内容超过 14 天仍判定不健康并返回 503。X 的 `sync` 来自公开 SQLite 中完整同步的真实运行记录，最近成功超过 72 小时、最新尝试失败、或无记录（`status: "unknown"`）仍返回 503；内容为空、SQLite/Ask 索引损坏、每日动态同步失败也继续返回 503。线上看到的是部署时的快照，重新同步后需提交并部署数据库才能更新该状态。
 
 ## 归档与云端清理
 

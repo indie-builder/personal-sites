@@ -13,6 +13,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await fetch(endpoint, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
     const payload = await response.json();
     if (response.ok && payload.healthy === true) {
+      if (Array.isArray(payload.warnings)) {
+        for (const warning of payload.warnings) console.warn(`生产数据健康警告：${warning}`);
+      }
       console.log(`生产数据健康：正常（${payload.deployment?.commit ?? "unknown commit"}）`);
       process.exit(0);
     }

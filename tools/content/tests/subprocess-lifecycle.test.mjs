@@ -1,4 +1,5 @@
-import { Effect } from "effect";
+import { spawn } from "node:child_process";
+import { Effect, Schedule } from "effect";
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -8,7 +9,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { runCodexCli } from "../modules/analysis/readers.mjs";
-import { runCommand } from "../modules/x-sync/pipeline.mjs";
+import { runCommand, trackXSync } from "../modules/x-sync/pipeline.mjs";
 
 const fixtureSource = `
 import { spawn } from "node:child_process";
@@ -129,7 +130,13 @@ test("Codex CLI stdin failure terminates the process before returning failure", 
   }
 });
 
-for (const [label, run] of [["Codex CLI", runCodexCli], ["pipeline command", runCommand]]) {
+for (const [label, run] of [
+  ["Codex CLI", runCodexCli],
+  ["pipeline command", runCommand],
+  ["tracked X command", (command, args, options) => trackXSync({
+    repoRoot: options.cwd, options: { fetchOnly: true }, run: runCommand(command, args, options),
+  })],
+]) {
   test(`${label} cancellation terminates its child and descendant`, { timeout: 10000 }, async () => {
     const fixture = await createFixture();
     const controller = new AbortController();
@@ -181,6 +188,56 @@ for (const [label, run] of [["Codex CLI", runCodexCli], ["pipeline command", run
       }
     });
   }
+}
+
+for (const nested of [false, true]) {
+ test(`X takeover waits for a ${nested ? "nested " : ""}detached worker surviving its owner SIGKILL`, { timeout: 10000 }, async () => {
+  const fixture = await createFixture();
+  const script = `
+    import { Effect } from "effect";
+    import { runCommand, trackXSync } from ${JSON.stringify(new URL("../modules/x-sync/pipeline.mjs", import.meta.url).href)};
+    await Effect.runPromise(trackXSync({
+      repoRoot: process.argv[1], options: { fetchOnly: true },
+      run: runCommand(process.execPath, process.argv.slice(2), { cwd: process.argv[1] }),
+    }));
+  `;
+  const nestedScript = `
+    import { Effect } from "effect";
+    import { runCommand } from ${JSON.stringify(new URL("../modules/x-sync/pipeline.mjs", import.meta.url).href)};
+    await Effect.runPromise(runCommand(process.execPath, process.argv.slice(1), { cwd: process.cwd() }));
+  `;
+  const workerArgs = nested ? ["--input-type=module", "-e", nestedScript, ...fixture.args] : fixture.args;
+  const owner = spawn(process.execPath, ["--input-type=module", "-e", script, fixture.directory, ...workerArgs], {
+    cwd: path.resolve(import.meta.dirname, ".."), stdio: ["ignore", "ignore", "inherit"],
+  });
+  const closed = once(owner, "close");
+  try {
+    const worker = await Promise.race([
+      fixture.ready(), closed.then(() => { throw new Error("fixture owner exited before worker startup"); }),
+    ]);
+    let ran = false;
+    const replacement = trackXSync({
+      repoRoot: fixture.directory, options: { fetchOnly: true },
+      run: Effect.sync(() => { ran = true; }),
+    });
+    assert.equal((await Effect.runPromiseExit(replacement))._tag, "Failure");
+    owner.kill("SIGKILL");
+    await closed;
+    assert.equal(worker.socket.destroyed, false);
+    const blocked = await Effect.runPromiseExit(replacement);
+    assert.equal(blocked._tag, "Failure");
+    assert.match(String(blocked.cause), /遗留工作进程/u);
+    assert.equal(ran, false);
+    worker.socket.write("stop\n");
+    await assertStopped(worker);
+    await Effect.runPromise(replacement.pipe(Effect.retry({ times: 50, schedule: Schedule.spaced("20 millis") })));
+    assert.equal(ran, true);
+  } finally {
+    owner.kill("SIGKILL");
+    await closed;
+    await fixture.cleanup();
+  }
+ });
 }
 
 test("process adapters report spawn failures without hanging cleanup", async () => {

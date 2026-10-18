@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { io } from "@site/effect";
 /**
  * Fetch X bookmarks/likes with the local smaug installation, move only the
@@ -22,7 +22,7 @@ import {
   resolveAnalysisConcurrency,
   resolveAnalysisEngine,
 } from "../modules/analysis/runtime.mjs";
-import { runHistoryPipeline, runSyncPipeline } from "../modules/x-sync/pipeline.mjs";
+import { runHistoryPipeline, runSyncPipeline, trackXSync } from "../modules/x-sync/pipeline.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -99,9 +99,11 @@ function printUsage() {
 `);
 }
 
-function tweetsFromBirdResponse(raw) {
+export function tweetsFromBirdResponse(raw) {
   const parsed = JSON.parse(raw);
-  return Array.isArray(parsed) ? parsed : Array.isArray(parsed.tweets) ? parsed.tweets : [];
+  return Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ id: Schema.NonEmptyString })))(
+    Array.isArray(parsed) ? parsed : parsed?.tweets,
+  );
 }
 
 function captureSourceOrder({ birdPath, credentials, source }) {
@@ -128,20 +130,12 @@ function captureSourceOrder({ birdPath, credentials, source }) {
     await writeFile(outputPath, JSON.stringify(snapshot, null, 2) + "\n", { mode: 0o600 });
     return outputPath;
   }).pipe(
-    Effect.catch((error) =>
-      Effect.sync(() => {
-        console.warn(`无法读取 X ${source} 列表顺序；新条目将暂不写入收录时间和顺序：${error.message}`);
-        return null;
-      }),
-    ),
+    Effect.mapError(() => new Error(`无法验证 X ${source} 列表；本次同步不记成功。`)),
   );
 }
 
-function main() {
+function sync(options) {
   return Effect.gen(function* () {
-    const options = parseSyncArgs(process.argv.slice(2));
-    if (options.help) return printUsage();
-
     loadLocalEnv(repoRoot);
     const smaugConfig = path.join(repoRoot, "tools/smaug/smaug.config.json");
     if (!existsSync(smaugConfig)) {
@@ -186,6 +180,14 @@ function main() {
       options,
       captureSourceOrder: (source) => captureSourceOrder({ birdPath, credentials, source }),
     });
+  });
+}
+
+function main() {
+  return Effect.gen(function* () {
+    const options = parseSyncArgs(process.argv.slice(2));
+    if (options.help) return printUsage();
+    yield* trackXSync({ repoRoot, options, run: sync(options) });
   });
 }
 

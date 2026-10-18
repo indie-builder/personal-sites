@@ -7,9 +7,9 @@ import test from "node:test";
 
 import Database from "better-sqlite3";
 
-import { readPublicDataHealth } from "../src/data-health/sqlite.mjs";
+import { readPublicDataHealth, recordXSyncState } from "../src/data-health/sqlite.mjs";
 import { buildDataHealth } from "../src/data-health/status.mjs";
-import { initializePublicDatabase } from "../src/sqlite.mjs";
+import { initializePublicDatabase, preserveSupplementalProjection } from "../src/sqlite.mjs";
 
 const now = new Date("2026-08-29T12:00:00.000Z");
 const base = {
@@ -25,7 +25,9 @@ const base = {
     askExtraPostings: 0,
     curation: {
       douyin: { count: 5, latestAt: "2026-08-29T10:00:00.000Z" },
-      x: { count: 5, latestAt: "2026-08-29T11:00:00.000Z" },
+      x: { count: 5, latestAt: "2026-08-29T11:00:00.000Z", sync: {
+        status: "succeeded", lastStartedAt: "2026-08-29T10:00:00.000Z", lastFinishedAt: "2026-08-29T11:00:00.000Z", lastSucceededAt: "2026-08-29T11:00:00.000Z",
+      } },
     },
     openSource: { count: 3, latestAt: "2026-08-28T12:00:00.000Z" },
     quickCheck: "ok",
@@ -34,6 +36,8 @@ const base = {
 
 function fixture(path = ":memory:") {
   const database = initializePublicDatabase(new Database(path));
+  recordXSyncState(database, "running", "2026-08-29T09:00:00.000Z", "fixture");
+  recordXSyncState(database, "succeeded", "2026-08-29T10:00:00.000Z", "fixture");
   database.exec(`
     DELETE FROM ask_documents;
     DROP TRIGGER ask_documents_fts_insert;
@@ -228,6 +232,132 @@ test("equal Ask counts cannot hide SQLite corruption or mismatched FTS rowids", 
   assert.equal(status.database.healthy, false);
   assert.equal(status.askIndex.healthy, false);
   assert.match(status.warnings.join("\n"), /SQLite|FTS/u);
+});
+
+test("stale X content is a warning after a verified successful sync", () => {
+  const status = buildDataHealth({
+    ...base,
+    publicData: {
+      ...base.publicData,
+      curation: { ...base.publicData.curation, x: {
+        count: 5, latestAt: "2026-08-20T11:00:00.000Z",
+        sync: { status: "succeeded", lastStartedAt: "2026-08-29T10:00:00.000Z", lastFinishedAt: "2026-08-29T11:00:00.000Z", lastSucceededAt: "2026-08-29T11:00:00.000Z" },
+      } },
+    },
+  });
+  assert.equal(status.healthy, true);
+  assert.equal(status.curation.x.freshness, "stale");
+  assert.equal(status.curation.x.sync.healthy, true);
+  assert.match(status.warnings.join("\n"), /X 策展.*内容/u);
+});
+
+test("a superseded X run cannot overwrite the newer run's failure", () => {
+  const database = fixture();
+  try {
+    recordXSyncState(database, "running", "2026-08-29T11:00:00.000Z", "run-a");
+    recordXSyncState(database, "running", "2026-08-29T11:01:00.000Z", "run-b");
+    recordXSyncState(database, "failed", "2026-08-29T11:02:00.000Z", "run-b");
+    const before = readPublicDataHealth(database).curation.x.sync;
+    assert.equal(recordXSyncState(database, "succeeded", "2026-08-29T11:03:00.000Z", "run-a"), false);
+    assert.deepEqual(readPublicDataHealth(database).curation.x.sync, before);
+    assert.equal(before.status, "failed");
+  } finally {
+    database.close();
+  }
+});
+
+test("X sync records survive projection rebuilds and keep last success after failure", () => {
+  const directory = mkdtempSync(join(tmpdir(), "x-sync-state-"));
+  const sourcePath = join(directory, "projection.sqlite");
+  const source = fixture(sourcePath);
+  const rebuilt = fixture();
+  try {
+    recordXSyncState(source, "running", "2026-08-29T11:00:00.000Z", "rebuilt-run");
+    recordXSyncState(source, "failed", "2026-08-29T11:05:00.000Z", "rebuilt-run");
+    rebuilt.exec("DELETE FROM x_sync_state; DELETE FROM open_source_items");
+    preserveSupplementalProjection(sourcePath, rebuilt);
+    assert.deepEqual(readPublicDataHealth(rebuilt).curation.x.sync, {
+      status: "failed", lastStartedAt: "2026-08-29T11:00:00.000Z",
+      lastFinishedAt: "2026-08-29T11:05:00.000Z", lastSucceededAt: "2026-08-29T10:00:00.000Z",
+    });
+    recordXSyncState(source, "running", "2026-08-29T11:10:00.000Z", "active-run");
+    rebuilt.exec("DELETE FROM x_sync_state; DELETE FROM open_source_items; DELETE FROM ask_documents WHERE source_scope = 'open-source'");
+    preserveSupplementalProjection(sourcePath, rebuilt);
+    assert.equal(readPublicDataHealth(rebuilt).curation.x.sync.lastFinishedAt, null);
+    assert.equal(recordXSyncState(rebuilt, "succeeded", "2026-08-29T11:15:00.000Z", "active-run"), true);
+    assert.equal(readPublicDataHealth(rebuilt).curation.x.sync.lastSucceededAt, "2026-08-29T11:15:00.000Z");
+  } finally {
+    source.close();
+    rebuilt.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("adding run ownership preserves existing heartbeat timestamps", () => {
+  const database = new Database(":memory:");
+  try {
+    database.exec(`CREATE TABLE x_sync_state (
+      id INTEGER PRIMARY KEY, status TEXT NOT NULL, last_started_at TEXT NOT NULL,
+      last_finished_at TEXT, last_succeeded_at TEXT
+    ); INSERT INTO x_sync_state VALUES (1, 'succeeded', '2026-08-29T09:00:00.000Z',
+      '2026-08-29T10:00:00.000Z', '2026-08-29T10:00:00.000Z')`);
+    initializePublicDatabase(database);
+    assert.equal(readPublicDataHealth(database).curation.x.sync.lastSucceededAt, "2026-08-29T10:00:00.000Z");
+    assert.equal(database.prepare("SELECT run_id FROM x_sync_state").get().run_id, null);
+    assert.equal(recordXSyncState(database, "failed", "2026-08-29T11:00:00.000Z", "unowned"), false);
+  } finally {
+    database.close();
+  }
+});
+
+test("snapshots without X sync evidence remain explicitly unknown", () => {
+  const database = fixture();
+  try {
+    database.exec("DROP TABLE x_sync_state");
+    const evidence = readPublicDataHealth(database);
+    assert.equal(evidence.curation.x.sync, null);
+    const status = buildDataHealth({ ...base, publicData: evidence });
+    assert.equal(status.curation.x.sync.status, "unknown");
+    assert.equal(status.curation.x.sync.healthy, null);
+    assert.equal(status.healthy, false);
+    assert.match(status.warnings.join("\n"), /同步状态未知/u);
+  } finally {
+    database.close();
+  }
+});
+
+for (const sync of [
+  { ...base.publicData.curation.x.sync, status: "failed" },
+  { ...base.publicData.curation.x.sync, lastSucceededAt: "2026-08-20T11:00:00.000Z" },
+  { ...base.publicData.curation.x.sync, lastSucceededAt: "invalid" },
+  { ...base.publicData.curation.x.sync, status: "running", lastSucceededAt: null },
+]) {
+  test(`recent X content cannot hide unhealthy sync ${JSON.stringify(sync)}`, () => {
+    const status = buildDataHealth({ ...base, publicData: {
+      ...base.publicData, curation: { ...base.publicData.curation, x: { ...base.publicData.curation.x, sync } },
+    } });
+    assert.equal(status.healthy, false);
+    assert.equal(status.curation.x.freshness, "fresh");
+    assert.equal(status.curation.x.sync.healthy, false);
+  });
+}
+
+test("stale Douyin and GitHub content still fail health while missing public content fails", () => {
+  const status = buildDataHealth({ ...base, publicData: {
+    ...base.publicData,
+    curation: { ...base.publicData.curation, douyin: { count: 5, latestAt: "2026-08-01T00:00:00.000Z" } },
+    openSource: { count: 3, latestAt: "2026-08-01T00:00:00.000Z" },
+  } });
+  assert.equal(status.healthy, false);
+  assert.equal(status.curation.douyin.healthy, false);
+  assert.equal(status.openSource.healthy, false);
+  assert.equal(status.curation.douyin.freshness, "stale");
+  assert.equal(status.openSource.freshness, "stale");
+  const missing = buildDataHealth({ ...base, publicData: {
+    ...base.publicData, curation: { ...base.publicData.curation, x: { ...base.publicData.curation.x, count: 0 } },
+  } });
+  assert.equal(missing.healthy, false);
+  assert.equal(missing.curation.x.freshness, "missing");
 });
 
 test("stale or inconsistent projections fail health with an actionable warning", () => {

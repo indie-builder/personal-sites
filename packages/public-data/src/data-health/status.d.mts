@@ -1,9 +1,10 @@
-import type { PublicDataHealthEvidence } from "./sqlite.mjs";
+import type { PublicDataHealthEvidence, XSyncState } from "./sqlite.mjs";
 
 export type DataSourceStatus = {
   ageMinutes: number | null;
   count: number;
   healthy: boolean;
+  freshness: "fresh" | "stale" | "missing";
   latestAt: string | null;
 };
 
@@ -20,7 +21,17 @@ export type DataHealth = {
     missingPostings: number;
     extraPostings: number;
   };
-  curation: { douyin: DataSourceStatus; x: DataSourceStatus };
+  curation: {
+    douyin: DataSourceStatus;
+    x: DataSourceStatus & { sync: {
+      status: XSyncState["status"] | "unknown";
+      lastStartedAt: string | null;
+      lastFinishedAt: string | null;
+      lastSucceededAt: string | null;
+      ageMinutes: number | null;
+      healthy: boolean | null;
+    } };
+  };
   database: { healthy: boolean; quickCheck: string };
   deployment: { commit: string | null };
   generatedAt: string;
