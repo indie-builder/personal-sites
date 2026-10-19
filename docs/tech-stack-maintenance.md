@@ -121,7 +121,7 @@ README 只保留栈型概述。下表是本轮维护的版本快照，仅作参�
 
 | 层 | 版本 |
 | --- | --- |
-| Web | TanStack Start 1.169.3（TanStack Router 1.170.45、Vite 8.3.4、Nitro 3.0.260903-beta）、React 19.3.1、Tailwind CSS 4.3.3、shadcn CLI 4.22.0 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.3.0（入场透明度与位移可能拆成多次 WAAPI 调用；`open-source-motion` 按行校验时长及 reduced-motion 终态）、Lucide 1.59.0；部署在 Vercel |
+| Web | TanStack Start 1.169.3（TanStack Router 1.170.45、Vite 8.3.4、Nitro 3.0.260903-beta）、React 19.3.1、Tailwind CSS 4.3.3、shadcn CLI 4.22.1 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.4.0（入场透明度与位移可能拆成多次 WAAPI 调用；`open-source-motion` 按行校验时长及 reduced-motion 终态）、Lucide 1.59.0；部署在 Vercel |
 | 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，本机 24.22.0，Vercel 支持上限 24.x）、Bun 1.4.3（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、`@types/node` 24.19.2（对齐 Node 24 运行时）、Effect 4.0.5、Turbo 2.11.9、oxlint 1.88.0、Portless 0.15.8；测试使用 Vitest 5.0.5、Vite 8.3.4 与 Playwright 1.64.1 |
 | 数据与 AI | Supabase JS 2.118.0、better-sqlite3 13.0.3、AI SDK 7.0.143 / Anthropic 4.0.82、Pi 1.3.0、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
 | 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、CommonMark 0.30.1、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
@@ -135,7 +135,7 @@ README 只保留栈型概述。下表是本轮维护的版本快照，仅作参�
 
 - `fflate` 中危（[GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98)）通过根 `overrides` 的 `fflate@0.7.3 → 0.7.5` 修复 Satori / `@shuding/opentype.js` 路径，保留 fast-png 的安全版本 0.8.3。OG 图片单测与生产构建通过；上游更新约束后优先移除覆盖。
 - KaTeX 低危（[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)）修复下限为 0.18.2；2026-10-18 进一步更新到稳定版 0.19.0，根 `overrides` 与 Web 直接依赖固定同版，覆盖仍声明 `^0.16.0` 的 `rehype-katex` / `micromark-extension-math`。Web 显式依赖同版 KaTeX，`AskAnswer` 懒加载其完整 CSS，避免新版类名与旧样式不匹配。真实 OpenUI TextContent 已验证行内公式、块级分式和上下标；浏览器回归覆盖 1440、320、390px 与横屏。上游正式支持补丁后移除覆盖，跟踪 [#74](https://github.com/indie-builder/personal-sites/issues/74)。
-- Motion 14.3.0 的多次 WAAPI 调用来自按属性拆分；专项测试改为按列表行归组验证 300ms 揭示时长，保留前八行上限及 reduced-motion 静态终态。专项 5 例与首例重复 3 次均通过。
+- Motion 的多次 WAAPI 调用来自按属性拆分；专项测试改为按列表行归组验证 300ms 揭示时长，保留前八行上限及 reduced-motion 静态终态。专项 5 例与首例重复 3 次均通过（14.3.0 与 14.4.0 均验证）。
 
 Android 当前 AGP / Gradle 组合高于 Kotlin 2.4.21 官方 fully-supported 矩阵上限（Gradle 9.7.0、AGP 9.3.1）。本轮 Debug 构建、30 项 JVM 单测、20 项 API 36 仪器测试及静态检查通过；这不扩大上游支持声明，后续升级继续核对兼容矩阵。
 
@@ -144,3 +144,5 @@ Android 当前 AGP / Gradle 组合高于 Kotlin 2.4.21 官方 fully-supported �
 2026-10-18 全工作区官方版本复核：除 KaTeX 外，已跟踪的 Web、小程序、共享包及内容工具直接依赖均无新的稳定升级项。根与 Web 的 `@types/node` 从 26.6.5 对齐到 Node 24 维护线最新的 24.19.2，避免类型检查接受生产 Node 24 不具备的接口。KaTeX 0.19.0 的 strict 回调行为变化不影响当前调用方（未设置 strict 回调）；直接依赖、间接渲染器覆盖与 CSS 保持同版，四视口 OpenUI 公式回归通过。
 
 Nitro 的官方 `latest` 仍为 3.0.260903-beta，维持现有版本，不切换到弃用版本或 alpha；`fflate` 和 KaTeX 覆盖仍为上游依赖范围所需。Bun、Node 24 运行线与 CI Actions 已符合当前稳定支持范围。被忽略的本地 Remotion 工程保持 4.0.536，清理一个不在锁文件中的 4.0.534 安装残留后，冻结安装、类型检查与带音轨短片段渲染通过，未修改其清单、锁文件或已有视频产物。
+
+2026-10-19 全工作区复核：升级 `@shadcn/lint` 0.2.3、shadcn CLI 4.22.1、Motion 14.4.0、Satori 0.63.0、postcss 8.5.31，均为当天/近期稳定补丁或小版本，无迁移指南要求。`@types/node` 保持 24.19.2（Node 24 维护线最新，26.6.5 仅对应 Node 26 Current）。Android 版本目录、Gradle wrapper、Bun 1.4.3、Node 24.22.0、浏览器端 Remotion 4.0.536 及独立 iOS 工程均无新版；Nitro 仍只有 beta `latest`。`braces` 3.0.3 上游 latest 仍为 3.0.3，告警状态不变。
