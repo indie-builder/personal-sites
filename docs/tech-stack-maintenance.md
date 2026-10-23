@@ -121,10 +121,10 @@ README 只保留栈型概述。下表是本轮维护的版本快照，仅作参�
 
 | 层 | 版本 |
 | --- | --- |
-| Web | TanStack Start 1.169.3（TanStack Router 1.170.45、Vite 8.3.4、Nitro 3.0.260903-beta）、React 19.3.1、Tailwind CSS 4.3.3、shadcn CLI 4.22.1 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.4.0（入场透明度与位移可能拆成多次 WAAPI 调用；`open-source-motion` 按行校验时长及 reduced-motion 终态）、Lucide 1.59.0；部署在 Vercel |
-| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，本机 24.22.0，Vercel 支持上限 24.x）、Bun 1.4.3（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、`@types/node` 24.19.2（对齐 Node 24 运行时）、Effect 4.0.5、Turbo 2.11.9、oxlint 1.88.0、Portless 0.15.8；测试使用 Vitest 5.0.5、Vite 8.3.4 与 Playwright 1.64.1 |
-| 数据与 AI | Supabase JS 2.118.0、better-sqlite3 13.0.3、AI SDK 7.0.143 / Anthropic 4.0.82、Pi 1.3.0、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
-| 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.1、Kotlin 2.4.21、Compose BOM 2026.09.00、CommonMark 0.30.1、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
+| Web | TanStack Start 1.169.4（TanStack Router 1.170.46、Vite 8.3.5、Nitro 3.0.260903-beta）、React 19.3.1、Tailwind CSS 4.3.3、shadcn CLI 4.22.1 / `@shadcn/react` 0.3.1、Radix UI 1.8.1、Motion 14.6.0（入场透明度与位移可能拆成多次 WAAPI 调用；`open-source-motion` 按行校验时长及 reduced-motion 终态）、Lucide 1.61.0；部署在 Vercel |
+| 运行时与工程工具 | Node.js `>=24.21.0 <25`（LTS，本机 24.22.0，Vercel 支持上限 24.x）、Bun 1.4.3（包管理器与默认脚本/测试运行时）、TypeScript 7.0.2、`@types/node` 24.19.2（对齐 Node 24 运行时）、Effect 4.0.6、Turbo 2.11.10、oxlint 1.89.0、Portless 0.15.9；测试使用 Vitest 5.0.5、Vite 8.3.5 与 Playwright 1.64.1 |
+| 数据与 AI | Supabase JS 2.118.0、better-sqlite3 13.0.3、AI SDK 7.0.150 / Anthropic 4.0.87、Pi 1.4.0、Transformers.js 4.3.1、sqlite-vec 0.1.9 |
+| 原生客户端（Android） | AGP 9.4.1、Gradle 9.8.2、Kotlin 2.4.21、Compose BOM 2026.09.00、CommonMark 0.30.1、compileSdk 37.1（minSdk 31，Android 12+）、JDK 17+ |
 | 原生客户端（iOS） | Swift 6 语言模式、SwiftUI、iOS 26+，无第三方依赖 |
 
 ## 依赖审计遗留
@@ -134,6 +134,7 @@ README 只保留栈型概述。下表是本轮维护的版本快照，仅作参�
 本轮补丁与再次处理条件：
 
 - `fflate` 中危（[GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98)）通过根 `overrides` 的 `fflate@0.7.3 → 0.7.5` 修复 Satori / `@shuding/opentype.js` 路径，保留 fast-png 的安全版本 0.8.3。OG 图片单测与生产构建通过；上游更新约束后优先移除覆盖。
+- `ip-address` 中危（[GHSA-rxp7-6hxx-x8q5](https://github.com/advisories/GHSA-rxp7-6hxx-x8q5)，Quadratic ReDoS）修复版本 10.7.4；上游 `express-rate-limit` 8.6.0 与 `socks` 2.8.10 均精确锁定 `10.7.3`，通过根 `overrides` 的 `ip-address → 10.7.4` 修复，仅影响开发服务端依赖，`bun audit` 该项消失。上游放宽约束后移除覆盖。
 - KaTeX 低危（[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)）修复下限为 0.18.2；2026-10-18 进一步更新到稳定版 0.19.0，根 `overrides` 与 Web 直接依赖固定同版，覆盖仍声明 `^0.16.0` 的 `rehype-katex` / `micromark-extension-math`。Web 显式依赖同版 KaTeX，`AskAnswer` 懒加载其完整 CSS，避免新版类名与旧样式不匹配。真实 OpenUI TextContent 已验证行内公式、块级分式和上下标；浏览器回归覆盖 1440、320、390px 与横屏。上游正式支持补丁后移除覆盖，跟踪 [#74](https://github.com/indie-builder/personal-sites/issues/74)。
 - Motion 的多次 WAAPI 调用来自按属性拆分；专项测试改为按列表行归组验证 300ms 揭示时长，保留前八行上限及 reduced-motion 静态终态。专项 5 例与首例重复 3 次均通过（14.3.0 与 14.4.0 均验证）。
 
@@ -146,3 +147,5 @@ Android 当前 AGP / Gradle 组合高于 Kotlin 2.4.21 官方 fully-supported �
 Nitro 的官方 `latest` 仍为 3.0.260903-beta，维持现有版本，不切换到弃用版本或 alpha；`fflate` 和 KaTeX 覆盖仍为上游依赖范围所需。Bun、Node 24 运行线与 CI Actions 已符合当前稳定支持范围。被忽略的本地 Remotion 工程保持 4.0.536，清理一个不在锁文件中的 4.0.534 安装残留后，冻结安装、类型检查与带音轨短片段渲染通过，未修改其清单、锁文件或已有视频产物。
 
 2026-10-19 全工作区复核：升级 `@shadcn/lint` 0.2.3、shadcn CLI 4.22.1、Motion 14.4.0、Satori 0.63.0、postcss 8.5.31，均为当天/近期稳定补丁或小版本，无迁移指南要求。`@types/node` 保持 24.19.2（Node 24 维护线最新，26.6.5 仅对应 Node 26 Current）。Android 版本目录、Gradle wrapper、Bun 1.4.3、Node 24.22.0、浏览器端 Remotion 4.0.536 及独立 iOS 工程均无新版；Nitro 仍只有 beta `latest`。`braces` 3.0.3 上游 latest 仍为 3.0.3，告警状态不变。
+
+2026-10-23 全工作区复核：升级均为近期稳定补丁/小版本，无迁移指南要求——Web `@tanstack/react-start` 1.169.4、`@tanstack/react-router` 1.170.46、`ai` 7.0.150、`@ai-sdk/anthropic` 4.0.87、`motion` 14.6.0、`lucide-react` 1.61.0、`satori` 0.63.2、`vite` 8.3.5；根 `effect` 4.0.6（传入 Web / public-data / effect 包 / content / 小程序）、`turbo` 2.11.10、`oxlint` 1.89.0、`portless` 0.15.9；数据侧 `@earendil-works/pi-coding-agent` 1.4.0；Android Gradle wrapper 9.8.1 → 9.8.2。新增 `ip-address` 覆盖到 10.7.4 修复中危告警。`@types/node` 保持 24.19.2（24 线最新即为 24.19.2）。`bun-types` 暂留 1.4.3，与 `packageManager` 锁定的 Bun 1.4.3 运行时保持同版；Bun 1.4.4 刚发布一天，随运行时一起评估。AGP / Kotlin / Compose BOM、iOS 工程、浏览器端本地 Remotion 4.0.536 无新版；Nitro `latest` 仍为 beta。验证：typecheck / lint / test（web 234、content 23、repo 27）/ build 通过；`test:e2e` 109 例通过，1 例 `curation-detail` agent 用例因 e2e 模型供应商余额不足（`[1113]`）失败，属环境问题非回归；`test:e2e:touch` 16 例通过；Android Debug 构建与 JVM 单测通过；dev 模式 Vite 8.3.5 启动、`/` 与 `/curation` 返回 200。
