@@ -11,7 +11,7 @@ import {
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { BIGMODEL_BASE_URL, BIGMODEL_PROVIDER, resolveBigModel } from "../../../config/bigmodel.mjs";
+import { BIGMODEL_PROVIDER, resolveBigModel, resolveBigModelBaseUrl } from "../../../config/bigmodel.mjs";
 import { resolvePiModelConfig, configureBigModelRuntime } from "../lib/pi-runtime.mjs";
 import { registerCliMocks } from "./helpers/cli-mock.mjs";
 
@@ -26,7 +26,7 @@ test("analysis registers BigModel before resolving credentials, including images
     configureBigModelRuntime(runtime, resolveBigModel(), { BIGMODEL_API_KEY: "fixture-key" }),
   );
   assert.equal(calls[0].id, BIGMODEL_PROVIDER);
-  assert.equal(calls[0].config.baseUrl, BIGMODEL_BASE_URL);
+  assert.equal(calls[0].config.baseUrl, "https://open.bigmodel.cn/api/anthropic");
   assert.equal(calls[0].config.api, "anthropic-messages");
   assert.deepEqual(calls[0].config.models[0].input, ["text", "image"]);
   assert.deepEqual(calls[1], { id: BIGMODEL_PROVIDER, key: "fixture-key" });
@@ -38,6 +38,15 @@ test("analysis registers BigModel before resolving credentials, including images
     Effect.runPromise(configureBigModelRuntime(runtime, resolveBigModel(), {})),
     /BIGMODEL_API_KEY/,
   );
+});
+
+test("base URL can point at a local model gateway while defaulting to the Zhipu endpoint", () => {
+  assert.equal(resolveBigModelBaseUrl({}), "https://open.bigmodel.cn/api/anthropic");
+  assert.equal(resolveBigModelBaseUrl({ BIGMODEL_BASE_URL: "  " }), "https://open.bigmodel.cn/api/anthropic");
+  assert.equal(resolveBigModelBaseUrl({ BIGMODEL_BASE_URL: "http://127.0.0.1:3425" }), "http://127.0.0.1:3425");
+  assert.equal(resolveBigModel("group/flash"), "group/flash");
+  assert.equal(resolveBigModel(" glm-5.3 "), "glm-5.3");
+  assert.throws(() => resolveBigModel("invalid-model"), /GLM/);
 });
 
 test("installed Pi SDK accepts model-runner images in an isolated session with no tools", async (t) => {

@@ -3,7 +3,7 @@ import type { E2EConfig } from "e2e";
 import { web } from "@e2e-dev/web";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { BIGMODEL_BASE_URL, requireBigModelApiKey, resolveBigModel } from "../../config/bigmodel.mjs";
+import { requireBigModelApiKey, resolveBigModel, resolveBigModelBaseUrl } from "../../config/bigmodel.mjs";
 
 // e2e 不读取任何 .env 文件；模型 key 从仓库根 .env.local 注入（已导出的 shell 变量优先）。
 const envLocalPath = fileURLToPath(new URL("../../.env.local", import.meta.url));
@@ -40,7 +40,7 @@ export default {
         agents: {
           default: {
             model: createAnthropic({
-              baseURL: `${BIGMODEL_BASE_URL}/v1`,
+              baseURL: `${resolveBigModelBaseUrl()}/v1`,
               apiKey: requireBigModelApiKey(),
             })(resolveBigModel(process.env.ASK_MODEL)),
             context:

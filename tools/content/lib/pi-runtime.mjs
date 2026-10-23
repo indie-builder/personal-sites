@@ -1,9 +1,9 @@
 import { Effect } from "effect";
 import { attempt, io } from "@site/effect";
 import {
-  BIGMODEL_BASE_URL,
   BIGMODEL_PROVIDER,
   resolveBigModel,
+  resolveBigModelBaseUrl,
   requireBigModelApiKey,
 } from "../../../config/bigmodel.mjs";
 
@@ -31,7 +31,7 @@ export function configureBigModelRuntime(runtime, model, env = process.env) {
     const id = yield* attempt("pi.model", () => resolveBigModel(model));
     const key = yield* attempt("pi.credentials", () => requireBigModelApiKey(env));
     runtime.registerProvider(BIGMODEL_PROVIDER, {
-      baseUrl: BIGMODEL_BASE_URL,
+      baseUrl: resolveBigModelBaseUrl(env),
       api: "anthropic-messages",
       authHeader: true,
       models: [
