@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 const ANALYSIS_PIPELINE_VERSION = 1;
 const EDITORIAL_STAGE_VERSION = 2;
+export const MAX_STAGE_ATTEMPTS = 4;
 const FACTS_STAGE_VERSION = 1;
 const VISUAL_STAGE_VERSION = 1;
 const DESIGN_STAGE_VERSION = 2;
@@ -179,8 +180,10 @@ export function prepareCurationItem(item, { now = new Date() } = {}) {
 }
 
 export function needsCurationAnalysis(item, { refresh = false } = {}) {
-  if (!item.ai?.enrichedAt) return true;
   const stage = item.pipeline?.stages?.editorial;
+  // 已终止的条目不再重试（--refresh 可强制重来），避免永久失败项每轮空转。
+  if (stage?.status === "skipped" && !refresh) return false;
+  if (!item.ai?.enrichedAt) return true;
   if (stage && (stage.status !== "complete" || stage.inputHash !== item.pipeline.inputHash)) return true;
   return Boolean(refresh && (
     Number(stage?.version ?? 0) < EDITORIAL_STAGE_VERSION
@@ -253,6 +256,7 @@ export function applyDesignAnalysis(item, design, { completedAt = new Date(), mo
 export function recordCurationAnalysisFailure(item, error, { attemptedAt = new Date(), model } = {}) {
   const prepared = prepareCurationItem(item, { now: attemptedAt });
   const previous = prepared.pipeline.stages.editorial;
+  const attempts = Number(previous?.attempts ?? 0) + 1;
   return {
     ...prepared,
     pipeline: {
@@ -260,13 +264,38 @@ export function recordCurationAnalysisFailure(item, error, { attemptedAt = new D
       stages: {
         ...prepared.pipeline.stages,
         editorial: {
-          attempts: Number(previous?.attempts ?? 0) + 1,
+          attempts,
           error: String(error?.message ?? error).slice(0, 500),
           inputHash: prepared.pipeline.inputHash,
           lastAttemptedAt: asIsoDate(attemptedAt),
           model,
-          status: "error",
+          // 连续失败达到上限即终止，后续同步不再重试。
+          status: attempts >= MAX_STAGE_ATTEMPTS ? "skipped" : "error",
           version: EDITORIAL_STAGE_VERSION,
+        },
+      },
+    },
+  };
+}
+
+export function recordDesignAnalysisFailure(item, error, { attemptedAt = new Date(), model } = {}) {
+  const prepared = prepareCurationItem(item, { now: attemptedAt });
+  const previous = prepared.pipeline.stages.design;
+  const attempts = Number(previous?.attempts ?? 0) + 1;
+  return {
+    ...prepared,
+    pipeline: {
+      ...prepared.pipeline,
+      stages: {
+        ...prepared.pipeline.stages,
+        design: {
+          attempts,
+          error: String(error?.message ?? error).slice(0, 500),
+          inputHash: prepared.pipeline.inputHash,
+          lastAttemptedAt: asIsoDate(attemptedAt),
+          model,
+          status: attempts >= MAX_STAGE_ATTEMPTS ? "skipped" : "error",
+          version: DESIGN_STAGE_VERSION,
         },
       },
     },
