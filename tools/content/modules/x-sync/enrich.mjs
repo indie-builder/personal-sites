@@ -9,6 +9,7 @@ import {
   needsCurationAnalysis,
   prepareCurationItem,
   recordCurationAnalysisFailure,
+  recordDesignAnalysisFailure,
 } from "./analysis.mjs";
 import { designClassificationStatus } from "./design-classification.mjs";
 import { classifyUrl, expandUrl, fetchGithubRepo, fetchArticleText } from "./link-content.mjs";
@@ -37,11 +38,12 @@ export const enrichQueue = Effect.fn("curation.enrich")(function* (
   if (normalizedStatuses > 0) {
     logger.log(`${dryRun ? "预览校正" : "已校正"} ${normalizedStatuses} 条历史设计分类状态。`);
   }
-  let targets = queue.items.filter((item) =>
-    designOnly
-      ? item.ai.enrichedAt && (!item.ai.design || (refresh && Number(item.pipeline?.stages?.design?.version ?? 0) < 2))
-      : needsCurationAnalysis(item, { refresh }),
-  );
+  let targets = queue.items.filter((item) => {
+    if (!designOnly) return needsCurationAnalysis(item, { refresh });
+    if (!item.ai.enrichedAt) return false;
+    if (!item.ai.design) return !(item.pipeline?.stages?.design?.status === "skipped" && !refresh);
+    return Boolean(refresh && Number(item.pipeline?.stages?.design?.version ?? 0) < 2);
+  });
   if (only) targets = targets.filter((item) => only.has(item.id));
   targets = targets.slice(0, limit);
 
@@ -137,7 +139,8 @@ export const enrichQueue = Effect.fn("curation.enrich")(function* (
         Effect.catch((error) =>
           Effect.gen(function* () {
             failed += 1;
-            if (!designOnly) Object.assign(item, recordCurationAnalysisFailure(item, error, { model: modelLabel }));
+            if (designOnly) Object.assign(item, recordDesignAnalysisFailure(item, error, { model: modelLabel }));
+            else Object.assign(item, recordCurationAnalysisFailure(item, error, { model: modelLabel }));
             logger.error(`[失败] ${item.id}: ${error.message.slice(0, 120)}`);
             yield* persistQueue();
             yield* Effect.sleep(2000);

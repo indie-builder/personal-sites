@@ -68,6 +68,14 @@ function readFavoriteOrders(favoriteIndexPath) {
   });
 }
 
+// 确定性无法处理：无转写/OCR 原句，或视频无语音无文字。重试不会改变结果。
+export function isPermanentDouyinFailure(message) {
+  return /没有可用于公开摘录的转写|没有得到语音转写或屏幕文字/u.test(String(message));
+}
+
+// 连续失败达到上限即终止，避免确定性失败项每轮重试。
+const MAX_DOUYIN_ATTEMPTS = 3;
+
 export function settleConcurrently(targets, concurrency, processTarget) {
   return Effect.gen(function* () {
     const failures = [];
@@ -157,7 +165,11 @@ function sync(options, config) {
       );
       if (manifestPath) {
         const knownIds = new Set(byId.keys());
-        const pending = videos.filter((video) => !knownIds.has(`douyin:${video.awemeId}`));
+        const pending = videos.filter(
+          (video) =>
+            !knownIds.has(`douyin:${video.awemeId}`)
+            && !failuresById.get(`douyin:${video.awemeId}`)?.skipped,
+        );
         console.log(
           `[dry-run] 清单 ${videos.length} 条，待分析 ${pending.length} 条${Number.isFinite(options.limit) ? `（--limit 取最新 ${Math.min(options.limit, pending.length)} 条）` : ""}。`,
         );
@@ -183,7 +195,12 @@ function sync(options, config) {
 
     const targets = options.refreshOnly
       ? []
-      : videos.filter((video) => options.force || !byId.has(`douyin:${video.awemeId}`));
+      // 已终止（明确无法处理）的条目除非 --force，否则不再重试。
+      : videos.filter(
+          (video) =>
+            options.force
+            || (!byId.has(`douyin:${video.awemeId}`) && !failuresById.get(`douyin:${video.awemeId}`)?.skipped),
+        );
 
     if (reader && targets.length > 0) {
       yield* reader
@@ -231,10 +248,16 @@ function sync(options, config) {
     const failures = yield* settleConcurrently(targets, concurrency, processVideo);
     if (failures.length > 0) process.exitCode = 1;
     for (const { error, target } of failures) {
-      failuresById.set(`douyin:${target.awemeId}`, {
-        error: error instanceof Error ? error.message : String(error),
+      const id = `douyin:${target.awemeId}`;
+      const message = error instanceof Error ? error.message : String(error);
+      const attempts = Number(failuresById.get(id)?.attempts ?? 0) + 1;
+      failuresById.set(id, {
+        error: message,
         failedAt: new Date().toISOString(),
-        id: `douyin:${target.awemeId}`,
+        id,
+        attempts,
+        // 无转写/OCR 是确定性无法产出；其余连续失败到上限也终止，避免每轮重试。
+        skipped: isPermanentDouyinFailure(message) || attempts >= MAX_DOUYIN_ATTEMPTS,
       });
     }
     yield* writeJsonAtomically(failuresPath, {
