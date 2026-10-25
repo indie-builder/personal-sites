@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 const COLLAPSED_KEY = "personal-site:profile-collapsed";
@@ -97,12 +96,17 @@ export function ProfileReadingMode() {
       <button
         aria-expanded={!collapsed}
         aria-label={collapsed ? "展开左侧个人简介" : "收起左侧个人简介，进入沉浸阅读"}
+        title={collapsed ? "展开左侧简介" : "收起左侧简介"}
         className="profile-reading-toggle"
         data-near={near ? "true" : undefined}
         onClick={toggle}
         type="button"
       >
-        {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronLeft aria-hidden="true" />}
+        {/* 接缝夹点：竖线是"这里可以推走"，三角指向收起的去向，不用独立图标。 */}
+        <svg aria-hidden="true" viewBox="0 0 10 28">
+          <path d="M1.5 5v18" />
+          <path className="profile-reading-toggle__arrow" d="M5 10.5 8.2 14 5 17.5" />
+        </svg>
       </button>
       <span aria-live="polite" className="sr-only">{announcement}</span>
     </>
