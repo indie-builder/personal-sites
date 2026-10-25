@@ -17,7 +17,12 @@ test("profile rail can collapse into an immersive reading column", async ({ app,
     const box = document.querySelector(".curation-home__feed")!.getBoundingClientRect();
     return { left: Math.round(box.left), width: Math.round(box.width) };
   });
-  // 把手紧贴身份轨右缘，不能飘到栏内或压住正文。
+  // 浮出有 220ms 过渡，等它落定再量位置，避免读到动画中间态。
+  await expect.poll(() => browser.evaluate(() => {
+    const handle = document.querySelector(".profile-reading-toggle")!.getBoundingClientRect();
+    const rail = document.querySelector(".curation-home__profile")!.getBoundingClientRect();
+    return Math.round(rail.right - handle.right);
+  })).toBeLessThanOrEqual(2);
   const alignment = await browser.evaluate(() => {
     const rail = document.querySelector(".curation-home__profile")!.getBoundingClientRect();
     const feed = document.querySelector(".curation-home__feed")!.getBoundingClientRect();
@@ -38,10 +43,18 @@ test("profile rail can collapse into an immersive reading column", async ({ app,
   expect(after.left).toBeGreaterThan(0);
   expect(await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+  // 方向要跟动作一致：展开态指向收起方向（左），收起后翻转指向取回方向（右）。
+  const arrowDirection = () => browser.evaluate(() =>
+    getComputedStyle(document.querySelector(".profile-reading-toggle__arrow")!).transform);
+  const collapsedArrow = await arrowDirection();
+  expect(collapsedArrow === "none" ? "none" : collapsedArrow).not.toBe("none");
+
   // 恢复：身份轨回来，焦点落回把手。
   await toggle.click();
   await expect.poll(() => browser.evaluate(() => Boolean((document.querySelector(".curation-home__profile") as HTMLElement | null)?.offsetParent))).toBe(true);
   expect(await browser.evaluate(() => document.activeElement?.classList.contains("profile-reading-toggle") ?? false)).toBe(true);
+  // 展开态镜像回来：箭头指向左栏收起的一侧。
+  expect(await arrowDirection()).not.toBe(collapsedArrow);
 });
 
 test("the reading handle stays out of the way on phones", async ({ app, browser }) => {

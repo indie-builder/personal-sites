@@ -102,10 +102,10 @@ export function ProfileReadingMode() {
         onClick={toggle}
         type="button"
       >
-        {/* 接缝夹点：竖线是"这里可以推走"，三角指向收起的去向，不用独立图标。 */}
+        {/* 接缝夹点：竖线标出可推走的那条缝，三角指向左栏将要去的一侧。 */}
         <svg aria-hidden="true" viewBox="0 0 10 28">
-          <path d="M1.5 5v18" />
-          <path className="profile-reading-toggle__arrow" d="M5 10.5 8.2 14 5 17.5" />
+          <path d="M8.5 5v18" />
+          <path className="profile-reading-toggle__arrow" d="M5.4 10.5 2.2 14l3.2 3.5" />
         </svg>
       </button>
       <span aria-live="polite" className="sr-only">{announcement}</span>
