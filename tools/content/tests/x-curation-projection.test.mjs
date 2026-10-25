@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Effect } from "effect";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -6,6 +7,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
+import { PROMPT_STAGE_VERSION } from "../modules/x-sync/prompt-content.mjs";
+import { PROMPT_SOURCE_VERSION } from "../modules/x-sync/prompt-source.mjs";
 import { isReadyForPublication, toPublicCurationItem } from "../modules/x-sync/curation-projection.mjs";
 import { buildPublicCurationDatabase } from "../modules/focus-sync/public-sqlite.mjs";
 import { firstSeenMetadata, parseSourceOrderSnapshot } from "../modules/x-sync/source-order.mjs";
@@ -81,6 +84,7 @@ test("only completed analysis results become a public curation record", () => {
       },
     ],
     publishedAt: "2026-08-09T00:00:00.000Z",
+    prompt: null,
     quoteContext: null,
     searchSignals: null,
     summary: "摘要",
@@ -90,6 +94,73 @@ test("only completed analysis results become a public curation record", () => {
     visualFacts: null,
     source: { label: "X 原文", platform: "x", url: "https://x.com/author/status/1" },
   });
+});
+
+test("prompt projection only carries fields from the selected real candidates", () => {
+  const projected = toPublicCurationItem({
+    ...item,
+    pipeline: { stages: { prompt: { status: "complete", version: PROMPT_STAGE_VERSION } } },
+    promptSource: { version: PROMPT_SOURCE_VERSION },
+    ai: {
+      ...item.ai,
+      tags: ["提示词", "软件工程提示词"],
+      prompt: {
+        quoteTranslation: null,
+        replies: [
+          {
+            author: { handle: "helper", name: "Helper" },
+            id: "900",
+            media: [{ type: "photo", url: "https://pbs.twimg.com/media/reply.jpg" }],
+            reason: "补充了可直接复用的参数。",
+            text: "Use --temperature 0.",
+            translation: "使用 --temperature 0。",
+            url: "https://x.com/helper/status/900",
+          },
+        ],
+        translation: "站内原文译文",
+      },
+    },
+  });
+  assert.deepEqual(projected.prompt, {
+    quoteTranslation: null,
+    replies: [
+      {
+        author: { handle: "helper", name: "Helper" },
+        id: "900",
+        media: [{ type: "photo", url: "https://pbs.twimg.com/media/reply.jpg" }],
+        reason: "补充了可直接复用的参数。",
+        text: "Use --temperature 0.",
+        translation: "使用 --temperature 0。",
+        url: "https://x.com/helper/status/900",
+      },
+    ],
+    translation: "站内原文译文",
+  });
+  assert.equal(projected.text, "公开原文");
+});
+
+test("verified translations ship even when reply selection was truncated", () => {
+  const base = {
+    ...item,
+    promptSource: { version: PROMPT_SOURCE_VERSION },
+    ai: { ...item.ai, prompt: { quoteTranslation: null, replies: [], translation: "完整译文" } },
+  };
+  const project = (promptStage) => toPublicCurationItem({
+    ...base, pipeline: { stages: { prompt: promptStage } },
+  }).prompt;
+  // 第一步完成后记录 translatedHash；第二步失败停在 error 仍可发布已校验译文。
+  const hash = createHash("sha256")
+    .update(JSON.stringify({ quote: null, text: item.text }))
+    .digest("hex");
+  assert.equal(project({ status: "error", translatedHash: hash, version: PROMPT_STAGE_VERSION }).translation, "完整译文");
+  // 原文变化后旧译文不得发布。
+  assert.equal(project({ status: "error", translatedHash: "stale", version: PROMPT_STAGE_VERSION }), null);
+});
+
+test("unverified legacy prompt metadata never reaches the public projection", () => {
+  assert.equal(toPublicCurationItem({
+    ...item, ai: { ...item.ai, prompt: { translation: "译文", replies: [] } },
+  }).prompt, null);
 });
 
 test("the public projection retains first-seen time and X list position for feed ordering", () => {

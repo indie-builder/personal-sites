@@ -23,6 +23,7 @@ import { Route as ApiCurationRouteImport } from './routes/api/curation'
 import { Route as ApiDesignRouteImport } from './routes/api/design'
 import { Route as ApiDouyinRouteImport } from './routes/api/douyin'
 import { Route as ApiOpenSourceRouteImport } from './routes/api/open-source'
+import { Route as ApiPromptsRouteImport } from './routes/api/prompts'
 import { Route as ApiXMediaRouteImport } from './routes/api/x-media'
 import { Route as CurationIndexRouteImport } from './routes/curation/index'
 import { Route as CurationIdRouteImport } from './routes/curation/$id'
@@ -30,6 +31,8 @@ import { Route as DesignIndexRouteImport } from './routes/design/index'
 import { Route as DesignIdRouteImport } from './routes/design/$id'
 import { Route as OpenSourceIndexRouteImport } from './routes/open-source/index'
 import { Route as OpenSourceSlugRouteImport } from './routes/open-source/$slug'
+import { Route as PromptsIndexRouteImport } from './routes/prompts/index'
+import { Route as PromptsIdRouteImport } from './routes/prompts/$id'
 import { Route as ApiAiNewsIdRouteImport } from './routes/api/ai-news/$id'
 import { Route as ApiCronAiNewsRouteImport } from './routes/api/cron/ai-news'
 import { Route as ApiHealthDataRouteImport } from './routes/api/health/data'
@@ -107,6 +110,11 @@ const ApiOpenSourceRoute = ApiOpenSourceRouteImport.update({
   path: '/api/open-source',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPromptsRoute = ApiPromptsRouteImport.update({
+  id: '/api/prompts',
+  path: '/api/prompts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiXMediaRoute = ApiXMediaRouteImport.update({
   id: '/api/x-media',
   path: '/api/x-media',
@@ -140,6 +148,16 @@ const OpenSourceIndexRoute = OpenSourceIndexRouteImport.update({
 const OpenSourceSlugRoute = OpenSourceSlugRouteImport.update({
   id: '/open-source/$slug',
   path: '/open-source/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PromptsIndexRoute = PromptsIndexRouteImport.update({
+  id: '/prompts/',
+  path: '/prompts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PromptsIdRoute = PromptsIdRouteImport.update({
+  id: '/prompts/$id',
+  path: '/prompts/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiNewsIdRoute = ApiAiNewsIdRouteImport.update({
@@ -189,14 +207,17 @@ export interface FileRoutesByFullPath {
   '/api/design': typeof ApiDesignRoute
   '/api/douyin': typeof ApiDouyinRoute
   '/api/open-source': typeof ApiOpenSourceRouteWithChildren
+  '/api/prompts': typeof ApiPromptsRoute
   '/api/x-media': typeof ApiXMediaRoute
   '/curation/$id': typeof CurationIdRoute
   '/design/$id': typeof DesignIdRoute
   '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/prompts/$id': typeof PromptsIdRoute
   '/ai-news/': typeof AiNewsIndexRoute
   '/curation/': typeof CurationIndexRoute
   '/design/': typeof DesignIndexRoute
   '/open-source/': typeof OpenSourceIndexRoute
+  '/prompts/': typeof PromptsIndexRoute
   '/api/ai-news/$id': typeof ApiAiNewsIdRoute
   '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
@@ -218,14 +239,17 @@ export interface FileRoutesByTo {
   '/api/design': typeof ApiDesignRoute
   '/api/douyin': typeof ApiDouyinRoute
   '/api/open-source': typeof ApiOpenSourceRouteWithChildren
+  '/api/prompts': typeof ApiPromptsRoute
   '/api/x-media': typeof ApiXMediaRoute
   '/curation/$id': typeof CurationIdRoute
   '/design/$id': typeof DesignIdRoute
   '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/prompts/$id': typeof PromptsIdRoute
   '/ai-news': typeof AiNewsIndexRoute
   '/curation': typeof CurationIndexRoute
   '/design': typeof DesignIndexRoute
   '/open-source': typeof OpenSourceIndexRoute
+  '/prompts': typeof PromptsIndexRoute
   '/api/ai-news/$id': typeof ApiAiNewsIdRoute
   '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
@@ -248,14 +272,17 @@ export interface FileRoutesById {
   '/api/design': typeof ApiDesignRoute
   '/api/douyin': typeof ApiDouyinRoute
   '/api/open-source': typeof ApiOpenSourceRouteWithChildren
+  '/api/prompts': typeof ApiPromptsRoute
   '/api/x-media': typeof ApiXMediaRoute
   '/curation/$id': typeof CurationIdRoute
   '/design/$id': typeof DesignIdRoute
   '/open-source/$slug': typeof OpenSourceSlugRoute
+  '/prompts/$id': typeof PromptsIdRoute
   '/ai-news/': typeof AiNewsIndexRoute
   '/curation/': typeof CurationIndexRoute
   '/design/': typeof DesignIndexRoute
   '/open-source/': typeof OpenSourceIndexRoute
+  '/prompts/': typeof PromptsIndexRoute
   '/api/ai-news/$id': typeof ApiAiNewsIdRoute
   '/api/cron/ai-news': typeof ApiCronAiNewsRoute
   '/api/health/data': typeof ApiHealthDataRoute
@@ -279,14 +306,17 @@ export interface FileRouteTypes {
     | '/api/design'
     | '/api/douyin'
     | '/api/open-source'
+    | '/api/prompts'
     | '/api/x-media'
     | '/curation/$id'
     | '/design/$id'
     | '/open-source/$slug'
+    | '/prompts/$id'
     | '/ai-news/'
     | '/curation/'
     | '/design/'
     | '/open-source/'
+    | '/prompts/'
     | '/api/ai-news/$id'
     | '/api/cron/ai-news'
     | '/api/health/data'
@@ -308,14 +338,17 @@ export interface FileRouteTypes {
     | '/api/design'
     | '/api/douyin'
     | '/api/open-source'
+    | '/api/prompts'
     | '/api/x-media'
     | '/curation/$id'
     | '/design/$id'
     | '/open-source/$slug'
+    | '/prompts/$id'
     | '/ai-news'
     | '/curation'
     | '/design'
     | '/open-source'
+    | '/prompts'
     | '/api/ai-news/$id'
     | '/api/cron/ai-news'
     | '/api/health/data'
@@ -337,14 +370,17 @@ export interface FileRouteTypes {
     | '/api/design'
     | '/api/douyin'
     | '/api/open-source'
+    | '/api/prompts'
     | '/api/x-media'
     | '/curation/$id'
     | '/design/$id'
     | '/open-source/$slug'
+    | '/prompts/$id'
     | '/ai-news/'
     | '/curation/'
     | '/design/'
     | '/open-source/'
+    | '/prompts/'
     | '/api/ai-news/$id'
     | '/api/cron/ai-news'
     | '/api/health/data'
@@ -367,14 +403,17 @@ export interface RootRouteChildren {
   ApiDesignRoute: typeof ApiDesignRoute
   ApiDouyinRoute: typeof ApiDouyinRoute
   ApiOpenSourceRoute: typeof ApiOpenSourceRouteWithChildren
+  ApiPromptsRoute: typeof ApiPromptsRoute
   ApiXMediaRoute: typeof ApiXMediaRoute
   CurationIdRoute: typeof CurationIdRoute
   DesignIdRoute: typeof DesignIdRoute
   OpenSourceSlugRoute: typeof OpenSourceSlugRoute
+  PromptsIdRoute: typeof PromptsIdRoute
   AiNewsIndexRoute: typeof AiNewsIndexRoute
   CurationIndexRoute: typeof CurationIndexRoute
   DesignIndexRoute: typeof DesignIndexRoute
   OpenSourceIndexRoute: typeof OpenSourceIndexRoute
+  PromptsIndexRoute: typeof PromptsIndexRoute
   ApiCronAiNewsRoute: typeof ApiCronAiNewsRoute
   ApiHealthDataRoute: typeof ApiHealthDataRoute
   ApiHealthAiNewsArchiveRoute: typeof ApiHealthAiNewsArchiveRoute
@@ -480,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOpenSourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/prompts': {
+      id: '/api/prompts'
+      path: '/api/prompts'
+      fullPath: '/api/prompts'
+      preLoaderRoute: typeof ApiPromptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/x-media': {
       id: '/api/x-media'
       path: '/api/x-media'
@@ -527,6 +573,20 @@ declare module '@tanstack/react-router' {
       path: '/open-source/$slug'
       fullPath: '/open-source/$slug'
       preLoaderRoute: typeof OpenSourceSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prompts/': {
+      id: '/prompts/'
+      path: '/prompts'
+      fullPath: '/prompts/'
+      preLoaderRoute: typeof PromptsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prompts/$id': {
+      id: '/prompts/$id'
+      path: '/prompts/$id'
+      fullPath: '/prompts/$id'
+      preLoaderRoute: typeof PromptsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai-news/$id': {
@@ -614,14 +674,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDesignRoute: ApiDesignRoute,
   ApiDouyinRoute: ApiDouyinRoute,
   ApiOpenSourceRoute: ApiOpenSourceRouteWithChildren,
+  ApiPromptsRoute: ApiPromptsRoute,
   ApiXMediaRoute: ApiXMediaRoute,
   CurationIdRoute: CurationIdRoute,
   DesignIdRoute: DesignIdRoute,
   OpenSourceSlugRoute: OpenSourceSlugRoute,
+  PromptsIdRoute: PromptsIdRoute,
   AiNewsIndexRoute: AiNewsIndexRoute,
   CurationIndexRoute: CurationIndexRoute,
   DesignIndexRoute: DesignIndexRoute,
   OpenSourceIndexRoute: OpenSourceIndexRoute,
+  PromptsIndexRoute: PromptsIndexRoute,
   ApiCronAiNewsRoute: ApiCronAiNewsRoute,
   ApiHealthDataRoute: ApiHealthDataRoute,
   ApiHealthAiNewsArchiveRoute: ApiHealthAiNewsArchiveRoute,

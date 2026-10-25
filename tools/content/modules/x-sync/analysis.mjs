@@ -55,11 +55,21 @@ function normalizedList(value, limit = 15) {
   return uniqueStrings(Array.isArray(value) ? value : [], limit);
 }
 
-function normalizeCurationTags(value) {
-  const tags = normalizedList(value);
+function normalizeTagKey(value) {
+  return String(value).toLocaleLowerCase("en-US").replace(/[\s\-_/·]+/gu, "");
+}
+
+/** 标签不锁词表：优先复用既有分类（含同义词归一），再保留模型给出的自由标签。 */
+export function normalizeCurationTags(value, { limit = 8, vocabulary = [] } = {}) {
+  const canonical = new Map(vocabulary.map((tag) => [normalizeTagKey(tag), tag]));
+  const tags = uniqueStrings(Array.isArray(value) ? value : [])
+    .map((tag) => canonical.get(normalizeTagKey(tag)) ?? tag);
   // 词表约定：除总类外，以「提示词」结尾的主题都是用途子类。
   const promptTypes = tags.filter((tag) => tag !== "提示词" && tag.endsWith("提示词"));
-  return normalizedList(promptTypes.length ? ["提示词", ...promptTypes, ...tags.filter((tag) => tag === "技能"), ...tags] : tags, 4);
+  const ordered = promptTypes.length
+    ? ["提示词", ...promptTypes, ...tags.filter((tag) => tag === "技能"), ...tags]
+    : tags;
+  return normalizedList(ordered, limit);
 }
 
 function extractCurationFacts(item) {
@@ -205,6 +215,7 @@ export function applyCurationAnalysis(item, result, {
   completedAt = new Date(),
   model,
   visualEvidenceCount = 0,
+  vocabulary = [],
 } = {}) {
   const prepared = prepareCurationItem(item, { now: completedAt });
   const timestamp = asIsoDate(completedAt);
@@ -219,7 +230,11 @@ export function applyCurationAnalysis(item, result, {
       enrichedAt: timestamp,
       searchSignals: normalizeSearchSignals(result.searchSignals ?? prepared.ai?.searchSignals),
       summary: String(result.summary),
-      tags: normalizeCurationTags(result.tags),
+      // 重新生成策展不得让已有提示词条目掉出提示词栏目（不必已有 prompt 内容）。
+      tags: normalizeCurationTags(
+        prepared.ai?.tags?.includes("提示词") ? ["提示词", ...result.tags] : result.tags,
+        { vocabulary },
+      ),
       title: String(result.title),
       visualFacts,
     },

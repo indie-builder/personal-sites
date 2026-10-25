@@ -11,6 +11,7 @@ const curationMocks = vi.hoisted(() => ({
 vi.mock("@/lib/curation", () => ({
   findCurationItem: curationMocks.findCurationItem,
   getCurationNeighbors: curationMocks.getCurationNeighbors,
+  PROMPT_TAG: "提示词",
 }));
 // vitest 不经过 TanStack 的 vite 编译插件：真实的 createServerFn 要么走客户端
 // fetch，要么依赖编译期拆出的 serverFn 桩，都无法在单测里拿到 handler 返回值。
@@ -39,7 +40,7 @@ import type { CurationItem } from "@/lib/curation-types";
 import { SITE_URL } from "@/lib/site";
 import { fetchCurationEntry } from "@/src/functions/content";
 
-const callFetchCurationEntry = (input: { context: "curation" | "design"; id: string }) =>
+const callFetchCurationEntry = (input: { context: "curation" | "design" | "prompts"; id: string }) =>
   fetchCurationEntry({ data: input }) as Promise<CurationEntryData | null>;
 
 const neighbors = { newer: null, older: null } as CurationEntryData["neighbors"];
@@ -66,6 +67,7 @@ function fixtureItem(overrides: Partial<CurationItem> = {}): CurationItem {
     id: "fixture-entry",
     links: [],
     media: [],
+    prompt: null,
     publishedAt: null,
     quoteContext: null,
     searchSignals: null,
@@ -102,7 +104,7 @@ describe("fetchCurationEntry", () => {
       item: plain,
       neighbors,
     });
-    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(plain.id, false);
+    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(plain.id, "curation");
   });
 
   it("设计收藏只放行 include 状态条目", async () => {
@@ -122,7 +124,7 @@ describe("fetchCurationEntry", () => {
     await expect(callFetchCurationEntry({ context: "design", id: excluded.id })).resolves.toBeNull();
     // 条目与相邻剪报已并行化：被排除条目允许并发发出的相邻查询（有索引，成本一次
     // 查询换取详情视图少一串行往返），契约只要求最终结果仍为 null。
-    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(excluded.id, true);
+    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(excluded.id, "design");
 
     const included = fixtureItem({
       design: {
@@ -140,7 +142,22 @@ describe("fetchCurationEntry", () => {
       item: included,
       neighbors,
     });
-    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(included.id, true);
+    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(included.id, "design");
+  });
+
+  it("提示词栏目只放行带总类标签的条目，相邻导航在子集内", async () => {
+    const withoutPrompt = fixtureItem({ tags: ["技能"] });
+    curationMocks.findCurationItem.mockReturnValueOnce(Effect.succeed(withoutPrompt));
+    await expect(callFetchCurationEntry({ context: "prompts", id: withoutPrompt.id })).resolves.toBeNull();
+    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(withoutPrompt.id, "prompts");
+
+    const promptItem = fixtureItem({ tags: ["提示词", "软件工程提示词"] });
+    curationMocks.findCurationItem.mockReturnValueOnce(Effect.succeed(promptItem));
+    await expect(callFetchCurationEntry({ context: "prompts", id: promptItem.id })).resolves.toEqual({
+      item: promptItem,
+      neighbors,
+    });
+    expect(curationMocks.getCurationNeighbors).toHaveBeenCalledWith(promptItem.id, "prompts");
   });
 
   it("未知条目返回 null（路由据此抛 notFound）", async () => {

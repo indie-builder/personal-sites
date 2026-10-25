@@ -45,7 +45,7 @@ export function DetailPage({ children, mainClassName = "curation-home curation-d
 }
 
 /** 详情页返回链接的合法目标：各板块列表页与首页。 */
-export type SiteBackHref = "/" | "/ai-news" | "/curation" | "/design" | "/douyin" | "/open-source";
+export type SiteBackHref = "/" | "/ai-news" | "/curation" | "/prompts" | "/design" | "/douyin" | "/open-source";
 
 /** 详情页顶部的返回导航（真实返回链接）。 */
 export function DetailTopbar({ backClassName, backHref, backLabel, className = "curation-detail__back" }: {

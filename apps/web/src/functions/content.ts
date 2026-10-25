@@ -9,6 +9,8 @@ import {
   getCurationTags,
   getDesignCurationPage,
   getDouyinCurationPage,
+  getPromptsCurationPage,
+  PROMPT_TAG,
 } from "@/lib/curation";
 import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import { getOpenSourceEntry, getOpenSourceListEntries } from "@/lib/open-source";
@@ -51,6 +53,15 @@ export const fetchDouyinPage = createServerFn({ method: "GET" })
   .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ offset: Schema.Number, limit: Schema.Number }))(input ?? {}))
   .handler(async ({ data }) => Effect.runPromise(getDouyinCurationPage(data.offset, data.limit)));
 
+/** 提示词栏目首屏：提示词子集分页 + 子集内全部标签（开放标签筛选菜单数据）。 */
+export const fetchPromptsPage = createServerFn({ method: "GET" })
+  .validator((input: unknown) => Schema.decodeUnknownSync(pageInput)(input ?? {}))
+  .handler(async ({ data }) =>
+    Effect.runPromise(Effect.all({
+      page: getPromptsCurationPage(data.offset ?? 0, data.limit ?? CURATION_PAGE_SIZE, data.tag ?? null),
+      tags: getCurationTags(true),
+    })));
+
 /** 开源关注列表全量条目。 */
 export const fetchOpenSourceEntries = createServerFn({ method: "GET" })
   .handler(() => Effect.runPromise(getOpenSourceListEntries()));
@@ -60,16 +71,17 @@ export const fetchOpenSourceEntry = createServerFn({ method: "GET" })
   .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ slug: Schema.String }))(input))
   .handler(async ({ data }) => Effect.runPromise(getOpenSourceEntry(data.slug)));
 
-/** 剪报详情（curation 与 design 板块共用，design 只放行 include 状态条目）。
+/** 剪报详情（curation、design 与 prompts 板块共用；design 只放行 include 状态条目，
+ *  prompts 只放行带「提示词」标签的条目）。
  *  条目与相邻剪报互不依赖，按 Vercel async-parallel 规则并行取回；非存在/被排除
  *  条目最多浪费一次相邻查询（有索引），换取详情视图少一串行往返。 */
 export const fetchCurationEntry = createServerFn({ method: "GET" })
-  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ context: Schema.Literals(["curation", "design"]), id: Schema.String }))(input))
+  .validator((input: unknown) => Schema.decodeUnknownSync(Schema.Struct({ context: Schema.Literals(["curation", "design", "prompts"]), id: Schema.String }))(input))
   .handler(async ({ data }) => {
-    const designContext = data.context === "design";
     const { item, neighbors } = await Effect.runPromise(Effect.all(
-      { item: findCurationItem(data.id), neighbors: getCurationNeighbors(data.id, designContext) },
+      { item: findCurationItem(data.id), neighbors: getCurationNeighbors(data.id, data.context) },
     ));
-    if (!item || (designContext && item.design?.status !== "include")) return null;
+    if (!item || (data.context === "design" && item.design?.status !== "include")) return null;
+    if (data.context === "prompts" && !item.tags.includes(PROMPT_TAG)) return null;
     return { item, neighbors };
   });

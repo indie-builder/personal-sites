@@ -5,10 +5,13 @@ import { attempt, io, OperationError } from "@site/effect";
 /** 本地 X 策展队列解析；原始队列仅留在 data/sensitive。 */
 
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { createAnalysisReader } from "../modules/analysis/readers.mjs";
 import { enrichQueue } from "../modules/x-sync/enrich.mjs";
+import { createXPromptSource } from "../modules/x-sync/prompt-source.mjs";
+import { readSmaugCredentials } from "../modules/x-sync/smaug-credentials.mjs";
 import { resolvePiModelConfig } from "../lib/pi-runtime.mjs";
 import { resolveAnalysisConcurrency, resolveAnalysisEngine } from "../modules/analysis/runtime.mjs";
 import { parseCliOptions } from "./lib/cli.mjs";
@@ -29,11 +32,16 @@ export function main(args = process.argv.slice(2)) {
       "--limit": "int",
       "--model": "string",
       "--only": "csv",
+      "--prompts-only": "flag",
       "--refresh": "flag",
       "--reasoning-effort": "string",
     }));
     const DRY_RUN = cli.dryRun ?? false;
     const DESIGN_ONLY = cli.designOnly ?? false;
+    const PROMPTS_ONLY = cli.promptsOnly ?? false;
+    if (DESIGN_ONLY && PROMPTS_ONLY) {
+      return yield* Effect.fail(new OperationError("curation.options", new Error("--design-only 与 --prompts-only 不能同时使用。")));
+    }
     const REFRESH = cli.refresh ?? false;
     const ENGINE = yield* attempt("curation.engine", () => resolveAnalysisEngine(cli.engine));
     const CODEX_MODEL = cli.model ?? "gpt-5.6-luna";
@@ -63,12 +71,33 @@ export function main(args = process.argv.slice(2)) {
           ? "zcode/GLM-5.3-Flash"
           : `pi/${piModel.provider}/${piModel.model}`;
 
+    // 运行时惰性读取本机 smaug 登录态；dry-run 不会走到这里，也就不会打开网络或模型。
+    const promptSource = DRY_RUN || DESIGN_ONLY
+      ? null
+      : Effect.suspend(() => {
+          const smaugConfig = path.join(repoRoot, "tools/smaug/smaug.config.json");
+          if (!existsSync(smaugConfig)) {
+            return Effect.fail(new OperationError("curation.prompt-source", new Error("缺少 tools/smaug/smaug.config.json；请在该目录完成本机 X 登录态配置。")));
+          }
+          const birdPath = process.env.BIRD_PATH ?? path.join(repoRoot, "tools/content/node_modules/.bin/bird");
+          if (!existsSync(birdPath)) {
+            return Effect.fail(new OperationError("curation.prompt-source", new Error("缺少本地 bird 依赖；请先执行 bun install。")));
+          }
+          return attempt("curation.prompt-source", () => createXPromptSource({
+            birdPath,
+            concurrency: 2,
+            credentials: readSmaugCredentials(smaugConfig),
+            cwd: repoRoot,
+          }));
+        });
+
     const result = yield* enrichQueue({
       queuePath, taxonomy: config.taxonomy, modelLabel: MODEL_LABEL,
-      dryRun: DRY_RUN, designOnly: DESIGN_ONLY, refresh: REFRESH,
+      dryRun: DRY_RUN, designOnly: DESIGN_ONLY, promptsOnly: PROMPTS_ONLY, refresh: REFRESH,
       only: ONLY, limit: LIMIT, concurrency: CONCURRENCY,
     }, {
       reader,
+      promptSource,
     });
     if (result.failed > 0) process.exitCode = 1;
   });

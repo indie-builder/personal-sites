@@ -23,6 +23,7 @@ import {
   resolveAnalysisEngine,
 } from "../modules/analysis/runtime.mjs";
 import { runHistoryPipeline, runSyncPipeline, trackXSync } from "../modules/x-sync/pipeline.mjs";
+import { readSmaugCredentials } from "../modules/x-sync/smaug-credentials.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -67,16 +68,6 @@ export function parseSyncArgs(args) {
     pi: 15,
   });
   return options;
-}
-
-function readSmaugCredentials(configPath) {
-  const config = JSON.parse(readFileSync(configPath, "utf8"));
-  const authToken = process.env.AUTH_TOKEN ?? config.twitter?.authToken ?? "";
-  const ct0 = process.env.CT0 ?? config.twitter?.ct0 ?? "";
-  if (!authToken || !ct0) {
-    throw new Error("smaug 配置中缺少 X 登录态（auth_token 或 ct0）。");
-  }
-  return { authToken, ct0 };
 }
 
 function printUsage() {
