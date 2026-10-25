@@ -426,31 +426,32 @@
   margin-left: .4rem;
 }
 
-/* 沉浸阅读把手：贴在身份轨与内容流的接缝上，默认近乎隐形，靠近接缝或键盘聚焦时浮出。 */
+/* 沉浸阅读把手：贴在身份轨与内容流的接缝上，默认隐形，靠近接缝或键盘聚焦时浮出。
+   只是一枚扁长的箭头，不做独立图标按钮。 */
 .profile-reading-toggle {
   position: fixed;
   top: 50%;
-  /* 落在身份轨与内容流之间的接缝上，靠左栏留白而不是压在文字上。 */
-  left: calc(min(max(28rem,38vw),38vw) - 1.9rem);
+  /* 紧贴身份轨右缘：手算式与网格列宽一致，避免多减一个栏间距。 */
+  left: calc(min(max(28rem,38vw),38vw) - 1.25rem);
   z-index: 30;
   display: none;
-  width: 1.75rem;
-  height: 3.25rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  width: 1.25rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 0 .375rem .375rem 0;
   background: transparent;
-  color: #a8a8ab;
+  color: #b8b8bb;
   cursor: pointer;
   opacity: 0;
   padding: 0;
   transform: translateY(-50%);
-  transition: opacity 220ms ease,visibility 220ms ease,color 180ms ease,border-color 180ms ease,background-color 180ms ease;
+  transition: opacity 220ms ease,visibility 220ms ease,color 180ms ease,background-color 180ms ease,transform 220ms ease;
   visibility: hidden;
 }
 .profile-reading-toggle svg {
-  width: .95rem;
-  height: .95rem;
-  stroke-width: 1.5;
+  width: .8rem;
+  height: .8rem;
+  stroke-width: 1.6;
 }
 /* 指针靠近接缝时浮出；离开感应带后自然淡回，不常驻占位。 */
 /* 键盘用户 Tab 到它时同样浮现；不可见时不让它进入可访问性树。 */
@@ -462,23 +463,24 @@
 }
 .profile-reading-toggle:hover,
 .profile-reading-toggle:focus-visible {
-  border-color: var(--line);
-  background: #fff;
+  background: #f7f7f8;
   color: var(--ink);
 }
 .profile-reading-toggle:focus-visible {
   outline: 2px solid currentColor;
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
-/* 收起后只剩这一枚恢复入口，保持可见但不抢阅读注意力。 */
+/* 收起后身份轨让出整列：恢复入口贴着视口左缘，保持可见但不抢阅读注意力。 */
 body[data-profile-collapsed="true"] .profile-reading-toggle {
-  left: .75rem;
-  opacity: .82;
+  left: 0;
+  border-radius: 0 .375rem .375rem 0;
+  opacity: .7;
   visibility: visible;
   color: #b4b4b8;
 }
 body[data-profile-collapsed="true"] .profile-reading-toggle:hover,
 body[data-profile-collapsed="true"] .profile-reading-toggle:focus-visible {
+  opacity: 1;
   color: var(--ink);
 }
 body[data-profile-collapsed="true"] .curation-home {

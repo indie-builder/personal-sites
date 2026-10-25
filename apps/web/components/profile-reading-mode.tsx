@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 const COLLAPSED_KEY = "personal-site:profile-collapsed";
@@ -102,7 +102,7 @@ export function ProfileReadingMode() {
         onClick={toggle}
         type="button"
       >
-        {collapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
+        {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronLeft aria-hidden="true" />}
       </button>
       <span aria-live="polite" className="sr-only">{announcement}</span>
     </>

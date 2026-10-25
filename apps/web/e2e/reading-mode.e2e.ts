@@ -17,6 +17,16 @@ test("profile rail can collapse into an immersive reading column", async ({ app,
     const box = document.querySelector(".curation-home__feed")!.getBoundingClientRect();
     return { left: Math.round(box.left), width: Math.round(box.width) };
   });
+  // 把手紧贴身份轨右缘，不能飘到栏内或压住正文。
+  const alignment = await browser.evaluate(() => {
+    const rail = document.querySelector(".curation-home__profile")!.getBoundingClientRect();
+    const feed = document.querySelector(".curation-home__feed")!.getBoundingClientRect();
+    const handle = document.querySelector(".profile-reading-toggle")!.getBoundingClientRect();
+    return { railRight: Math.round(rail.right), handleRight: Math.round(handle.right), feedLeft: Math.round(feed.left) };
+  });
+  expect(Math.abs(alignment.handleRight - alignment.railRight)).toBeLessThanOrEqual(2);
+  expect(alignment.handleRight).toBeLessThan(alignment.feedLeft);
+
   const before = await readFeed();
   await toggle.click();
   await expect.poll(() => browser.evaluate(() => document.body.dataset.profileCollapsed ?? null)).toBe("true");
