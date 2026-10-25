@@ -308,3 +308,114 @@
   color: #767676;
   cursor: wait;
 }
+
+/* 提示词摘录：正文是主角，保留换行与参数；效果图前置，复制就地完成。 */
+.prompt-entry {
+  display: grid;
+  grid-template-columns: minmax(7rem,8.5rem) minmax(0,1fr);
+  column-gap: clamp(1.25rem,2.5vw,2rem);
+  align-items: start;
+  padding: 1.5rem 0;
+}
+.prompt-entry .curation-home__stream-copy h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.prompt-entry .curation-home__stream-copy h3 a:hover,
+.prompt-entry .curation-home__stream-copy h3 a:focus-visible {
+  color: var(--ink);
+}
+.prompt-entry__summary {
+  color: #6f6f72!important;
+}
+.prompt-entry__prompt {
+  position: relative;
+  max-width: 40rem;
+  margin-top: 1rem;
+  border-left: 1px solid #dededf;
+  padding-left: .85rem;
+}
+.prompt-entry__prompt pre {
+  margin: 0;
+  color: #3f3f42;
+  font-family: var(--font-sans);
+  font-size: .82rem;
+  line-height: 1.62;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.prompt-entry__media {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,14rem),1fr));
+  gap: .75rem;
+  max-width: 32rem;
+  margin-top: 1rem;
+}
+/* 效果图按原始比例完整展示：提示词的价值常在细节，裁切会让人误判。 */
+.prompt-entry__media a {
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f4f4f5;
+}
+.prompt-entry__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 22rem;
+  object-fit: contain;
+  transition: transform 200ms var(--ease-out);
+}
+@media (hover:hover) and (pointer:fine) {
+  .prompt-entry__media a:hover img {
+    transform: scale(1.02);
+  }
+}
+.prompt-copy {
+  min-height: 44px;
+  margin-top: .35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: #6f6f72;
+  font: inherit;
+  font-size: .72rem;
+  padding: .35rem .85rem;
+  cursor: pointer;
+  transition: color 160ms ease,border-color 160ms ease;
+}
+.prompt-copy:hover,
+.prompt-copy:focus-visible {
+  border-color: #b9b9bc;
+  color: var(--ink);
+}
+.prompt-copy:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.prompt-copy[data-state="copied"] {
+  color: var(--ink);
+}
+.prompt-copy[data-state="failed"] {
+  border-color: #994545;
+  color: #994545;
+}
+@media (prefers-reduced-motion:reduce) {
+  .prompt-entry__media img {
+    transition: none;
+  }
+}
+@media (max-width:900px) {
+  .prompt-entry {
+    grid-template-columns: minmax(0,1fr);
+  }
+}
+.prompt-entry__prompt pre[data-collapsed="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 12;
+  overflow: hidden;
+}
+.prompt-entry__prompt .prompt-copy + .prompt-copy {
+  margin-left: .4rem;
+}

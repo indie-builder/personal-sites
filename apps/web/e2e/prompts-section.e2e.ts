@@ -21,6 +21,21 @@ for (const width of [1_440, 390, 320, 844]) {
     const payload = await (await fetch(new URL("/api/prompts", app.baseUrl))).json() as { items: { id: string }[] };
     await expect(entries.first()).toHaveAttribute("data-content-id", payload.items[0].id);
 
+    // 摘录式条目：正文直接可读、可就地复制，长正文默认折叠到 12 行。
+    await expect(browser.locator(".prompt-entry").first()).toBeVisible();
+    await expect(browser.locator(".prompt-copy").first()).toBeVisible();
+    const promptBox = await browser.evaluate(() => {
+      const pre = document.querySelector(".prompt-entry__prompt pre");
+      return pre ? { collapsed: pre.getAttribute("data-collapsed"), chars: pre.textContent?.length ?? 0 } : null;
+    });
+    expect(promptBox?.chars).toBeGreaterThan(0);
+    if (promptBox?.collapsed === "true") {
+      // 多个长条目各有展开按钮；按 DOM 位置锁定第一条，避免按钮文案变化后重新匹配到别的条目。
+      const toggle = browser.locator("xpath=(//article[contains(@class,'prompt-entry')])[1]//button[@aria-expanded]");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    }
+
     // 开放标签筛选：菜单来自提示词子集，选中后筛选状态写进 URL。
     await screen.getByRole("button", "筛选提示词：全部主题", { exact: false }).click();
     await screen.getByRole("menuitemradio", new RegExp(`^${TAG} · `, "u")).click();

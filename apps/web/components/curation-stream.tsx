@@ -18,6 +18,7 @@ import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
 import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import type { CurationListItem } from "@/lib/curation-types";
 import { XVideoPlayer } from "@/components/x-video-player";
+import { CopyPromptButton } from "@/components/copy-prompt-button";
 import { useStreamDate } from "@/components/use-stream-date";
 
 import { STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, staggerDelay } from "./motion-tokens";
@@ -28,6 +29,7 @@ import { StreamFilterMenu } from "./stream-filter-menu";
 import { StreamLoadStatus } from "./stream-skeleton";
 
 const TAG_STORAGE_KEY = "curation-active-tag";
+const PROMPT_CLIP_LIMIT = 600;
 
 /** 带标签筛选的剪报流：每日关注与提示词栏目共用；提示词的选中标签落在 URL，便于详情点标签回到同类内容。 */
 export function TaggedCurationStream({ initialHasMore, initialItems, initialTag = null, section = "curation", tags }: {
@@ -208,8 +210,10 @@ export function CurationStream({
                 <StreamClipAndTags item={item} />
               </div>
             </article>
+          ) : detailSection === "prompts" ? (
+          <PromptStreamEntry item={item} />
           ) : (
-          <Link data-content-id={item.id} params={{ id: item.id }} to={detailSection === "prompts" ? "/prompts/$id" : "/curation/$id"}>
+          <Link data-content-id={item.id} params={{ id: item.id }} to="/curation/$id">
             <div className="curation-home__stream-meta">
               <time dateTime={item.collectedAt ?? item.publishedAt ?? undefined}>{formatCurationDate(item)}</time>
               <span>{item.source.platform === "x" ? `X · @${item.author.handle}` : `抖音 · ${item.author.name}`}</span>
@@ -234,8 +238,7 @@ export function CurationStream({
   );
 }
 
-/** 两种列表变体共用的剪报摘录 + 标签行；判断正文之外的原声音登记。 */
-function StreamClipAndTags({ item }: { item: CurationListItem }) {
+/** 两种列表变体共用的剪报摘录 + 标签行；判断正文之外的原声音登记。 */function StreamClipAndTags({ item }: { item: CurationListItem }) {
   return <>
     {item.text.trim() ? (
       <blockquote className="curation-home__stream-clip">
@@ -244,4 +247,64 @@ function StreamClipAndTags({ item }: { item: CurationListItem }) {
     ) : null}
     {item.tags.length > 0 ? <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p> : null}
   </>;
+}
+
+/**
+ * 提示词条目是「摘录」，不是「判断」：正文本身是主角，效果图前置，并可就地复制。
+ * 解析只留一句用途说明，详情仍是完整解析与追评。
+ */
+function PromptStreamEntry({ item }: { item: CurationListItem }) {
+  const photos = item.media.filter((media) => media.type === "photo").slice(0, 3);
+  const clip = item.text.trim();
+  // 中位长度约 300 字，长条目折叠到 12 行，避免单条霸屏；复制始终是全文。
+  const collapsible = clip.length > PROMPT_CLIP_LIMIT;
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <article className="prompt-entry">
+      <div className="curation-home__stream-meta">
+        <time dateTime={item.collectedAt ?? item.publishedAt ?? undefined}>{formatCurationDate(item)}</time>
+        <span>{`X · @${item.author.handle}`}</span>
+        {item.attachments.length > 0 ? <span>{item.attachments.join(" · ")}</span> : null}
+      </div>
+      <div className="curation-home__stream-copy">
+        <h3>
+          <Link data-content-id={item.id} params={{ id: item.id }} to="/prompts/$id">{item.title}</Link>
+        </h3>
+        <p className="prompt-entry__summary">{item.summary}</p>
+        {clip ? (
+          <div className="prompt-entry__prompt">
+            <pre data-collapsed={collapsible && !expanded ? "true" : undefined}>{clip}</pre>
+            {collapsible ? (
+              <button
+                aria-expanded={expanded}
+                className="prompt-copy"
+                onClick={() => setExpanded((value) => !value)}
+                type="button"
+              >
+                {expanded ? "收起" : "展开全部"}
+              </button>
+            ) : null}
+            <CopyPromptButton text={clip} />
+          </div>
+        ) : null}
+        {photos.length > 0 ? (
+          <div className="prompt-entry__media">
+            {photos.map((media) => (
+              <a href={media.url} key={media.url} rel="noreferrer noopener" target="_blank">
+                {/* eslint-disable-next-line @next/next/no-img-element -- 外部推文媒体直链 */}
+                <img
+                  alt={`${item.title} 的效果图`}
+                  height={media.height ?? undefined}
+                  loading="lazy"
+                  src={media.url}
+                  width={media.width ?? undefined}
+                />
+              </a>
+            ))}
+          </div>
+        ) : null}
+        {item.tags.length > 0 ? <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p> : null}
+      </div>
+    </article>
+  );
 }
