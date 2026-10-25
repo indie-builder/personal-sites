@@ -1,5 +1,7 @@
 import { designClassificationStatus } from "./design-classification.mjs";
 import { prepareCurationItem } from "./analysis.mjs";
+import { hasVerifiedTranslation, PROMPT_STAGE_VERSION } from "./prompt-content.mjs";
+import { PROMPT_SOURCE_VERSION } from "./prompt-source.mjs";
 
 export function isReadyForPublication(item) {
   return Boolean(
@@ -20,14 +22,39 @@ export function toOrder(value) {
   return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
+function toPublicPrompt(item) {
+  const prompt = item.ai?.prompt;
+  const stage = item.pipeline?.stages?.prompt;
+  if (!prompt || item.promptSource?.version !== PROMPT_SOURCE_VERSION) return null;
+  // 译文已按当前原文校验通过即可先发布译文；追评未补齐时只省略追评。
+  const ready = hasVerifiedTranslation(item)
+    || (stage?.status === "complete" && stage?.version === PROMPT_STAGE_VERSION);
+  if (!ready) return null;
+  return {
+    quoteTranslation: prompt.quoteTranslation ?? null,
+    replies: (prompt.replies ?? []).map((reply) => ({
+      author: { handle: reply.author?.handle ?? "", name: reply.author?.name ?? "" },
+      id: reply.id,
+      media: (reply.media ?? []).filter((media) => media.url),
+      reason: reply.reason,
+      text: reply.text,
+      translation: reply.translation ?? null,
+      url: reply.url,
+    })),
+    translation: prompt.translation ?? null,
+  };
+}
+
 export function toPublicCurationItem(item) {
   const prepared = prepareCurationItem(item);
+  const prompt = toPublicPrompt(prepared);
   return {
     id: prepared.id,
     title: prepared.ai.title,
     summary: prepared.ai.summary,
     tags: prepared.ai.tags,
     text: prepared.text,
+    prompt,
     facts: prepared.facts,
     searchSignals: prepared.ai.searchSignals ?? null,
     visualFacts: prepared.ai.visualFacts ?? null,

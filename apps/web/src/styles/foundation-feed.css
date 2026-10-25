@@ -308,3 +308,212 @@
   color: #767676;
   cursor: wait;
 }
+
+/* 提示词摘录：正文是主角，保留换行与参数；效果图前置，复制就地完成。 */
+/* 提示词以内容为主：出处压成一行辅助信息，正文独占整行宽度。 */
+.prompt-entry {
+  display: block;
+  padding: 1.5rem 0;
+}
+.prompt-entry .curation-home__stream-meta {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: .2rem .5rem;
+  margin-bottom: .7rem;
+  padding-top: 0;
+  font-size: .67rem;
+}
+.prompt-entry .curation-home__stream-meta :where(time,span):has(+ :where(time,span))::after {
+  margin-left: .5rem;
+  content: "·";
+}
+.prompt-entry .curation-home__stream-copy h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.prompt-entry .curation-home__stream-copy h3 a:hover,
+.prompt-entry .curation-home__stream-copy h3 a:focus-visible {
+  color: var(--ink);
+}
+.prompt-entry__summary {
+  color: #6f6f72!important;
+}
+.prompt-entry__prompt {
+  position: relative;
+  max-width: 44rem;
+  margin-top: 1rem;
+  border-left: 1px solid #dededf;
+  padding-left: .85rem;
+}
+.prompt-entry__prompt pre {
+  margin: 0;
+  color: #3f3f42;
+  font-family: var(--font-sans);
+  font-size: .82rem;
+  line-height: 1.62;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.prompt-entry__media {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,14rem),1fr));
+  gap: .75rem;
+  max-width: 36rem;
+  margin-top: 1rem;
+}
+/* 效果图按原始比例完整展示：提示词的价值常在细节，裁切会让人误判。 */
+.prompt-entry__media a {
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f4f4f5;
+}
+.prompt-entry__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 22rem;
+  object-fit: contain;
+  transition: transform 200ms var(--ease-out);
+}
+@media (hover:hover) and (pointer:fine) {
+  .prompt-entry__media a:hover img {
+    transform: scale(1.02);
+  }
+}
+.prompt-copy {
+  min-height: 44px;
+  margin-top: .35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: #6f6f72;
+  font: inherit;
+  font-size: .72rem;
+  padding: .35rem .85rem;
+  cursor: pointer;
+  transition: color 160ms ease,border-color 160ms ease;
+}
+.prompt-copy:hover,
+.prompt-copy:focus-visible {
+  border-color: #b9b9bc;
+  color: var(--ink);
+}
+.prompt-copy:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.prompt-copy[data-state="copied"] {
+  color: var(--ink);
+}
+.prompt-copy[data-state="failed"] {
+  border-color: #994545;
+  color: #994545;
+}
+@media (prefers-reduced-motion:reduce) {
+  .prompt-entry__media img {
+    transition: none;
+  }
+}
+
+.prompt-entry__prompt pre[data-collapsed="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 12;
+  overflow: hidden;
+}
+.prompt-entry__prompt .prompt-copy + .prompt-copy {
+  margin-left: .4rem;
+}
+
+/* 沉浸阅读把手：贴在身份轨与内容流的接缝上，默认隐形，靠近接缝或键盘聚焦时浮出。
+   只是一枚扁长的箭头，不做独立图标按钮。 */
+.profile-reading-toggle {
+  position: fixed;
+  top: 50%;
+  /* 紧贴身份轨右缘：手算式与网格列宽一致，避免多减一个栏间距。 */
+  left: calc(min(max(28rem,38vw),38vw) - 1.25rem);
+  z-index: 30;
+  display: none;
+  width: 1.5rem;
+  height: 3rem;
+  border: 0;
+  border-radius: 0 .375rem .375rem 0;
+  background: transparent;
+  color: #7c7c80;
+  cursor: pointer;
+  opacity: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  transition: opacity 220ms ease,visibility 220ms ease,color 180ms ease,background-color 180ms ease,transform 220ms ease;
+  visibility: hidden;
+}
+.profile-reading-toggle svg {
+  width: .625rem;
+  height: 1.75rem;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  fill: none;
+}
+.profile-reading-toggle__arrow {
+  transition: transform 220ms cubic-bezier(0.16,1,0.3,1);
+}
+/* 收起态箭头指向右侧（展开方向），与收起方向相反。 */
+body[data-profile-collapsed="true"] .profile-reading-toggle__arrow {
+  transform: scaleX(-1);
+}
+/* 指针靠近接缝时浮出；离开感应带后自然淡回，不常驻占位。 */
+/* 键盘用户 Tab 到它时同样浮现；不可见时不让它进入可访问性树。 */
+.profile-reading-toggle[data-near="true"],
+.profile-reading-toggle:hover,
+.profile-reading-toggle:focus-visible {
+  opacity: 1;
+  visibility: visible;
+}
+.profile-reading-toggle:hover,
+.profile-reading-toggle:focus-visible {
+  background: #f4f4f5;
+  color: var(--ink);
+}
+.profile-reading-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+/* 收起后身份轨让出整列：恢复入口贴着视口左缘，保持可见但不抢阅读注意力。 */
+body[data-profile-collapsed="true"] .profile-reading-toggle {
+  left: 0;
+  border-radius: 0 .375rem .375rem 0;
+  opacity: .9;
+  visibility: visible;
+  color: #7c7c80;
+}
+body[data-profile-collapsed="true"] .profile-reading-toggle:hover,
+body[data-profile-collapsed="true"] .profile-reading-toggle:focus-visible {
+  opacity: 1;
+  color: var(--ink);
+}
+body[data-profile-collapsed="true"] .curation-home {
+  grid-template-columns: minmax(0,1fr);
+  gap: 0;
+}
+body[data-profile-collapsed="true"] .curation-home__profile {
+  display: none;
+}
+body[data-profile-collapsed="true"] .curation-home__feed,
+body[data-profile-collapsed="true"] .curation-detail__article {
+  margin-inline: auto;
+  padding-left: 1.875rem;
+}
+@media (min-width:901px) {
+  .profile-reading-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .profile-reading-toggle {
+    transition: none;
+  }
+}

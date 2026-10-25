@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from "react";
 
 import { SectionMotionLifecycle } from "@/components/section-motion-lifecycle";
 import { ContentSectionNavigation, type SiteSection } from "@/components/site-section-navigation";
+import { ProfileReadingMode } from "@/components/profile-reading-mode";
 import { SiteProfile } from "@/components/site-profile";
 import { StreamSkeletonLines } from "@/components/stream-skeleton";
 import styles from "@/components/open-source.module.css";
@@ -23,6 +24,7 @@ export function FeedPage({ children, label, section }: { children: ReactNode; la
   return (
     <main className="curation-home" id="site-main" tabIndex={-1}>
       <SiteProfile mobileSection={section} />
+      <ProfileReadingMode />
       <SectionMotionLifecycle />
       <section aria-label={label} className="curation-home__feed site-section-motion">
         {/* 条目标题是 h3，需要一个节级 h2 维持标题层级（与每日动态的日期分组标题同模式）。 */}
@@ -39,13 +41,14 @@ export function DetailPage({ children, mainClassName = "curation-home curation-d
   return (
     <main className={mainClassName} id="site-main" tabIndex={-1}>
       <SiteProfile />
+      <ProfileReadingMode />
       {children}
     </main>
   );
 }
 
 /** 详情页返回链接的合法目标：各板块列表页与首页。 */
-export type SiteBackHref = "/" | "/ai-news" | "/curation" | "/design" | "/douyin" | "/open-source";
+export type SiteBackHref = "/" | "/ai-news" | "/curation" | "/prompts" | "/design" | "/douyin" | "/open-source";
 
 /** 详情页顶部的返回导航（真实返回链接）。 */
 export function DetailTopbar({ backClassName, backHref, backLabel, className = "curation-detail__back" }: {

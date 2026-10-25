@@ -5,7 +5,7 @@ import { getSitemapRecords } from "@/lib/discovery.server";
 import { PUBLIC_FEED_CACHE_CONTROL } from "@/lib/paginated-route";
 import { SITE_URL } from "@/lib/site";
 
-const staticPaths = ["", "/ai-news", "/curation", "/design", "/douyin", "/open-source"];
+const staticPaths = ["", "/ai-news", "/curation", "/prompts", "/design", "/douyin", "/open-source"];
 
 const escapeXml = (value: string) =>
   value

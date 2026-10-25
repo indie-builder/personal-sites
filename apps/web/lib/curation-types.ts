@@ -3,6 +3,18 @@ import { Effect, Schema, Struct } from "effect";
 
 export const CURATION_PAGE_SIZE = 20;
 
+const curationMediaSchema = Schema.Struct({
+  durationMs: Schema.NullOr(
+    Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)),
+  ).pipe(Schema.withDecodingDefaultType(Effect.sync(() => null))),
+  height: Schema.NullOr(Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThan(0))),
+  previewUrl: Schema.NullOr(UrlString),
+  type: Schema.Literals(["photo", "video", "animated_gif"]),
+  url: UrlString,
+  videoUrl: Schema.NullOr(UrlString).pipe(Schema.withDecodingDefaultType(Effect.sync(() => null))),
+  width: Schema.NullOr(Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThan(0))),
+});
+
 /**
  * 公开策展投影（curation.sqlite `content_json`）的唯一结构定义：
  * Effect Schema 同时承担运行时校验与静态类型推导，避免手写类型与校验规则漂移。
@@ -65,23 +77,20 @@ export const curationItemSchema = Schema.Struct({
       url: UrlString,
     }),
   ).pipe(Schema.mutable),
-  media: Schema.Array(
-    Schema.Struct({
-      durationMs: Schema.NullOr(
-        Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)),
-      ).pipe(Schema.withDecodingDefaultType(Effect.sync(() => null))),
-      height: Schema.NullOr(
-        Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThan(0)),
-      ),
-      previewUrl: Schema.NullOr(UrlString),
-      type: Schema.Literals(["photo", "video", "animated_gif"]),
-      url: UrlString,
-      videoUrl: Schema.NullOr(UrlString).pipe(Schema.withDecodingDefaultType(Effect.sync(() => null))),
-      width: Schema.NullOr(
-        Schema.Number.check(Schema.isFinite()).check(Schema.isInt()).check(Schema.isGreaterThan(0)),
-      ),
-    }),
-  ).pipe(Schema.mutable),
+  media: Schema.Array(curationMediaSchema).pipe(Schema.mutable),
+  prompt: Schema.NullOr(Schema.Struct({
+    translation: Schema.NullOr(Schema.String.check(Schema.isMinLength(1))),
+    quoteTranslation: Schema.NullOr(Schema.String.check(Schema.isMinLength(1))),
+    replies: Schema.Array(Schema.Struct({
+      id: Schema.String.check(Schema.isMinLength(1)),
+      author: Schema.Struct({ handle: Schema.String, name: Schema.String }),
+      text: Schema.String.check(Schema.isMinLength(1)),
+      translation: Schema.NullOr(Schema.String.check(Schema.isMinLength(1))),
+      reason: Schema.String.check(Schema.isMinLength(1)),
+      url: UrlString.check(Schema.isPattern(/^https:\/\/(?:x\.com|twitter\.com)\/[A-Za-z0-9_]+\/status\/\d+$/u)),
+      media: Schema.Array(curationMediaSchema).pipe(Schema.mutable),
+    })).pipe(Schema.mutable).check(Schema.isMaxLength(5)),
+  })).pipe(Schema.withDecodingDefaultType(Effect.sync(() => null))),
   publishedAt: Schema.NullOr(UtcDateTimeString),
   quoteContext: Schema.NullOr(
     Schema.Struct({ author: Schema.String, authorName: Schema.String, text: Schema.String }),

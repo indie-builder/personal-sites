@@ -23,6 +23,9 @@ const DOUYIN_CURATION_ORDER =
 const ORDER_BY_PLATFORM: Record<CurationPlatform, string> = { douyin: DOUYIN_CURATION_ORDER, x: CURATION_ORDER };
 const CURATION_PLATFORM = "json_extract(content_json, '$.source.platform')";
 const CURATION_DESIGN_INCLUDE = "json_extract(content_json, '$.design.status') = 'include'";
+/** 提示词栏目的流归属标签；开放标签只用于筛选，不构成固定枚举。 */
+export const PROMPT_TAG = "提示词";
+const CURATION_PROMPT_INCLUDE = `EXISTS (SELECT 1 FROM json_each(content_json, '$.tags') WHERE value = '${PROMPT_TAG}')`;
 
 function parseCurationItem(contentJson: string) {
   return Schema.decodeUnknownSync(curationItemSchema)(JSON.parse(contentJson));
@@ -65,13 +68,18 @@ function getCurationPageByPlatform(
   limit: number,
   designOnly = false,
   tag: string | null = null,
+  promptOnly = false,
 ) {
   return attempt("curation.page", () => {
-    const where = designOnly ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_DESIGN_INCLUDE}` : `${CURATION_PLATFORM} = ?`;
+    const where = designOnly
+      ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_DESIGN_INCLUDE}`
+      : promptOnly
+        ? `${CURATION_PLATFORM} = 'x' AND ${CURATION_PROMPT_INCLUDE}`
+        : `${CURATION_PLATFORM} = ?`;
     const order = ORDER_BY_PLATFORM[platform];
     const items = selectCurationRows(
       `${where}${tag ? " AND EXISTS (SELECT 1 FROM json_each(content_json, '$.tags') WHERE value = ?)" : ""} ORDER BY ${order}`,
-      [...(designOnly ? [] : [platform]), ...(tag ? [tag] : [])],
+      [...(designOnly || promptOnly ? [] : [platform]), ...(tag ? [tag] : [])],
       offset,
       limit,
     );
@@ -84,13 +92,14 @@ export function getCurationPage(offset = 0, limit = CURATION_PAGE_SIZE, tag: str
   return getCurationPageByPlatform("x", offset, limit, false, tag);
 }
 
-/** 全库主题计数及首条 ID，不受已加载分页限制；首条用于校验返回列表的会话快照。 */
-export function getCurationTags() {
+/** 全库主题计数及首条 ID，不受已加载分页限制；首条用于校验返回列表的会话快照。
+ *  promptOnly 只在提示词子集内统计全部标签（开放标签，不锁定用途枚举）。 */
+export function getCurationTags(promptOnly = false) {
   return attempt("curation.tags", () => {
     const rows = getPublicDatabase()
       .prepare(
         `SELECT id, json_extract(content_json, '$.tags') AS tags
-      FROM curation_items WHERE ${CURATION_PLATFORM} = 'x' ORDER BY ${CURATION_ORDER}`,
+      FROM curation_items WHERE ${CURATION_PLATFORM} = 'x'${promptOnly ? ` AND ${CURATION_PROMPT_INCLUDE}` : ""} ORDER BY ${CURATION_ORDER}`,
       )
       .all();
     const tags = new Map<string, { tag: string; count: number; headId: string }>();
@@ -103,6 +112,8 @@ export function getCurationTags() {
         tags.set(tag, entry);
       }
     }
+    // 提示词栏目本身就是总类集合，菜单只列子集内的其余标签，按数量排列，不设固定词表。
+    if (promptOnly) return [...tags.values()].filter(({ tag }) => tag !== PROMPT_TAG).sort((a, b) => b.count - a.count);
     const priority: Record<string, number> = {
       提示词: 9,
       视频提示词: 8,
@@ -128,11 +139,23 @@ export function getDesignCurationPage(offset = 0, limit = CURATION_PAGE_SIZE) {
   return getCurationPageByPlatform("x", offset, limit, true);
 }
 
+/** 提示词栏目：X 条目中带「提示词」标签的子集，可按其余任意标签筛选同类内容。 */
+export function getPromptsCurationPage(offset = 0, limit = CURATION_PAGE_SIZE, tag: string | null = null) {
+  return getCurationPageByPlatform("x", offset, limit, false, tag, true);
+}
+
 const curationPlatformRowSchema = Schema.Struct({ platform: Schema.Literals(["douyin", "x"]) });
+type CurationNeighborContext = "curation" | "design" | "prompts";
+const NEIGHBOR_INCLUDE: Record<CurationNeighborContext, string> = {
+  curation: "",
+  design: `AND ${CURATION_DESIGN_INCLUDE}`,
+  prompts: `AND ${CURATION_PROMPT_INCLUDE}`,
+};
 
 // 剪报簿总量有限（逐条人工策展的点赞），一次取全量 id+title 即可按列表同一排序定位相邻条目。
-// 来源拆分后相邻导航不跨来源：抖音条目只在抖音条目间翻页，X 条目只在 X 条目间翻页。
-export function getCurationNeighbors(id: string, designOnly = false) {
+// 来源拆分后相邻导航不跨来源：抖音条目只在抖音条目间翻页，X 条目只在 X 条目间翻页；
+// 设计收藏与提示词栏目各自在子集内翻页。
+export function getCurationNeighbors(id: string, context: CurationNeighborContext = "curation") {
   return attempt("getCurationNeighbors", () => {
     const platformRow = getPublicDatabase()
       .prepare(`SELECT ${CURATION_PLATFORM} AS platform FROM curation_items WHERE id = ?`)
@@ -144,7 +167,7 @@ export function getCurationNeighbors(id: string, designOnly = false) {
       .prepare(
         `SELECT id, title FROM curation_items
       WHERE ${CURATION_PLATFORM} = ?
-        ${designOnly ? `AND ${CURATION_DESIGN_INCLUDE}` : ""}
+        ${NEIGHBOR_INCLUDE[context]}
       ORDER BY ${order}`,
       )
       .all(platform)

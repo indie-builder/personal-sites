@@ -73,11 +73,17 @@ export function toDailySearchDocuments(rows) {
   return rows.flatMap((row) => {
     const item = row?.content;
     if (!item?.id || !item.title || !item.summary) return [];
+    const promptContent = joinSearchText([
+      item.prompt?.translation,
+      item.prompt?.quoteTranslation,
+      ...(item.prompt?.replies ?? []).flatMap((reply) => [reply.text, reply.translation, reply.reason]),
+    ]);
     const content = joinSearchText([
       item.summary,
       item.analysis,
       item.text,
       item.quoteContext?.text,
+      promptContent,
     ]);
     const searchText = joinSearchText([
       item.title,

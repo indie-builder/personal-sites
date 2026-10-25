@@ -3,11 +3,10 @@ import { OperationError } from "@site/effect";
 import { isTransientModelError, withModelRetry } from "../modules/analysis/retry.mjs";
 import { TestClock } from "effect/testing";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { prepareCurationItem } from "../modules/x-sync/analysis.mjs";
+import { content, forbidden, withQueue } from "./lib/enrich-fixtures.mjs";
 import { enrichQueue } from "../modules/x-sync/enrich.mjs";
 
 function fixtureItems() {
@@ -31,22 +30,7 @@ function fixtureItems() {
 
 
 const response = JSON.stringify({ title: "Fixture title", summary: "Fixture summary", analysis: "Fixture analysis", tags: ["test"], searchSignals: {}, visualFacts: {}, design: { relevant: false, confidence: 0.9, reason: "Synthetic reason" } });
-const forbidden = () => assert.fail("unexpected remote call");
-const content = { expandUrl: forbidden, fetchGithubRepo: forbidden, fetchArticleText: forbidden, collectDesignEvidenceImages: forbidden };
 
-async function withQueue(items, run) {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "site-enrich-"));
-  const queuePath = path.join(directory, "queue.json");
-  const bytes = `${JSON.stringify({ version: 1, items }, null, 2)}\n`;
-  const logs = [];
-  const logger = { log: (line) => logs.push(line), error: (line) => logs.push(line) };
-  try {
-    await writeFile(queuePath, bytes);
-    await run({ queuePath, bytes, logs, logger });
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-}
 
 const cases = [
   { name: "normal", options: {}, ids: ["pending"] },

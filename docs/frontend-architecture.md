@@ -15,6 +15,8 @@
    │  └─ 右侧每日动态列表（保留 Suspense 边界）
    ├─ /ai-news                  每日动态版块（CDN 缓存，s-maxage = 60）
    ├─ /curation                 每日关注版块（仅 X 来源，CDN 缓存，s-maxage = 300）
+   ├─ /prompts                  提示词版块（X 提示词子集，开放标签筛选，CDN 缓存，s-maxage = 300）
+   ├─ /prompts/[id]             提示词详情（原文、中文译文、解析与精选追评，共享策展记录）
    ├─ /design                   设计收藏版块（X 高置信设计相关内容，CDN 缓存，视频站内播放）
    ├─ /design/[id]              设计收藏详情（CDN 缓存，复用策展详情骨架与设计子集相邻导航）
    ├─ /douyin                   抖音收藏版块（仅抖音来源，CDN 缓存，s-maxage = 300）
@@ -31,7 +33,9 @@
    │     ├─ Back navigation
    │     ├─ Metadata / title / summary / tags
    │     ├─ Original source and media
+   │     ├─ Prompt Chinese translation (when needed)
    │     ├─ Markdown analysis
+   │     ├─ Selected prompt replies and examples (when available)
    │     └─ Source links
    └─ /open-source/[slug]       开源详情页（CDN 缓存，s-maxage = 300）
       ├─ Profile rail（与首页相同）
@@ -45,10 +49,10 @@
 | 全局壳 | `apps/web/src/routes/__root.tsx` | metadata、全局 CSS、Loading 注入 | 路由内容或业务数据 |
 | 首页 | `apps/web/src/routes/index.tsx` | 稳定输出身份轨、刊头与每日动态列表，保留数据 Suspense 边界 | 详情内容渲染；在数据 Suspense fallback 中复制身份轨或刊头 |
 | 版块页 | `apps/web/src/routes/ai-news/index.tsx`、`apps/web/src/routes/curation/index.tsx`、`apps/web/src/routes/design/index.tsx`、`apps/web/src/routes/douyin.tsx`、`apps/web/src/routes/open-source/index.tsx` | 带 CDN 页面缓存头的单版块列表页，复用身份轨与刊头 | 第二套侧栏语言 |
-| 详情页 | `apps/web/src/routes/curation/$id.tsx`、`apps/web/src/routes/design/$id.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免把筛选上下文放入请求期 query | 第二套个人侧栏 |
+| 详情页 | `apps/web/src/routes/curation/$id.tsx`、`apps/web/src/routes/prompts/$id.tsx`、`apps/web/src/routes/design/$id.tsx` | 条目元信息、原文、媒体、解析、来源；设计上下文使用独立静态路径，避免把筛选上下文放入请求期 query | 第二套个人侧栏 |
 | Loading | `apps/web/components/opening-loader.tsx` | 加载阶段、滚动锁定、向上揭幕；每个浏览器会话仅首次播放，水合后移除 | 常规页面配色 |
 | 个人简介 | `apps/web/components/profile-introduction.tsx`、`apps/web/components/profile-typewriter.ts`、`apps/web/components/growing-paragraph.tsx` | 双语逐字输入/删除、正文高度过渡与多语言标题轮换 | 静态履历数据源 |
-| 内容导航 | `apps/web/components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
+| 内容导航 | `apps/web/components/site-section-navigation.tsx` | 统一内容入口（每日动态、每日关注、提示词、设计收藏、抖音收藏、开源关注）的路由跳转与当前页面状态；导航即栏目页头，不重复显示标题与说明 | 外部链接或同页 Tab 语义 |
 | 技术信号场 | `apps/web/components/interactive-dot-field.tsx` | AI 术语与技术栈词库、稀疏视觉表达 | 标签过滤或导航 |
 | 策展数据 | `apps/web/lib/curation.ts` | Effect Schema 校验、Effect 查询、日期格式化 | 页面布局、问答检索 |
 | 本地问答检索 | `apps/web/lib/curation-search.server.ts` | 公开 SQLite 语料缓存、全文匹配与排序 | 策展页面查询 |
@@ -77,7 +81,7 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 | `.curation-home` | 两栏 Grid；左栏最小 `28rem`、最大 `38vw` | 新首页内容不得破坏此列关系 |
 | `.curation-home__profile` | `sticky`、`100dvh`、`1.875rem` padding | 首页与详情页必须视觉一致 |
 | `.curation-home__feed` | 最大 `50rem`，右侧连续流 | 使用行与行分隔，不包卡片 |
-| `ContentSectionNavigation` | 每日动态、每日关注、设计收藏、抖音收藏、开源关注共享等权内容入口；导航即栏目页头 | 使用站内链接与 `aria-current`，不得伪装为同页 Tab |
+| `ContentSectionNavigation` | 每日动态、每日关注、提示词、设计收藏、抖音收藏、开源关注共享等权内容入口；导航即栏目页头 | 使用站内链接与 `aria-current`，不得伪装为同页 Tab |
 | `.curation-detail__article` | 最大 `50rem`，承接右栏阅读 | 详情结构沿用首页的留白与分隔节奏 |
 | `.curation-home__bio` | `width: 100%` | 简介正文撑满身份轨，不再限制 `max-width` |
 | `.interactive-dot-field` | `11.5rem` 高点阵画布 | AI 术语 12 词 + 技术栈 25 词按 6 条单动画轨道滚动，每条轨道以双序列无缝循环和大间距维持约 12 个同屏词；参数按泳道确定性内联，reduced-motion 收为 3×4 静态网格 |
@@ -112,7 +116,7 @@ Web 是主要产品，Android 与 iOS 客户端的实现和验证见各自 READM
 ## 当前对齐结论
 
 - 首页和详情页均采用同一左侧身份轨，避免旧版详情页回退为独立工作台。
-- 桌面左侧个人资料是首页锚点，右侧默认显示每日动态；移动端把个人资料展开为默认首页，导航置于身份区与内容区之间，并在内容页随紧凑身份区固定。移动端内容 Grid 必须从顶部自然排布，避免少量内容拉伸身份区与内容区之间的间距。每日动态、每日关注、抖音收藏、开源关注不再重复显示栏目标题或摘要。
+- 桌面左侧个人资料是首页锚点，右侧默认显示每日动态；移动端把个人资料展开为默认首页，导航置于身份区与内容区之间，并在内容页随紧凑身份区固定。移动端内容 Grid 必须从顶部自然排布，避免少量内容拉伸身份区与内容区之间的间距。每日动态、每日关注、提示词、抖音收藏、开源关注不再重复显示栏目标题或摘要。
 - 动效分工保持克制：Loading、技术信号场和双语简介分别承担揭幕、环境与叙事。首访内容揭幕由 `SectionMotionLifecycle` 私有实现；同级栏目直接提交路由，移动端首页与内容页之间保留身份轨桥接；`prefers-reduced-motion` 下即时完成。
 - 点描头像的输入、十段冒险、可见时钟与回归覆盖见[点描头像](frontend/motion.md#点描头像)。
 - 手机首页与内容页间的身份轨过渡、临时覆盖层及清理契约见[手机身份桥接](frontend/motion.md#手机身份桥接)。

@@ -58,7 +58,7 @@ test("prompt subtypes retain their parent and skill tags through model analysis"
   const cases = [
     {
       input: ["AI 应用", "视频提示词", "软件工程提示词", "技能", "视频提示词"],
-      expected: ["提示词", "视频提示词", "软件工程提示词", "技能"],
+      expected: ["提示词", "视频提示词", "软件工程提示词", "技能", "AI 应用"],
     },
     {
       input: ["软件工程提示词", "技能", "Agent 工程"],
@@ -79,6 +79,19 @@ test("prompt subtypes retain their parent and skill tags through model analysis"
     }, { model: "test" });
     assert.deepEqual(analyzed.ai.tags, expected);
   }
+});
+
+test("model tags stay open but reuse the existing vocabulary, with synonyms normalized", () => {
+  const tagged = (tags) => applyCurationAnalysis(rawItem, {
+    analysis: "解析", summary: "摘要", title: "标题", tags,
+  }, { model: "test", vocabulary: ["提示词", "AI 应用", "Agent 工程"] }).ai.tags;
+
+  // 既有分类的同义写法归一，新标签原样保留，父标签与用途子类不丢。
+  assert.deepEqual(tagged(["ai应用", "提示词", "图像提示词", "Midjourney 参数"]), [
+    "提示词", "图像提示词", "AI 应用", "Midjourney 参数",
+  ]);
+  assert.deepEqual(tagged(["Agent 工程", "AI应用", "研发效能"]), ["Agent 工程", "AI 应用", "研发效能"]);
+  assert.equal(tagged(Array.from({ length: 12 }, (_, index) => `标签${index}`)).length, 8);
 });
 
 test("editorial analysis persists bounded search and visual facts for reuse", () => {

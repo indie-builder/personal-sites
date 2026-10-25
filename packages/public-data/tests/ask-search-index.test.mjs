@@ -39,6 +39,37 @@ test("daily public projections become one searchable document per item", () => {
   assert.match(document.content, /公开原文/u);
 });
 
+test("prompt translations and selected replies are searchable", () => {
+  const [document] = toDailySearchDocuments([{
+    content: {
+      analysis: "解析",
+      author: { handle: "author", name: "Author" },
+      id: "prompt-1",
+      prompt: {
+        quoteTranslation: "引用译文",
+        replies: [{
+          author: { handle: "helper", name: "Helper" },
+          id: "2",
+          media: [],
+          reason: "补充了可复现参数",
+          text: "Use temperature 0.",
+          translation: "使用 temperature 0。",
+          url: "https://x.com/helper/status/2",
+        }],
+        translation: "原文中文译文",
+      },
+      summary: "摘要",
+      tags: ["提示词"],
+      text: "Original prompt",
+      title: "提示词条目",
+    },
+  }]);
+
+  assert.match(document.content, /原文中文译文/u);
+  assert.match(document.content, /使用 temperature 0。/u);
+  assert.match(document.content, /补充了可复现参数/u);
+});
+
 test("published README is split at headings and has stable source citations", () => {
   const documents = toOpenSourceSearchDocuments([{
     content: {

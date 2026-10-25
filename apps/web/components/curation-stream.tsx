@@ -10,7 +10,7 @@
  * FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
  */
 
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
@@ -18,6 +18,7 @@ import { formatCurationClip, formatCurationDate } from "@/lib/curation-format";
 import { CURATION_PAGE_SIZE } from "@/lib/curation-types";
 import type { CurationListItem } from "@/lib/curation-types";
 import { XVideoPlayer } from "@/components/x-video-player";
+import { CopyPromptButton } from "@/components/copy-prompt-button";
 import { useStreamDate } from "@/components/use-stream-date";
 
 import { STREAM_EASE, STREAM_REVEAL_DURATION, STREAM_REVEAL_Y, staggerDelay } from "./motion-tokens";
@@ -28,57 +29,78 @@ import { StreamFilterMenu } from "./stream-filter-menu";
 import { StreamLoadStatus } from "./stream-skeleton";
 
 const TAG_STORAGE_KEY = "curation-active-tag";
+const PROMPT_CLIP_LIMIT = 600;
 
-export function TaggedCurationStream({ initialHasMore, initialItems, tags }: {
+/** 带标签筛选的剪报流：每日关注与提示词栏目共用；提示词的选中标签落在 URL，便于详情点标签回到同类内容。 */
+export function TaggedCurationStream({ initialHasMore, initialItems, initialTag = null, section = "curation", tags }: {
   initialHasMore: boolean;
   initialItems: CurationListItem[];
+  initialTag?: string | null;
+  section?: "curation" | "prompts";
   tags: { tag: string; count: number; headId: string }[];
 }) {
   const reduceMotion = useReducedMotion();
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [storedTag, setStoredTag] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const promptsSection = section === "prompts";
   useLayoutEffect(() => {
+    if (promptsSection) return;
     try {
       const saved = window.sessionStorage.getItem(TAG_STORAGE_KEY);
       if (tags.some(({ tag }) => tag === saved)) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- 水合后恢复筛选，保持 SSR 首屏一致
-        setActiveTag(saved);
+        setStoredTag(saved);
       }
     } catch { /* 隐私模式下仍可正常筛选。 */ }
-  }, [tags]);
+  }, [tags, promptsSection]);
 
+  const activeTag = promptsSection ? initialTag : storedTag;
+  const sectionLabel = promptsSection ? "提示词" : "每日关注";
   const selectTag = (value: string, viaKeyboard = false) => {
     const next = value === "all" ? null : value;
     if (next === activeTag) return;
-    setActiveTag(next);
-    try {
-      if (next) window.sessionStorage.setItem(TAG_STORAGE_KEY, next);
-      else window.sessionStorage.removeItem(TAG_STORAGE_KEY);
-    } catch { /* 会话存储只用于返回时恢复选择。 */ }
+    if (promptsSection) {
+      void navigate({ search: next ? { tag: next } : {}, to: "/prompts" });
+    } else {
+      setStoredTag(next);
+      try {
+        if (next) window.sessionStorage.setItem(TAG_STORAGE_KEY, next);
+        else window.sessionStorage.removeItem(TAG_STORAGE_KEY);
+      } catch { /* 会话存储只用于返回时恢复选择。 */ }
+    }
     // 键盘切换（event.detail === 0 约定）与 reduced-motion 一样即时回顶：html 的全局
     // scroll-behavior:smooth 会接管 behavior:"auto"，必须显式 "instant" 才真正立即到位。
     if (wrapperRef.current) getCurationScrollTarget(wrapperRef.current).scrollTo({ behavior: reduceMotion || viaKeyboard ? "instant" : "smooth", top: 0 });
   };
   const selected = tags.find(({ tag }) => tag === activeTag);
   const filter = <StreamFilterMenu
-    ariaLabel={`筛选每日关注：${activeTag ?? "全部主题"}`}
+    ariaLabel={`筛选${sectionLabel}：${activeTag ?? "全部主题"}`}
     triggerLabel={activeTag ?? "全部主题"}
     value={activeTag ?? "all"}
     options={[{ value: "all", label: "全部主题" }, ...tags.map(({ tag, count }) => ({ value: tag, label: `${tag} · ${count}` }))]}
     onSelect={selectTag}
     menuClassName="curation-category-menu"
   />;
+  // 提示词的筛选在 URL 上，loader 已按 tag 取好首屏；每日关注的筛选在会话内，切换时由 API 重新取。
+  const apiPath = promptsSection ? "/api/prompts" : "/api/curation";
+  const remoteFilter = !promptsSection && activeTag !== null;
 
   return <div ref={wrapperRef}>
     <CurationStream
-      apiPath={activeTag ? `/api/curation?tag=${encodeURIComponent(activeTag)}` : "/api/curation"}
-      emptyLabel="这个主题暂无已发布内容。"
+      apiPath={activeTag ? `${apiPath}?tag=${encodeURIComponent(activeTag)}` : apiPath}
+      detailSection={section}
+      emptyLabel={promptsSection ? "这个主题暂无已发布提示词。" : "这个主题暂无已发布内容。"}
       filter={filter}
-      initialHasMore={activeTag ? true : initialHasMore}
-      initialItems={activeTag ? [] : initialItems}
+      initialHasMore={remoteFilter ? true : initialHasMore}
+      initialItems={remoteFilter ? [] : initialItems}
       key={activeTag ?? "all"}
+      loadedAllLabel={promptsSection ? "已加载全部提示词" : undefined}
+      sectionLabel={sectionLabel}
       snapshotHeadId={selected?.headId}
-      snapshotKey={activeTag ? `curation-stream-tag-${activeTag}-v1` : undefined}
+      snapshotKey={promptsSection
+        ? activeTag ? `prompts-stream-tag-${activeTag}-v1` : "prompts-stream-v1"
+        : activeTag ? `curation-stream-tag-${activeTag}-v1` : undefined}
     />
   </div>;
 }
@@ -95,6 +117,10 @@ export function CurationStream({
   loadErrorMessage = "暂时无法加载更多策展内容。",
   /** 全部加载完成的收尾文案，同样随板块传入。 */
   loadedAllLabel = "已加载全部策展内容",
+  /** 详情链接所属板块；设计收藏另有 variant="design" 的整行布局。 */
+  detailSection = "curation",
+  /** 无日期时的工具栏兜底文案，随板块传入。 */
+  sectionLabel = "每日关注",
   /** 设计收藏在列表内直接呈现可播放视频，详情入口缩为标题链接以避免嵌套交互。 */
   variant = "default",
 }: {
@@ -108,6 +134,8 @@ export function CurationStream({
   snapshotKey?: string;
   loadErrorMessage?: string;
   loadedAllLabel?: string;
+  detailSection?: "curation" | "prompts";
+  sectionLabel?: string;
   variant?: "default" | "design";
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -132,7 +160,7 @@ export function CurationStream({
   return (
     <div ref={wrapperRef}>
       {currentDate || filter ? <div className="stream-date-toolbar">
-        <span className="curation-stream__date">{currentDate ?? "每日关注"}</span>
+        <span className="curation-stream__date">{currentDate ?? sectionLabel}</span>
         {filter}
       </div> : null}
     <ol className="curation-home__stream" ref={streamRef}>
@@ -182,6 +210,8 @@ export function CurationStream({
                 <StreamClipAndTags item={item} />
               </div>
             </article>
+          ) : detailSection === "prompts" ? (
+          <PromptStreamEntry item={item} />
           ) : (
           <Link data-content-id={item.id} params={{ id: item.id }} to="/curation/$id">
             <div className="curation-home__stream-meta">
@@ -208,8 +238,7 @@ export function CurationStream({
   );
 }
 
-/** 两种列表变体共用的剪报摘录 + 标签行；判断正文之外的原声音登记。 */
-function StreamClipAndTags({ item }: { item: CurationListItem }) {
+/** 两种列表变体共用的剪报摘录 + 标签行；判断正文之外的原声音登记。 */function StreamClipAndTags({ item }: { item: CurationListItem }) {
   return <>
     {item.text.trim() ? (
       <blockquote className="curation-home__stream-clip">
@@ -218,4 +247,64 @@ function StreamClipAndTags({ item }: { item: CurationListItem }) {
     ) : null}
     {item.tags.length > 0 ? <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p> : null}
   </>;
+}
+
+/**
+ * 提示词条目是「摘录」，不是「判断」：正文本身是主角，效果图前置，并可就地复制。
+ * 解析只留一句用途说明，详情仍是完整解析与追评。
+ */
+function PromptStreamEntry({ item }: { item: CurationListItem }) {
+  const photos = item.media.filter((media) => media.type === "photo").slice(0, 3);
+  const clip = item.text.trim();
+  // 中位长度约 300 字，长条目折叠到 12 行，避免单条霸屏；复制始终是全文。
+  const collapsible = clip.length > PROMPT_CLIP_LIMIT;
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <article className="prompt-entry">
+      <div className="curation-home__stream-meta">
+        <time dateTime={item.collectedAt ?? item.publishedAt ?? undefined}>{formatCurationDate(item)}</time>
+        <span>{`X · @${item.author.handle}`}</span>
+        {item.attachments.length > 0 ? <span>{item.attachments.join(" · ")}</span> : null}
+      </div>
+      <div className="curation-home__stream-copy">
+        <h3>
+          <Link data-content-id={item.id} params={{ id: item.id }} to="/prompts/$id">{item.title}</Link>
+        </h3>
+        <p className="prompt-entry__summary">{item.summary}</p>
+        {clip ? (
+          <div className="prompt-entry__prompt">
+            <pre data-collapsed={collapsible && !expanded ? "true" : undefined}>{clip}</pre>
+            {collapsible ? (
+              <button
+                aria-expanded={expanded}
+                className="prompt-copy"
+                onClick={() => setExpanded((value) => !value)}
+                type="button"
+              >
+                {expanded ? "收起" : "展开全部"}
+              </button>
+            ) : null}
+            <CopyPromptButton text={clip} />
+          </div>
+        ) : null}
+        {photos.length > 0 ? (
+          <div className="prompt-entry__media">
+            {photos.map((media) => (
+              <a href={media.url} key={media.url} rel="noreferrer noopener" target="_blank">
+                {/* eslint-disable-next-line @next/next/no-img-element -- 外部推文媒体直链 */}
+                <img
+                  alt={`${item.title} 的效果图`}
+                  height={media.height ?? undefined}
+                  loading="lazy"
+                  src={media.url}
+                  width={media.width ?? undefined}
+                />
+              </a>
+            ))}
+          </div>
+        ) : null}
+        {item.tags.length > 0 ? <p className="curation-home__stream-tags">{item.tags.join(" · ")}</p> : null}
+      </div>
+    </article>
+  );
 }
