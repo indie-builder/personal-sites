@@ -432,7 +432,8 @@
   position: fixed;
   top: 50%;
   /* 紧贴身份轨右缘：手算式与网格列宽一致，避免多减一个栏间距。 */
-  left: calc(min(max(28rem,38vw),38vw) - 1.25rem);
+  /* 盒子右缘对齐栏右缘：left = 栏宽 - 盒子宽。 */
+  left: calc(min(max(28rem,38vw),38vw) - 1.5rem);
   z-index: 30;
   display: none;
   width: 1.5rem;
@@ -457,9 +458,12 @@
   fill: none;
 }
 .profile-reading-toggle__arrow {
+  /* SVG path 的 transform-origin 默认在 viewBox 原点，翻转前先以自身包围盒为基准。 */
+  transform-box: fill-box;
+  transform-origin: center;
   transition: transform 220ms cubic-bezier(0.16,1,0.3,1);
 }
-/* 收起态箭头指向右侧（展开方向），与收起方向相反。 */
+/* 收起后左栏在左侧不可见，箭头反过来指向右，表示"从这里取回"。 */
 body[data-profile-collapsed="true"] .profile-reading-toggle__arrow {
   transform: scaleX(-1);
 }
